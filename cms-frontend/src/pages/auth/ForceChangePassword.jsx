@@ -55,7 +55,7 @@ export default function ForceChangePassword() {
               placeholder="••••••••"
               required
               style={styles.input}
-              onFocus={e => e.target.style.borderColor = '#2563eb'}
+              onFocus={e => e.target.style.borderColor = '#0066b3'}
               onBlur={e => e.target.style.borderColor = '#d1d5db'}
             />
           </div>
@@ -70,7 +70,7 @@ export default function ForceChangePassword() {
               placeholder="Min. 8 characters"
               required
               style={styles.input}
-              onFocus={e => e.target.style.borderColor = '#2563eb'}
+              onFocus={e => e.target.style.borderColor = '#0066b3'}
               onBlur={e => e.target.style.borderColor = '#d1d5db'}
             />
           </div>
@@ -85,7 +85,7 @@ export default function ForceChangePassword() {
               placeholder="••••••••"
               required
               style={styles.input}
-              onFocus={e => e.target.style.borderColor = '#2563eb'}
+              onFocus={e => e.target.style.borderColor = '#0066b3'}
               onBlur={e => e.target.style.borderColor = '#d1d5db'}
             />
           </div>
@@ -184,7 +184,7 @@ const styles = {
     color: '#0f172a'
   },
   submitBtn: {
-    background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+    background: 'linear-gradient(135deg, #005599, #13B5EA)',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',

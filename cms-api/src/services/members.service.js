@@ -1,6 +1,6 @@
 "use strict";
 
-const { Member, CellGroup, Group } = require("../models");
+const { Member, CellGroup, Group, EmergencyContact } = require("../models");
 
 const memberIncludes = [
   {
@@ -55,7 +55,14 @@ exports.getAllMembers = async ({ page = 1, limit = 20, search, status } = {}) =>
 exports.getMemberById = async (id) => {
   const member = await Member.findOne({
     where: { id },
-    include: memberIncludes,
+    include: [
+      ...memberIncludes,
+      {
+        model: EmergencyContact,
+        as: 'emergencyContacts',
+        required: false,
+      },
+    ],
   });
   if (!member) throw { status: 404, message: "Member not found" };
   return member;

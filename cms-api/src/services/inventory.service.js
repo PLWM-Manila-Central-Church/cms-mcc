@@ -192,6 +192,12 @@ exports.getAllRequests = async ({ page = 1, limit = 15, status } = {}) => {
         attributes: ["id", "name", "unit"],
         required: false,
       },
+      {
+        model: User,
+        as: "requestedByUser",
+        attributes: ["id", "email"],
+        required: false,
+      },
     ],
     order: [["created_at", "DESC"]],
     limit: parseInt(limit),

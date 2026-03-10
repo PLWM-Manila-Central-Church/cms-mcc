@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 const STATUS_META = {
   draft:     { bg: '#f1f5f9', color: '#475569', label: 'Draft' },
   published: { bg: '#dcfce7', color: '#16a34a', label: 'Published' },
-  completed: { bg: '#eff6ff', color: '#2563eb', label: 'Completed' },
+  completed: { bg: '#e8f4fd', color: '#0066b3', label: 'Completed' },
   cancelled: { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
 };
 
@@ -140,7 +140,7 @@ export default function AttendancePage() {
           <div style={styles.summaryLabel}>Attended</div>
         </div>
         <div style={styles.summaryCard}>
-          <div style={{ ...styles.summaryNum, color: '#2563eb' }}>{service?.capacity ?? 0}</div>
+          <div style={{ ...styles.summaryNum, color: '#0066b3' }}>{service?.capacity ?? 0}</div>
           <div style={styles.summaryLabel}>Capacity</div>
         </div>
         <div style={styles.summaryCard}>
@@ -246,7 +246,7 @@ export default function AttendancePage() {
             ) : records.map((r, i) => (
               <tr key={r.id}
                 style={{ ...styles.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
                 onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
               >
                 <td style={{ ...styles.td, color: '#94a3b8', fontWeight: '600' }}>{i + 1}</td>
@@ -289,7 +289,7 @@ export default function AttendancePage() {
 }
 
 const METHOD_STYLE = {
-  manual:    { background: '#eff6ff', color: '#2563eb' },
+  manual:    { background: '#e8f4fd', color: '#0066b3' },
   barcode:   { background: '#f0fdf4', color: '#16a34a' },
   'pre-reg': { background: '#faf5ff', color: '#7c3aed' },
 };
@@ -297,7 +297,7 @@ const METHOD_STYLE = {
 const styles = {
   page:          { fontFamily: "'Segoe UI', sans-serif" },
   loading:       { padding: '48px', textAlign: 'center', color: '#94a3b8' },
-  backBtn:       { background: 'none', border: 'none', color: '#2563eb', fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: '0 0 20px 0', display: 'block' },
+  backBtn:       { background: 'none', border: 'none', color: '#0066b3', fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: '0 0 20px 0', display: 'block' },
   serviceCard:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px 24px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   serviceInfo:   {},
   serviceTitle:  { fontSize: '20px', fontWeight: '700', color: '#0f172a', marginBottom: '6px' },
@@ -315,12 +315,12 @@ const styles = {
   searchSpinner: { fontSize: '13px', color: '#94a3b8', padding: '8px 0' },
   dropdown:      { position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, overflow: 'hidden', marginTop: '4px' },
   dropdownItem:  { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' },
-  dropdownAvatar:{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', flexShrink: 0 },
+  dropdownAvatar:{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', flexShrink: 0 },
   dropdownInfo:  { flex: 1 },
   dropdownName:  { fontSize: '14px', fontWeight: '600', color: '#0f172a' },
   dropdownMeta:  { fontSize: '12px', color: '#94a3b8', marginTop: '2px' },
   alreadyTag:    { color: '#16a34a', fontSize: '12px', fontWeight: '600' },
-  checkInBtn:    { background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', flexShrink: 0 },
+  checkInBtn:    { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', flexShrink: 0 },
   successBox:    { background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginTop: '12px' },
   errorBox:      { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginTop: '12px' },
   warningBox:    { background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '20px' },
@@ -335,7 +335,7 @@ const styles = {
   td:            { padding: '14px 16px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
   centerCell:    { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   memberCell:    { display: 'flex', alignItems: 'center', gap: '10px' },
-  avatar:        { width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
+  avatar:        { width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
   memberName:    { fontWeight: '600', color: '#0f172a' },
   methodBadge:   { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' },
   undoBtn:       { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },

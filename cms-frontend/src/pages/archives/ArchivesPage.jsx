@@ -9,7 +9,7 @@ const STATUS_META = {
 };
 
 const VISIBILITY_META = {
-  public:       { bg: '#eff6ff', color: '#2563eb',  label: 'Public' },
+  public:       { bg: '#e8f4fd', color: '#0066b3',  label: 'Public' },
   restricted:   { bg: '#fffbeb', color: '#d97706',  label: 'Restricted' },
   confidential: { bg: '#fef2f2', color: '#dc2626',  label: 'Confidential' },
 };
@@ -266,7 +266,7 @@ export default function ArchivesPage() {
                 return (
                   <div key={record.id}
                     onClick={() => openDetail(record)}
-                    style={{ ...s.recordCard, background: isSelected ? '#eff6ff' : '#fff', borderColor: isSelected ? '#2563eb' : '#e2e8f0', cursor: 'pointer' }}>
+                    style={{ ...s.recordCard, background: isSelected ? '#e8f4fd' : '#fff', borderColor: isSelected ? '#0066b3' : '#e2e8f0', cursor: 'pointer' }}>
                     <div style={s.recordTop}>
                       <span style={s.fileIcon}>{icon}</span>
                       <div style={s.recordMeta}>
@@ -413,7 +413,7 @@ const s = {
   pageHeader:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
   title:          { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   subtitle:       { fontSize: '14px', color: '#64748b', margin: '4px 0 0' },
-  addBtn:         { background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  addBtn:         { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   formCard:       { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
   formTitle:      { fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: '0 0 16px' },
   form:           { display: 'flex', flexDirection: 'column', gap: '14px' },
@@ -423,10 +423,10 @@ const s = {
   input:          { padding: '9px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', width: '100%', boxSizing: 'border-box' },
   select:         { padding: '9px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: '#fff' },
   fileInput:      { fontSize: '13px', color: '#475569' },
-  fileName:       { fontSize: '12px', color: '#2563eb', fontWeight: '500' },
+  fileName:       { fontSize: '12px', color: '#0066b3', fontWeight: '500' },
   formActions:    { display: 'flex', gap: '10px', justifyContent: 'flex-end' },
   cancelBtn:      { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
-  submitBtn:      { background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 22px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
+  submitBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 22px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   filterBar:      { display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' },
   filterInput:    { padding: '8px 12px', fontSize: '13px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', flex: 1, minWidth: '140px' },
   filterSelect:   { padding: '8px 12px', fontSize: '13px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: '#fff' },
@@ -455,15 +455,15 @@ const s = {
   detailLabel:    { fontSize: '12px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' },
   detailValue:    { fontSize: '13px', color: '#0f172a', fontWeight: '500' },
   detailDesc:     { fontSize: '13px', color: '#475569', lineHeight: '1.5', background: '#f8fafc', borderRadius: '8px', padding: '10px' },
-  downloadBtn:    { display: 'block', textAlign: 'center', background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', borderRadius: '8px', padding: '10px', fontSize: '13px', fontWeight: '600', textDecoration: 'none', marginTop: '4px' },
+  downloadBtn:    { display: 'block', textAlign: 'center', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', borderRadius: '8px', padding: '10px', fontSize: '13px', fontWeight: '600', textDecoration: 'none', marginTop: '4px' },
   versionsSection:{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', marginTop: '4px' },
   sectionTitle:   { fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' },
   versionRow:     { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '1px solid #f8fafc' },
-  versionNum:     { fontSize: '12px', fontWeight: '700', color: '#2563eb', minWidth: '24px' },
+  versionNum:     { fontSize: '12px', fontWeight: '700', color: '#0066b3', minWidth: '24px' },
   versionMeta:    { fontSize: '12px', color: '#64748b', flex: 1 },
-  versionLink:    { fontSize: '12px', color: '#2563eb', textDecoration: 'none', fontWeight: '600' },
+  versionLink:    { fontSize: '12px', color: '#0066b3', textDecoration: 'none', fontWeight: '600' },
   detailActions:  { display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '4px' },
-  editBtn:        { background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+  editBtn:        { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   deleteBtn:      { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   logRow:         { display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f8fafc' },
   logUser:        { fontSize: '12px', color: '#374151', fontWeight: '500' },

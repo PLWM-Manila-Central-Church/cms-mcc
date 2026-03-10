@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 const STATUS_META = {
   draft:     { bg: '#f1f5f9', color: '#475569', label: 'Draft' },
   published: { bg: '#dcfce7', color: '#16a34a', label: 'Published' },
-  completed: { bg: '#eff6ff', color: '#2563eb', label: 'Completed' },
+  completed: { bg: '#e8f4fd', color: '#0066b3', label: 'Completed' },
   cancelled: { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
 };
 
@@ -20,7 +20,7 @@ const STATUS_FLOW = {
 const STATUS_ACTION_LABEL = { published: 'Publish', completed: 'Complete', cancelled: 'Cancel' };
 const STATUS_ACTION_STYLE = {
   published: { background: '#dcfce7', color: '#16a34a' },
-  completed: { background: '#eff6ff', color: '#2563eb' },
+  completed: { background: '#e8f4fd', color: '#0066b3' },
   cancelled:  { background: '#fef2f2', color: '#dc2626' },
 };
 
@@ -246,7 +246,7 @@ export default function EventsPage() {
       <div style={s.filterBar}>
         {['', 'draft', 'published', 'completed', 'cancelled'].map(st => (
           <button key={st} onClick={() => { setStatusFilter(st); setPage(1); }}
-            style={{ ...s.filterChip, background: statusFilter === st ? '#1e3a5f' : '#f1f5f9', color: statusFilter === st ? '#fff' : '#475569' }}>
+            style={{ ...s.filterChip, background: statusFilter === st ? '#005599' : '#f1f5f9', color: statusFilter === st ? '#fff' : '#475569' }}>
             {st ? STATUS_META[st].label : 'All'}
           </button>
         ))}
@@ -330,7 +330,7 @@ const s = {
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
   title:       { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   subtitle:    { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
-  addBtn:      { background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   formCard:    { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
   formTitle:   { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px 0' },
   form:        { display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -341,7 +341,7 @@ const s = {
   select:      { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: '#fff' },
   formActions: { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
   cancelBtn:   { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  submitBtn:   { background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  submitBtn:   { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   filterBar:   { display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' },
   filterChip:  { border: 'none', borderRadius: '20px', padding: '6px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
@@ -355,7 +355,7 @@ const s = {
   cardDesc:    { fontSize: '13px', color: '#64748b', lineHeight: '1.5' },
   cardMeta:    { fontSize: '13px', color: '#64748b' },
   cardActions: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' },
-  viewBtn:     { background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+  viewBtn:     { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   editBtn:     { background: '#f8fafc', color: '#475569', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   statusBtn:   { border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   deleteBtn:   { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },

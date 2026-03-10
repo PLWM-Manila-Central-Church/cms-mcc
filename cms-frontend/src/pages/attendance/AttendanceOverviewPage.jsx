@@ -93,7 +93,7 @@ export default function AttendanceOverviewPage() {
   const STATUS_META = {
     draft:     { bg: '#f1f5f9', color: '#475569' },
     published: { bg: '#dcfce7', color: '#16a34a' },
-    completed: { bg: '#eff6ff', color: '#2563eb' },
+    completed: { bg: '#e8f4fd', color: '#0066b3' },
     cancelled: { bg: '#fef2f2', color: '#dc2626' },
   };
 
@@ -255,12 +255,12 @@ const s = {
   searchHint:         { fontSize: '13px', color: '#94a3b8', marginTop: '6px' },
   dropdown:           { position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, overflow: 'hidden', marginTop: '4px' },
   dropdownItem:       { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' },
-  dropdownAvatar:     { width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', flexShrink: 0 },
+  dropdownAvatar:     { width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', flexShrink: 0 },
   dropdownName:       { fontSize: '14px', fontWeight: '600', color: '#0f172a' },
   dropdownMeta:       { fontSize: '12px', color: '#94a3b8', marginTop: '2px' },
   historyBox:         { marginTop: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   historyHeader:      { display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' },
-  historyAvatar:      { width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '700', flexShrink: 0 },
+  historyAvatar:      { width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '700', flexShrink: 0 },
   historyName:        { fontSize: '16px', fontWeight: '700', color: '#0f172a' },
   historySub:         { fontSize: '13px', color: '#64748b', marginTop: '2px' },
   emptyHistory:       { padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },

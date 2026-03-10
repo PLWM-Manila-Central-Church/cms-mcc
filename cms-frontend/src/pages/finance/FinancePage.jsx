@@ -11,7 +11,7 @@ const PAYMENT_LABELS = {
 const PAYMENT_STYLE = {
   cash:          { bg: '#f0fdf4', color: '#16a34a' },
   gcash:         { bg: '#faf5ff', color: '#7c3aed' },
-  bank_transfer: { bg: '#eff6ff', color: '#2563eb' }
+  bank_transfer: { bg: '#e8f4fd', color: '#0066b3' }
 };
 
 export default function FinancePage() {
@@ -193,7 +193,7 @@ export default function FinancePage() {
   const formatDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
   const formatAmount = (a) => parseFloat(a).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' });
 
-  const totalAmount = summary.reduce((sum, s) => sum + parseFloat(s.dataValues?.total || s.total || 0), 0);
+  const totalAmount = summary.reduce((sum, s) => sum + parseFloat(s.total_amount || 0), 0);
 
   return (
     <div style={s.page}>
@@ -216,9 +216,9 @@ export default function FinancePage() {
           <div style={s.summaryLabel}>Total Collected</div>
         </div>
         {summary.map(row => {
-          const name  = row.FinancialCategory?.name || '—';
-          const total = parseFloat(row.dataValues?.total || row.total || 0);
-          const count = parseInt(row.dataValues?.count || row.count || 0);
+          const name  = row.category?.name || '—';
+          const total = parseFloat(row.total_amount || 0);
+          const count = parseInt(row.count || 0);
           return (
             <div key={row.category_id} style={s.summaryCard}>
               <div style={{ ...s.summaryNum, fontSize: '20px' }}>{formatAmount(total)}</div>
@@ -359,7 +359,7 @@ export default function FinancePage() {
               return (
                 <tr key={r.id}
                   style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                  onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
                   onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
                 >
                   <td style={s.td}>
@@ -367,7 +367,7 @@ export default function FinancePage() {
                       {r.Member?.last_name}, {r.Member?.first_name}
                     </div>
                   </td>
-                  <td style={s.td}>{r.FinancialCategory?.name}</td>
+                  <td style={s.td}>{r.category?.name}</td>
                   <td style={{ ...s.td, fontWeight: '700', color: '#0f172a' }}>{formatAmount(r.amount)}</td>
                   <td style={s.td}>
                     <span style={{ ...s.badge, background: pmStyle.bg, color: pmStyle.color }}>
@@ -379,7 +379,7 @@ export default function FinancePage() {
                     {r.receipt_number || '—'}
                   </td>
                   <td style={{ ...s.td, fontSize: '12px', color: '#64748b' }}>
-                    {r.recordedBy?.email || '—'}
+                    {r.recorder?.email || '—'}
                   </td>
                   {canRecord && (
                     <td style={s.td}>
@@ -413,7 +413,7 @@ const s = {
   pageHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
   title:        { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   subtitle:     { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
-  addBtn:       { background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  addBtn:       { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   summaryRow:   { display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' },
   summaryCard:  { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px 24px', flex: 1, minWidth: '140px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   summaryNum:   { fontSize: '24px', fontWeight: '800', color: '#0f172a' },
@@ -429,7 +429,7 @@ const s = {
   select:       { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: '#fff' },
   formActions:  { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
   cancelBtn:    { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  submitBtn:    { background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  submitBtn:    { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   dropdown:     { position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, overflow: 'hidden', marginTop: '4px' },
   dropdownItem: { padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid #f1f5f9' },
   filterBar:    { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
@@ -446,7 +446,7 @@ const s = {
   centerCell:   { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   badge:        { padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' },
   actions:      { display: 'flex', gap: '6px' },
-  editBtn:      { background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+  editBtn:      { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   deleteBtn:    { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   pagination:   { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px' },
   pageBtn:      { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', cursor: 'pointer' },

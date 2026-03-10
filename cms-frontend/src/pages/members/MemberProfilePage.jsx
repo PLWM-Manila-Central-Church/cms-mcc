@@ -25,6 +25,7 @@ export default function MemberProfilePage() {
   const [ecError, setEcError]   = useState('');
   const [showEcForm, setShowEcForm] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchMember = async () => {
     setLoading(true);
     try {
@@ -37,7 +38,8 @@ export default function MemberProfilePage() {
     }
   };
 
-  useEffect(() => { fetchMember(); }, [fetchMember]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchMember(); }, [id]);
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this member?')) return;
@@ -211,11 +213,11 @@ export default function MemberProfilePage() {
             )}
 
             {/* Contacts List */}
-            {member.emergencyContacts?.length === 0 ? (
+            {!(member.emergencyContacts?.length) ? (
               <p style={styles.emptyText}>No emergency contacts added.</p>
             ) : (
               <div style={styles.ecList}>
-                {member.emergencyContacts.map(c => (
+                {(member.emergencyContacts || []).map(c => (
                   <div key={c.id} style={styles.ecItem}>
                     <div style={styles.ecAvatar}>
                       {c.name[0]}
@@ -264,12 +266,12 @@ const styles = {
     alignItems: 'center', marginBottom: '24px'
   },
   backBtn: {
-    background: 'none', border: 'none', color: '#2563eb',
+    background: 'none', border: 'none', color: '#005599',
     fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: 0
   },
   topActions: { display: 'flex', gap: '10px' },
   editBtn: {
-    background: '#eff6ff', color: '#2563eb', border: 'none',
+    background: '#eff6ff', color: '#005599', border: 'none',
     borderRadius: '8px', padding: '8px 18px', fontSize: '14px',
     fontWeight: '600', cursor: 'pointer'
   },
@@ -279,7 +281,7 @@ const styles = {
     fontWeight: '600', cursor: 'pointer'
   },
   profileCard: {
-    background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)',
+    background: 'linear-gradient(135deg, #003d70 0%, #005599 60%, #13B5EA 100%)',
     borderRadius: '16px', padding: '32px', display: 'flex',
     alignItems: 'center', gap: '24px', marginBottom: '24px'
   },
@@ -310,7 +312,7 @@ const styles = {
     alignItems: 'center', marginBottom: '16px'
   },
   cardTitle: {
-    fontSize: '15px', fontWeight: '700', color: '#1e3a5f',
+    fontSize: '15px', fontWeight: '700', color: '#005599',
     margin: '0 0 16px 0'
   },
   detailGrid: { display: 'flex', flexDirection: 'column', gap: '12px' },
@@ -318,7 +320,7 @@ const styles = {
   detailLabel:{ fontSize: '13px', color: '#94a3b8', fontWeight: '500', flexShrink: 0, marginRight: '16px' },
   detailValue:{ fontSize: '14px', color: '#0f172a', fontWeight: '500', textAlign: 'right' },
   addEcBtn: {
-    background: '#eff6ff', color: '#2563eb', border: 'none',
+    background: '#eff6ff', color: '#005599', border: 'none',
     borderRadius: '6px', padding: '5px 12px', fontSize: '13px',
     fontWeight: '600', cursor: 'pointer', marginBottom: '0'
   },
@@ -332,7 +334,7 @@ const styles = {
     borderRadius: '8px', outline: 'none', width: '100%', boxSizing: 'border-box'
   },
   ecSaveBtn: {
-    background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+    background: 'linear-gradient(135deg, #005599, #13B5EA)',
     color: '#fff', border: 'none', borderRadius: '8px',
     padding: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer'
   },

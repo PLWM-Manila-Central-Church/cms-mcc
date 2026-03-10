@@ -105,7 +105,7 @@ export default function MembersPage() {
               onClick={() => handleStatusFilter(s)}
               style={{
                 ...styles.filterChip,
-                background: statusFilter === s ? '#1e3a5f' : '#f1f5f9',
+                background: statusFilter === s ? '#005599' : '#f1f5f9',
                 color:      statusFilter === s ? '#fff'    : '#475569',
               }}
             >
@@ -150,7 +150,7 @@ export default function MembersPage() {
               <tr
                 key={m.id}
                 style={{ ...styles.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
                 onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
               >
                 <td style={styles.td}>
@@ -165,8 +165,8 @@ export default function MembersPage() {
                 </td>
                 <td style={styles.td}>{m.email || '—'}</td>
                 <td style={styles.td}>{m.phone || '—'}</td>
-                <td style={styles.td}>{m.CellGroup?.name || '—'}</td>
-                <td style={styles.td}>{m.Group?.name || '—'}</td>
+                <td style={styles.td}>{m.cellGroup?.name || '—'}</td>
+                <td style={styles.td}>{m.group?.name || '—'}</td>
                 <td style={styles.td}>
                   <span style={{
                     ...styles.badge,
@@ -236,7 +236,7 @@ const styles = {
   pageTitle:    { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   pageSubtitle: { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
   addBtn: {
-    background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+    background: 'linear-gradient(135deg, #005599, #13B5EA)',
     color: '#fff', border: 'none', borderRadius: '8px',
     padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer'
   },
@@ -250,7 +250,7 @@ const styles = {
     border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none'
   },
   searchBtn: {
-    background: '#1e3a5f', color: '#fff', border: 'none',
+    background: '#005599', color: '#fff', border: 'none',
     borderRadius: '8px', padding: '10px 16px', fontSize: '14px',
     fontWeight: '600', cursor: 'pointer'
   },
@@ -284,7 +284,7 @@ const styles = {
   nameCell:   { display: 'flex', alignItems: 'center', gap: '10px' },
   avatar: {
     width: '34px', height: '34px', borderRadius: '50%',
-    background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+    background: 'linear-gradient(135deg, #005599, #13B5EA)',
     color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: '12px', fontWeight: '700', flexShrink: 0
   },
@@ -295,7 +295,7 @@ const styles = {
   },
   actions:    { display: 'flex', gap: '6px' },
   viewBtn: {
-    background: '#eff6ff', color: '#2563eb', border: 'none',
+    background: '#e8f4fd', color: '#0066b3', border: 'none',
     borderRadius: '6px', padding: '5px 12px', fontSize: '12px',
     fontWeight: '600', cursor: 'pointer'
   },

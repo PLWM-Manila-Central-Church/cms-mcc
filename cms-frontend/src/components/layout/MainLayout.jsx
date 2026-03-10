@@ -4,7 +4,7 @@ import Header from './Header';
 
 export default function MainLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
-  const sidebarWidth = collapsed ? '64px' : '240px';
+  const sidebarWidth = collapsed ? '68px' : '244px';
 
   return (
     <div style={styles.root}>
@@ -21,14 +21,14 @@ const styles = {
   root: {
     display: 'flex',
     minHeight: '100vh',
-    background: '#f8fafc',
-    fontFamily: "'Segoe UI', sans-serif"
+    background: '#f0f6ff',
+    fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
   },
   main: {
     flex: 1,
     marginTop: '64px',
     padding: '32px',
     transition: 'margin-left 0.25s ease',
-    minHeight: 'calc(100vh - 64px)'
-  }
+    minHeight: 'calc(100vh - 64px)',
+  },
 };

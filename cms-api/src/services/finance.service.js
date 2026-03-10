@@ -19,6 +19,12 @@ const recordIncludes = [
     attributes: ["id", "name", "description"],
     required: false,
   },
+  {
+    model: User,
+    as: "recorder",
+    attributes: ["id", "email"],
+    required: false,
+  },
 ];
 
 // ── Get All Financial Records (paginated) ────────────────────
@@ -99,6 +105,7 @@ exports.createRecord = async (data, recordedBy) => {
     category_id,
     receipt_number,
     amount,
+    payment_method,
     transaction_date,
     notes,
   } = data;

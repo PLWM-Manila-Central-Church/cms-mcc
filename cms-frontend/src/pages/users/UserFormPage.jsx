@@ -121,7 +121,7 @@ export default function UserFormPage() {
               required
               style={styles.input}
               placeholder="user@plwmmcc.com"
-              onFocus={e => e.target.style.borderColor = '#2563eb'}
+              onFocus={e => e.target.style.borderColor = '#0066b3'}
               onBlur={e => e.target.style.borderColor = '#e2e8f0'}
             />
           </div>
@@ -137,7 +137,7 @@ export default function UserFormPage() {
                 required
                 style={styles.input}
                 placeholder="Min. 8 characters"
-                onFocus={e => e.target.style.borderColor = '#2563eb'}
+                onFocus={e => e.target.style.borderColor = '#0066b3'}
                 onBlur={e => e.target.style.borderColor = '#e2e8f0'}
               />
               <p style={styles.hint}>
@@ -201,7 +201,7 @@ const styles = {
   loading: { padding: '48px', textAlign: 'center', color: '#94a3b8' },
   header:  { marginBottom: '24px' },
   backBtn: {
-    background: 'none', border: 'none', color: '#2563eb',
+    background: 'none', border: 'none', color: '#0066b3',
     fontSize: '14px', cursor: 'pointer', padding: '0 0 8px 0', fontWeight: '500'
   },
   title:    { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0' },
@@ -216,7 +216,7 @@ const styles = {
     boxShadow: '0 1px 8px rgba(0,0,0,0.06)'
   },
   cardTitle: {
-    fontSize: '15px', fontWeight: '700', color: '#1e3a5f',
+    fontSize: '15px', fontWeight: '700', color: '#005599',
     margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9'
   },
   fieldWrap: { display: 'flex', flexDirection: 'column', gap: '6px' },
@@ -240,7 +240,7 @@ const styles = {
     fontWeight: '600', cursor: 'pointer'
   },
   saveBtn: {
-    background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+    background: 'linear-gradient(135deg, #005599, #13B5EA)',
     color: '#fff', border: 'none', borderRadius: '8px',
     padding: '12px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer'
   },

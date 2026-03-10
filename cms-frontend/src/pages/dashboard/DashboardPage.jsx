@@ -31,10 +31,10 @@ export default function DashboardPage() {
     const map = {
       LOGIN: { bg: '#d1fae5', color: '#065f46' },
       LOGOUT: { bg: '#f3f4f6', color: '#374151' },
-      CREATE_MEMBER: { bg: '#dbeafe', color: '#1e40af' },
+      CREATE_MEMBER: { bg: '#bde3f5', color: '#1e40af' },
       UPDATE_MEMBER: { bg: '#ede9fe', color: '#5b21b6' },
       DELETE_MEMBER: { bg: '#fee2e2', color: '#991b1b' },
-      CREATE_USER:   { bg: '#dbeafe', color: '#1e40af' },
+      CREATE_USER:   { bg: '#bde3f5', color: '#1e40af' },
       UPDATE_USER:   { bg: '#ede9fe', color: '#5b21b6' },
       CREATE_FINANCIAL_RECORD: { bg: '#d1fae5', color: '#065f46' },
       UPLOAD_ARCHIVE: { bg: '#fef3c7', color: '#92400e' },
@@ -55,7 +55,7 @@ export default function DashboardPage() {
   const { members, finance, services, events, inventory, recentActivity } = stats;
 
   const statCards = [
-    { label: 'Total Members',   value: members.total,              sub: `+${members.newThisMonth} this month`, icon: '👥', color: '#1e4080', path: '/members' },
+    { label: 'Total Members',   value: members.total,              sub: `+${members.newThisMonth} this month`, icon: '👥', color: '#005599', path: '/members' },
     { label: 'Active Members',  value: members.active,             sub: `of ${members.total} total`,           icon: '✅', color: '#059669', path: '/members' },
     { label: 'Finance (Month)', value: `₱${fmt(finance.totalThisMonth)}`, sub: 'Total collections',           icon: '💰', color: '#d97706', path: '/finance' },
     { label: 'Upcoming Events', value: events.upcoming.length,     sub: `${events.total} total events`,        icon: '📅', color: '#7c3aed', path: '/events' },
@@ -104,7 +104,7 @@ export default function DashboardPage() {
                     <div style={styles.listTitle}>{ev.title}</div>
                     <div style={styles.listSub}>{fmtDate(ev.start_date)}{ev.location ? ` · ${ev.location}` : ''}</div>
                   </div>
-                  <span style={{ ...styles.statusBadge, background: '#dbeafe', color: '#1e40af' }}>{ev.status}</span>
+                  <span style={{ ...styles.statusBadge, background: '#bde3f5', color: '#1e40af' }}>{ev.status}</span>
                 </div>
               ))
             }
@@ -172,7 +172,7 @@ const styles = {
   loading:      { padding: '48px', textAlign: 'center', color: '#888' },
   error:        { padding: '48px', textAlign: 'center', color: '#dc2626' },
   header:       { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' },
-  title:        { fontSize: '24px', fontWeight: '700', color: '#1e3a5f', margin: 0 },
+  title:        { fontSize: '24px', fontWeight: '700', color: '#005599', margin: 0 },
   subtitle:     { fontSize: '14px', color: '#6b7280', marginTop: '4px' },
   dateBadge:    { fontSize: '13px', color: '#6b7280', background: '#f3f4f6', padding: '6px 14px', borderRadius: '20px' },
   statsGrid:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '16px', marginBottom: '24px' },
@@ -184,8 +184,8 @@ const styles = {
   statSub:      { fontSize: '12px', color: '#9ca3af' },
   columns:      { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' },
   card:         { background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' },
-  cardHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '14px', color: '#1e3a5f' },
-  viewAll:      { background: 'none', border: 'none', color: '#1e4080', fontSize: '13px', cursor: 'pointer', fontWeight: '600' },
+  cardHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '14px', color: '#005599' },
+  viewAll:      { background: 'none', border: 'none', color: '#005599', fontSize: '13px', cursor: 'pointer', fontWeight: '600' },
   cardBody:     { padding: '4px 0' },
   listRow:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '12px 20px', borderBottom: '1px solid #f9fafb', cursor: 'pointer' },
   listTitle:    { fontSize: '14px', fontWeight: '500', color: '#111827' },

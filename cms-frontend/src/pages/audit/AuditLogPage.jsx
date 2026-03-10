@@ -3,7 +3,7 @@ import axiosInstance from '../../api/axiosInstance';
 
 const ACTION_COLORS = {
   CREATE:  { bg: '#f0fdf4', color: '#16a34a' },
-  UPDATE:  { bg: '#eff6ff', color: '#2563eb' },
+  UPDATE:  { bg: '#e8f4fd', color: '#0066b3' },
   DELETE:  { bg: '#fef2f2', color: '#dc2626' },
   LOGIN:   { bg: '#f5f3ff', color: '#7c3aed' },
   LOGOUT:  { bg: '#f1f5f9', color: '#475569' },
@@ -151,7 +151,7 @@ export default function AuditLogPage() {
                 <>
                   <tr key={log.id}
                     style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc', cursor: hasValues ? 'pointer' : 'default' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                    onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
                     onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
                     onClick={() => hasValues && setExpanded(isExpanded ? null : log.id)}
                   >
@@ -248,9 +248,9 @@ const s = {
   td:          { padding: '11px 14px', fontSize: '13px', color: '#374151', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' },
   centerCell:  { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   userCell:    { display: 'flex', alignItems: 'center', gap: '8px' },
-  avatar:      { width: '26px', height: '26px', borderRadius: '50%', background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
+  avatar:      { width: '26px', height: '26px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
   actionBadge: { padding: '3px 9px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', fontFamily: 'monospace', whiteSpace: 'nowrap' },
-  expandBtn:   { fontSize: '11px', color: '#2563eb', fontWeight: '600', whiteSpace: 'nowrap' },
+  expandBtn:   { fontSize: '11px', color: '#0066b3', fontWeight: '600', whiteSpace: 'nowrap' },
   diffCell:    { padding: '0 14px 14px' },
   diffGrid:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' },
   diffPanel:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' },

@@ -178,7 +178,7 @@ export default function InventoryPage() {
       <div style={s.tabBar}>
         {['items', 'requests'].map(t => (
           <button key={t} onClick={() => setTab(t)}
-            style={{ ...s.tab, background: tab === t ? '#1e3a5f' : '#f1f5f9', color: tab === t ? '#fff' : '#475569' }}>
+            style={{ ...s.tab, background: tab === t ? '#005599' : '#f1f5f9', color: tab === t ? '#fff' : '#475569' }}>
             {t === 'items' ? '📦 Items' : '📋 Requests'}
           </button>
         ))}
@@ -278,19 +278,19 @@ export default function InventoryPage() {
                   return (
                     <tr key={item.id}
                       style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                      onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
                       onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
                     >
                       <td style={s.td}>
                         <span style={{ fontWeight: '600', color: '#0f172a' }}>{item.name}</span>
                         {lowStock && <span style={s.lowStockTag}> ⚠ Low</span>}
                       </td>
-                      <td style={s.td}>{item.InventoryCategory?.name || '—'}</td>
+                      <td style={s.td}>{item.category?.name || '—'}</td>
                       <td style={{ ...s.td, fontWeight: '700', color: lowStock ? '#dc2626' : '#0f172a', fontSize: '16px' }}>{item.quantity}</td>
                       <td style={{ ...s.td, color: '#64748b' }}>{item.unit || '—'}</td>
                       <td style={s.td}>
-                        <span style={{ ...s.badge, background: item.InventoryCategory?.is_returnable ? '#eff6ff' : '#f0fdf4', color: item.InventoryCategory?.is_returnable ? '#2563eb' : '#16a34a' }}>
-                          {item.InventoryCategory?.is_returnable ? 'Returnable' : 'Consumable'}
+                        <span style={{ ...s.badge, background: item.category?.is_returnable ? '#e8f4fd' : '#f0fdf4', color: item.category?.is_returnable ? '#0066b3' : '#16a34a' }}>
+                          {item.category?.is_returnable ? 'Returnable' : 'Consumable'}
                         </span>
                       </td>
                       <td style={s.td}>
@@ -361,7 +361,7 @@ export default function InventoryPage() {
             <div style={s.filterBar}>
               {['', 'pending', 'approved', 'rejected'].map(st => (
                 <button key={st} onClick={() => { setReqFilter(st); setReqPage(1); }}
-                  style={{ ...s.filterChip, background: reqFilter === st ? '#1e3a5f' : '#f1f5f9', color: reqFilter === st ? '#fff' : '#475569' }}>
+                  style={{ ...s.filterChip, background: reqFilter === st ? '#005599' : '#f1f5f9', color: reqFilter === st ? '#fff' : '#475569' }}>
                   {st ? st.charAt(0).toUpperCase() + st.slice(1) : 'All'}
                 </button>
               ))}
@@ -394,12 +394,12 @@ export default function InventoryPage() {
                   return (
                     <tr key={r.id}
                       style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                      onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
                       onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
                     >
-                      <td style={{ ...s.td, fontWeight: '600', color: '#0f172a' }}>{r.InventoryItem?.name}</td>
-                      <td style={{ ...s.td, fontSize: '13px', color: '#64748b' }}>{r.requestedBy?.email}</td>
-                      <td style={s.td}>{r.quantity} {r.InventoryItem?.unit || ''}</td>
+                      <td style={{ ...s.td, fontWeight: '600', color: '#0f172a' }}>{r.item?.name}</td>
+                      <td style={{ ...s.td, fontSize: '13px', color: '#64748b' }}>{r.requestedByUser?.email}</td>
+                      <td style={s.td}>{r.quantity} {r.item?.unit || ''}</td>
                       <td style={{ ...s.td, color: '#64748b', fontSize: '13px' }}>{r.purpose || '—'}</td>
                       <td style={s.td}>
                         <span style={{ ...s.badge, background: stStyle.bg, color: stStyle.color }}>
@@ -450,7 +450,7 @@ const s = {
   title:        { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   subtitle:     { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
   headerActions:{ display: 'flex', gap: '10px' },
-  addBtn:       { background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  addBtn:       { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   tabBar:       { display: 'flex', gap: '8px', marginBottom: '24px' },
   tab:          { border: 'none', borderRadius: '20px', padding: '8px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   formCard:     { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
@@ -463,7 +463,7 @@ const s = {
   select:       { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: '#fff' },
   formActions:  { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
   cancelBtn:    { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  submitBtn:    { background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  submitBtn:    { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   filterBar:    { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
   filterInput:  { padding: '8px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', flex: 1, minWidth: '160px' },
   filterSelect: { padding: '8px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: '#fff' },
@@ -479,7 +479,7 @@ const s = {
   badge:        { padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' },
   lowStockTag:  { color: '#dc2626', fontSize: '11px', fontWeight: '700', marginLeft: '4px' },
   actions:      { display: 'flex', gap: '6px' },
-  editBtn:      { background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+  editBtn:      { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   approveBtn:   { background: '#f0fdf4', color: '#16a34a', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   rejectBtn:    { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   pagination:   { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px' },
