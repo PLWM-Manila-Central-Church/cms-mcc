@@ -12,6 +12,12 @@ export const NAV_ITEMS = [
     permissions: { module: 'members', action: 'read' }
   },
   {
+    label: 'Cell Groups',
+    path: '/cell-groups',
+    icon: '🏘️',
+    permissions: { module: 'cellgroups', action: 'read' }
+  },
+  {
     label: 'Users',
     path: '/users',
     icon: '🔑',

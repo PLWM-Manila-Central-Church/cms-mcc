@@ -4,9 +4,12 @@ import ProtectedRoute from './ProtectedRoute';
 import MainLayout from '../components/layout/MainLayout';
 import LoginPage from '../pages/auth/LoginPage';
 import ForceChangePassword from '../pages/auth/ForceChangePassword';
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 import MembersPage       from '../pages/members/MembersPage';
 import MemberFormPage    from '../pages/members/MemberFormPage';
 import MemberProfilePage from '../pages/members/MemberProfilePage';
+import CellGroupsPage   from '../pages/cellgroups/CellGroupsPage';
 import UsersPage     from '../pages/users/UsersPage';
 import UserFormPage  from '../pages/users/UserFormPage';
 import ServicesPage   from '../pages/services/ServicesPage';
@@ -70,6 +73,11 @@ const AppRoutes = () => {
           <MainLayout><MembersPage /></MainLayout>
         </ProtectedRoute>
       } />
+      <Route path="/cell-groups" element={
+        <ProtectedRoute>
+          <MainLayout><CellGroupsPage /></MainLayout>
+        </ProtectedRoute>
+      } />
       <Route path="/members/new" element={
         <ProtectedRoute>
           <MainLayout><MemberFormPage /></MainLayout>
@@ -88,6 +96,14 @@ const AppRoutes = () => {
       <Route
         path="/login"
         element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+      />
+      <Route
+        path="/forgot-password"
+        element={user ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />}
+      />
+      <Route
+        path="/reset-password"
+        element={user ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />}
       />
 
       <Route
