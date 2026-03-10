@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 const STATUS_META = {
   draft:     { bg: '#f1f5f9', color: '#475569', label: 'Draft' },
   published: { bg: '#dcfce7', color: '#16a34a', label: 'Published' },
-  completed: { bg: '#eff6ff', color: '#2563eb', label: 'Completed' },
+  completed: { bg: '#e8f4fd', color: '#0066b3', label: 'Completed' },
   cancelled: { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
 };
 
@@ -229,7 +229,7 @@ export default function EventDetailPage() {
 const s = {
   page:         { fontFamily: "'Segoe UI', sans-serif" },
   loading:      { padding: '48px', textAlign: 'center', color: '#94a3b8' },
-  backBtn:      { background: 'none', border: 'none', color: '#2563eb', fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: '0 0 20px 0', display: 'block' },
+  backBtn:      { background: 'none', border: 'none', color: '#0066b3', fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: '0 0 20px 0', display: 'block' },
   headerCard:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '28px 32px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   headerTop:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
   badge:        { padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', marginRight: '8px' },
@@ -243,7 +243,7 @@ const s = {
   detailValue:  { fontSize: '14px', color: '#0f172a', fontWeight: '500', marginTop: '2px' },
   regRow:       { display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' },
   regConfirmed: { fontSize: '14px', color: '#16a34a', fontWeight: '600' },
-  registerBtn:  { background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' },
+  registerBtn:  { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' },
   cancelRegBtn: { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   closedBox:    { background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: '8px', padding: '10px 16px', fontSize: '14px', display: 'inline-block' },
   successBox:   { background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', borderRadius: '8px', padding: '10px 16px', fontSize: '14px', marginBottom: '12px' },
@@ -258,6 +258,6 @@ const s = {
   row:          {},
   td:           { padding: '12px 14px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
   memberCell:   { display: 'flex', alignItems: 'center', gap: '10px' },
-  avatar:       { width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
+  avatar:       { width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
   removeBtn:    { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
 };

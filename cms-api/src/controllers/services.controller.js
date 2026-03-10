@@ -46,3 +46,13 @@ exports.deleteService = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.updateStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const result = await servicesService.updateStatus(req.params.id, status);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};

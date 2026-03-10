@@ -97,3 +97,29 @@ exports.deleteService = async (id) => {
   await service.destroy();
   return { message: "Service deleted successfully." };
 };
+
+// ── Update Service Status ────────────────────────────────────
+exports.updateStatus = async (id, status) => {
+  const allowed = ["draft", "published", "completed", "cancelled"];
+  if (!allowed.includes(status))
+    throw { status: 400, message: "Invalid status value" };
+
+  const service = await Service.findByPk(id);
+  if (!service) throw { status: 404, message: "Service not found" };
+
+  const flow = {
+    draft:     ["published", "cancelled"],
+    published: ["completed", "cancelled"],
+    completed: [],
+    cancelled: [],
+  };
+
+  if (!flow[service.status]?.includes(status))
+    throw {
+      status: 400,
+      message: `Cannot transition from '${service.status}' to '${status}'`,
+    };
+
+  await service.update({ status });
+  return service;
+};

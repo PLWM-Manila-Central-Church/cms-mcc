@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 const ROLE_COLORS = {
   'System Admin':      { bg: '#fef2f2', color: '#dc2626' },
   'Pastor':            { bg: '#f5f3ff', color: '#7c3aed' },
-  'Registration Team': { bg: '#eff6ff', color: '#2563eb' },
+  'Registration Team': { bg: '#e8f4fd', color: '#0066b3' },
   'Finance Team':      { bg: '#f0fdf4', color: '#16a34a' },
   'Cell Group Leader': { bg: '#fffbeb', color: '#d97706' },
   'Group Leader':      { bg: '#ecfeff', color: '#0891b2' },
@@ -90,7 +90,7 @@ export default function UsersPage() {
               <tr
                 key={u.id}
                 style={{ ...styles.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
                 onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
               >
                 <td style={styles.td}>
@@ -107,15 +107,15 @@ export default function UsersPage() {
                 <td style={styles.td}>
                   <span style={{
                     ...styles.badge,
-                    background: ROLE_COLORS[u.Role?.role_name]?.bg || '#f8fafc',
-                    color:      ROLE_COLORS[u.Role?.role_name]?.color || '#64748b',
+                    background: ROLE_COLORS[u.role?.role_name]?.bg || '#f8fafc',
+                    color:      ROLE_COLORS[u.role?.role_name]?.color || '#64748b',
                   }}>
-                    {u.Role?.role_name || '—'}
+                    {u.role?.role_name || '—'}
                   </span>
                 </td>
                 <td style={styles.td}>
-                  {u.Member
-                    ? `${u.Member.first_name} ${u.Member.last_name}`
+                  {u.member
+                    ? `${u.member.first_name} ${u.member.last_name}`
                     : <span style={styles.noMember}>No member linked</span>
                   }
                 </td>
@@ -180,7 +180,7 @@ const styles = {
   pageTitle:  { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   pageSubtitle:{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
   addBtn: {
-    background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+    background: 'linear-gradient(135deg, #005599, #13B5EA)',
     color: '#fff', border: 'none', borderRadius: '8px',
     padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer'
   },
@@ -205,7 +205,7 @@ const styles = {
   userCell:   { display: 'flex', alignItems: 'center', gap: '10px' },
   avatar: {
     width: '34px', height: '34px', borderRadius: '50%',
-    background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
+    background: 'linear-gradient(135deg, #005599, #13B5EA)',
     color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: '14px', fontWeight: '700', flexShrink: 0
   },
@@ -218,7 +218,7 @@ const styles = {
   },
   actions:    { display: 'flex', gap: '6px' },
   editBtn: {
-    background: '#eff6ff', color: '#2563eb', border: 'none',
+    background: '#e8f4fd', color: '#0066b3', border: 'none',
     borderRadius: '6px', padding: '5px 12px', fontSize: '12px',
     fontWeight: '600', cursor: 'pointer'
   },

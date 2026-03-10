@@ -91,8 +91,8 @@ Member.hasMany(Member, { foreignKey: "referred_by", as: "referrals" });
 Member.belongsTo(User, { foreignKey: "deleted_by", as: "deletedByUser" });
 
 // ── EmergencyContact ─────────────────────────────────────────
-Member.hasMany(EmergencyContact, { foreignKey: "member_id" });
-EmergencyContact.belongsTo(Member, { foreignKey: "member_id" });
+Member.hasMany(EmergencyContact, { foreignKey: "member_id", as: "emergencyContacts" });
+EmergencyContact.belongsTo(Member, { foreignKey: "member_id", as: "member" });
 
 // ── MemberNote ───────────────────────────────────────────────
 Member.hasMany(MemberNote, { foreignKey: "member_id" });

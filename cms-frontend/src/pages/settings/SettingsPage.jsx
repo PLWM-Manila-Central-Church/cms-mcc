@@ -144,12 +144,12 @@ export default function SettingsPage() {
         <div style={s.toggleRow}>
           <button
             onClick={() => handleChange(key, isOn ? 'false' : 'true')}
-            style={{ ...s.toggle, background: isOn ? '#1e4080' : '#d1d5db' }}
+            style={{ ...s.toggle, background: isOn ? '#005599' : '#d1d5db' }}
             aria-label={`Toggle ${setting.label}`}
           >
             <span style={{ ...s.toggleThumb, transform: isOn ? 'translateX(22px)' : 'translateX(2px)' }} />
           </button>
-          <span style={{ ...s.toggleLabel, color: isOn ? '#1e4080' : '#6b7280' }}>
+          <span style={{ ...s.toggleLabel, color: isOn ? '#005599' : '#6b7280' }}>
             {isOn ? 'Enabled' : 'Disabled'}
           </span>
         </div>
@@ -223,7 +223,7 @@ export default function SettingsPage() {
               >
                 <span style={s.navIcon}>{GROUP_ICONS[group] || '⚙️'}</span>
                 <span style={s.navLabel}>{group}</span>
-                <span style={{ ...s.navCount, background: isActive ? '#dbeafe' : '#f3f4f6', color: isActive ? '#1e4080' : '#6b7280' }}>
+                <span style={{ ...s.navCount, background: isActive ? '#bde3f5' : '#f3f4f6', color: isActive ? '#005599' : '#6b7280' }}>
                   {count}
                 </span>
               </button>
@@ -289,14 +289,14 @@ const s = {
   subtitle:    { fontSize: '14px', color: '#64748b', marginTop: '4px' },
   headerRight: { display: 'flex', alignItems: 'center', gap: '12px' },
   savedBadge:  { background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '20px', padding: '6px 14px', fontSize: '13px', fontWeight: '600' },
-  saveBtn:     { background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 24px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'opacity 0.15s' },
+  saveBtn:     { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 24px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'opacity 0.15s' },
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '10px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
   changesBanner: { background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '16px' },
   layout:      { display: 'flex', gap: '24px', alignItems: 'flex-start' },
   // Sidebar
   sidebar:     { width: '200px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '4px', position: 'sticky', top: '24px' },
   navItem:     { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 0.12s' },
-  navItemActive: { background: '#eff6ff' },
+  navItemActive: { background: '#e8f4fd' },
   navIcon:     { fontSize: '18px', lineHeight: 1 },
   navLabel:    { flex: 1, fontSize: '14px', fontWeight: '600', color: '#1e293b' },
   navCount:    { fontSize: '11px', fontWeight: '700', padding: '2px 7px', borderRadius: '10px' },
