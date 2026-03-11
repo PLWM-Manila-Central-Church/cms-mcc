@@ -143,7 +143,7 @@ export default function EventsPage() {
     const hr = parseInt(h);
     return ` · ${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
   };
-
+// eslint-disable-next-line no-unused-vars
   const _fc = (name, val, onChange, placeholder, type = 'text') => (
     <div style={s.field}>
       <label style={s.label}>{name}</label>

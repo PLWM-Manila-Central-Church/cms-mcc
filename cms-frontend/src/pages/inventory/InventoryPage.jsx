@@ -43,6 +43,7 @@ export default function InventoryPage() {
 
   // ── Requests state ────────────────────────────────────────
   const [requests, setRequests]       = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [_totalReqs, setTotalReqs]     = useState(0);
   const [reqPage, setReqPage]         = useState(1);
   const [reqPages, setReqPages]       = useState(1);
