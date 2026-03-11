@@ -18,6 +18,12 @@ export const NAV_ITEMS = [
     permissions: { module: 'cellgroups', action: 'read' }
   },
   {
+    label: 'Ministry',
+    path: '/ministry',
+    icon: '🎭',
+    permissions: { module: 'ministry', action: 'read' }
+  },
+  {
     label: 'Users',
     path: '/users',
     icon: '🔑',

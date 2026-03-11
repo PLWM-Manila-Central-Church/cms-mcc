@@ -7,6 +7,7 @@ const {
   User, Role, Member, PasswordResetToken,
   RefreshToken, UserSession, RolePermission, Permission,
 } = require("../models");
+const mailer = require("../utils/mailer");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
 
@@ -128,6 +129,7 @@ exports.refreshToken = async (token) => {
 exports.forgotPassword = async (email) => {
   const user = await User.findOne({ where: { email } });
 
+  // Always return same message to prevent email enumeration
   if (!user) return { message: "If that email exists, a reset link was sent." };
 
   const rawToken  = crypto.randomBytes(32).toString("hex");
@@ -137,10 +139,19 @@ exports.forgotPassword = async (email) => {
   await PasswordResetToken.update({ used: 1 }, { where: { user_id: user.id, used: 0 } });
   await PasswordResetToken.create({ user_id: user.id, token: tokenHash, expires_at: expiresAt, used: 0 });
 
+  // Build reset URL and send email
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const resetUrl = `${frontendUrl}/reset-password?token=${rawToken}`;
+
+  // Non-blocking — email failure does not break the response
+  mailer.sendPasswordReset({ to: user.email, resetUrl }).catch((err) => {
+    console.error("[Auth] Failed to send password reset email:", err.message);
+  });
+
   const isDev = process.env.NODE_ENV === "development";
   return {
     message: "If that email exists, a reset link was sent.",
-    ...(isDev && { dev_token: rawToken }),
+    ...(isDev && { dev_token: rawToken, dev_reset_url: resetUrl }),
   };
 };
 
