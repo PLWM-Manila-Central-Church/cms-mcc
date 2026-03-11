@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
-import { useAuth } from '../../context/AuthContext';
 
 export default function MemberFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
   const isEdit = Boolean(id);
 
   const [form, setForm] = useState({

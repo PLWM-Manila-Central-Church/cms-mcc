@@ -24,7 +24,6 @@ export default function ArchivesPage() {
   const { user, hasPermission } = useAuth();
   const canUpload  = hasPermission('archives', 'upload');
   const canApprove = hasPermission('archives', 'approve');
-  const canManage  = hasPermission('archives', 'manage');
   const isApprover = APPROVER_ROLES.includes(user?.roleId);
 
   const [records, setRecords]       = useState([]);
