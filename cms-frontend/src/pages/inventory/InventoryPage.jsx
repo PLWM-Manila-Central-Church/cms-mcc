@@ -43,7 +43,7 @@ export default function InventoryPage() {
 
   // ── Requests state ────────────────────────────────────────
   const [requests, setRequests]       = useState([]);
-  const [totalReqs, setTotalReqs]     = useState(0);
+  const [_totalReqs, setTotalReqs]     = useState(0);
   const [reqPage, setReqPage]         = useState(1);
   const [reqPages, setReqPages]       = useState(1);
   const [reqFilter, setReqFilter]     = useState('');

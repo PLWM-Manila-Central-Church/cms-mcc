@@ -26,7 +26,7 @@ const STATUS_ACTION_STYLE = {
 
 export default function EventsPage() {
   const navigate        = useNavigate();
-  const { hasPermission, user } = useAuth();
+  const { hasPermission } = useAuth();
   const canCreate       = hasPermission('events', 'create');
 
   const [events, setEvents]         = useState([]);
@@ -144,7 +144,7 @@ export default function EventsPage() {
     return ` · ${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
   };
 
-  const fc = (name, val, onChange, placeholder, type = 'text') => (
+  const _fc = (name, val, onChange, placeholder, type = 'text') => (
     <div style={s.field}>
       <label style={s.label}>{name}</label>
       <input type={type} value={val} onChange={onChange} placeholder={placeholder} style={s.input} />
