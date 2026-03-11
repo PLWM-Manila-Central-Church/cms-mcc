@@ -10,6 +10,7 @@ import MembersPage       from '../pages/members/MembersPage';
 import MemberFormPage    from '../pages/members/MemberFormPage';
 import MemberProfilePage from '../pages/members/MemberProfilePage';
 import CellGroupsPage   from '../pages/cellgroups/CellGroupsPage';
+import MinistryPage     from '../pages/ministry/MinistryPage';
 import UsersPage     from '../pages/users/UsersPage';
 import UserFormPage  from '../pages/users/UserFormPage';
 import ServicesPage   from '../pages/services/ServicesPage';
@@ -76,6 +77,11 @@ const AppRoutes = () => {
       <Route path="/cell-groups" element={
         <ProtectedRoute>
           <MainLayout><CellGroupsPage /></MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/ministry" element={
+        <ProtectedRoute>
+          <MainLayout><MinistryPage /></MainLayout>
         </ProtectedRoute>
       } />
       <Route path="/members/new" element={
