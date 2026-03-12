@@ -24,15 +24,24 @@ export const AuthProvider = ({ children }) => {
     const res = await axiosInstance.post('/auth/login', { email, password });
     const { accessToken, refreshToken, user, permissions, forcePasswordChange } = res.data.data;
 
+    // Store forcePasswordChange inside the user object so ProtectedRoute can enforce it
+    const userWithFlag = { ...user, forcePasswordChange: !!forcePasswordChange };
+
     localStorage.setItem('accessToken',  accessToken);
     localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('user',         JSON.stringify(user));
+    localStorage.setItem('user',         JSON.stringify(userWithFlag));
     localStorage.setItem('permissions',  JSON.stringify(permissions));
 
-    setUser(user);
+    setUser(userWithFlag);
     setPermissions(permissions);
 
     return { forcePasswordChange };
+  };
+
+  const clearForcePasswordChange = () => {
+    const updatedUser = { ...user, forcePasswordChange: false };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
   };
 
   const logout = async () => {
@@ -53,7 +62,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, permissions, loading, login, logout, hasPermission }}>
+    <AuthContext.Provider value={{ user, permissions, loading, login, logout, hasPermission, clearForcePasswordChange }}>
       {children}
     </AuthContext.Provider>
   );
