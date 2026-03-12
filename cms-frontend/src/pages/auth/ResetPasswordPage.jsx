@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 
-const LOGO   = process.env.PUBLIC_URL + '/logo.png';
+const LOGO   = process.env.PUBLIC_URL + '/logo.jpg';
 const BG_URL = process.env.PUBLIC_URL + '/smr.jpg';
 
 const rules = [
