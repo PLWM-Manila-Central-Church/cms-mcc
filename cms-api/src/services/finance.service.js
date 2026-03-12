@@ -9,7 +9,7 @@ const {
 
 const recordIncludes = [
   {
-    model: Member,
+    model: Member.unscoped(),
     attributes: ["id", "first_name", "last_name"],
     required: false,
   },
