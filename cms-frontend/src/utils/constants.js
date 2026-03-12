@@ -69,7 +69,7 @@ export const NAV_ITEMS = [
   label: 'Audit Logs',
   path: '/audit-logs',
   icon: '📋',
-  permissions: { module: 'audit_logs', action: 'read' }
+  permissions: { module: 'audit', action: 'read' }
 },
   {
     label: 'Settings',
