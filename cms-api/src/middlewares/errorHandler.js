@@ -1,6 +1,9 @@
 "use strict";
 
 module.exports = (err, req, res, next) => {
+  console.error("ERR_NAME:", err.name);
+  console.error("ERR_MSG:", err.message);
+  if (err.original) console.error("ERR_SQL:", err.original.sqlMessage || err.original.message);
   console.error(err.stack);
 
   // Sequelize validation errors
