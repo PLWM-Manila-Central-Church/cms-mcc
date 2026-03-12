@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
 
 export default function ForceChangePassword() {
-  const { logout } = useAuth();
+  const { logout, clearForcePasswordChange } = useAuth();
   const navigate   = useNavigate();
 
   const [form, setForm]       = useState({ current_password: '', new_password: '', confirm_password: '' });
@@ -25,6 +25,7 @@ export default function ForceChangePassword() {
     setLoading(true);
     try {
       await axiosInstance.put('/auth/change-password', form);
+      clearForcePasswordChange();
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to change password.');
