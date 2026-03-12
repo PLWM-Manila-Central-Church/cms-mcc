@@ -48,6 +48,7 @@ exports.getAllRecords = async ({ page = 1, limit = 20, category_id, payment_meth
     limit: parseInt(limit),
     offset,
     distinct: true,
+    subQuery: false,
   });
 
   return {
