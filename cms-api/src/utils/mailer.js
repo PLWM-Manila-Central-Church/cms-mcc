@@ -1,19 +1,18 @@
 "use strict";
 
-// ── Resend HTTP API (replaces Nodemailer SMTP)
-// Railway blocks outbound SMTP ports (465/587). Using Resend's REST API
-// over HTTPS (port 443) bypasses this restriction entirely.
+// ── Brevo HTTP API (replaces Resend)
+// No domain verification needed, sends to any email address.
 
-const RESEND_API_URL = "https://api.resend.com/emails";
+const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
-async function sendViaResend(payload) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) throw new Error("[Mailer] RESEND_API_KEY env variable is not set.");
+async function sendViaBrevo(payload) {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) throw new Error("[Mailer] BREVO_API_KEY env variable is not set.");
 
-  const response = await fetch(RESEND_API_URL, {
+  const response = await fetch(BREVO_API_URL, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${apiKey}`,
+      "api-key": apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
@@ -22,31 +21,32 @@ async function sendViaResend(payload) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(`[Mailer] Resend API error: ${data?.message || response.statusText}`);
+    throw new Error(`[Mailer] Brevo API error: ${data?.message || response.statusText}`);
   }
 
-  console.log("[Mailer] Email sent successfully. ID:", data.id);
+  console.log("[Mailer] Email sent successfully. ID:", data.messageId);
   return data;
 }
 
 // ── Verify on startup (non-fatal) ────────────────────────────
 (function verifyMailer() {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn("[Mailer] WARNING: RESEND_API_KEY is not set. Emails will fail.");
+  if (!process.env.BREVO_API_KEY) {
+    console.warn("[Mailer] WARNING: BREVO_API_KEY is not set. Emails will fail.");
   } else {
-    console.log("[Mailer] Resend HTTP mailer ready.");
+    console.log("[Mailer] Brevo HTTP mailer ready.");
   }
 })();
 
 // ── Send Password Reset Email ────────────────────────────────
 exports.sendPasswordReset = async ({ to, resetUrl }) => {
-  const from = process.env.SMTP_FROM || "PLWM-MCC <onboarding@resend.dev>";
+  const fromEmail = "onboarding@resend.dev";
+  const fromName  = "PLWM-MCC";
 
-  await sendViaResend({
-    from,
-    to,
+  await sendViaBrevo({
+    sender: { name: fromName, email: fromEmail },
+    to: [{ email: to }],
     subject: "Reset Your PLWM-MCC Password",
-    text: `
+    textContent: `
 You requested a password reset for your PLWM-MCC Church Management System account.
 
 Click the link below to set a new password. This link expires in 1 hour.
@@ -57,7 +57,7 @@ If you did not request this, you can safely ignore this email.
 
 — PLWM Manila Central Church
     `.trim(),
-    html: `
+    htmlContent: `
 <!DOCTYPE html>
 <html>
 <head>
