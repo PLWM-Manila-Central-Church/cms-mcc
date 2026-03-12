@@ -1,8 +1,6 @@
 "use strict";
 
-// ── Brevo HTTP API (replaces Resend)
-// No domain verification needed, sends to any email address.
-
+// ── Brevo HTTP API
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 async function sendViaBrevo(payload) {
@@ -39,8 +37,11 @@ async function sendViaBrevo(payload) {
 
 // ── Send Password Reset Email ────────────────────────────────
 exports.sendPasswordReset = async ({ to, resetUrl }) => {
-  const fromEmail = "onboarding@resend.dev";
-  const fromName  = "PLWM-MCC";
+  // Reads from SMTP_FROM env var e.g. "PLWM-MCC <johnlesterdematera0961@gmail.com>"
+  const smtpFrom  = process.env.SMTP_FROM || "PLWM-MCC <johnlesterdematera0961@gmail.com>";
+  const match     = smtpFrom.match(/^(.*?)\s*<(.+)>$/);
+  const fromName  = match ? match[1].trim() : "PLWM-MCC";
+  const fromEmail = match ? match[2].trim() : smtpFrom.trim();
 
   await sendViaBrevo({
     sender: { name: fromName, email: fromEmail },
