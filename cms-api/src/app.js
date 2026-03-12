@@ -19,13 +19,28 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── Rate Limit on Auth ───────────────────────────────────────
+// ── Rate Limiters ─────────────────────────────────────────────
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { message: "Too many login attempts. Try again later." },
 });
-app.use("/api/auth", loginLimiter);
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: "Too many password reset requests. Try again later." },
+});
+
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { message: "Too many requests. Try again later." },
+});
+
+app.use("/api/auth/login",           loginLimiter);
+app.use("/api/auth/forgot-password", forgotPasswordLimiter);
+app.use("/api/auth/refresh-token",   refreshLimiter);
 
 // ── Routes ───────────────────────────────────────────────────
 app.use("/api/auth",          require("./routes/auth.routes"));
