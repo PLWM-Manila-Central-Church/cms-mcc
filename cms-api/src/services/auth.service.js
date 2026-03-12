@@ -8,7 +8,6 @@ const {
   RefreshToken, UserSession, RolePermission, Permission,
 } = require("../models");
 const mailer = require("../utils/mailer");
-const auditLog = require("../helpers/auditLog.helper");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
 
@@ -67,8 +66,7 @@ exports.login = async (email, password, ip, device) => {
   await RefreshToken.create({ user_id: user.id, token: refreshToken, expires_at: expiresAt, revoked: 0 });
   await user.update({ last_login_at: new Date() });
   await UserSession.create({ user_id: user.id, ip_address: ip || null, device: device || null, login_at: new Date() });
-  auditLog.log({ userId: user.id, action: "LOGIN", ipAddress: ip });
-
+  
   const permissions = await getUserPermissions(user.role_id);
 
   return {
@@ -189,6 +187,5 @@ exports.logout = async (userId, token) => {
   if (token) {
     await RefreshToken.update({ revoked: 1 }, { where: { user_id: userId, token } });
   }
-  auditLog.log({ userId, action: "LOGOUT" });
   return { message: "Logged out successfully." };
 };
