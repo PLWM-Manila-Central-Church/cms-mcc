@@ -29,9 +29,8 @@ exports.getStats = async () => {
   const recentRecords = await FinancialRecord.findAll({
     order: [["transaction_date", "DESC"]],
     limit: 5,
-    subQuery: false,
     include: [
-      { model: Member,           attributes: ["id", "first_name", "last_name"], required: false },
+      { model: Member.unscoped(), attributes: ["id", "first_name", "last_name"], required: false },
       { model: FinancialCategory, as: "category", attributes: ["id", "name"],  required: false },
     ],
   });
