@@ -25,8 +25,9 @@ router.get("/requests/all",  auth, authorize("inventory", "read"), ctrl.getAllRe
 router.get("/requests",      auth, authorize("inventory", "read"),   ctrl.getAllRequests);
 router.get("/requests/:id",        auth, authorize("inventory", "read"),   ctrl.getRequestById);
 router.post("/requests",           auth, authorize("inventory", "create"), ctrl.createRequest);
-router.put("/requests/:id/review", auth, authorize("inventory", "update"), ctrl.reviewRequest);
-router.delete("/requests/:id",     auth, authorize("inventory", "delete"), ctrl.deleteRequest);
+router.put("/requests/:id/review",   auth, authorize("inventory", "update"), ctrl.reviewRequest);
+router.patch("/requests/:id/review", auth, authorize("inventory", "update"), ctrl.reviewRequest);
+router.delete("/requests/:id",       auth, authorize("inventory", "delete"), ctrl.deleteRequest);
 
 // ── Usage ────────────────────────────────────────────────────
 router.get("/usage",     auth, authorize("inventory", "read"),   ctrl.getAllUsage);

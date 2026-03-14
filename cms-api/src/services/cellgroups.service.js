@@ -1,6 +1,7 @@
 "use strict";
 
 const { CellGroup, CellGroupHistory, Member } = require("../models");
+const auditLog = require("../helpers/auditLog.helper");
 
 // ── Get All Cell Groups ──────────────────────────────────────
 exports.getAllCellGroups = async () => {
@@ -15,16 +16,18 @@ exports.getCellGroupById = async (id) => {
 };
 
 // ── Create Cell Group ────────────────────────────────────────
-exports.createCellGroup = async (data) => {
+exports.createCellGroup = async (data, createdBy) => {
   const { name, area } = data;
   const existing = await CellGroup.findOne({ where: { name } });
   if (existing)
     throw { status: 409, message: "Cell group name already exists" };
-  return await CellGroup.create({ name, area: area || null });
+  const cg = await CellGroup.create({ name, area: area || null });
+  auditLog.log({ userId: createdBy, action: "CREATE_CELL_GROUP", targetTable: "cell_groups", targetId: cg.id });
+  return cg;
 };
 
 // ── Update Cell Group ────────────────────────────────────────
-exports.updateCellGroup = async (id, data) => {
+exports.updateCellGroup = async (id, data, updatedBy) => {
   const cellGroup = await CellGroup.findByPk(id);
   if (!cellGroup) throw { status: 404, message: "Cell group not found" };
 
@@ -39,11 +42,12 @@ exports.updateCellGroup = async (id, data) => {
     ...(name && { name }),
     ...(area !== undefined && { area }),
   });
+  auditLog.log({ userId: updatedBy, action: "UPDATE_CELL_GROUP", targetTable: "cell_groups", targetId: id });
   return cellGroup;
 };
 
 // ── Delete Cell Group ────────────────────────────────────────
-exports.deleteCellGroup = async (id) => {
+exports.deleteCellGroup = async (id, deletedBy) => {
   const cellGroup = await CellGroup.findByPk(id);
   if (!cellGroup) throw { status: 404, message: "Cell group not found" };
 
@@ -55,6 +59,7 @@ exports.deleteCellGroup = async (id) => {
     };
 
   await cellGroup.destroy();
+  auditLog.log({ userId: deletedBy, action: "DELETE_CELL_GROUP", targetTable: "cell_groups", targetId: id });
   return { message: "Cell group deleted successfully." };
 };
 

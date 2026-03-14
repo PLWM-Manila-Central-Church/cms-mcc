@@ -22,7 +22,7 @@ exports.getCellGroupById = async (req, res, next) => {
 
 exports.createCellGroup = async (req, res, next) => {
   try {
-    const data = await cellGroupsService.createCellGroup(req.body);
+    const data = await cellGroupsService.createCellGroup(req.body, req.user.userId);
     res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -31,7 +31,7 @@ exports.createCellGroup = async (req, res, next) => {
 
 exports.updateCellGroup = async (req, res, next) => {
   try {
-    const data = await cellGroupsService.updateCellGroup(req.params.id, req.body);
+    const data = await cellGroupsService.updateCellGroup(req.params.id, req.body, req.user.userId);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -40,7 +40,7 @@ exports.updateCellGroup = async (req, res, next) => {
 
 exports.deleteCellGroup = async (req, res, next) => {
   try {
-    const data = await cellGroupsService.deleteCellGroup(req.params.id);
+    const data = await cellGroupsService.deleteCellGroup(req.params.id, req.user.userId);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

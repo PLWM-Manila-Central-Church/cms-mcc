@@ -176,7 +176,9 @@ exports.updateRecord = async (id, data) => {
     ...(notes !== undefined && { notes }),
   });
 
-  return await exports.getRecordById(id);
+  const updated = await exports.getRecordById(id);
+  auditLog.log({ userId: updated.recorded_by, action: "UPDATE_FINANCE_RECORD", targetTable: "financial_records", targetId: id });
+  return updated;
 };
 
 // ── Soft Delete Financial Record ─────────────────────────────

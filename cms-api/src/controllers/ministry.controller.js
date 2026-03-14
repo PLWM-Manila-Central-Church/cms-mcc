@@ -23,7 +23,7 @@ exports.getRoleById = async (req, res, next) => {
 
 exports.createRole = async (req, res, next) => {
   try {
-    const data = await ministryService.createRole(req.body);
+    const data = await ministryService.createRole(req.body, req.user.userId);
     res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -32,7 +32,7 @@ exports.createRole = async (req, res, next) => {
 
 exports.updateRole = async (req, res, next) => {
   try {
-    const data = await ministryService.updateRole(req.params.id, req.body);
+    const data = await ministryService.updateRole(req.params.id, req.body, req.user.userId);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -41,7 +41,7 @@ exports.updateRole = async (req, res, next) => {
 
 exports.deleteRole = async (req, res, next) => {
   try {
-    const data = await ministryService.deleteRole(req.params.id);
+    const data = await ministryService.deleteRole(req.params.id, req.user.userId);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -78,7 +78,7 @@ exports.getAssignmentsByService = async (req, res, next) => {
 
 exports.createAssignment = async (req, res, next) => {
   try {
-    const data = await ministryService.createAssignment(req.body);
+    const data = await ministryService.createAssignment(req.body, req.user.userId);
     res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -87,7 +87,7 @@ exports.createAssignment = async (req, res, next) => {
 
 exports.updateAssignment = async (req, res, next) => {
   try {
-    const data = await ministryService.updateAssignment(req.params.id, req.body);
+    const data = await ministryService.updateAssignment(req.params.id, req.body, req.user.userId);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -96,7 +96,7 @@ exports.updateAssignment = async (req, res, next) => {
 
 exports.deleteAssignment = async (req, res, next) => {
   try {
-    const data = await ministryService.deleteAssignment(req.params.id);
+    const data = await ministryService.deleteAssignment(req.params.id, req.user.userId);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

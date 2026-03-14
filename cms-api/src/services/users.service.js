@@ -2,6 +2,7 @@
 
 const bcrypt = require("bcrypt");
 const { User, Role, Member } = require("../models");
+const auditLog = require("../helpers/auditLog.helper");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
 
@@ -35,7 +36,7 @@ exports.getUserById = async (id) => {
 };
 
 // ── Create User ──────────────────────────────────────────────
-exports.createUser = async (data) => {
+exports.createUser = async (data, createdBy) => {
   const { email, password, role_id, member_id, invited_member_id } = data;
 
   const existing = await User.findOne({ where: { email } });
@@ -56,11 +57,13 @@ exports.createUser = async (data) => {
     force_password_change: 1,
   });
 
-  return await exports.getUserById(user.id);
+  const created = await exports.getUserById(user.id);
+  auditLog.log({ userId: createdBy, action: "CREATE_USER", targetTable: "users", targetId: created.id });
+  return created;
 };
 
 // ── Update User ──────────────────────────────────────────────
-exports.updateUser = async (id, data) => {
+exports.updateUser = async (id, data, updatedBy) => {
   const user = await User.findByPk(id);
   if (!user) throw { status: 404, message: "User not found" };
 
@@ -84,6 +87,7 @@ exports.updateUser = async (id, data) => {
     ...(is_active !== undefined && { is_active }),
   });
 
+  auditLog.log({ userId: updatedBy, action: "UPDATE_USER", targetTable: "users", targetId: id });
   return await exports.getUserById(id);
 };
 
@@ -96,15 +100,17 @@ exports.deactivateUser = async (id, requestingUserId) => {
   if (!user) throw { status: 404, message: "User not found" };
 
   await user.update({ is_active: 0 });
+  auditLog.log({ userId: requestingUserId, action: "DEACTIVATE_USER", targetTable: "users", targetId: id });
   return { message: "User deactivated successfully." };
 };
 
 // ── Activate User ─────────────────────────────────────────────
-exports.activateUser = async (id) => {
+exports.activateUser = async (id, requestingUserId) => {
   const user = await User.findByPk(id);
   if (!user) throw { status: 404, message: "User not found" };
 
   await user.update({ is_active: 1 });
+  auditLog.log({ userId: requestingUserId, action: "ACTIVATE_USER", targetTable: "users", targetId: id });
   return { message: "User activated successfully." };
 };
 
@@ -135,5 +141,6 @@ exports.hardDeleteUser = async (id, requestingUserId) => {
     await user.destroy({ transaction: t });
   });
 
+  auditLog.log({ userId: requestingUserId, action: "DELETE_USER", targetTable: "users", targetId: id });
   return { message: "User permanently deleted." };
 };

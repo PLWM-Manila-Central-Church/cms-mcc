@@ -108,11 +108,12 @@ exports.createEvent = async (data, createdBy) => {
     created_by: createdBy,
   });
 
-  return await exports.getEventById(event.id);
-};
+  const created = await exports.getEventById(event.id);
+  auditLog.log({ userId: createdBy, action: "CREATE_EVENT", targetTable: "events", targetId: created.id });
+  return created;
 
 // ── Update Event ─────────────────────────────────────────────
-exports.updateEvent = async (id, data) => {
+exports.updateEvent = async (id, data, updatedBy) => {
   const event = await Event.findOne({ where: { id } });
   if (!event) throw { status: 404, message: "Event not found" };
 
@@ -150,11 +151,12 @@ exports.updateEvent = async (id, data) => {
     ...(status                               && { status }),
   });
 
+  auditLog.log({ userId: updatedBy, action: "UPDATE_EVENT", targetTable: "events", targetId: id });
   return await exports.getEventById(id);
 };
 
 // ── Update Event Status ──────────────────────────────────────
-exports.updateEventStatus = async (id, newStatus) => {
+exports.updateEventStatus = async (id, newStatus, updatedBy) => {
   const event = await Event.findOne({ where: { id } });
   if (!event) throw { status: 404, message: "Event not found" };
 
@@ -172,6 +174,7 @@ exports.updateEventStatus = async (id, newStatus) => {
     };
 
   await event.update({ status: newStatus });
+  auditLog.log({ userId: updatedBy, action: "UPDATE_EVENT_STATUS", targetTable: "events", targetId: id, newValues: { status: newStatus } });
   return await exports.getEventById(id);
 };
 
@@ -189,6 +192,7 @@ exports.deleteEvent = async (id, deletedBy) => {
     deleted_by: deletedBy,
   });
 
+  auditLog.log({ userId: deletedBy, action: "DELETE_EVENT", targetTable: "events", targetId: id });
   return { message: "Event deleted successfully." };
 };
 
@@ -243,7 +247,7 @@ exports.getEventRegistrations = async (eventId) => {
   });
 };
 
-exports.registerMember = async (eventId, memberId) => {
+exports.registerMember = async (eventId, memberId, registeredBy) => {
   const event = await Event.findOne({ where: { id: eventId } });
   if (!event) throw { status: 404, message: "Event not found" };
   if (event.status !== "published")
@@ -258,12 +262,15 @@ exports.registerMember = async (eventId, memberId) => {
     const count = await EventRegistration.count({ where: { event_id: eventId } });
     if (count >= event.capacity) throw { status: 400, message: "Event has reached full capacity" };
   }
-  return await EventRegistration.create({ event_id: eventId, member_id: memberId, registered_at: new Date() });
+  const reg = await EventRegistration.create({ event_id: eventId, member_id: memberId, registered_at: new Date() });
+  auditLog.log({ userId: registeredBy, action: "REGISTER_EVENT", targetTable: "event_registrations", targetId: reg.id, newValues: { event_id: eventId, member_id: memberId } });
+  return reg;
 };
 
-exports.unregisterMember = async (eventId, memberId) => {
+exports.unregisterMember = async (eventId, memberId, unregisteredBy) => {
   const registration = await EventRegistration.findOne({ where: { event_id: eventId, member_id: memberId } });
   if (!registration) throw { status: 404, message: "Registration not found" };
   await registration.destroy();
+  auditLog.log({ userId: unregisteredBy, action: "UNREGISTER_EVENT", targetTable: "event_registrations", targetId: null, newValues: { event_id: eventId, member_id: memberId } });
   return { message: "Member unregistered from event successfully." };
 };

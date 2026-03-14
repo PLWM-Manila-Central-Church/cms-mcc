@@ -1,5 +1,6 @@
 "use strict";
 
+const auditLog = require("../helpers/auditLog.helper");
 const { Service } = require("../models");
 
 // ── Get All Services (paginated) ─────────────────────────────
@@ -30,7 +31,7 @@ exports.getServiceById = async (id) => {
 };
 
 // ── Create Service ───────────────────────────────────────────
-exports.createService = async (data) => {
+exports.createService = async (data, createdBy) => {
   const {
     title,
     service_date,
@@ -41,7 +42,7 @@ exports.createService = async (data) => {
     status,
   } = data;
 
-  return await Service.create({
+  const service = await Service.create({
     title,
     service_date,
     service_time,
@@ -50,10 +51,13 @@ exports.createService = async (data) => {
     response_deadline: response_deadline || null,
     status: status || "draft",
   });
+
+  auditLog.log({ userId: createdBy, action: "CREATE_SERVICE", targetTable: "services", targetId: service.id });
+  return service;
 };
 
 // ── Update Service ───────────────────────────────────────────
-exports.updateService = async (id, data) => {
+exports.updateService = async (id, data, updatedBy) => {
   const service = await Service.findByPk(id);
   if (!service) throw { status: 404, message: "Service not found" };
 
@@ -83,11 +87,12 @@ exports.updateService = async (id, data) => {
     ...(status && { status }),
   });
 
+  auditLog.log({ userId: updatedBy, action: "UPDATE_SERVICE", targetTable: "services", targetId: id });
   return service;
 };
 
 // ── Delete Service ───────────────────────────────────────────
-exports.deleteService = async (id) => {
+exports.deleteService = async (id, deletedBy) => {
   const service = await Service.findByPk(id);
   if (!service) throw { status: 404, message: "Service not found" };
 
@@ -95,11 +100,12 @@ exports.deleteService = async (id) => {
     throw { status: 400, message: "Cannot delete a completed service" };
 
   await service.destroy();
+  auditLog.log({ userId: deletedBy, action: "DELETE_SERVICE", targetTable: "services", targetId: id });
   return { message: "Service deleted successfully." };
 };
 
 // ── Update Service Status ────────────────────────────────────
-exports.updateStatus = async (id, status) => {
+exports.updateStatus = async (id, status, updatedBy) => {
   const allowed = ["draft", "published", "completed", "cancelled"];
   if (!allowed.includes(status))
     throw { status: 400, message: "Invalid status value" };
@@ -121,5 +127,6 @@ exports.updateStatus = async (id, status) => {
     };
 
   await service.update({ status });
+  auditLog.log({ userId: updatedBy, action: "UPDATE_SERVICE_STATUS", targetTable: "services", targetId: id, newValues: { status } });
   return service;
 };

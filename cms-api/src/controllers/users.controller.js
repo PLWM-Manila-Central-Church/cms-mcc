@@ -22,7 +22,7 @@ exports.getUserById = async (req, res, next) => {
 
 exports.createUser = async (req, res, next) => {
   try {
-    const result = await usersService.createUser(req.body);
+    const result = await usersService.createUser(req.body, req.user.userId);
     res.status(201).json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -31,7 +31,7 @@ exports.createUser = async (req, res, next) => {
 
 exports.updateUser = async (req, res, next) => {
   try {
-    const result = await usersService.updateUser(req.params.id, req.body);
+    const result = await usersService.updateUser(req.params.id, req.body, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -52,7 +52,7 @@ exports.deactivateUser = async (req, res, next) => {
 
 exports.activateUser = async (req, res, next) => {
   try {
-    const result = await usersService.activateUser(req.params.id);
+    const result = await usersService.activateUser(req.params.id, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

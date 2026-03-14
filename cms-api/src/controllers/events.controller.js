@@ -26,7 +26,7 @@ exports.createEvent = async (req, res, next) => {
 
 exports.updateEvent = async (req, res, next) => {
   try {
-    const result = await eventsService.updateEvent(req.params.id, req.body);
+    const result = await eventsService.updateEvent(req.params.id, req.body, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -34,7 +34,7 @@ exports.updateEvent = async (req, res, next) => {
 exports.updateEventStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
-    const result = await eventsService.updateEventStatus(req.params.id, status);
+    const result = await eventsService.updateEventStatus(req.params.id, status, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -92,14 +92,19 @@ exports.getEventRegistrations = async (req, res, next) => {
 
 exports.registerMember = async (req, res, next) => {
   try {
-    const result = await eventsService.registerMember(req.params.id, req.body.member_id);
+    // Allow self-registration: if no member_id in body, use the logged-in user's member
+    const memberId = req.body.member_id || req.user.memberId;
+    if (!memberId) return res.status(400).json({ success: false, message: "No member profile linked to this account" });
+    const result = await eventsService.registerMember(req.params.id, memberId, req.user.userId);
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
 };
 
 exports.unregisterMember = async (req, res, next) => {
   try {
-    const result = await eventsService.unregisterMember(req.params.id, req.body.member_id);
+    const memberId = req.body.member_id || req.user.memberId;
+    if (!memberId) return res.status(400).json({ success: false, message: "No member profile linked to this account" });
+    const result = await eventsService.unregisterMember(req.params.id, memberId, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };

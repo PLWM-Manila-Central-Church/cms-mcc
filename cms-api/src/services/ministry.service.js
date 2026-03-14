@@ -1,5 +1,6 @@
 "use strict";
 
+const auditLog = require("../helpers/auditLog.helper");
 const {
   MinistryRole,
   MinistryAssignment,
@@ -39,16 +40,18 @@ exports.getRoleById = async (id) => {
 };
 
 // ── Create Ministry Role ─────────────────────────────────────
-exports.createRole = async (data) => {
+exports.createRole = async (data, createdBy) => {
   const { name } = data;
   const existing = await MinistryRole.findOne({ where: { name } });
   if (existing)
     throw { status: 409, message: "Ministry role name already exists" };
-  return await MinistryRole.create({ name });
+  const role = await MinistryRole.create({ name });
+  auditLog.log({ userId: createdBy, action: "CREATE_MINISTRY_ROLE", targetTable: "ministry_roles", targetId: role.id });
+  return role;
 };
 
 // ── Update Ministry Role ─────────────────────────────────────
-exports.updateRole = async (id, data) => {
+exports.updateRole = async (id, data, updatedBy) => {
   const role = await MinistryRole.findByPk(id);
   if (!role) throw { status: 404, message: "Ministry role not found" };
 
@@ -60,11 +63,12 @@ exports.updateRole = async (id, data) => {
   }
 
   await role.update({ ...(name && { name }) });
+  auditLog.log({ userId: updatedBy, action: "UPDATE_MINISTRY_ROLE", targetTable: "ministry_roles", targetId: id });
   return role;
 };
 
 // ── Delete Ministry Role ─────────────────────────────────────
-exports.deleteRole = async (id) => {
+exports.deleteRole = async (id, deletedBy) => {
   const role = await MinistryRole.findByPk(id);
   if (!role) throw { status: 404, message: "Ministry role not found" };
 
@@ -78,6 +82,7 @@ exports.deleteRole = async (id) => {
     };
 
   await role.destroy();
+  auditLog.log({ userId: deletedBy, action: "DELETE_MINISTRY_ROLE", targetTable: "ministry_roles", targetId: id });
   return { message: "Ministry role deleted successfully." };
 };
 
@@ -112,7 +117,7 @@ exports.getAssignmentsByService = async (serviceId) => {
 };
 
 // ── Create Assignment ────────────────────────────────────────
-exports.createAssignment = async (data) => {
+exports.createAssignment = async (data, createdBy) => {
   const { service_id, member_id, ministry_role_id } = data;
 
   const service = await Service.findByPk(service_id);
@@ -124,7 +129,6 @@ exports.createAssignment = async (data) => {
   const role = await MinistryRole.findByPk(ministry_role_id);
   if (!role) throw { status: 404, message: "Ministry role not found" };
 
-  // Prevent duplicate assignment for same service + member + role
   const existing = await MinistryAssignment.findOne({
     where: { service_id, member_id, ministry_role_id },
   });
@@ -142,11 +146,13 @@ exports.createAssignment = async (data) => {
     substitute_requested: 0,
   });
 
-  return await exports.getAssignmentById(assignment.id);
+  const created = await exports.getAssignmentById(assignment.id);
+  auditLog.log({ userId: createdBy, action: "CREATE_MINISTRY_ASSIGNMENT", targetTable: "ministry_assignments", targetId: created.id });
+  return created;
 };
 
 // ── Update Assignment ────────────────────────────────────────
-exports.updateAssignment = async (id, data) => {
+exports.updateAssignment = async (id, data, updatedBy) => {
   const assignment = await MinistryAssignment.findByPk(id);
   if (!assignment)
     throw { status: 404, message: "Ministry assignment not found" };
@@ -164,15 +170,17 @@ exports.updateAssignment = async (id, data) => {
     ...(substitute_requested !== undefined && { substitute_requested }),
   });
 
+  auditLog.log({ userId: updatedBy, action: "UPDATE_MINISTRY_ASSIGNMENT", targetTable: "ministry_assignments", targetId: id });
   return await exports.getAssignmentById(id);
 };
 
 // ── Delete Assignment ────────────────────────────────────────
-exports.deleteAssignment = async (id) => {
+exports.deleteAssignment = async (id, deletedBy) => {
   const assignment = await MinistryAssignment.findByPk(id);
   if (!assignment)
     throw { status: 404, message: "Ministry assignment not found" };
 
   await assignment.destroy();
+  auditLog.log({ userId: deletedBy, action: "DELETE_MINISTRY_ASSIGNMENT", targetTable: "ministry_assignments", targetId: id });
   return { message: "Ministry assignment deleted successfully." };
 };

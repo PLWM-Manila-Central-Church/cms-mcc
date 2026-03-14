@@ -1,6 +1,7 @@
 "use strict";
 
 const { Op } = require("sequelize");
+const auditLog = require("../helpers/auditLog.helper");
 const {
   ArchiveRecord,
   ArchiveCategory,
@@ -117,10 +118,9 @@ exports.createRecord = async (data, uploadedBy) => {
     uploaded_by:    uploadedBy,
   });
 
-  return await exports.getRecordById(record.id);
-};
-
-// ── Update Record ────────────────────────────────────────────
+  const created = await exports.getRecordById(record.id);
+  auditLog.log({ userId: uploadedBy, action: "UPLOAD_ARCHIVE", targetTable: "archive_records", targetId: created.id });
+  return created;
 exports.updateRecord = async (id, data, uploadedBy) => {
   const record = await ArchiveRecord.findOne({ where: { id } });
   if (!record) throw { status: 404, message: "Archive record not found" };
@@ -167,6 +167,7 @@ exports.updateRecord = async (id, data, uploadedBy) => {
     approved_by: null,
   });
 
+  auditLog.log({ userId: uploadedBy, action: "UPDATE_ARCHIVE", targetTable: "archive_records", targetId: id });
   return await exports.getRecordById(id);
 };
 
@@ -179,6 +180,7 @@ exports.approveRecord = async (id, approvedBy) => {
     throw { status: 400, message: "Only pending records can be approved" };
 
   await record.update({ status: "approved", approved_by: approvedBy });
+  auditLog.log({ userId: approvedBy, action: "APPROVE_ARCHIVE", targetTable: "archive_records", targetId: id });
   return await exports.getRecordById(id);
 };
 
@@ -194,6 +196,7 @@ exports.deleteRecord = async (id, deletedBy) => {
     status:     "deleted",
   });
 
+  auditLog.log({ userId: deletedBy, action: "DELETE_ARCHIVE", targetTable: "archive_records", targetId: id });
   return { message: "Archive record deleted successfully." };
 };
 

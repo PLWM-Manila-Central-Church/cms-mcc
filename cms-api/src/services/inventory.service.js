@@ -54,7 +54,7 @@ exports.getItemById = async (id) => {
 };
 
 // ── Create Item ──────────────────────────────────────────────
-exports.createItem = async (data) => {
+exports.createItem = async (data, createdBy) => {
   const {
     name,
     category_id,
@@ -81,11 +81,10 @@ exports.createItem = async (data) => {
     notes: notes || null,
   });
 
-  return await exports.getItemById(item.id);
-};
-
-// ── Update Item ──────────────────────────────────────────────
-exports.updateItem = async (id, data) => {
+  const created = await exports.getItemById(item.id);
+  auditLog.log({ userId: createdBy, action: "CREATE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: created.id });
+  return created;
+exports.updateItem = async (id, data, updatedBy) => {
   const item = await InventoryItem.findByPk(id);
   if (!item) throw { status: 404, message: "Inventory item not found" };
 
@@ -115,15 +114,17 @@ exports.updateItem = async (id, data) => {
     ...(notes !== undefined && { notes }),
   });
 
+  auditLog.log({ userId: updatedBy, action: "UPDATE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: id });
   return await exports.getItemById(id);
 };
 
 // ── Delete Item ──────────────────────────────────────────────
-exports.deleteItem = async (id) => {
+exports.deleteItem = async (id, deletedBy) => {
   const item = await InventoryItem.findByPk(id);
   if (!item) throw { status: 404, message: "Inventory item not found" };
 
   await item.destroy();
+  auditLog.log({ userId: deletedBy, action: "DELETE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: id });
   return { message: "Inventory item deleted successfully." };
 };
 
@@ -253,10 +254,9 @@ exports.createRequest = async (data, requestedBy) => {
     status: "pending",
   });
 
-  return await exports.getRequestById(request.id);
-};
-
-// ── Review Request (Approve/Reject) ──────────────────────────
+  const created = await exports.getRequestById(request.id);
+  auditLog.log({ userId: requestedBy, action: "CREATE_INVENTORY_REQUEST", targetTable: "inventory_requests", targetId: created.id });
+  return created;
 exports.reviewRequest = async (id, status, reviewedBy) => {
   const request = await InventoryRequest.findByPk(id);
   if (!request) throw { status: 404, message: "Inventory request not found" };
@@ -276,11 +276,12 @@ exports.reviewRequest = async (id, status, reviewedBy) => {
   }
 
   await request.update({ status, reviewed_by: reviewedBy });
+  auditLog.log({ userId: reviewedBy, action: `INVENTORY_REQUEST_${status.toUpperCase()}`, targetTable: "inventory_requests", targetId: id, newValues: { status } });
   return await exports.getRequestById(id);
 };
 
 // ── Delete Request ───────────────────────────────────────────
-exports.deleteRequest = async (id) => {
+exports.deleteRequest = async (id, deletedBy) => {
   const request = await InventoryRequest.findByPk(id);
   if (!request) throw { status: 404, message: "Inventory request not found" };
 
@@ -288,6 +289,7 @@ exports.deleteRequest = async (id) => {
     throw { status: 400, message: "Only pending requests can be deleted" };
 
   await request.destroy();
+  auditLog.log({ userId: deletedBy, action: "DELETE_INVENTORY_REQUEST", targetTable: "inventory_requests", targetId: id });
   return { message: "Inventory request deleted successfully." };
 };
 

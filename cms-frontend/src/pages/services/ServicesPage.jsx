@@ -190,6 +190,11 @@ export default function ServicesPage() {
         )}
       </div>
 
+      {isMember && !user?.memberId && (
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '12px 18px', marginBottom: '16px', fontSize: '14px', color: '#9a3412' }}>
+          ⚠️ Your account is not linked to a member profile. Contact your admin to enable service pre-registration.
+        </div>
+      )}
       {isMember && (
         <div style={styles.memberHint}>
           ⛪ Click <strong>Pre-Register</strong> on any published service to set your attendance.
@@ -293,7 +298,7 @@ export default function ServicesPage() {
               const nextStatuses = (canCreate && !isMember) ? STATUS_FLOW[s.status] : [];
               const attended     = s.ServiceAttendanceSummary?.total_attended ?? 0;
               const myResponse   = myResponses[s.id];
-              const canPreReg    = isMember && s.status === 'published' && user?.memberId;
+              const canPreReg    = isMember && s.status === 'published' && !!user?.memberId;
 
               return (
                 <tr key={s.id}

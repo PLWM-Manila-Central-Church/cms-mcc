@@ -1,6 +1,7 @@
 "use strict";
 
 const { Role, User } = require("../models");
+const auditLog = require("../helpers/auditLog.helper");
 
 // ── Get All Roles ────────────────────────────────────────────
 exports.getAllRoles = async () => {
@@ -17,21 +18,24 @@ exports.getRoleById = async (id) => {
 };
 
 // ── Create Role ──────────────────────────────────────────────
-exports.createRole = async (data) => {
+exports.createRole = async (data, createdBy) => {
   const { role_name, description } = data;
 
   const existing = await Role.findOne({ where: { role_name } });
   if (existing) throw { status: 409, message: "Role name already exists" };
 
-  return await Role.create({
+  const role = await Role.create({
     role_name,
     description: description || null,
     is_system: 0,
   });
+
+  auditLog.log({ userId: createdBy, action: "CREATE_ROLE", targetTable: "roles", targetId: role.id });
+  return role;
 };
 
 // ── Update Role ──────────────────────────────────────────────
-exports.updateRole = async (id, data) => {
+exports.updateRole = async (id, data, updatedBy) => {
   const role = await Role.findByPk(id);
   if (!role) throw { status: 404, message: "Role not found" };
 
@@ -50,18 +54,18 @@ exports.updateRole = async (id, data) => {
     ...(description !== undefined && { description }),
   });
 
+  auditLog.log({ userId: updatedBy, action: "UPDATE_ROLE", targetTable: "roles", targetId: id });
   return role;
 };
 
 // ── Delete Role ──────────────────────────────────────────────
-exports.deleteRole = async (id) => {
+exports.deleteRole = async (id, deletedBy) => {
   const role = await Role.findByPk(id);
   if (!role) throw { status: 404, message: "Role not found" };
 
   if (role.is_system)
     throw { status: 403, message: "System roles cannot be deleted" };
 
-  // Check if any users are assigned to this role
   const usersWithRole = await User.count({ where: { role_id: id } });
   if (usersWithRole > 0)
     throw {
@@ -70,5 +74,6 @@ exports.deleteRole = async (id) => {
     };
 
   await role.destroy();
+  auditLog.log({ userId: deletedBy, action: "DELETE_ROLE", targetTable: "roles", targetId: id });
   return { message: "Role deleted successfully." };
 };

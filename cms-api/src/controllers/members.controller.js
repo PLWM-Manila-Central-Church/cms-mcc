@@ -22,7 +22,7 @@ exports.getMemberById = async (req, res, next) => {
 
 exports.createMember = async (req, res, next) => {
   try {
-    const result = await membersService.createMember(req.body);
+    const result = await membersService.createMember(req.body, req.user.userId);
     res.status(201).json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -31,7 +31,7 @@ exports.createMember = async (req, res, next) => {
 
 exports.updateMember = async (req, res, next) => {
   try {
-    const result = await membersService.updateMember(req.params.id, req.body);
+    const result = await membersService.updateMember(req.params.id, req.body, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

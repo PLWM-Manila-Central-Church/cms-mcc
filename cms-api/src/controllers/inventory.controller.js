@@ -23,29 +23,23 @@ exports.getItemById = async (req, res, next) => {
 
 exports.createItem = async (req, res, next) => {
   try {
-    const data = await inventoryService.createItem(req.body);
+    const data = await inventoryService.createItem(req.body, req.user.userId);
     res.status(201).json({ success: true, data });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 exports.updateItem = async (req, res, next) => {
   try {
-    const data = await inventoryService.updateItem(req.params.id, req.body);
+    const data = await inventoryService.updateItem(req.params.id, req.body, req.user.userId);
     res.json({ success: true, data });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 exports.deleteItem = async (req, res, next) => {
   try {
-    const data = await inventoryService.deleteItem(req.params.id);
+    const data = await inventoryService.deleteItem(req.params.id, req.user.userId);
     res.json({ success: true, data });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 // ── Categories ───────────────────────────────────────────────
@@ -153,11 +147,9 @@ exports.reviewRequest = async (req, res, next) => {
 
 exports.deleteRequest = async (req, res, next) => {
   try {
-    const data = await inventoryService.deleteRequest(req.params.id);
+    const data = await inventoryService.deleteRequest(req.params.id, req.user.userId);
     res.json({ success: true, data });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 // ── Usage ────────────────────────────────────────────────────
