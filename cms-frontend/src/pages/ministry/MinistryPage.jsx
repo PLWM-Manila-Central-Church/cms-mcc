@@ -605,7 +605,6 @@ function RolesTab() {
    Substitute Requests Tab (Member role only)
 ───────────────────────────────────────────────────────────── */
 function SubstituteRequestsTab() {
-  const { user } = useAuth();
   const [requests, setRequests]     = useState([]);
   const [services, setServices]     = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -614,7 +613,6 @@ function SubstituteRequestsTab() {
   const [saving, setSaving]         = useState(false);
   const [formError, setFormError]   = useState('');
   const [form, setForm]             = useState({ service_id: '', reason: '', proposed_member_id: '' });
-  const [members, setMembers]       = useState([]);
   const [memberSearch, setMemberSearch]   = useState('');
   const [memberResults, setMemberResults] = useState([]);
   let searchTimeout = null;
