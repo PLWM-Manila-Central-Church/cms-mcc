@@ -107,13 +107,22 @@ const attendanceService = require("../services/attendance.service");
 
 exports.getAttendanceByService = async (req, res, next) => {
   try {
-    const { Attendance, Member } = require("../models");
+    const { Attendance, Member, Service, ServiceAttendanceSummary } = require("../models");
+
+    const service = await Service.findByPk(req.params.id);
+    if (!service) return res.status(404).json({ success: false, message: "Service not found" });
+
     const records = await Attendance.findAll({
       where: { service_id: req.params.id },
       include: [{ model: Member, attributes: ["id", "first_name", "last_name", "barcode"], required: false }],
       order: [["checked_in_at", "DESC"]],
     });
-    res.json({ success: true, data: records });
+
+    const summary = await ServiceAttendanceSummary.findOne({
+      where: { service_id: req.params.id },
+    });
+
+    res.json({ success: true, data: { service, records, summary: summary || null } });
   } catch (err) { next(err); }
 };
 
@@ -142,14 +151,18 @@ exports.deleteAttendanceForService = async (req, res, next) => {
 // ── Service Responses alias (:id/responses) ─────────────────
 exports.getResponsesByServiceAlias = async (req, res, next) => {
   try {
-    const data = await serviceExtrasService.getResponsesByService(req.params.id);
-    res.json({ success: true, data });
+    const responses = await serviceExtrasService.getResponsesByService(req.params.id);
+    // Wrap in { responses } so frontend can do res.data.data.responses
+    res.json({ success: true, data: { responses } });
   } catch (err) { next(err); }
 };
 
 exports.createOrUpdateResponseAlias = async (req, res, next) => {
   try {
-    const { member_id, ...responseData } = req.body;
+    // Fall back to the logged-in user's memberId for self pre-registration
+    const member_id = req.body.member_id || req.user.memberId;
+    if (!member_id) return res.status(400).json({ success: false, message: "No member profile linked to this account" });
+    const { member_id: _m, ...responseData } = req.body;
     const data = await serviceExtrasService.createOrUpdateResponse(
       req.params.id, member_id, responseData, req.user.userId,
     );

@@ -170,6 +170,7 @@ exports.resetPassword = async (token, newPassword) => {
   await User.update({ password_hash: hash, force_password_change: 0 }, { where: { id: record.user_id } });
   await record.update({ used: 1 });
 
+  auditLog.log({ userId: record.user_id, action: "RESET_PASSWORD" });
   return { message: "Password updated successfully." };
 };
 
@@ -182,6 +183,7 @@ exports.changePassword = async (userId, currentPassword, newPassword) => {
   const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   await user.update({ password_hash: hash, force_password_change: 0 });
 
+  auditLog.log({ userId, action: "CHANGE_PASSWORD" });
   return { message: "Password changed successfully." };
 };
 

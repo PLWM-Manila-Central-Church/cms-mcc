@@ -1,6 +1,7 @@
 "use strict";
 
 const { SystemSetting } = require("../models");
+const auditLog = require("../helpers/auditLog.helper");
 
 // Static metadata for known settings keys
 const SETTING_META = {
@@ -81,17 +82,18 @@ exports.updateSetting = async (key, value, updatedBy) => {
   if (!setting) throw { status: 404, message: "Setting not found" };
 
   await setting.update({ value, updated_by: updatedBy });
+  auditLog.log({ userId: updatedBy, action: "UPDATE_SETTING", targetTable: "system_settings", targetId: key });
   return setting;
 };
 
 // ── Bulk Update Settings (array format) ──────────────────────
 exports.bulkUpdateSettings = async (settings, updatedBy) => {
-  // settings = [{ key, value }, ...]
   for (const { key, value } of settings) {
     const setting = await SystemSetting.findOne({ where: { key } });
     if (!setting) throw { status: 404, message: `Setting '${key}' not found` };
     await setting.update({ value, updated_by: updatedBy });
   }
+  auditLog.log({ userId: updatedBy, action: "UPDATE_SETTINGS", targetTable: "system_settings" });
   const allRows = await SystemSetting.findAll({ order: [["key", "ASC"]] });
   return toKeyedObject(allRows);
 };
@@ -100,9 +102,10 @@ exports.bulkUpdateSettings = async (settings, updatedBy) => {
 exports.bulkUpdateFromObject = async (obj, updatedBy) => {
   for (const [key, value] of Object.entries(obj)) {
     const setting = await SystemSetting.findOne({ where: { key } });
-    if (!setting) continue; // silently skip unknown keys
+    if (!setting) continue;
     await setting.update({ value: String(value), updated_by: updatedBy });
   }
+  auditLog.log({ userId: updatedBy, action: "UPDATE_SETTINGS", targetTable: "system_settings" });
   const allRows = await SystemSetting.findAll({ order: [["key", "ASC"]] });
   return toKeyedObject(allRows);
 };

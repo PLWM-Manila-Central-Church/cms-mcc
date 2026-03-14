@@ -1,6 +1,7 @@
 "use strict";
 
 const { Attendance, Member, Service, User } = require("../models");
+const auditLog = require("../helpers/auditLog.helper");
 
 const attendanceIncludes = [
   {
@@ -60,8 +61,9 @@ exports.createAttendance = async (data, recordedBy) => {
     recorded_by: recordedBy || null,
   });
 
-  return await exports.getAttendanceById(record.id);
-};
+  const created = await exports.getAttendanceById(record.id);
+  auditLog.log({ userId: recordedBy, action: "CHECK_IN", targetTable: "attendances", targetId: created.id, newValues: { service_id, member_id } });
+  return created;
 
 // ── Update Attendance ────────────────────────────────────────
 exports.updateAttendance = async (id, data) => {

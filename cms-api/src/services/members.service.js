@@ -70,7 +70,7 @@ exports.getMemberById = async (id) => {
 };
 
 // ── Create Member ────────────────────────────────────────────
-exports.createMember = async (data) => {
+exports.createMember = async (data, createdBy) => {
   const {
     first_name,
     last_name,
@@ -126,11 +126,12 @@ exports.createMember = async (data) => {
     is_deleted: 0,
   });
 
-  return await exports.getMemberById(member.id);
-};
+  const created = await exports.getMemberById(member.id);
+  auditLog.log({ userId: createdBy, action: "CREATE_MEMBER", targetTable: "members", targetId: created.id });
+  return created;
 
 // ── Update Member ────────────────────────────────────────────
-exports.updateMember = async (id, data) => {
+exports.updateMember = async (id, data, updatedBy) => {
   const member = await Member.findOne({ where: { id } });
   if (!member) throw { status: 404, message: "Member not found" };
 
@@ -188,6 +189,7 @@ exports.updateMember = async (id, data) => {
     ...(barcode !== undefined && { barcode }),
   });
 
+  auditLog.log({ userId: updatedBy, action: "UPDATE_MEMBER", targetTable: "members", targetId: id });
   return await exports.getMemberById(id);
 };
 
@@ -202,5 +204,6 @@ exports.deleteMember = async (id, deletedBy) => {
     deleted_by: deletedBy,
   });
 
+  auditLog.log({ userId: deletedBy, action: "DELETE_MEMBER", targetTable: "members", targetId: id });
   return { message: "Member deleted successfully." };
 };
