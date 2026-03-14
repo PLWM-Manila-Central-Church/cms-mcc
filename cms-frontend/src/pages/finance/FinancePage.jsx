@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import axiosInstance from '../../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 
 const PAYMENT_LABELS = {
