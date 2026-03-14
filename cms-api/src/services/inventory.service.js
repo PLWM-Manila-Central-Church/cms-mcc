@@ -84,6 +84,9 @@ exports.createItem = async (data, createdBy) => {
   const created = await exports.getItemById(item.id);
   auditLog.log({ userId: createdBy, action: "CREATE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: created.id });
   return created;
+};
+
+// ── Update Item ──────────────────────────────────────────────
 exports.updateItem = async (id, data, updatedBy) => {
   const item = await InventoryItem.findByPk(id);
   if (!item) throw { status: 404, message: "Inventory item not found" };
@@ -257,6 +260,9 @@ exports.createRequest = async (data, requestedBy) => {
   const created = await exports.getRequestById(request.id);
   auditLog.log({ userId: requestedBy, action: "CREATE_INVENTORY_REQUEST", targetTable: "inventory_requests", targetId: created.id });
   return created;
+};
+
+// ── Review Request (Approve/Reject) ──────────────────────────
 exports.reviewRequest = async (id, status, reviewedBy) => {
   const request = await InventoryRequest.findByPk(id);
   if (!request) throw { status: 404, message: "Inventory request not found" };
