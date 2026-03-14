@@ -140,8 +140,6 @@ exports.deleteAttendanceForService = async (req, res, next) => {
 };
 
 // ── Service Responses alias (:id/responses) ─────────────────
-const serviceExtrasService = require("../services/service-extras.service");
-
 exports.getResponsesByServiceAlias = async (req, res, next) => {
   try {
     const data = await serviceExtrasService.getResponsesByService(req.params.id);
