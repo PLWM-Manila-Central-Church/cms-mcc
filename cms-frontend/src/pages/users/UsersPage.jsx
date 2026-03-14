@@ -146,7 +146,7 @@ export default function UsersPage() {
                         Edit
                       </button>
                     )}
-                    {hasPermission('users', 'deactivate') && (
+                    {hasPermission('users', 'update') && (
                       <button
                         onClick={() => handleToggleActive(u)}
                         disabled={actionLoading === u.id}

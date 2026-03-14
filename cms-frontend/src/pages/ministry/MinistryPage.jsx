@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
 
 /* ─────────────────────────────────────────────────────────────
@@ -13,6 +14,9 @@ function fmtDate(d) {
    Main Page
 ───────────────────────────────────────────────────────────── */
 export default function MinistryPage() {
+  const { hasPermission } = useAuth();
+  const canWrite = hasPermission('ministry', 'create');
+
   const [tab, setTab] = useState('assignments'); // 'assignments' | 'roles'
 
   return (
@@ -175,7 +179,7 @@ function AssignmentsTab() {
           {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
         </div>
         <div style={S.countBadge}>{filtered.length} assignment{filtered.length !== 1 ? 's' : ''}</div>
-        <button style={S.addBtn} onClick={openAdd}>+ New Assignment</button>
+        {canWrite && <button style={S.addBtn} onClick={openAdd}>+ New Assignment</button>}
       </div>
 
       {error && (
@@ -239,8 +243,8 @@ function AssignmentsTab() {
                       </div>
                     </td>
                     <td style={{ ...S.td, textAlign:'right' }}>
-                      <button style={S.editBtn} onClick={() => openEdit(a)}>Edit</button>
-                      <button style={S.deleteBtn} onClick={() => { setDelTarget(a); setDelErr(''); }}>Remove</button>
+                      {canWrite && <button style={S.editBtn} onClick={() => openEdit(a)}>Edit</button>}
+                      {canWrite && <button style={S.deleteBtn} onClick={() => { setDelTarget(a); setDelErr(''); }}>Remove</button>}
                     </td>
                   </tr>
                 );
@@ -466,7 +470,7 @@ function RolesTab() {
           {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
         </div>
         <div style={S.countBadge}>{filtered.length} role{filtered.length !== 1 ? 's' : ''}</div>
-        <button style={S.addBtn} onClick={openAdd}>+ New Role</button>
+        {canWrite && <button style={S.addBtn} onClick={openAdd}>+ New Role</button>}
       </div>
 
       {error && (
@@ -507,8 +511,8 @@ function RolesTab() {
                     </div>
                   </td>
                   <td style={{ ...S.td, textAlign:'right' }}>
-                    <button style={S.editBtn} onClick={() => openEdit(r)}>Edit</button>
-                    <button style={S.deleteBtn} onClick={() => { setDelTarget(r); setDelErr(''); }}>Delete</button>
+                    {canWrite && <button style={S.editBtn} onClick={() => openEdit(r)}>Edit</button>}
+                    {canWrite && <button style={S.deleteBtn} onClick={() => { setDelTarget(r); setDelErr(''); }}>Delete</button>}
                   </td>
                 </tr>
               ))}

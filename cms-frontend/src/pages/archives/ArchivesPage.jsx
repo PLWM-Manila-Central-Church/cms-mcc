@@ -22,8 +22,8 @@ const APPROVER_ROLES = [1, 2]; // Admin, Pastor
 
 export default function ArchivesPage() {
   const { user, hasPermission } = useAuth();
-  const canUpload  = hasPermission('archives', 'upload');
-  const canApprove = hasPermission('archives', 'approve');
+  const canUpload  = hasPermission('archives', 'create');
+  const canApprove = hasPermission('archives', 'update');
   const isApprover = APPROVER_ROLES.includes(user?.roleId);
 
   const [records, setRecords]       = useState([]);

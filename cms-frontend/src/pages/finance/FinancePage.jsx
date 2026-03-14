@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 const PAYMENT_LABELS = {
@@ -15,8 +17,13 @@ const PAYMENT_STYLE = {
 };
 
 export default function FinancePage() {
-  const { hasPermission } = useAuth();
-  const canRecord = hasPermission('finance', 'record');
+  const { hasPermission, user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.roleName === 'Member') navigate('/finance/my-giving', { replace: true });
+  }, [user, navigate]);
+  const canRecord = hasPermission('finance', 'create');
 
   const [records, setRecords]         = useState([]);
   const [total, setTotal]             = useState(0);
