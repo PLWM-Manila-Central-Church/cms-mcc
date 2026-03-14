@@ -15,12 +15,17 @@ const ROLE_COLORS = {
 
 export default function UsersPage() {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user: currentUser } = useAuth();
 
-  const [users, setUsers]     = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [users, setUsers]             = useState([]);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
   const [actionLoading, setActionLoading] = useState(null);
+
+  // Delete confirm modal
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError]   = useState('');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -49,6 +54,21 @@ export default function UsersPage() {
       setError(err.response?.data?.message || 'Action failed.');
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      await axiosInstance.delete(`/users/${deleteTarget.id}`);
+      setDeleteTarget(null);
+      fetchUsers();
+    } catch (err) {
+      setDeleteError(err.response?.data?.message || 'Failed to delete user.');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -95,9 +115,7 @@ export default function UsersPage() {
               >
                 <td style={styles.td}>
                   <div style={styles.userCell}>
-                    <div style={styles.avatar}>
-                      {u.email[0].toUpperCase()}
-                    </div>
+                    <div style={styles.avatar}>{u.email[0].toUpperCase()}</div>
                     <div>
                       <div style={styles.email}>{u.email}</div>
                       <div style={styles.userId}>ID #{u.id}</div>
@@ -163,6 +181,14 @@ export default function UsersPage() {
                         }
                       </button>
                     )}
+                    {hasPermission('users', 'delete') && u.id !== currentUser?.id && (
+                      <button
+                        onClick={() => { setDeleteTarget(u); setDeleteError(''); }}
+                        style={styles.deleteBtn}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -170,60 +196,73 @@ export default function UsersPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirm Modal */}
+      {deleteTarget && (
+        <div style={styles.overlay}>
+          <div style={styles.modal}>
+            <div style={styles.modalIcon}>🗑️</div>
+            <h3 style={styles.modalTitle}>Permanently Delete User?</h3>
+            <p style={styles.modalBody}>
+              You are about to permanently delete{' '}
+              <strong>{deleteTarget.email}</strong>. This action cannot be undone.
+              Their audit log history will be preserved.
+            </p>
+            {deleteError && <div style={styles.errorBox}>{deleteError}</div>}
+            <div style={styles.modalActions}>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleteLoading}
+                style={styles.cancelBtn}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleteLoading}
+                style={{ ...styles.confirmDeleteBtn, opacity: deleteLoading ? 0.7 : 1 }}
+              >
+                {deleteLoading ? 'Deleting...' : 'Yes, Delete Permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 const styles = {
-  page:       { fontFamily: "'Segoe UI', sans-serif" },
-  pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  pageTitle:  { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
+  page:        { fontFamily: "'Segoe UI', sans-serif" },
+  pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
+  pageTitle:   { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   pageSubtitle:{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
-  addBtn: {
-    background: 'linear-gradient(135deg, #005599, #13B5EA)',
-    color: '#fff', border: 'none', borderRadius: '8px',
-    padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer'
-  },
-  errorBox: {
-    background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
-    borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '14px'
-  },
-  tableWrap: {
-    background: '#fff', borderRadius: '12px',
-    boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'hidden'
-  },
-  table:      { width: '100%', borderCollapse: 'collapse' },
-  thead:      { background: '#f8fafc' },
-  th: {
-    padding: '12px 16px', textAlign: 'left', fontSize: '12px',
-    fontWeight: '600', color: '#64748b', textTransform: 'uppercase',
-    letterSpacing: '0.5px', borderBottom: '1px solid #e2e8f0'
-  },
-  row:        { transition: 'background 0.15s' },
-  td:         { padding: '14px 16px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
-  centerCell: { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
-  userCell:   { display: 'flex', alignItems: 'center', gap: '10px' },
-  avatar: {
-    width: '34px', height: '34px', borderRadius: '50%',
-    background: 'linear-gradient(135deg, #005599, #13B5EA)',
-    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '14px', fontWeight: '700', flexShrink: 0
-  },
-  email:      { fontWeight: '600', color: '#0f172a', fontSize: '14px' },
-  userId:     { fontSize: '12px', color: '#94a3b8' },
-  noMember:   { color: '#94a3b8', fontStyle: 'italic' },
-  badge: {
-    padding: '3px 10px', borderRadius: '20px',
-    fontSize: '12px', fontWeight: '600'
-  },
-  actions:    { display: 'flex', gap: '6px' },
-  editBtn: {
-    background: '#e8f4fd', color: '#0066b3', border: 'none',
-    borderRadius: '6px', padding: '5px 12px', fontSize: '12px',
-    fontWeight: '600', cursor: 'pointer'
-  },
-  toggleBtn: {
-    border: 'none', borderRadius: '6px', padding: '5px 12px',
-    fontSize: '12px', fontWeight: '600', cursor: 'pointer'
-  },
+  addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '14px' },
+  tableWrap:   { background: '#fff', borderRadius: '12px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'hidden' },
+  table:       { width: '100%', borderCollapse: 'collapse' },
+  thead:       { background: '#f8fafc' },
+  th:          { padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e2e8f0' },
+  row:         { transition: 'background 0.15s' },
+  td:          { padding: '14px 16px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
+  centerCell:  { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
+  userCell:    { display: 'flex', alignItems: 'center', gap: '10px' },
+  avatar:      { width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', flexShrink: 0 },
+  email:       { fontWeight: '600', color: '#0f172a', fontSize: '14px' },
+  userId:      { fontSize: '12px', color: '#94a3b8' },
+  noMember:    { color: '#94a3b8', fontStyle: 'italic' },
+  badge:       { padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' },
+  actions:     { display: 'flex', gap: '6px' },
+  editBtn:     { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+  toggleBtn:   { border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+  deleteBtn:   { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+  // Modal
+  overlay:     { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal:       { background: '#fff', borderRadius: '16px', padding: '36px', maxWidth: '420px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', textAlign: 'center' },
+  modalIcon:   { fontSize: '40px', marginBottom: '12px' },
+  modalTitle:  { fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: '0 0 12px' },
+  modalBody:   { fontSize: '14px', color: '#475569', lineHeight: '1.6', margin: '0 0 20px' },
+  modalActions:{ display: 'flex', gap: '12px', justifyContent: 'center' },
+  cancelBtn:   { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  confirmDeleteBtn: { background: 'linear-gradient(135deg, #dc2626, #ef4444)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
 };
