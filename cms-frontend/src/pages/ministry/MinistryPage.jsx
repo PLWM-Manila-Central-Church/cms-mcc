@@ -14,23 +14,31 @@ function fmtDate(d) {
    Main Page
 ───────────────────────────────────────────────────────────── */
 export default function MinistryPage() {
-  const [tab, setTab] = useState('assignments'); // 'assignments' | 'roles'
+  const { user } = useAuth();
+  const isMember = user?.roleName === 'Member';
+  const [tab, setTab] = useState(isMember ? 'substitutes' : 'assignments');
+
+  const tabs = isMember
+    ? [{ key: 'substitutes', label: '🔄 Substitute Requests' }]
+    : [
+        { key: 'assignments', label: '📋 Assignments' },
+        { key: 'roles',       label: '🎭 Roles' },
+      ];
 
   return (
     <div style={S.page}>
       <div style={S.header}>
         <div>
           <h1 style={S.title}>Ministry</h1>
-          <p style={S.subtitle}>Manage ministry roles and service assignments</p>
+          <p style={S.subtitle}>
+            {isMember ? 'Submit substitute requests for your ministry assignments' : 'Manage ministry roles and service assignments'}
+          </p>
         </div>
       </div>
 
       {/* Tabs */}
       <div style={S.tabs}>
-        {[
-          { key: 'assignments', label: '📋 Assignments' },
-          { key: 'roles',       label: '🎭 Roles' },
-        ].map(t => (
+        {tabs.map(t => (
           <button
             key={t.key}
             style={{ ...S.tab, ...(tab === t.key ? S.tabActive : {}) }}
@@ -41,7 +49,9 @@ export default function MinistryPage() {
         ))}
       </div>
 
-      {tab === 'assignments' ? <AssignmentsTab /> : <RolesTab />}
+      {tab === 'assignments' && <AssignmentsTab />}
+      {tab === 'roles'       && <RolesTab />}
+      {tab === 'substitutes' && <SubstituteRequestsTab />}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
@@ -584,6 +594,236 @@ function RolesTab() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   Substitute Requests Tab (Member role only)
+───────────────────────────────────────────────────────────── */
+function SubstituteRequestsTab() {
+  const { user } = useAuth();
+  const [requests, setRequests]     = useState([]);
+  const [services, setServices]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
+  const [showForm, setShowForm]     = useState(false);
+  const [saving, setSaving]         = useState(false);
+  const [formError, setFormError]   = useState('');
+  const [form, setForm]             = useState({ service_id: '', reason: '', proposed_member_id: '' });
+  const [members, setMembers]       = useState([]);
+  const [memberSearch, setMemberSearch]   = useState('');
+  const [memberResults, setMemberResults] = useState([]);
+  let searchTimeout = null;
+
+  const STATUS_META = {
+    pending:  { bg: '#fffbeb', color: '#d97706', label: 'Pending' },
+    approved: { bg: '#dcfce7', color: '#16a34a', label: 'Approved' },
+    rejected: { bg: '#fef2f2', color: '#dc2626', label: 'Rejected' },
+  };
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [subRes, svcRes] = await Promise.all([
+        axiosInstance.get('/services/substitutes'),
+        axiosInstance.get('/services?limit=100'),
+      ]);
+      // Filter to only this member's requests
+      const all = subRes.data.data?.requests || subRes.data.data || [];
+      setRequests(Array.isArray(all) ? all : []);
+      setServices(svcRes.data.data?.services || []);
+    } catch {
+      setError('Failed to load data.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleMemberSearch = (val) => {
+    setMemberSearch(val);
+    clearTimeout(searchTimeout);
+    if (!val.trim()) { setMemberResults([]); return; }
+    searchTimeout = setTimeout(async () => {
+      try {
+        const res = await axiosInstance.get(`/members?search=${encodeURIComponent(val)}&limit=5`);
+        setMemberResults(res.data.data?.members || []);
+      } catch {}
+    }, 300);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.service_id || !form.reason.trim()) {
+      setFormError('Please select a service and provide a reason.');
+      return;
+    }
+    setSaving(true);
+    setFormError('');
+    try {
+      const payload = {
+        service_id: Number(form.service_id),
+        reason:     form.reason,
+        ...(form.proposed_member_id && { proposed_member_id: Number(form.proposed_member_id) }),
+      };
+      await axiosInstance.post('/services/substitutes', payload);
+      setShowForm(false);
+      setForm({ service_id: '', reason: '', proposed_member_id: '' });
+      setMemberSearch('');
+      fetchData();
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Failed to submit request.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const publishedServices = services.filter(s => s.status === 'published');
+
+  return (
+    <>
+      <div style={S.toolbar}>
+        <button onClick={() => { setShowForm(!showForm); setFormError(''); }} style={S.addBtn}>
+          {showForm ? '✕ Cancel' : '+ New Request'}
+        </button>
+      </div>
+
+      {/* Submit Form */}
+      {showForm && (
+        <div style={{ ...S.tableCard, padding: '24px', marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px' }}>
+            Submit Substitute Request
+          </h3>
+          {formError && <div style={S.formErr}>{formError}</div>}
+          <form onSubmit={handleSubmit}>
+            <div style={S.fieldGroup}>
+              <label style={S.label}>Service *</label>
+              <select
+                value={form.service_id}
+                onChange={e => setForm({ ...form, service_id: e.target.value })}
+                style={S.select}
+                required
+              >
+                <option value="">— Select a service —</option>
+                {publishedServices.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.title} — {fmtDate(s.service_date)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={S.fieldGroup}>
+              <label style={S.label}>Reason *</label>
+              <textarea
+                value={form.reason}
+                onChange={e => setForm({ ...form, reason: e.target.value })}
+                placeholder="Explain why you cannot attend this service..."
+                rows={3}
+                style={{ ...S.input, resize: 'vertical', fontFamily: 'inherit' }}
+                required
+              />
+            </div>
+
+            <div style={S.fieldGroup}>
+              <label style={S.label}>Proposed Replacement (optional)</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  value={memberSearch}
+                  onChange={e => handleMemberSearch(e.target.value)}
+                  placeholder="Search member by name..."
+                  style={S.input}
+                />
+                {memberResults.length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10 }}>
+                    {memberResults.map(m => (
+                      <div
+                        key={m.id}
+                        onClick={() => {
+                          setForm({ ...form, proposed_member_id: m.id });
+                          setMemberSearch(`${m.last_name}, ${m.first_name}`);
+                          setMemberResults([]);
+                        }}
+                        style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid #f1f5f9' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f0f6ff'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                      >
+                        {m.last_name}, {m.first_name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {form.proposed_member_id && (
+                <p style={{ fontSize: '12px', color: '#16a34a', margin: '4px 0 0' }}>
+                  ✓ Replacement selected
+                </p>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setShowForm(false)} style={S.cancelBtn}>Cancel</button>
+              <button type="submit" disabled={saving} style={{ ...S.saveBtn, opacity: saving ? 0.7 : 1 }}>
+                {saving ? 'Submitting...' : 'Submit Request'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Requests List */}
+      {error && <div style={S.errBanner}>{error}</div>}
+
+      {loading ? (
+        <div style={S.centerMsg}><div style={S.spinner} /></div>
+      ) : requests.length === 0 ? (
+        <div style={S.centerMsg}>
+          <div style={S.emptyIcon}>🔄</div>
+          <div style={S.emptyTitle}>No substitute requests yet</div>
+          <div style={S.emptyHint}>Click "+ New Request" to submit one.</div>
+        </div>
+      ) : (
+        <div style={S.tableCard}>
+          <table style={S.table}>
+            <thead>
+              <tr style={S.thead}>
+                <th style={S.th}>Service</th>
+                <th style={S.th}>Reason</th>
+                <th style={S.th}>Proposed Replacement</th>
+                <th style={S.th}>Status</th>
+                <th style={S.th}>Submitted</th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.map(r => {
+                const meta = STATUS_META[r.status] || STATUS_META.pending;
+                return (
+                  <tr key={r.id} style={S.row}>
+                    <td style={{ ...S.td, fontWeight: '600', color: '#0f172a' }}>
+                      {r.Service?.title || `Service #${r.service_id}`}
+                    </td>
+                    <td style={{ ...S.td, maxWidth: '220px', color: '#374151' }}>{r.reason}</td>
+                    <td style={S.td}>
+                      {r.ProposedMember
+                        ? `${r.ProposedMember.last_name}, ${r.ProposedMember.first_name}`
+                        : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>None</span>
+                      }
+                    </td>
+                    <td style={S.td}>
+                      <span style={{ ...S.pill, background: meta.bg, color: meta.color }}>{meta.label}</span>
+                    </td>
+                    <td style={{ ...S.td, color: '#64748b' }}>{fmtDate(r.created_at)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </>
