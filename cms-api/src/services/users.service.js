@@ -107,3 +107,33 @@ exports.activateUser = async (id) => {
   await user.update({ is_active: 1 });
   return { message: "User activated successfully." };
 };
+
+// ── Hard Delete User ──────────────────────────────────────────
+exports.hardDeleteUser = async (id, requestingUserId) => {
+  if (parseInt(id) === parseInt(requestingUserId))
+    throw { status: 400, message: "You cannot delete your own account" };
+
+  const user = await User.findByPk(id);
+  if (!user) throw { status: 404, message: "User not found" };
+
+  const { sequelize } = require("../models");
+
+  await sequelize.transaction(async (t) => {
+    // Nullify audit logs (preserve history but remove user reference)
+    await sequelize.query(
+      "UPDATE audit_logs SET user_id = NULL WHERE user_id = :userId",
+      { replacements: { userId: id }, transaction: t }
+    );
+
+    // Delete dependent records
+    await sequelize.query("DELETE FROM refresh_tokens WHERE user_id = :userId",        { replacements: { userId: id }, transaction: t });
+    await sequelize.query("DELETE FROM password_reset_tokens WHERE user_id = :userId", { replacements: { userId: id }, transaction: t });
+    await sequelize.query("DELETE FROM user_sessions WHERE user_id = :userId",         { replacements: { userId: id }, transaction: t });
+    await sequelize.query("DELETE FROM notifications WHERE user_id = :userId",         { replacements: { userId: id }, transaction: t });
+
+    // Hard delete the user
+    await user.destroy({ transaction: t });
+  });
+
+  return { message: "User permanently deleted." };
+};
