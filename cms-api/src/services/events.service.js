@@ -111,6 +111,7 @@ exports.createEvent = async (data, createdBy) => {
   const created = await exports.getEventById(event.id);
   auditLog.log({ userId: createdBy, action: "CREATE_EVENT", targetTable: "events", targetId: created.id });
   return created;
+};
 
 // ── Update Event ─────────────────────────────────────────────
 exports.updateEvent = async (id, data, updatedBy) => {

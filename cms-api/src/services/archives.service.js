@@ -121,6 +121,9 @@ exports.createRecord = async (data, uploadedBy) => {
   const created = await exports.getRecordById(record.id);
   auditLog.log({ userId: uploadedBy, action: "UPLOAD_ARCHIVE", targetTable: "archive_records", targetId: created.id });
   return created;
+};
+
+// ── Update Record ────────────────────────────────────────────
 exports.updateRecord = async (id, data, uploadedBy) => {
   const record = await ArchiveRecord.findOne({ where: { id } });
   if (!record) throw { status: 404, message: "Archive record not found" };

@@ -129,6 +129,7 @@ exports.createMember = async (data, createdBy) => {
   const created = await exports.getMemberById(member.id);
   auditLog.log({ userId: createdBy, action: "CREATE_MEMBER", targetTable: "members", targetId: created.id });
   return created;
+};
 
 // ── Update Member ────────────────────────────────────────────
 exports.updateMember = async (id, data, updatedBy) => {

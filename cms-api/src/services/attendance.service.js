@@ -64,6 +64,7 @@ exports.createAttendance = async (data, recordedBy) => {
   const created = await exports.getAttendanceById(record.id);
   auditLog.log({ userId: recordedBy, action: "CHECK_IN", targetTable: "attendances", targetId: created.id, newValues: { service_id, member_id } });
   return created;
+};
 
 // ── Update Attendance ────────────────────────────────────────
 exports.updateAttendance = async (id, data) => {
