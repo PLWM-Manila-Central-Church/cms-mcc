@@ -55,6 +55,8 @@ export default function MinistryPage() {
    Assignments Tab
 ───────────────────────────────────────────────────────────── */
 function AssignmentsTab() {
+  const { hasPermission } = useAuth();
+  const canWrite = hasPermission('ministry', 'create');
   const [assignments, setAssignments] = useState([]);
   const [roles,       setRoles]       = useState([]);
   const [members,     setMembers]     = useState([]);
@@ -392,6 +394,8 @@ function AssignmentsTab() {
    Roles Tab
 ───────────────────────────────────────────────────────────── */
 function RolesTab() {
+  const { hasPermission } = useAuth();
+  const canWrite = hasPermission('ministry', 'create');
   const [roles,   setRoles]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
