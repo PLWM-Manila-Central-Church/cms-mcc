@@ -21,7 +21,7 @@ router.delete("/categories/:id", auth, authorize("inventory", "delete"), ctrl.de
 
 // ── Requests (mine and all MUST be before :id) ───────────────
 router.get("/requests/mine", auth, authorize("inventory", "read"),   ctrl.getMyRequests);
-router.get("/requests/all",  auth, authorize("inventory", "manage"), ctrl.getAllRequestsPaginated);
+router.get("/requests/all",  auth, authorize("inventory", "read"), ctrl.getAllRequestsPaginated);
 router.get("/requests",      auth, authorize("inventory", "read"),   ctrl.getAllRequests);
 router.get("/requests/:id",        auth, authorize("inventory", "read"),   ctrl.getRequestById);
 router.post("/requests",           auth, authorize("inventory", "create"), ctrl.createRequest);

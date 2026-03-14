@@ -177,6 +177,7 @@ module.exports = {
       { role_id: 7, permission_id: p("finance", "read"), created_at: now },
       { role_id: 7, permission_id: p("events", "read"), created_at: now },
       { role_id: 7, permission_id: p("services", "read"), created_at: now },
+      { role_id: 7, permission_id: p("services", "create"), created_at: now }, // pre-registration + substitute requests
       { role_id: 7, permission_id: p("archives", "read"), created_at: now },
     ];
 

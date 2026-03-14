@@ -55,7 +55,7 @@ router.get(
 router.post(
   "/substitutes",
   auth,
-  authorize("ministry", "create"),
+  authorize("services", "create"),
   ctrl.createSubstituteRequest,
 );
 router.put(

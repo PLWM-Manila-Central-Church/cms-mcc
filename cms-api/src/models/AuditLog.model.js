@@ -11,7 +11,7 @@ const AuditLog = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
-    user_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    user_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     action: { type: DataTypes.STRING(100), allowNull: false },
     target_table: { type: DataTypes.STRING(100), allowNull: true },
     target_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
