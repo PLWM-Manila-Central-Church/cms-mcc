@@ -14,7 +14,7 @@ export default function AttendancePage() {
   const { id: serviceId } = useParams();
   const navigate          = useNavigate();
   const { hasPermission } = useAuth();
-  const canRecord         = hasPermission('attendance', 'record');
+  const canRecord         = hasPermission('attendance', 'create');
 
   const [service, setService]     = useState(null);
   const [records, setRecords]     = useState([]);

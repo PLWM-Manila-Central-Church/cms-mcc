@@ -17,7 +17,7 @@ const STATUS_STYLE = {
 
 export default function InventoryPage() {
   const { hasPermission } = useAuth();
-  const canManage = hasPermission('inventory', 'manage');
+  const canManage = hasPermission('inventory', 'create');
 
   const [tab, setTab] = useState('items'); // items | requests
 
