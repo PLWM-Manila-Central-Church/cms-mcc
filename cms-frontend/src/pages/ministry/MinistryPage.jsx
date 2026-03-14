@@ -14,9 +14,6 @@ function fmtDate(d) {
    Main Page
 ───────────────────────────────────────────────────────────── */
 export default function MinistryPage() {
-  const { hasPermission } = useAuth();
-  const canWrite = hasPermission('ministry', 'create');
-
   const [tab, setTab] = useState('assignments'); // 'assignments' | 'roles'
 
   return (
