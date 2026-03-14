@@ -6,13 +6,12 @@ const {
   InventoryItem, InventoryRequest, AuditLog, User,
 } = require("../models");
 
-exports.getStats = async () => {
+exports.getStats = async ({ memberId, roleId } = {}) => {
   const now       = new Date();
   const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const isMember  = roleId === 7; // role_id 7 = Member
 
   // ── Members ───────────────────────────────────────────────
-  // Member has defaultScope { where: { is_deleted: 0 } } — never repeat it.
-  // Timestamp auto-attrs are camelCase in JS when underscored:true → use `createdAt`
   const totalMembers  = await Member.count();
   const activeMembers = await Member.count({ where: { status: "Active" } });
   const newThisMonth  = await Member.count({
@@ -20,30 +19,30 @@ exports.getStats = async () => {
   });
 
   // ── Finance ───────────────────────────────────────────────
-  // FinancialRecord has defaultScope { where: { is_deleted: 0 } } — never repeat it.
-  // `transaction_date` is explicitly defined on the model so the attribute IS snake_case.
+  const financeWhere = { transaction_date: { [Op.gte]: thisMonth } };
+  if (isMember && memberId) financeWhere.member_id = memberId;
+
   const totalThisMonth = (await FinancialRecord.sum("amount", {
-    where: { transaction_date: { [Op.gte]: thisMonth } },
+    where: financeWhere,
   })) || 0;
 
   const recentRecords = await FinancialRecord.findAll({
     order: [["transaction_date", "DESC"]],
     limit: 5,
-    attributes: ["id", "member_id", "amount", "transaction_date", "payment_method"],
+    ...(isMember && memberId ? { where: { member_id: memberId } } : {}),
     include: [
+      { model: Member.unscoped(), attributes: ["id", "first_name", "last_name"], required: false },
       { model: FinancialCategory, as: "category", attributes: ["id", "name"], required: false },
     ],
   });
 
   // ── Services ──────────────────────────────────────────────
-  // Service has NO is_deleted column and NO defaultScope — plain queries are safe.
   const totalServices    = await Service.count();
   const upcomingServices = await Service.count({
     where: { service_date: { [Op.gte]: now }, status: "published" },
   });
 
   // ── Events ────────────────────────────────────────────────
-  // Event has defaultScope { where: { is_deleted: 0 } } — never repeat it.
   const totalEvents    = await Event.count();
   const upcomingEvents = await Event.findAll({
     where: { start_date: { [Op.gte]: now }, status: "published" },
@@ -60,7 +59,6 @@ exports.getStats = async () => {
   const lowStock = lowStockItems.filter((i) => i.quantity <= i.low_stock_threshold).length;
 
   // ── Recent Activity ───────────────────────────────────────
-  // AuditLog → User association has no alias, include directly with model: User
   const recentActivity = await AuditLog.findAll({
     order: [["created_at", "DESC"]],
     limit: 10,

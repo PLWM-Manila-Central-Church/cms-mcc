@@ -1,5 +1,7 @@
 "use strict";
 
+const auditLog = require("../helpers/auditLog.helper");
+const notifService = require("./notifications.service");
 const {
   InventoryItem,
   InventoryCategory,

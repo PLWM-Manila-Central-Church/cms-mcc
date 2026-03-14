@@ -101,3 +101,60 @@ exports.deleteSubstituteRequest = async (req, res, next) => {
     next(err);
   }
 };
+
+// ── Attendance by Service ────────────────────────────────────
+const attendanceService = require("../services/attendance.service");
+
+exports.getAttendanceByService = async (req, res, next) => {
+  try {
+    const { Attendance, Member } = require("../models");
+    const records = await Attendance.findAll({
+      where: { service_id: req.params.id },
+      include: [{ model: Member, attributes: ["id", "first_name", "last_name", "barcode"], required: false }],
+      order: [["checked_in_at", "DESC"]],
+    });
+    res.json({ success: true, data: records });
+  } catch (err) { next(err); }
+};
+
+exports.createAttendanceForService = async (req, res, next) => {
+  try {
+    const data = await attendanceService.createAttendance(
+      { ...req.body, service_id: req.params.id },
+      req.user.userId,
+    );
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.deleteAttendanceForService = async (req, res, next) => {
+  try {
+    const { Attendance } = require("../models");
+    const record = await Attendance.findOne({
+      where: { service_id: req.params.id, member_id: req.params.memberId },
+    });
+    if (!record) throw { status: 404, message: "Attendance record not found" };
+    await record.destroy();
+    res.json({ success: true, message: "Attendance removed." });
+  } catch (err) { next(err); }
+};
+
+// ── Service Responses alias (:id/responses) ─────────────────
+const serviceExtrasService = require("../services/service-extras.service");
+
+exports.getResponsesByServiceAlias = async (req, res, next) => {
+  try {
+    const data = await serviceExtrasService.getResponsesByService(req.params.id);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.createOrUpdateResponseAlias = async (req, res, next) => {
+  try {
+    const { member_id, ...responseData } = req.body;
+    const data = await serviceExtrasService.createOrUpdateResponse(
+      req.params.id, member_id, responseData, req.user.userId,
+    );
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};

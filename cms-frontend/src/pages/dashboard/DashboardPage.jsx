@@ -57,7 +57,7 @@ export default function DashboardPage() {
   const statCards = [
     { label: 'Total Members',   value: members.total,              sub: `+${members.newThisMonth} this month`, icon: '👥', color: '#005599', path: '/members' },
     { label: 'Active Members',  value: members.active,             sub: `of ${members.total} total`,           icon: '✅', color: '#059669', path: '/members' },
-    { label: 'Finance (Month)', value: `₱${fmt(finance.totalThisMonth)}`, sub: 'Total collections',           icon: '💰', color: '#d97706', path: '/finance' },
+    { label: user?.roleId === 7 ? 'My Giving (Month)' : 'Finance (Month)', value: `₱${fmt(finance.totalThisMonth)}`, sub: user?.roleId === 7 ? 'Your contributions' : 'Total collections', icon: '💰', color: '#d97706', path: user?.roleId === 7 ? '/finance/my-giving' : '/finance' },
     { label: 'Upcoming Events', value: events.upcoming.length,     sub: `${events.total} total events`,        icon: '📅', color: '#7c3aed', path: '/events' },
     { label: 'Inventory Items', value: inventory.totalItems,       sub: `${inventory.pendingRequests} pending requests`, icon: '📦', color: '#0891b2', path: '/inventory' },
     { label: 'Upcoming Services', value: services.upcoming,        sub: `${services.total} total services`,    icon: '⛪', color: '#be185d', path: '/services' },

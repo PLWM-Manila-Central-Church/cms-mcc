@@ -1,5 +1,6 @@
 "use strict";
 
+const auditLog = require("../helpers/auditLog.helper");
 const {
   FinancialRecord,
   FinancialCategory,
@@ -132,7 +133,9 @@ exports.createRecord = async (data, recordedBy) => {
     is_deleted: 0,
   });
 
-  return await exports.getRecordById(record.id);
+  const created = await exports.getRecordById(record.id);
+  auditLog.log({ userId: recordedBy, action: "CREATE_FINANCE_RECORD", targetTable: "financial_records", targetId: created.id });
+  return created;
 };
 
 // ── Update Financial Record ──────────────────────────────────
@@ -187,6 +190,7 @@ exports.deleteRecord = async (id, deletedBy) => {
     deleted_by: deletedBy,
   });
 
+  auditLog.log({ userId: deletedBy, action: "DELETE_FINANCE_RECORD", targetTable: "financial_records", targetId: id });
   return { message: "Financial record deleted successfully." };
 };
 
@@ -254,4 +258,36 @@ exports.deleteCategory = async (id) => {
 
   await category.destroy();
   return { message: "Financial category deleted successfully." };
+};
+// ── Get My Giving (member's own records) ─────────────────────
+exports.getMyGiving = async (memberId, { page = 1, limit = 20, date_from, date_to } = {}) => {
+  const { Op } = require("sequelize");
+  if (!memberId) throw { status: 400, message: "No member profile linked to this account" };
+
+  const offset = (parseInt(page) - 1) * parseInt(limit);
+  const where = { is_deleted: 0, member_id: memberId };
+
+  if (date_from || date_to) {
+    where.transaction_date = {};
+    if (date_from) where.transaction_date[Op.gte] = date_from;
+    if (date_to)   where.transaction_date[Op.lte] = date_to;
+  }
+
+  const { count, rows } = await FinancialRecord.findAndCountAll({
+    where,
+    include: [
+      { model: FinancialCategory, as: "category", attributes: ["id", "name"], required: false },
+    ],
+    order: [["transaction_date", "DESC"]],
+    limit: parseInt(limit),
+    offset,
+    distinct: true,
+    subQuery: false,
+  });
+
+  return {
+    records: rows,
+    total: count,
+    total_pages: Math.ceil(count / parseInt(limit)),
+  };
 };

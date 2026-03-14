@@ -1,6 +1,8 @@
 "use strict";
 
 const { Op } = require("sequelize");
+const auditLog = require("../helpers/auditLog.helper");
+const notifService = require("./notifications.service");
 const {
   Event,
   EventCategory,

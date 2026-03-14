@@ -116,7 +116,7 @@ exports.hardDeleteUser = async (id, requestingUserId) => {
   const user = await User.findByPk(id);
   if (!user) throw { status: 404, message: "User not found" };
 
-  const { sequelize } = require("../models");
+  const sequelize = require("../config/db");
 
   await sequelize.transaction(async (t) => {
     // Nullify audit logs (preserve history but remove user reference)

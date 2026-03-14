@@ -6,6 +6,7 @@ const auth = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 
 // ── Financial Records ────────────────────────────────────────
+router.get("/my-giving", auth, ctrl.getMyGiving);
 router.get("/summary", auth, authorize("finance", "read"), ctrl.getSummary);
 router.get("/records", auth, authorize("finance", "read"), ctrl.getAllRecords);
 router.get(
