@@ -1,6 +1,7 @@
 "use strict";
 
 const { Member, CellGroup, Group, EmergencyContact } = require("../models");
+const auditLog = require("../helpers/auditLog.helper");
 
 const memberIncludes = [
   {

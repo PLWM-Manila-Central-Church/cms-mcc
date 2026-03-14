@@ -45,10 +45,10 @@ export default function EventDetailPage() {
     setRegLoading(true); setRegMessage(''); setRegError('');
     try {
       if (isRegistered) {
-        await axiosInstance.delete(`/events/${id}/register`);
+        await axiosInstance.delete(`/events/${id}/registrations`);
         setRegMessage('Your registration has been cancelled.');
       } else {
-        await axiosInstance.post(`/events/${id}/register`);
+        await axiosInstance.post(`/events/${id}/registrations`);
         setRegMessage('You have successfully registered for this event!');
       }
       fetchEvent();

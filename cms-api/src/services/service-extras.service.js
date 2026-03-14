@@ -128,28 +128,40 @@ exports.getSubstituteRequestById = async (id) => {
 };
 
 exports.createSubstituteRequest = async (data, requestedBy) => {
-  const { assignment_id, proposed_substitute, reason } = data;
+  const { assignment_id, service_id, proposed_substitute, proposed_member_id, reason } = data;
 
-  const assignment = await MinistryAssignment.findByPk(assignment_id);
-  if (!assignment)
-    throw { status: 404, message: "Ministry assignment not found" };
+  let resolvedAssignmentId = assignment_id;
+
+  // If frontend sends service_id instead of assignment_id, look up the assignment
+  if (!resolvedAssignmentId && service_id && requestedBy) {
+    const { User } = require("../models");
+    const user = await User.findByPk(requestedBy, { attributes: ["member_id"] });
+    if (user?.member_id) {
+      const assignment = await MinistryAssignment.findOne({
+        where: { service_id, member_id: user.member_id },
+      });
+      if (assignment) resolvedAssignmentId = assignment.id;
+    }
+  }
+
+  if (!resolvedAssignmentId)
+    throw { status: 400, message: "Could not find your ministry assignment for this service" };
+
+  const assignment = await MinistryAssignment.findByPk(resolvedAssignmentId);
+  if (!assignment) throw { status: 404, message: "Ministry assignment not found" };
 
   const existing = await SubstituteRequest.findOne({
-    where: { assignment_id, status: "pending" },
+    where: { assignment_id: resolvedAssignmentId, status: "pending" },
   });
   if (existing)
-    throw {
-      status: 409,
-      message:
-        "A pending substitute request already exists for this assignment",
-    };
+    throw { status: 409, message: "A pending substitute request already exists for this assignment" };
 
   return await SubstituteRequest.create({
-    assignment_id,
-    requested_by: requestedBy,
-    proposed_substitute: proposed_substitute || null,
-    reason: reason || null,
-    status: "pending",
+    assignment_id:       resolvedAssignmentId,
+    requested_by:        requestedBy,
+    proposed_substitute: proposed_substitute || proposed_member_id || null,
+    reason:              reason || null,
+    status:              "pending",
   });
 };
 

@@ -1,7 +1,7 @@
 "use strict";
 
 const jwt = require("jsonwebtoken");
-const { User, Role } = require("../models");
+const { User, Role, Member } = require("../models");
 
 module.exports = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -12,36 +12,26 @@ module.exports = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Re-fetch user on every request to check is_active and get role
     const user = await User.findByPk(decoded.userId, {
-      attributes: [
-        "id",
-        "email",
-        "role_id",
-        "is_active",
-        "force_password_change",
-      ],
+      attributes: ["id", "email", "role_id", "member_id", "is_active", "force_password_change"],
       include: [
-        {
-          model: Role,
-          as: "role",
-          attributes: ["id", "role_name", "is_system"],
-        },
+        { model: Role, as: "role", attributes: ["id", "role_name", "is_system"] },
+        { model: Member, as: "member", attributes: ["id", "cell_group_id", "group_id"], required: false },
       ],
     });
 
     if (!user) return res.status(401).json({ message: "User not found" });
+    if (!user.is_active) return res.status(401).json({ message: "Account deactivated" });
 
-    if (!user.is_active)
-      return res.status(401).json({ message: "Account deactivated" });
-
-    // Attach full user info to req.user
     req.user = {
-      userId: user.id,
-      email: user.email,
-      roleId: user.role_id,
-      roleName: user.role.role_name,
-      isSystem: user.role.is_system,
+      userId:             user.id,
+      email:              user.email,
+      roleId:             user.role_id,
+      roleName:           user.role.role_name,
+      isSystem:           user.role.is_system,
+      memberId:           user.member_id || null,
+      cellGroupId:        user.member?.cell_group_id || null,
+      groupId:            user.member?.group_id || null,
       forcePasswordChange: user.force_password_change,
     };
 

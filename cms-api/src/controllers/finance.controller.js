@@ -105,3 +105,10 @@ exports.deleteCategory = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getMyGiving = async (req, res, next) => {
+  try {
+    const result = await financeService.getMyGiving(req.user.memberId, req.query);
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+};

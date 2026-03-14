@@ -20,6 +20,7 @@ const generateAccessToken = (user) => {
       roleId:      user.role_id,
       roleName:    user.role.role_name,
       email:       user.email,
+      memberId:    user.member_id || null,
       cellGroupId: user.member?.cell_group_id || null,
       groupId:     user.member?.group_id || null,
     },

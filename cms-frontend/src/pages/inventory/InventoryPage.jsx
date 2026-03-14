@@ -18,6 +18,7 @@ const STATUS_STYLE = {
 export default function InventoryPage() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission('inventory', 'create');
+  const canRequest = !canManage;
 
   const [tab, setTab] = useState('items'); // items | requests
 
@@ -167,7 +168,7 @@ export default function InventoryPage() {
               {showItemForm ? '✕ Cancel' : '+ Add Item'}
             </button>
           )}
-          {tab === 'requests' && !canManage && (
+          {tab === 'requests' && canRequest && (
             <button onClick={() => setShowReqForm(!showReqForm)} style={s.addBtn}>
               {showReqForm ? '✕ Cancel' : '+ Request Item'}
             </button>
