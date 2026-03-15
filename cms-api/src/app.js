@@ -14,7 +14,18 @@ app.set('trust proxy', 1);
   
 // ── Security & Logging ───────────────────────────────────────
 app.use(helmet());
-app.use(cors({ origin: process.env.ALLOWED_ORIGIN }));
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, mobile apps) or matching allowed origins
+    const allowed = (process.env.ALLOWED_ORIGIN || "").split(",").map(o => o.trim()).filter(Boolean);
+    if (!origin || allowed.includes(origin) || allowed.includes("*")) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+}));
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -42,6 +53,8 @@ app.use("/api/auth/login",           loginLimiter);
 app.use("/api/auth/forgot-password", forgotPasswordLimiter);
 app.use("/api/auth/refresh-token",   refreshLimiter);
 
+// ── Public Routes (no auth — for landing page) ───────────────
+app.use("/api/public",        require("./routes/public.routes"));
 // ── Routes ───────────────────────────────────────────────────
 app.use("/api/auth",          require("./routes/auth.routes"));
 app.use("/api/dashboard",     require("./routes/dashboard.routes")); // ← was missing
