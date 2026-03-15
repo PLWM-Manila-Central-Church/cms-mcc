@@ -199,7 +199,7 @@ export function MissionStatusPage() {
     'Talibon Bohol (Cebu)','Banilad (Kaylavay)','Lupi (Ragay)','El Nido (Palawan)','Tubli Caramoan (Virac)',
     'Hiyop Pandan (Virac)','Magsaysay (Davao)','Ocampo (Naga)','Tigaon (Pili)','Lobo (MCC)',
     'Daan Bantayan (Cebu)','Calapan Mindoro (Tanauan)','Santa Rita Samar (Cavite)','San Juan (San Fabian)','Benito Soliven (Ilagan)',
-    'Kabankalan (Bagong Silang)','Opol (CDO)','Luna (Ilagan)','Tiwi (Langkaan)','T'Boli (Sto. Nino)',
+    'Kabankalan (Bagong Silang)','Opol (CDO)','Luna (Ilagan)','Tiwi (Langkaan)',"T'Boli (Sto. Nino)",
     'Calamba (Calauan)','Iniwaran (Burias)','San Vicente (Abongan)','Medellin (Cebu)','Gen. M. Natividad Nueva Ecija (Tarlac)',
   ];
 
