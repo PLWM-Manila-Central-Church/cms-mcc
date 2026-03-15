@@ -44,7 +44,7 @@ export default function BibleSeminarPage() {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[['📖', 'Prove the existence of God', 'Meet the living God who created the heavens and earth.'],
-                  ['✝️', 'Testify to the Bible's truth',  'The Bible is not mere religion — it is God's history.'],
+                  ['✝️', "Testify to the Bible's truth", "The Bible is not mere religion — it is God's history."],
                   ['🕊️', 'Preach the Gospel of Jesus Christ', 'The good news of redemption delivered to all people.']
                 ].map(([icon, t, d]) => (
                   <div key={t} style={{ display:'flex', gap:12, alignItems:'flex-start', background:C.off, border:`1.5px solid ${C.border}`, borderRadius:10, padding:'14px 16px' }}>
