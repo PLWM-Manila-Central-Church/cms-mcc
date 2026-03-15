@@ -12,33 +12,6 @@ const BIBLE_SEMINAR_TOPICS = [
   { n: '5', title: "What Is the End of Human History and God's Kingdom?" },
 ];
 
-function CountUp({ target, duration = 1400 }) {
-  const [val, setVal] = useState(0);
-  const started = useRef(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !started.current) {
-        started.current = true;
-        const start = performance.now();
-        const update = (now) => {
-          const p = Math.min((now - start) / duration, 1);
-          const eased = 1 - Math.pow(1 - p, 3);
-          setVal(Math.floor(eased * target));
-          if (p < 1) requestAnimationFrame(update);
-          else setVal(target);
-        };
-        requestAnimationFrame(update);
-      }
-    }, { threshold: 0.5 });
-    if (ref.current) obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, [target, duration]);
-
-  return <span ref={ref}>{val}</span>;
-}
-
 function Reveal({ children, delay = 0 }) {
   const [vis, setVis] = useState(false);
   const ref = useRef(null);
