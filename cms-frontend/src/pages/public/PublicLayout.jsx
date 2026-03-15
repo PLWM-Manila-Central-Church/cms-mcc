@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 // ── Design tokens ──────────────────────────────────────────────
 const C = {
@@ -185,7 +185,6 @@ export default function PublicLayout({ children }) {
   const [currentLang, setCurrentLang] = useState('English');
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
   const langRef = useRef(null);
   const isHome = location.pathname === '/';
 
