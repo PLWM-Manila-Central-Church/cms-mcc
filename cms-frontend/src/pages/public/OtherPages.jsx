@@ -161,59 +161,47 @@ export function WorldMissionPage() {
 
 // ── MISSION STATUS ────────────────────────────────────────────
 export function MissionStatusPage() {
+  // ── PLWM Churches (108 total from official map) ──────────
   const CHURCHES = [
     'Manila Central Church','Naga Church','Quezon City Church','Cavite Church','Ortigas Church',
-    'Pili Church','Lapog Church','Malolos Church','Bani Church','Tagkawayan Church',
-    'Angel Church','Dasmarinas Church','Palawan Church','Calauag Church','Ligao Church',
-    'San Jose Del Monte Church','Bato Catanduanes Church','Manila City Church','Castillejos Church','Kaylavay Church',
-    'Davao Toril Church','Sili Church','Cebu Church','Cagayan De Oro Church','Sultan Kudarat Church',
-    'Malusqui Church','Iloilo Church',
+    'Pili Church','Subic Church','Malolos Church','Bani Church','Tagkawayan Church',
+    'Angat Church','Lapidario Church','Dasmariñas Church','Palawan Church','Calauan Church',
+    'Ligao Church','San Jose Del Monte Church','Bato Catanduanes Church','Manila City Church','Castillejos Church',
+    'Kaylavay Church','Davao Toril Church','Siit Church','Cebu Church','Cagayan De Oro Church',
+    'Tanauan Church','Sultan Kudarat Church','Malusqui Church','Iloilo Church','Palawan Quezon Church',
+    'Hilongos, Leyte Church','Angeles Church','Virac Church','Dumaguete Church','Cabiao Church',
+    'Caloocan Church','Sta. Magdalena Church','Bagong Silang Church','Santa Rosa Church','Marilao Church',
+    'Tambac Church','Tanza Church','San Narciso Church','Ilagan Church','Tarlac Church',
+    'Camalig Church','Palawan Roxas Church','Imus Church','Ragay Church','Sipocot Church',
+    'Agno Church','Sta. Cruz Church','Valenzuela Church','Baclaran Church','Bacolod Church',
+    'Pamplona Church','San Fabian Church','Hagonoy Church','Sta. Maria Church (Isabela)','Guinayangan Church',
+    'Gigmoto Church','Palawan Sta. Teresita Church','Umingan Church','Quezon City East Church','Española Church (Palawan)',
+    'San Rafael Church (Iloilo)','Ballesteros Church (Cagayan)','Antonino Church (Palawan)','Davao City Church','Baybay Church (Leyte)',
+    'Burias Church (Masbate)','Tinambac Church (Naga)','Bataan Church','Tablon Church (CDO)','Langkaan Church',
+    'Calauag Church','Capalonga Church','Burgos Ilocos Sur Church','San Manuel Church','Bocaue Church',
+    'Abongan Church','Tanatanaon Church','Antipolo Church','Panitan Church','Iloilo City Church',
+    'Sto. Nino Church','Bacoor Church','Gingoog City Church','Apalit Church','Sagay Bato Church',
+    'Ramon Church','Tondo Church','Tagaytay Church','Pandi Church','Sual Church',
+    'Baguio Church','Iba Church','Tubao Church','Tumarbong Church','Dumaran Island Church',
+    'Legaspi Church','Pasacao Church','Tiaong Church','Sibuyan Romblon Church','Catubig Church (Northern Samar)',
+    'Mariveles Church','Siaton Church','Meycauayan Church',
   ];
 
-  const BRANCHES_LUZON = [
-    'Tondo Mission Branch','Sta. Mesa Mission Branch','Novaliches Mission Branch','Fairview Mission Branch',
-    'Valenzuela Mission Branch','Marikina Mission Branch','Antipolo Mission Branch','Binangonan Mission Branch',
-    'Taytay Mission Branch','Angono Mission Branch','Cainta Mission Branch','San Mateo Mission Branch',
-    'Montalban Mission Branch','San Jose Del Monte Mission Branch','Meycauayan Mission Branch',
-    'Marilao Mission Branch','Bocaue Mission Branch','Balagtas Mission Branch','Guiguinto Mission Branch',
-    'Malolos Mission Branch','Plaridel Mission Branch','San Rafael Mission Branch','San Ildefonso Mission Branch',
-    'Norzagaray Mission Branch','Sta. Maria Mission Branch','San Miguel Mission Branch','Candaba Mission Branch',
-    'Apalit Mission Branch','Macabebe Mission Branch','Masantol Mission Branch','Minalin Mission Branch',
-    'Mexico Mission Branch','Magalang Mission Branch','Mabalacat Mission Branch','Bamban Mission Branch',
-    'Capas Mission Branch','Tarlac City Mission Branch','La Paz Mission Branch','Paniqui Mission Branch',
-    'Gerona Mission Branch','San Jose City Mission Branch','Cabanatuan Mission Branch','Palayan Mission Branch',
-    'Bongabon Mission Branch','Talavera Mission Branch','General Trias Mission Branch','Imus Mission Branch',
-    'Bacoor Mission Branch','Dasmariñas Mission Branch','Carmona Mission Branch',
+  // ── PLWM Mission Branches (60 total from official map) ───
+  const MISSION_BRANCHES = [
+    'Gapan (Cabiao)','Iriga (Naga)','Daet (Sipocot)','Caramoan (Naga)','Talisay (Sipocot)',
+    'Concepcion (Angeles)','Carmen, Bohol (Cebu, Ortigas)','Pitogo (Cebu)','Rosario (Ortigas)','Lipa (Tanauan)',
+    'Lopez (Tagkawayan)','Capoocan (Ortigas)','Tacloban (Cebu)','Hitaasan (Imus)','General Trias (Lapidario)',
+    'Indang (Tanza)','Dumangas (Iloilo)','Pozorrubio (Malasiqui)','Baco Oriental Mindoro (Ortigas)','Payao (Baclaran)',
+    'Ipil (Manila City)','Liloan (Cebu)','Simpocan (Palawan)','Bolinao (Bani)','Malatgao (Palawan)',
+    'Bataraza (Palawan)','Aborlan (Palawan)','Dumarao (Palawan)','Aparri (Ballesteros)','DRT Area (Angat)',
+    'Bamban (Angeles)','Buenavista (Sta. Rosa)','Ternate (Cavite)','Cabangan (San Narciso)','Reina Mercedes (Isabela)',
+    'Talibon Bohol (Cebu)','Banilad (Kaylavay)','Lupi (Ragay)','El Nido (Palawan)','Tubli Caramoan (Virac)',
+    'Hiyop Pandan (Virac)','Magsaysay (Davao)','Ocampo (Naga)','Tigaon (Pili)','Lobo (MCC)',
+    'Daan Bantayan (Cebu)','Calapan Mindoro (Tanauan)','Santa Rita Samar (Cavite)','San Juan (San Fabian)','Benito Soliven (Ilagan)',
+    'Kabankalan (Bagong Silang)','Opol (CDO)','Luna (Ilagan)','Tiwi (Langkaan)','T'Boli (Sto. Nino)',
+    'Calamba (Calauan)','Iniwaran (Burias)','San Vicente (Abongan)','Medellin (Cebu)','Gen. M. Natividad Nueva Ecija (Tarlac)',
   ];
-
-  const BRANCHES_VISAYAS = [
-    'Cebu City Mission Branch','Mandaue Mission Branch','Lapu-Lapu Mission Branch','Talisay Mission Branch',
-    'Consolacion Mission Branch','Liloan Mission Branch','Compostela Mission Branch','Danao Mission Branch',
-    'Bogo Mission Branch','Toledo Mission Branch','Balamban Mission Branch','Iloilo City Mission Branch',
-    'Pavia Mission Branch','Santa Barbara Mission Branch','Leganes Mission Branch','Oton Mission Branch',
-    'Dumangas Mission Branch','Barotac Nuevo Mission Branch','Zarraga Mission Branch','San Miguel Mission Branch',
-    'Bacolod Mission Branch','Talisay Mission Branch','Victorias Mission Branch','Sagay Mission Branch',
-    'Cadiz Mission Branch','Dumaguete Mission Branch','Bayawan Mission Branch','Tanjay Mission Branch',
-    'Tacloban Mission Branch','Palo Mission Branch','Tanauan Mission Branch','Santa Fe Mission Branch',
-    'Ormoc Mission Branch','Kananga Mission Branch','Baybay Mission Branch',
-  ];
-
-  const BRANCHES_MINDANAO = [
-    'Davao City Mission Branch','Tagum Mission Branch','Panabo Mission Branch','Digos Mission Branch',
-    'Mati Mission Branch','Cagayan de Oro Mission Branch','El Salvador Mission Branch','Opol Mission Branch',
-    'Gingoog Mission Branch','Ozamiz Mission Branch','Iligan Mission Branch','Marawi Mission Branch',
-    'General Santos Mission Branch','Koronadal Mission Branch','Kidapawan Mission Branch',
-    'Cotabato City Mission Branch','Midsayap Mission Branch','Pikit Mission Branch',
-    'Sultan Kudarat Mission Branch','Isulan Mission Branch','Tacurong Mission Branch',
-    'Zamboanga City Mission Branch','Ipil Mission Branch','Pagadian Mission Branch',
-    'Dipolog Mission Branch','Dapitan Mission Branch','Butuan Mission Branch','Cabadbaran Mission Branch',
-  ];
-
-  const SectionHeader = ({ color, label }) => (
-    <h4 style={{ fontSize:12, fontWeight:700, color, textTransform:'uppercase', letterSpacing:'1px', marginBottom:12, display:'flex', alignItems:'center', gap:8 }}>
-      <span style={{ width:16, height:2.5, background:color, borderRadius:2, display:'inline-block' }} />{label}
-    </h4>
-  );
 
   const ChipList = ({ items, dotColor }) => (
     <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(210px,1fr))', gap:7, marginBottom:28 }}>
@@ -262,18 +250,8 @@ export function MissionStatusPage() {
             <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:6, display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ width:30, height:3, background:C.gold, borderRadius:2, display:'inline-block' }} />Mission Branches
             </h3>
-            <p style={{ fontSize:13, color:C.muted, marginBottom:24 }}>Active mission branches across Luzon, Visayas, and Mindanao — {BRANCHES_LUZON.length + BRANCHES_VISAYAS.length + BRANCHES_MINDANAO.length}+ total</p>
-
-            <div style={{ background:C.off, border:`1.5px solid ${C.border}`, borderRadius:14, padding:'24px 24px 16px' }}>
-              <SectionHeader color="#1565C0" label="Luzon Region" />
-              <ChipList items={BRANCHES_LUZON} dotColor="#1565C0" />
-
-              <SectionHeader color="#2E7D32" label="Visayas Region" />
-              <ChipList items={BRANCHES_VISAYAS} dotColor="#2E7D32" />
-
-              <SectionHeader color="#C9A84C" label="Mindanao Region" />
-              <ChipList items={BRANCHES_MINDANAO} dotColor="#C9A84C" />
-            </div>
+            <p style={{ fontSize:13, color:C.muted, marginBottom:20 }}>Active mission branches nationwide — {MISSION_BRANCHES.length} total</p>
+            <ChipList items={MISSION_BRANCHES} dotColor="#C9A84C" />
           </div>
 
           {/* CTA */}
