@@ -218,8 +218,8 @@ export default function HomePage() {
                 </div>
                 {[
                   { title: 'Cellgroup Bible Seminar', date: 'March 21–24, 2026' },
-                  { title: 'Rosario Batangas Mission', date: 'Bro. Arman's hometown outreach' },
-                  { title: 'Women's Group Fellowship', date: 'Friday 7:00 PM — Pastor Jayson' },
+                  { title: 'Rosario Batangas Mission', date: "Bro. Arman's hometown outreach" },
+                  { title: "Women's Group Fellowship", date: 'Friday 7:00 PM — Pastor Jayson' },
                   { title: 'Seoul Central Church Media Team', date: 'Documentary Team visit to MCC' },
                   { title: '2026 Summer Retreat Preparation', date: 'Home Visitation ongoing' },
                 ].map((a, i) => (
