@@ -210,15 +210,45 @@ export default function PublicLayout({ children }) {
   const switchLang = (lang) => {
     setCurrentLang(lang.label);
     setLangOpen(false);
-    if (lang.code === 'en') {
-      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-      window.location.reload();
-      return;
+
+    const applyTranslation = () => {
+      try {
+        const select = document.querySelector('.goog-te-combo');
+        if (select) {
+          select.value = lang.code;
+          select.dispatchEvent(new Event('change'));
+          return true;
+        }
+      } catch (_) {}
+      return false;
+    };
+
+    // Try immediately, then retry after GT loads
+    if (!applyTranslation()) {
+      let tries = 0;
+      const interval = setInterval(() => {
+        tries++;
+        if (applyTranslation() || tries > 20) clearInterval(interval);
+      }, 250);
     }
-    const val = '/en/' + lang.code;
-    document.cookie = `googtrans=${val}; path=/`;
-    window.location.reload();
   };
+
+  // Load Google Translate script once
+  useEffect(() => {
+    if (document.getElementById('gt-script')) return;
+    window.googleTranslateElementInit = () => {
+      // eslint-disable-next-line no-new
+      new window.google.translate.TranslateElement(
+        { pageLanguage: 'en', autoDisplay: false },
+        'google_translate_element'
+      );
+    };
+    const script = document.createElement('script');
+    script.id  = 'gt-script';
+    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    script.async = true;
+    document.head.appendChild(script);
+  }, []);
 
   const headerBg = isHome
     ? (scrolled ? 'rgba(11,36,71,0.97)' : 'rgba(11,36,71,0)')
@@ -226,8 +256,8 @@ export default function PublicLayout({ children }) {
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.text, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Google Translate hidden */}
-      <div id="google_translate_element" style={{ display: 'none', visibility: 'hidden', position: 'absolute' }} />
+      {/* Google Translate — must be in DOM but visually hidden */}
+      <div id="google_translate_element" style={{ position: 'fixed', bottom: -200, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1 }} />
 
       {/* ── Language Bar ── */}
       <div style={{ background: C.navyMid, borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '5px 24px', position: 'relative', zIndex: 1001 }}>
@@ -272,7 +302,7 @@ export default function PublicLayout({ children }) {
         <div style={{ maxWidth: 1160, width: '100%', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           {/* Logo */}
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            <div style={{ width: 38, height: 38, background: C.gold, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Playfair Display',serif", fontSize: 17, fontWeight: 900, color: C.navy }}>M</div>
+            <img src={process.env.PUBLIC_URL + '/logo.jpg'} alt="PLWM-MCC Logo" style={{ width: 42, height: 42, borderRadius: 8, objectFit: 'contain', background: 'rgba(255,255,255,0.1)', padding: 2 }} />
             <div>
               <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 13.5, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>Manila Central Church</div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>PLWM — Parañaque City, Philippines</div>
@@ -442,6 +472,9 @@ export default function PublicLayout({ children }) {
         @keyframes fadeDown { from{opacity:0;transform:translateY(-6px);} to{opacity:1;transform:translateY(0);} }
         @keyframes fadeUp { from{opacity:0;transform:translateY(28px);} to{opacity:1;transform:translateY(0);} }
         .goog-te-banner-frame, .skiptranslate { display: none !important; }
+        .goog-te-gadget { display: none !important; }
+        body { top: 0 !important; }
+        .VIpgJd-ZVi9od-aZ2wEe-wOHMyf, .VIpgJd-ZVi9od-aZ2wEe { display: none !important; }
         body { top: 0 !important; }
         @media (max-width: 768px) {
           .desktop-nav { display: none !important; }

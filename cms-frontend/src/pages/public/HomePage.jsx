@@ -27,6 +27,88 @@ function Reveal({ children, delay = 0 }) {
   );
 }
 
+
+/* ── Looping hero video via YouTube IFrame API ─────────────── */
+function HeroVideo() {
+  const containerRef = useRef(null);
+  const playerRef    = useRef(null);
+  const START_SEC    = 227; // where to start and loop back to
+
+  useEffect(() => {
+    // Load the YT IFrame API script once
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src   = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+    }
+
+    const init = () => {
+      if (playerRef.current) return; // already created
+      playerRef.current = new window.YT.Player(containerRef.current, {
+        videoId:    '4v-66wXlQCE',
+        playerVars: {
+          autoplay:       1,
+          mute:           1,
+          controls:       0,
+          showinfo:       0,
+          rel:            0,
+          disablekb:      1,
+          iv_load_policy: 3,
+          modestbranding: 1,
+          start:          START_SEC,
+          playsinline:    1,
+        },
+        events: {
+          onReady: (e) => {
+            e.target.mute();
+            e.target.playVideo();
+          },
+          onStateChange: (e) => {
+            // When video ends (state 0), seek back to start and keep playing
+            if (e.data === window.YT.PlayerState.ENDED) {
+              e.target.seekTo(START_SEC, true);
+              e.target.playVideo();
+            }
+          },
+        },
+      });
+    };
+
+    // If API already loaded, init immediately; otherwise wait for callback
+    if (window.YT && window.YT.Player) {
+      init();
+    } else {
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (prev) prev();
+        init();
+      };
+    }
+
+    return () => {
+      if (playerRef.current) {
+        try { playerRef.current.destroy(); } catch (_) {}
+        playerRef.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+      <div
+        ref={containerRef}
+        style={{
+          position: 'absolute', top: '50%', left: '50%',
+          width: '177.78vh', height: '100vh',
+          minWidth: '100%', minHeight: '56.25vw',
+          transform: 'translate(-50%, -50%)',
+          border: 'none',
+        }}
+      />
+    </div>
+  );
+}
+
 export default function HomePage() {
   const [cgCount, setCgCount] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -51,18 +133,8 @@ export default function HomePage() {
     <PublicLayout>
       {/* ── HERO ── */}
       <section style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', padding: '60px 24px 80px' }}>
-        {/* Video background (desktop only) */}
-        {!isMobile && (
-          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-            <iframe
-              src="https://www.youtube.com/embed/4v-66wXlQCE?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&disablekb=1&playlist=4v-66wXlQCE&start=227"
-              title="Background worship"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
-              tabIndex={-1}
-              style={{ position: 'absolute', top: '50%', left: '50%', width: '177.78vh', height: '100vh', minWidth: '100%', minHeight: '56.25vw', transform: 'translate(-50%, -50%)', border: 'none' }}
-            />
-          </div>
-        )}
+        {/* Video background (desktop only) — loops from start point via YT IFrame API */}
+        {!isMobile && <HeroVideo />}
 
         {/* Overlay */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: isMobile ? C.navy : 'linear-gradient(to bottom, rgba(11,36,71,0.75) 0%, rgba(11,36,71,0.60) 40%, rgba(11,36,71,0.75) 100%)' }} />
