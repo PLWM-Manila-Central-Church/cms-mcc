@@ -191,7 +191,6 @@ export default function DashboardPage() {
   // Permission-based flags (uses real permissions array — always accurate)
   const canFinance   = hasPermission('finance',    'read');
   const canInventory = hasPermission('inventory',  'read');
-  const canAudit     = hasPermission('audit',      'read');
   const canMembers   = hasPermission('members',    'read');
   const canEvents    = hasPermission('events',     'read');
   const canServices  = hasPermission('services',   'read');
