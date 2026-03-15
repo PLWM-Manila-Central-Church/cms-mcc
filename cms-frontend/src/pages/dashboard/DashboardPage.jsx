@@ -3,15 +3,199 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axiosInstance';
 
-const ROLE = { ADMIN: 1, PASTOR: 2, REG_TEAM: 3, FINANCE: 4, CG_LEADER: 5, GRP_LEADER: 6, MEMBER: 7 };
+// ── Role name constants (matches what backend returns) ────────
+const R = {
+  ADMIN:    'System Admin',
+  PASTOR:   'Pastor',
+  REG:      'Registration Team',
+  FINANCE:  'Finance Team',
+  CG:       'Cell Group Leader',
+  GRP:      'Group Leader',
+  MEMBER:   'Member',
+};
 
+// ── Role accent colors ────────────────────────────────────────
+const ROLE_ACCENT = {
+  [R.ADMIN]:   { primary: '#dc2626', light: '#fef2f2', label: '#b91c1c' },
+  [R.PASTOR]:  { primary: '#7c3aed', light: '#f5f3ff', label: '#6d28d9' },
+  [R.REG]:     { primary: '#005599', light: '#e8f4fd', label: '#004080' },
+  [R.FINANCE]: { primary: '#059669', light: '#f0fdf4', label: '#047857' },
+  [R.CG]:      { primary: '#d97706', light: '#fffbeb', label: '#b45309' },
+  [R.GRP]:     { primary: '#0891b2', light: '#ecfeff', label: '#0e7490' },
+  [R.MEMBER]:  { primary: '#64748b', light: '#f8fafc', label: '#475569' },
+};
+
+// ── Format helpers ────────────────────────────────────────────
+const fmtMoney = (n) => {
+  const v = Number(n || 0);
+  if (v >= 1_000_000_000) return `₱${(v / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+  if (v >= 1_000_000)     return `₱${(v / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (v >= 1_000)         return `₱${(v / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  return `₱${v.toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
+};
+const fmtMoneyFull = (n) =>
+  `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
+const fmtDate = (d) =>
+  d ? new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+const greeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+};
+
+// ── Sub-components ────────────────────────────────────────────
+
+function StatCard({ icon, label, value, sub, accent, onClick }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        background: '#fff',
+        border: `1.5px solid ${hover ? accent : '#e8edf2'}`,
+        borderRadius: '14px',
+        padding: '20px 18px',
+        cursor: 'pointer',
+        transition: 'all 0.18s ease',
+        boxShadow: hover ? `0 4px 20px ${accent}28` : '0 1px 4px rgba(0,0,0,0.05)',
+        transform: hover ? 'translateY(-2px)' : 'none',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '3px', height: '100%', background: accent, borderRadius: '14px 0 0 14px' }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+        <span style={{ fontSize: '24px', lineHeight: 1 }}>{icon}</span>
+        <span style={{ fontSize: '26px', fontWeight: '800', color: accent, lineHeight: 1, letterSpacing: '-0.5px' }}>
+          {value}
+        </span>
+      </div>
+      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', marginBottom: '3px' }}>{label}</div>
+      <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '500' }}>{sub}</div>
+    </div>
+  );
+}
+
+function SectionCard({ title, icon, actionLabel, onAction, children, minHeight }) {
+  return (
+    <div style={{ background: '#fff', border: '1.5px solid #e8edf2', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', minHeight }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #f1f5f9' }}>
+        <span style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '7px' }}>
+          <span>{icon}</span> {title}
+        </span>
+        {actionLabel && (
+          <button onClick={onAction} style={{ background: 'none', border: 'none', fontSize: '12px', fontWeight: '700', color: '#005599', cursor: 'pointer', padding: '3px 8px', borderRadius: '6px' }}>
+            {actionLabel} →
+          </button>
+        )}
+      </div>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function ListRow({ left, right, sub, onClick, rightColor }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 20px', borderBottom: '1px solid #f8fafc', cursor: onClick ? 'pointer' : 'default', background: hover && onClick ? '#f8fafc' : '#fff', transition: 'background 0.12s', gap: '12px' }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{left}</div>
+        {sub && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{sub}</div>}
+      </div>
+      <div style={{ fontSize: '13px', fontWeight: '700', color: rightColor || '#374151', flexShrink: 0 }}>{right}</div>
+    </div>
+  );
+}
+
+function EmptyState({ icon, text }) {
+  return (
+    <div style={{ padding: '32px 20px', textAlign: 'center', color: '#94a3b8' }}>
+      <div style={{ fontSize: '28px', marginBottom: '8px' }}>{icon}</div>
+      <div style={{ fontSize: '13px', fontWeight: '500' }}>{text}</div>
+    </div>
+  );
+}
+
+function ActionBadge({ action }) {
+  const BADGE = {
+    LOGIN:                      ['#d1fae5', '#065f46'],
+    LOGOUT:                     ['#f3f4f6', '#374151'],
+    CREATE_MEMBER:              ['#dbeafe', '#1e40af'],
+    UPDATE_MEMBER:              ['#ede9fe', '#5b21b6'],
+    DELETE_MEMBER:              ['#fee2e2', '#991b1b'],
+    CREATE_USER:                ['#dbeafe', '#1e40af'],
+    UPDATE_USER:                ['#ede9fe', '#5b21b6'],
+    DEACTIVATE_USER:            ['#fee2e2', '#991b1b'],
+    ACTIVATE_USER:              ['#d1fae5', '#065f46'],
+    CREATE_FINANCE_RECORD:      ['#d1fae5', '#065f46'],
+    UPDATE_FINANCE_RECORD:      ['#ede9fe', '#5b21b6'],
+    DELETE_FINANCE_RECORD:      ['#fee2e2', '#991b1b'],
+    UPLOAD_ARCHIVE:             ['#fef3c7', '#92400e'],
+    APPROVE_ARCHIVE:            ['#d1fae5', '#065f46'],
+    CHECK_IN:                   ['#dbeafe', '#1e40af'],
+    REGISTER_EVENT:             ['#d1fae5', '#065f46'],
+    UNREGISTER_EVENT:           ['#fee2e2', '#991b1b'],
+    INVENTORY_REQUEST_APPROVED: ['#d1fae5', '#065f46'],
+    INVENTORY_REQUEST_REJECTED: ['#fee2e2', '#991b1b'],
+    CREATE_EVENT:               ['#dbeafe', '#1e40af'],
+    UPDATE_EVENT_STATUS:        ['#ede9fe', '#5b21b6'],
+    RESET_PASSWORD:             ['#fef3c7', '#92400e'],
+    CHANGE_PASSWORD:            ['#fef3c7', '#92400e'],
+    UPDATE_SETTINGS:            ['#f0fdf4', '#166534'],
+  };
+  const [bg, color] = BADGE[action] || ['#f3f4f6', '#374151'];
+  return (
+    <span style={{ background: bg, color, padding: '2px 9px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', whiteSpace: 'nowrap', letterSpacing: '0.2px' }}>
+      {action.replace(/_/g, ' ')}
+    </span>
+  );
+}
+
+function AlertBanner({ icon, text, onClick, accent }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{ background: hover ? '#fff7ed' : '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: '12px', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', transition: 'all 0.15s', marginTop: '20px' }}
+    >
+      <span style={{ fontSize: '18px' }}>{icon}</span>
+      <span style={{ fontSize: '13px', color: '#92400e', fontWeight: '600', flex: 1 }}>{text}</span>
+      <span style={{ fontSize: '12px', color: '#d97706', fontWeight: '700' }}>View →</span>
+    </div>
+  );
+}
+
+// ── Main Dashboard ────────────────────────────────────────────
 export default function DashboardPage() {
-  const { user } = useAuth();
-  const navigate  = useNavigate();
+  const { user, hasPermission } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
-  const roleId = user?.roleId;
+
+  // Use roleName (string) — that's what the backend returns
+  const role    = user?.roleName || '';
+  const accent  = (ROLE_ACCENT[role] || ROLE_ACCENT[R.MEMBER]).primary;
+  const acLight = (ROLE_ACCENT[role] || ROLE_ACCENT[R.MEMBER]).light;
+
+  // Permission-based flags (uses real permissions array — always accurate)
+  const canFinance   = hasPermission('finance',    'read');
+  const canInventory = hasPermission('inventory',  'read');
+  const canAudit     = hasPermission('audit',      'read');
+  const canMembers   = hasPermission('members',    'read');
+  const canEvents    = hasPermission('events',     'read');
+  const canServices  = hasPermission('services',   'read');
+  const isMember     = role === R.MEMBER;
 
   useEffect(() => {
     api.get('/dashboard/stats')
@@ -20,254 +204,294 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const greeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
-  };
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: '14px' }}>
+      <div style={{ width: '36px', height: '36px', border: `3px solid ${acLight}`, borderTop: `3px solid ${accent}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <span style={{ color: '#94a3b8', fontSize: '14px' }}>Loading your dashboard...</span>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 
-  const fmtMoney = (n) => {
-    const v = Number(n || 0);
-    if (v >= 1_000_000_000) return `₱${(v / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
-    if (v >= 1_000_000)     return `₱${(v / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-    if (v >= 1_000)         return `₱${(v / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
-    return `₱${v.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
-  };
-  const fmtMoneyFull = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
-  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-
-  const actionBadge = (action) => {
-    const map = {
-      LOGIN:                      { bg: '#d1fae5', color: '#065f46' },
-      LOGOUT:                     { bg: '#f3f4f6', color: '#374151' },
-      CREATE_MEMBER:              { bg: '#bde3f5', color: '#1e40af' },
-      UPDATE_MEMBER:              { bg: '#ede9fe', color: '#5b21b6' },
-      DELETE_MEMBER:              { bg: '#fee2e2', color: '#991b1b' },
-      CREATE_USER:                { bg: '#bde3f5', color: '#1e40af' },
-      UPDATE_USER:                { bg: '#ede9fe', color: '#5b21b6' },
-      DEACTIVATE_USER:            { bg: '#fee2e2', color: '#991b1b' },
-      CREATE_FINANCE_RECORD:      { bg: '#d1fae5', color: '#065f46' },
-      UPDATE_FINANCE_RECORD:      { bg: '#ede9fe', color: '#5b21b6' },
-      DELETE_FINANCE_RECORD:      { bg: '#fee2e2', color: '#991b1b' },
-      UPLOAD_ARCHIVE:             { bg: '#fef3c7', color: '#92400e' },
-      APPROVE_ARCHIVE:            { bg: '#d1fae5', color: '#065f46' },
-      UPDATE_SETTINGS:            { bg: '#f0fdf4', color: '#166534' },
-      CHECK_IN:                   { bg: '#bde3f5', color: '#1e40af' },
-      REGISTER_EVENT:             { bg: '#d1fae5', color: '#065f46' },
-      INVENTORY_REQUEST_APPROVED: { bg: '#d1fae5', color: '#065f46' },
-      INVENTORY_REQUEST_REJECTED: { bg: '#fee2e2', color: '#991b1b' },
-    };
-    const style = map[action] || { bg: '#f3f4f6', color: '#374151' };
-    return (
-      <span style={{ background: style.bg, color: style.color, padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap' }}>
-        {action}
-      </span>
-    );
-  };
-
-  if (loading) return <div style={styles.loading}>Loading dashboard...</div>;
-  if (error)   return <div style={styles.error}>{error}</div>;
+  if (error) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: '10px' }}>
+      <span style={{ fontSize: '32px' }}>⚠️</span>
+      <span style={{ color: '#dc2626', fontSize: '15px', fontWeight: '600' }}>{error}</span>
+    </div>
+  );
 
   const { members, finance, services, events, inventory, recentActivity } = stats;
 
-  const allCards = {
-    members:   { label: 'Total Members',     value: members.total,                  sub: `+${members.newThisMonth} this month`, icon: '👥', color: '#005599', path: '/members' },
-    active:    { label: 'Active Members',    value: members.active,                 sub: `of ${members.total} total`,           icon: '✅', color: '#059669', path: '/members' },
-    finance:   { label: 'Finance (Month)',   value: fmtMoney(finance.totalThisMonth), sub: 'Total collections',                 icon: '💰', color: '#d97706', path: '/finance' },
-    myGiving:  { label: 'My Giving (Month)', value: fmtMoney(finance.totalThisMonth), sub: 'Your contributions',                icon: '💰', color: '#d97706', path: '/finance/my-giving' },
-    events:    { label: 'Upcoming Events',   value: events.upcoming.length,         sub: `${events.total} total events`,        icon: '📅', color: '#7c3aed', path: '/events' },
-    inventory: { label: 'Inventory Items',   value: inventory.totalItems,           sub: `${inventory.pendingRequests} pending`, icon: '📦', color: '#0891b2', path: '/inventory' },
-    services:  { label: 'Upcoming Services', value: services.upcoming,              sub: `${services.total} total services`,    icon: '⛪', color: '#be185d', path: '/services' },
-  };
+  // ── Build stat cards based on actual permissions ──────────
+  const statCards = [];
+  if (canMembers) {
+    statCards.push({ icon: '👥', label: 'Total Members',    value: members.total,   sub: `+${members.newThisMonth} this month`,    accent, path: '/members' });
+    if (role !== R.FINANCE && role !== R.MEMBER) {
+      statCards.push({ icon: '✅', label: 'Active Members',  value: members.active,  sub: `of ${members.total} total`,              accent: '#059669', path: '/members' });
+    }
+  }
+  if (canFinance && !isMember) {
+    statCards.push({ icon: '💰', label: 'Finance (Month)',  value: fmtMoney(finance.totalThisMonth), sub: 'Total collections this month', accent: '#059669', path: '/finance' });
+  }
+  if (isMember) {
+    statCards.push({ icon: '💰', label: 'My Giving (Month)', value: fmtMoney(finance.totalThisMonth), sub: 'Your contributions this month', accent: '#059669', path: '/finance/my-giving' });
+  }
+  if (canEvents) {
+    statCards.push({ icon: '📅', label: 'Upcoming Events',  value: events.upcoming.length, sub: `${events.total} total events`,      accent: '#7c3aed', path: '/events' });
+  }
+  if (canInventory) {
+    statCards.push({ icon: '📦', label: 'Inventory Items',  value: inventory.totalItems,   sub: `${inventory.pendingRequests} pending requests`, accent: '#0891b2', path: '/inventory' });
+  }
+  if (canServices) {
+    statCards.push({ icon: '⛪', label: 'Upcoming Services', value: services.upcoming,      sub: `${services.total} total services`,  accent: '#be185d', path: '/services' });
+  }
 
-  const cardKeysByRole = {
-    [ROLE.ADMIN]:      ['members', 'active', 'finance', 'events', 'inventory', 'services'],
-    [ROLE.PASTOR]:     ['members', 'active', 'finance', 'events', 'services'],
-    [ROLE.REG_TEAM]:   ['members', 'active', 'events', 'services'],
-    [ROLE.FINANCE]:    ['members', 'finance', 'events'],
-    [ROLE.CG_LEADER]:  ['members', 'events', 'inventory', 'services'],
-    [ROLE.GRP_LEADER]: ['members', 'events', 'inventory', 'services'],
-    [ROLE.MEMBER]:     ['myGiving', 'events', 'services'],
-  };
-
-  const statCards = (cardKeysByRole[roleId] || ['members', 'events', 'services'])
-    .map(k => allCards[k]).filter(Boolean);
-
-  const showFinance   = [ROLE.ADMIN, ROLE.PASTOR, ROLE.FINANCE].includes(roleId);
-  const showMyGiving  = roleId === ROLE.MEMBER;
-  const showInventory = [ROLE.ADMIN, ROLE.CG_LEADER, ROLE.GRP_LEADER].includes(roleId);
-  const showAudit     = [ROLE.ADMIN, ROLE.PASTOR].includes(roleId);
+  const dateStr = new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const displayName = user?.email?.split('@')[0] || 'there';
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
+    <div style={s.page}>
+
+      {/* ── Hero header ────────────────────────────────────── */}
+      <div style={{ ...s.hero, background: `linear-gradient(135deg, ${accent}18 0%, #f8fafc 100%)`, borderBottom: `2px solid ${accent}22` }}>
         <div>
-          <h1 style={styles.title}>{greeting()}, {user?.email?.split('@')[0]} 👋</h1>
-          <p style={styles.subtitle}>Here's what's happening at PLWM-MCC today.</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+            <span style={{ fontSize: '26px' }}>
+              {role === R.ADMIN ? '🛡️' : role === R.PASTOR ? '✝️' : role === R.REG ? '📋' : role === R.FINANCE ? '💼' : role === R.CG ? '🏘️' : role === R.GRP ? '👫' : '👤'}
+            </span>
+            <h1 style={{ ...s.title, color: accent }}>{greeting()}, {displayName} 👋</h1>
+          </div>
+          <p style={s.subtitle}>Here's what's happening at PLWM-MCC today.</p>
         </div>
-        <span style={styles.dateBadge}>{new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+          <span style={{ ...s.dateBadge, background: `${accent}15`, color: accent, border: `1px solid ${accent}30` }}>{dateStr}</span>
+          <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{role}</span>
+        </div>
       </div>
 
-      <div style={styles.statsGrid}>
-        {statCards.map((card) => (
-          <div key={card.label} style={styles.statCard} onClick={() => navigate(card.path)}>
-            <div style={styles.statTop}>
-              <span style={styles.statIcon}>{card.icon}</span>
-              <span style={{ ...styles.statValue, color: card.color }}>{card.value}</span>
-            </div>
-            <div style={styles.statLabel}>{card.label}</div>
-            <div style={styles.statSub}>{card.sub}</div>
-          </div>
-        ))}
-      </div>
+      {/* ── Stat cards ─────────────────────────────────────── */}
+      {statCards.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(175px, 1fr))`, gap: '14px', marginBottom: '24px' }}>
+          {statCards.map(card => (
+            <StatCard key={card.label} {...card} onClick={() => navigate(card.path)} />
+          ))}
+        </div>
+      )}
 
-      <div style={styles.columns}>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>📅 Upcoming Events</span>
-            <button style={styles.viewAll} onClick={() => navigate('/events')}>View all</button>
+      {/* ── Role-specific content sections ─────────────────── */}
+
+      {/* SYSTEM ADMIN ─────────────────────────────────────── */}
+      {role === R.ADMIN && (
+        <>
+          <div style={s.grid2}>
+            <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
+              {events.upcoming.length === 0
+                ? <EmptyState icon="📭" text="No upcoming events" />
+                : events.upcoming.map(ev => (
+                    <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date) + (ev.location ? ` · ${ev.location}` : '')}
+                      right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />
+                  ))
+              }
+            </SectionCard>
+            <SectionCard title="Recent Transactions" icon="💰" actionLabel="View all" onAction={() => navigate('/finance')}>
+              {finance.recentRecords.length === 0
+                ? <EmptyState icon="📭" text="No transactions yet" />
+                : finance.recentRecords.map(r => (
+                    <ListRow key={r.id}
+                      left={r.Member ? `${r.Member.first_name} ${r.Member.last_name}` : '—'}
+                      sub={`${r.category?.name || '—'} · ${fmtDate(r.transaction_date)}`}
+                      right={fmtMoneyFull(r.amount)} rightColor="#059669" />
+                  ))
+              }
+            </SectionCard>
           </div>
-          <div style={styles.cardBody}>
+          <div style={{ ...s.grid2, marginTop: '16px' }}>
+            <SectionCard title="Recent Activity" icon="📋" actionLabel="View all" onAction={() => navigate('/audit-logs')}>
+              {recentActivity.length === 0
+                ? <EmptyState icon="📭" text="No activity yet" />
+                : recentActivity.map(log => (
+                    <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 20px', borderBottom: '1px solid #f8fafc', gap: '10px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.User?.email || `User #${log.user_id}`}</div>
+                        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{new Date(log.created_at).toLocaleString('en-PH')}</div>
+                      </div>
+                      <ActionBadge action={log.action} />
+                    </div>
+                  ))
+              }
+            </SectionCard>
+            <SectionCard title="Services Overview" icon="⛪" actionLabel="View all" onAction={() => navigate('/services')}>
+              <ListRow left="Total services"    right={services.total}    rightColor="#be185d" />
+              <ListRow left="Upcoming published" right={services.upcoming} rightColor="#be185d" />
+              <ListRow left="Inventory items"   right={inventory.totalItems} rightColor="#0891b2" onClick={() => navigate('/inventory')} />
+              <ListRow left="Pending requests"  right={inventory.pendingRequests} rightColor={inventory.pendingRequests > 0 ? '#d97706' : '#94a3b8'} onClick={() => navigate('/inventory')} />
+              <ListRow left="Total members"     right={members.total}     rightColor="#005599" onClick={() => navigate('/members')} />
+              <ListRow left="Active members"    right={members.active}    rightColor="#059669" onClick={() => navigate('/members')} />
+            </SectionCard>
+          </div>
+          {inventory.lowStock > 0 && (
+            <AlertBanner icon="⚠️" accent={accent}
+              text={`${inventory.lowStock} inventory item${inventory.lowStock > 1 ? 's are' : ' is'} at or below minimum stock level.`}
+              onClick={() => navigate('/inventory')} />
+          )}
+        </>
+      )}
+
+      {/* PASTOR ────────────────────────────────────────────── */}
+      {role === R.PASTOR && (
+        <>
+          <div style={s.grid2}>
+            <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
+              {events.upcoming.length === 0
+                ? <EmptyState icon="📭" text="No upcoming events" />
+                : events.upcoming.map(ev => (
+                    <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date)} right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />
+                  ))
+              }
+            </SectionCard>
+            <SectionCard title="Recent Transactions" icon="💰" actionLabel="View all" onAction={() => navigate('/finance')}>
+              {finance.recentRecords.length === 0
+                ? <EmptyState icon="📭" text="No transactions yet" />
+                : finance.recentRecords.map(r => (
+                    <ListRow key={r.id}
+                      left={r.Member ? `${r.Member.first_name} ${r.Member.last_name}` : '—'}
+                      sub={`${r.category?.name || '—'} · ${fmtDate(r.transaction_date)}`}
+                      right={fmtMoneyFull(r.amount)} rightColor="#059669" />
+                  ))
+              }
+            </SectionCard>
+          </div>
+          <div style={{ marginTop: '16px' }}>
+            <SectionCard title="Recent Activity" icon="📋" actionLabel="View all" onAction={() => navigate('/audit-logs')}>
+              {recentActivity.length === 0
+                ? <EmptyState icon="📭" text="No activity yet" />
+                : recentActivity.map(log => (
+                    <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 20px', borderBottom: '1px solid #f8fafc', gap: '10px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.User?.email || `User #${log.user_id}`}</div>
+                        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{new Date(log.created_at).toLocaleString('en-PH')}</div>
+                      </div>
+                      <ActionBadge action={log.action} />
+                    </div>
+                  ))
+              }
+            </SectionCard>
+          </div>
+        </>
+      )}
+
+      {/* REGISTRATION TEAM ─────────────────────────────────── */}
+      {role === R.REG && (
+        <div style={s.grid2}>
+          <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
             {events.upcoming.length === 0
-              ? <p style={styles.empty}>No upcoming events.</p>
+              ? <EmptyState icon="📭" text="No upcoming events" />
               : events.upcoming.map(ev => (
-                <div key={ev.id} style={styles.listRow} onClick={() => navigate(`/events/${ev.id}`)}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={styles.listTitle}>{ev.title}</div>
-                    <div style={styles.listSub}>{fmtDate(ev.start_date)}{ev.location ? ` · ${ev.location}` : ''}</div>
-                  </div>
-                  <span style={{ ...styles.statusBadge, background: '#bde3f5', color: '#1e40af' }}>{ev.status}</span>
-                </div>
-              ))
-            }
-          </div>
-        </div>
-
-        {showFinance && (
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <span>💰 Recent Transactions</span>
-              <button style={styles.viewAll} onClick={() => navigate('/finance')}>View all</button>
-            </div>
-            <div style={styles.cardBody}>
-              {finance.recentRecords.length === 0
-                ? <p style={styles.empty}>No transactions yet.</p>
-                : finance.recentRecords.map(r => (
-                  <div key={r.id} style={styles.listRow}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={styles.listTitle}>{r.Member ? `${r.Member.first_name} ${r.Member.last_name}` : '—'}</div>
-                      <div style={styles.listSub}>{r.category?.name} · {fmtDate(r.transaction_date)}</div>
-                    </div>
-                    <span style={{ fontWeight: '700', color: '#059669', flexShrink: 0 }}>{fmtMoneyFull(r.amount)}</span>
-                  </div>
+                  <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date)} right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />
                 ))
-              }
-            </div>
-          </div>
-        )}
-
-        {showMyGiving && (
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <span>💰 My Recent Giving</span>
-              <button style={styles.viewAll} onClick={() => navigate('/finance/my-giving')}>View all</button>
-            </div>
-            <div style={styles.cardBody}>
-              {finance.recentRecords.length === 0
-                ? <p style={styles.empty}>No giving records yet.</p>
-                : finance.recentRecords.map(r => (
-                  <div key={r.id} style={styles.listRow}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={styles.listTitle}>{r.category?.name || '—'}</div>
-                      <div style={styles.listSub}>{fmtDate(r.transaction_date)}</div>
-                    </div>
-                    <span style={{ fontWeight: '700', color: '#059669', flexShrink: 0 }}>{fmtMoneyFull(r.amount)}</span>
-                  </div>
-                ))
-              }
-            </div>
-          </div>
-        )}
-
-        {!showFinance && !showMyGiving && (
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <span>⛪ Services</span>
-              <button style={styles.viewAll} onClick={() => navigate('/services')}>View all</button>
-            </div>
-            <div style={styles.cardBody}>
-              <div style={styles.listRow}>
-                <div style={styles.listTitle}>Upcoming this week</div>
-                <span style={{ fontWeight: '700', color: '#be185d' }}>{services.upcoming}</span>
-              </div>
-              <div style={styles.listRow}>
-                <div style={styles.listTitle}>Total services</div>
-                <span style={{ fontWeight: '700', color: '#be185d' }}>{services.total}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {showAudit && (
-        <div style={{ ...styles.card, marginTop: '20px' }}>
-          <div style={styles.cardHeader}>
-            <span>📋 Recent Activity</span>
-            <button style={styles.viewAll} onClick={() => navigate('/audit-logs')}>View all</button>
-          </div>
-          <div style={styles.cardBody}>
-            {recentActivity.length === 0
-              ? <p style={styles.empty}>No activity yet.</p>
-              : recentActivity.map(log => (
-                <div key={log.id} style={{ ...styles.listRow, alignItems: 'center' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={styles.listTitle}>{log.User?.email || `User #${log.user_id}`}</div>
-                    <div style={styles.listSub}>{new Date(log.created_at).toLocaleString('en-PH')}</div>
-                  </div>
-                  {actionBadge(log.action)}
-                </div>
-              ))
             }
-          </div>
+          </SectionCard>
+          <SectionCard title="Services & Members" icon="⛪" actionLabel="View services" onAction={() => navigate('/services')}>
+            <ListRow left="Total members"      right={members.total}    rightColor="#005599" onClick={() => navigate('/members')} />
+            <ListRow left="Active members"     right={members.active}   rightColor="#059669" onClick={() => navigate('/members')} />
+            <ListRow left="New this month"     right={members.newThisMonth} rightColor="#005599" />
+            <ListRow left="Total services"     right={services.total}   rightColor="#be185d" onClick={() => navigate('/services')} />
+            <ListRow left="Upcoming services"  right={services.upcoming} rightColor="#be185d" onClick={() => navigate('/services')} />
+            <ListRow left="Total events"       right={events.total}     rightColor="#7c3aed" onClick={() => navigate('/events')} />
+          </SectionCard>
         </div>
       )}
 
-      {showInventory && inventory.lowStock > 0 && (
-        <div style={styles.warningBanner} onClick={() => navigate('/inventory')}>
-          ⚠️ <strong>{inventory.lowStock}</strong> inventory item{inventory.lowStock > 1 ? 's are' : ' is'} at or below minimum stock level.
-          <span style={styles.warningLink}>View Inventory →</span>
+      {/* FINANCE TEAM ──────────────────────────────────────── */}
+      {role === R.FINANCE && (
+        <>
+          <div style={s.grid2}>
+            <SectionCard title="Recent Transactions" icon="💰" actionLabel="View all" onAction={() => navigate('/finance')}>
+              {finance.recentRecords.length === 0
+                ? <EmptyState icon="📭" text="No transactions yet" />
+                : finance.recentRecords.map(r => (
+                    <ListRow key={r.id}
+                      left={r.Member ? `${r.Member.first_name} ${r.Member.last_name}` : '—'}
+                      sub={`${r.category?.name || '—'} · ${fmtDate(r.transaction_date)}`}
+                      right={fmtMoneyFull(r.amount)} rightColor="#059669" />
+                  ))
+              }
+            </SectionCard>
+            <SectionCard title="Overview" icon="📊">
+              <ListRow left="Total members"     right={members.total}    rightColor="#005599" onClick={() => navigate('/members')} />
+              <ListRow left="Total events"      right={events.total}     rightColor="#7c3aed" onClick={() => navigate('/events')} />
+              <ListRow left="Upcoming events"   right={events.upcoming.length} rightColor="#7c3aed" />
+              <div style={{ padding: '14px 20px', borderTop: '1px solid #f1f5f9', marginTop: '4px' }}>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>This Month</div>
+                <div style={{ fontSize: '22px', fontWeight: '800', color: '#059669' }}>{fmtMoneyFull(finance.totalThisMonth)}</div>
+                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Total collections</div>
+              </div>
+            </SectionCard>
+          </div>
+        </>
+      )}
+
+      {/* CELL GROUP LEADER ─────────────────────────────────── */}
+      {(role === R.CG || role === R.GRP) && (
+        <div style={s.grid2}>
+          <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
+            {events.upcoming.length === 0
+              ? <EmptyState icon="📭" text="No upcoming events" />
+              : events.upcoming.map(ev => (
+                  <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date)} right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />
+                ))
+            }
+          </SectionCard>
+          <SectionCard title="Inventory & Members" icon="📦" actionLabel="View inventory" onAction={() => navigate('/inventory')}>
+            <ListRow left="Total items"        right={inventory.totalItems}      rightColor="#0891b2" onClick={() => navigate('/inventory')} />
+            <ListRow left="Pending requests"   right={inventory.pendingRequests} rightColor={inventory.pendingRequests > 0 ? '#d97706' : '#94a3b8'} onClick={() => navigate('/inventory')} />
+            <ListRow left="Low stock items"    right={inventory.lowStock}        rightColor={inventory.lowStock > 0 ? '#dc2626' : '#94a3b8'} onClick={() => navigate('/inventory')} />
+            <ListRow left="Total members"      right={members.total}             rightColor="#005599" onClick={() => navigate('/members')} />
+            <ListRow left="Upcoming services"  right={services.upcoming}         rightColor="#be185d" onClick={() => navigate('/services')} />
+          </SectionCard>
         </div>
       )}
+
+      {/* MEMBER ─────────────────────────────────────────────── */}
+      {role === R.MEMBER && (
+        <div style={s.grid2}>
+          <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
+            {events.upcoming.length === 0
+              ? <EmptyState icon="📭" text="No upcoming events" />
+              : events.upcoming.map(ev => (
+                  <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date) + (ev.location ? ` · ${ev.location}` : '')}
+                    right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />
+                ))
+            }
+          </SectionCard>
+          <SectionCard title="My Recent Giving" icon="💰" actionLabel="View all" onAction={() => navigate('/finance/my-giving')}>
+            {finance.recentRecords.length === 0
+              ? <EmptyState icon="📭" text="No giving records yet" />
+              : finance.recentRecords.map(r => (
+                  <ListRow key={r.id}
+                    left={r.category?.name || '—'}
+                    sub={fmtDate(r.transaction_date)}
+                    right={fmtMoneyFull(r.amount)} rightColor="#059669" />
+                ))
+            }
+            {finance.recentRecords.length > 0 && (
+              <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>This month total</span>
+                <span style={{ fontSize: '15px', fontWeight: '800', color: '#059669' }}>{fmtMoneyFull(finance.totalThisMonth)}</span>
+              </div>
+            )}
+          </SectionCard>
+        </div>
+      )}
+
     </div>
   );
 }
 
-const styles = {
-  page:         { padding: '32px', maxWidth: '1100px' },
-  loading:      { padding: '48px', textAlign: 'center', color: '#888' },
-  error:        { padding: '48px', textAlign: 'center', color: '#dc2626' },
-  header:       { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' },
-  title:        { fontSize: '24px', fontWeight: '700', color: '#005599', margin: 0 },
-  subtitle:     { fontSize: '14px', color: '#6b7280', marginTop: '4px' },
-  dateBadge:    { fontSize: '13px', color: '#6b7280', background: '#f3f4f6', padding: '6px 14px', borderRadius: '20px' },
-  statsGrid:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '24px' },
-  statCard:     { background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px 16px', cursor: 'pointer', transition: 'box-shadow 0.15s' },
-  statTop:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' },
-  statIcon:     { fontSize: '22px' },
-  statValue:    { fontSize: '22px', fontWeight: '800', lineHeight: 1, maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  statLabel:    { fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '2px' },
-  statSub:      { fontSize: '12px', color: '#9ca3af' },
-  columns:      { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' },
-  card:         { background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' },
-  cardHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', fontWeight: '600', fontSize: '14px', color: '#005599' },
-  viewAll:      { background: 'none', border: 'none', color: '#005599', fontSize: '13px', cursor: 'pointer', fontWeight: '600' },
-  cardBody:     { padding: '4px 0' },
-  listRow:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '12px 20px', borderBottom: '1px solid #f9fafb', cursor: 'pointer', gap: '8px' },
-  listTitle:    { fontSize: '14px', fontWeight: '500', color: '#111827' },
-  listSub:      { fontSize: '12px', color: '#9ca3af', marginTop: '2px' },
-  statusBadge:  { padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', flexShrink: 0 },
-  empty:        { textAlign: 'center', color: '#9ca3af', padding: '24px', fontSize: '14px' },
-  warningBanner:{ marginTop: '20px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '10px', padding: '14px 20px', fontSize: '14px', color: '#92400e', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
-  warningLink:  { marginLeft: 'auto', color: '#d97706', fontWeight: '600' },
+const s = {
+  page:     { padding: '0', maxWidth: '1120px', fontFamily: "'Segoe UI', system-ui, sans-serif" },
+  hero:     { padding: '24px 28px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', borderRadius: '0 0 0 0' },
+  title:    { fontSize: '22px', fontWeight: '800', margin: 0, letterSpacing: '-0.3px' },
+  subtitle: { fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' },
+  dateBadge:{ fontSize: '12px', fontWeight: '600', padding: '5px 12px', borderRadius: '20px' },
+  grid2:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
 };
