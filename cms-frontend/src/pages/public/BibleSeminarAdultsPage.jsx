@@ -4,11 +4,11 @@ import PublicLayout, { VideoEmbed } from './PublicLayout';
 const C = { navy:'#0B2447', blue:'#1565C0', gold:'#C9A84C', white:'#fff', off:'#F4F7FB', border:'#E2E8F0', text:'#0F1B33', sub:'#475569', muted:'#64748B' };
 
 const VIDEOS = [
-  { id: '-I4DKbntDTY', n: 1, title: 'God Who Created the Heavens and the Earth Is Alive',        verse: 'Genesis 1:1' },
-  { id: 'KG7M8qAHsdY', n: 2, title: 'Creation and Historical Events in the Bible',                verse: 'Isaiah 46:9' },
+  { id: '6jDTQBiD1JY', n: 1, title: 'God Who Created the Heavens and the Earth Is Alive',        verse: 'Genesis 1:1' },
+  { id: 'QTzLZgK_-lI', n: 2, title: 'Creation and Historical Events in the Bible',                verse: 'Isaiah 46:9' },
   { id: 'A1RAGMqa3iI', n: 3, title: "What Is God's Purpose in Choosing Israel?",                   verse: 'Isaiah 43:10' },
-  { id: 'QTzLZgK_-lI', n: 4, title: 'Our History and the Future Through the Bible',                verse: 'Matthew 24:3' },
-  { id: '6jDTQBiD1JY', n: 5, title: "What Is the End of Human History and God's Kingdom?",        verse: 'Revelation 20:4' },
+  { id: 'KG7M8qAHsdY', n: 4, title: 'Our History and the Future Through the Bible',                verse: 'Matthew 24:3' },
+  { id: '-I4DKbntDTY', n: 5, title: "What Is the End of Human History and God's Kingdom?",        verse: 'Revelation 20:4' },
 ];
 
 export default function BibleSeminarAdultsPage() {

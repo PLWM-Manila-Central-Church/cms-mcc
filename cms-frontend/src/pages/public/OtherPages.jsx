@@ -161,45 +161,130 @@ export function WorldMissionPage() {
 
 // ── MISSION STATUS ────────────────────────────────────────────
 export function MissionStatusPage() {
-  const CHURCHES = ['Manila Central Church','Naga Church','Quezon City Church','Cavite Church','Ortigas Church','Pili Church','Lapog Church','Malolos Church','Bani Church','Tagkawayan Church','Angel Church','Dasmarinas Church','Palawan Church','Calauag Church','Ligao Church','San Jose Del Monte Church','Bato Catanduanes Church','Manila City Church','Castillejos Church','Kaylavay Church','Davao Toril Church','Sili Church','Cebu Church','Cagayan De Oro Church','Sultan Kudarat Church','Malusqui Church','Iloilo Church'];
+  const CHURCHES = [
+    'Manila Central Church','Naga Church','Quezon City Church','Cavite Church','Ortigas Church',
+    'Pili Church','Lapog Church','Malolos Church','Bani Church','Tagkawayan Church',
+    'Angel Church','Dasmarinas Church','Palawan Church','Calauag Church','Ligao Church',
+    'San Jose Del Monte Church','Bato Catanduanes Church','Manila City Church','Castillejos Church','Kaylavay Church',
+    'Davao Toril Church','Sili Church','Cebu Church','Cagayan De Oro Church','Sultan Kudarat Church',
+    'Malusqui Church','Iloilo Church',
+  ];
+
+  const BRANCHES_LUZON = [
+    'Tondo Mission Branch','Sta. Mesa Mission Branch','Novaliches Mission Branch','Fairview Mission Branch',
+    'Valenzuela Mission Branch','Marikina Mission Branch','Antipolo Mission Branch','Binangonan Mission Branch',
+    'Taytay Mission Branch','Angono Mission Branch','Cainta Mission Branch','San Mateo Mission Branch',
+    'Montalban Mission Branch','San Jose Del Monte Mission Branch','Meycauayan Mission Branch',
+    'Marilao Mission Branch','Bocaue Mission Branch','Balagtas Mission Branch','Guiguinto Mission Branch',
+    'Malolos Mission Branch','Plaridel Mission Branch','San Rafael Mission Branch','San Ildefonso Mission Branch',
+    'Norzagaray Mission Branch','Sta. Maria Mission Branch','San Miguel Mission Branch','Candaba Mission Branch',
+    'Apalit Mission Branch','Macabebe Mission Branch','Masantol Mission Branch','Minalin Mission Branch',
+    'Mexico Mission Branch','Magalang Mission Branch','Mabalacat Mission Branch','Bamban Mission Branch',
+    'Capas Mission Branch','Tarlac City Mission Branch','La Paz Mission Branch','Paniqui Mission Branch',
+    'Gerona Mission Branch','San Jose City Mission Branch','Cabanatuan Mission Branch','Palayan Mission Branch',
+    'Bongabon Mission Branch','Talavera Mission Branch','General Trias Mission Branch','Imus Mission Branch',
+    'Bacoor Mission Branch','Dasmariñas Mission Branch','Carmona Mission Branch',
+  ];
+
+  const BRANCHES_VISAYAS = [
+    'Cebu City Mission Branch','Mandaue Mission Branch','Lapu-Lapu Mission Branch','Talisay Mission Branch',
+    'Consolacion Mission Branch','Liloan Mission Branch','Compostela Mission Branch','Danao Mission Branch',
+    'Bogo Mission Branch','Toledo Mission Branch','Balamban Mission Branch','Iloilo City Mission Branch',
+    'Pavia Mission Branch','Santa Barbara Mission Branch','Leganes Mission Branch','Oton Mission Branch',
+    'Dumangas Mission Branch','Barotac Nuevo Mission Branch','Zarraga Mission Branch','San Miguel Mission Branch',
+    'Bacolod Mission Branch','Talisay Mission Branch','Victorias Mission Branch','Sagay Mission Branch',
+    'Cadiz Mission Branch','Dumaguete Mission Branch','Bayawan Mission Branch','Tanjay Mission Branch',
+    'Tacloban Mission Branch','Palo Mission Branch','Tanauan Mission Branch','Santa Fe Mission Branch',
+    'Ormoc Mission Branch','Kananga Mission Branch','Baybay Mission Branch',
+  ];
+
+  const BRANCHES_MINDANAO = [
+    'Davao City Mission Branch','Tagum Mission Branch','Panabo Mission Branch','Digos Mission Branch',
+    'Mati Mission Branch','Cagayan de Oro Mission Branch','El Salvador Mission Branch','Opol Mission Branch',
+    'Gingoog Mission Branch','Ozamiz Mission Branch','Iligan Mission Branch','Marawi Mission Branch',
+    'General Santos Mission Branch','Koronadal Mission Branch','Kidapawan Mission Branch',
+    'Cotabato City Mission Branch','Midsayap Mission Branch','Pikit Mission Branch',
+    'Sultan Kudarat Mission Branch','Isulan Mission Branch','Tacurong Mission Branch',
+    'Zamboanga City Mission Branch','Ipil Mission Branch','Pagadian Mission Branch',
+    'Dipolog Mission Branch','Dapitan Mission Branch','Butuan Mission Branch','Cabadbaran Mission Branch',
+  ];
+
+  const SectionHeader = ({ color, label }) => (
+    <h4 style={{ fontSize:12, fontWeight:700, color, textTransform:'uppercase', letterSpacing:'1px', marginBottom:12, display:'flex', alignItems:'center', gap:8 }}>
+      <span style={{ width:16, height:2.5, background:color, borderRadius:2, display:'inline-block' }} />{label}
+    </h4>
+  );
+
+  const ChipList = ({ items, dotColor }) => (
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(210px,1fr))', gap:7, marginBottom:28 }}>
+      {items.map((ch,i)=>(
+        <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', background:C.off, borderRadius:8, border:`1px solid ${C.border}` }}>
+          <div style={{ width:6, height:6, borderRadius:'50%', background:dotColor, flexShrink:0 }} />
+          <span style={{ fontSize:12.5, color:C.text, fontWeight:500 }}>{ch}</span>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <PublicLayout>
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'World Mission',path:'/world-mission'},{label:'Status'}]} title="Status of World Mission" sub="PLWM Churches and Mission Branches across the Philippines — 2026" />
       <section style={{ background:C.white, padding:'72px 24px' }}>
-        <div style={{ maxWidth:1060, margin:'0 auto' }}>
+        <div style={{ maxWidth:1100, margin:'0 auto' }}>
+
           {/* Stats */}
-          <div style={{ display:'flex', gap:16, marginBottom:48, flexWrap:'wrap' }}>
-            {[['50+','PLWM Churches','Mother churches across the Philippines'],['120+','Mission Branches','Active branch missions nationwide'],['3','Island Groups','Luzon, Visayas, and Mindanao'],['17','Metro Cellgroups','Active cellgroups in Manila']].map(([num,label,sub])=>(
-              <div key={label} style={{ flex:1, minWidth:180, background:C.off, border:`1.5px solid ${C.border}`, borderRadius:12, padding:'20px', textAlign:'center' }}>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'2rem', fontWeight:900, color:C.blue }}>{num}</div>
-                <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:3 }}>{label}</div>
-                <div style={{ fontSize:12, color:C.muted }}>{sub}</div>
+          <div style={{ display:'flex', gap:16, marginBottom:56, flexWrap:'wrap' }}>
+            {[
+              ['50+','PLWM Churches','Mother churches across the Philippines'],
+              ['120+','Mission Branches','Active branch missions nationwide'],
+              ['3','Island Groups','Luzon, Visayas, and Mindanao'],
+              ['17','Metro Cellgroups','Active cellgroups in Manila'],
+            ].map(([num,label,sub])=>(
+              <div key={label} style={{ flex:1, minWidth:200, background:C.off, border:`1.5px solid ${C.border}`, borderRadius:14, padding:'22px 20px', textAlign:'center' }}>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'2.2rem', fontWeight:900, color:C.blue, lineHeight:1 }}>{num}</div>
+                <div style={{ fontSize:13, fontWeight:700, color:C.text, margin:'6px 0 3px' }}>{label}</div>
+                <div style={{ fontSize:11.5, color:C.muted }}>{sub}</div>
               </div>
             ))}
           </div>
 
-          {/* Churches list */}
-          <div style={{ marginBottom:40 }}>
-            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.3rem', fontWeight:700, color:C.text, marginBottom:20, display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ width:28, height:3, background:C.blue, borderRadius:2, display:'inline-block' }} />PLWM Churches
+          {/* PLWM Churches */}
+          <div style={{ marginBottom:48 }}>
+            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:6, display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ width:30, height:3, background:C.blue, borderRadius:2, display:'inline-block' }} />PLWM Churches
             </h3>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px,1fr))', gap:8 }}>
-              {CHURCHES.map((ch,i)=>(
-                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', background:C.off, borderRadius:8, border:`1px solid ${C.border}` }}>
-                  <div style={{ width:7, height:7, borderRadius:'50%', background:'#FF5733', flexShrink:0 }} />
-                  <span style={{ fontSize:13, color:C.text, fontWeight:500 }}>{ch}</span>
-                </div>
-              ))}
+            <p style={{ fontSize:13, color:C.muted, marginBottom:20 }}>Mother churches across the Philippines — {CHURCHES.length} total</p>
+            <ChipList items={CHURCHES} dotColor="#E53E3E" />
+          </div>
+
+          {/* Mission Branches */}
+          <div style={{ marginBottom:48 }}>
+            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:6, display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ width:30, height:3, background:C.gold, borderRadius:2, display:'inline-block' }} />Mission Branches
+            </h3>
+            <p style={{ fontSize:13, color:C.muted, marginBottom:24 }}>Active mission branches across Luzon, Visayas, and Mindanao — {BRANCHES_LUZON.length + BRANCHES_VISAYAS.length + BRANCHES_MINDANAO.length}+ total</p>
+
+            <div style={{ background:C.off, border:`1.5px solid ${C.border}`, borderRadius:14, padding:'24px 24px 16px' }}>
+              <SectionHeader color="#1565C0" label="Luzon Region" />
+              <ChipList items={BRANCHES_LUZON} dotColor="#1565C0" />
+
+              <SectionHeader color="#2E7D32" label="Visayas Region" />
+              <ChipList items={BRANCHES_VISAYAS} dotColor="#2E7D32" />
+
+              <SectionHeader color="#C9A84C" label="Mindanao Region" />
+              <ChipList items={BRANCHES_MINDANAO} dotColor="#C9A84C" />
             </div>
           </div>
 
-          <div style={{ background:C.navy, borderRadius:14, padding:'24px 28px', textAlign:'center' }}>
+          {/* CTA */}
+          <div style={{ background:C.navy, borderRadius:14, padding:'28px 32px', textAlign:'center' }}>
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.3rem', color:'#fff', fontWeight:700, marginBottom:10 }}>See the Full 2026 PLWM Map</div>
-            <p style={{ fontSize:14, color:'rgba(255,255,255,0.6)', marginBottom:16, lineHeight:1.6 }}>For the complete list of all PLWM churches and mission branches, visit the PLWM International website.</p>
+            <p style={{ fontSize:14, color:'rgba(255,255,255,0.6)', marginBottom:18, lineHeight:1.6 }}>For the complete list of all PLWM churches and mission branches, visit the PLWM International website.</p>
             <a href="https://www.jbch.org/en/mission/?cId=451" target="_blank" rel="noopener noreferrer">
-              <button style={{ background:C.gold, color:C.navy, border:'none', padding:'12px 24px', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Visit PLWM International →</button>
+              <button style={{ background:C.gold, color:C.navy, border:'none', padding:'12px 28px', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Visit PLWM International →</button>
             </a>
           </div>
+
         </div>
       </section>
     </PublicLayout>
