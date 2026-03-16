@@ -258,16 +258,19 @@ export default function ServicesPage() {
         </div>
       )}
 
-      {/* Status Filter */}
+      {/* Status Filter — members only see relevant states (Published/Completed) */}
       <div style={styles.filterBar}>
-        {['', 'draft', 'published', 'completed', 'cancelled'].map(s => (
-          <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
+        {(isMember
+          ? [{ key: '', label: 'All' }, { key: 'published', label: 'Published' }, { key: 'completed', label: 'Completed' }]
+          : [{ key: '', label: 'All' }, { key: 'draft', label: 'Draft' }, { key: 'published', label: 'Published' }, { key: 'completed', label: 'Completed' }, { key: 'cancelled', label: 'Cancelled' }]
+        ).map(opt => (
+          <button key={opt.key} onClick={() => { setStatusFilter(opt.key); setPage(1); }}
             style={{
               ...styles.filterChip,
-              background: statusFilter === s ? '#005599' : '#f1f5f9',
-              color:      statusFilter === s ? '#fff'    : '#475569',
+              background: statusFilter === opt.key ? '#005599' : '#f1f5f9',
+              color:      statusFilter === opt.key ? '#fff'    : '#475569',
             }}>
-            {s ? STATUS_META[s].label : 'All'}
+            {opt.label}
           </button>
         ))}
       </div>
@@ -338,7 +341,7 @@ export default function ServicesPage() {
                       {/* Member: Pre-register button */}
                       {canPreReg && (
                         <button onClick={() => openPreReg(s)} style={styles.preRegBtn}>
-                          {myResponse ? '✏️ Edit Response' : '📋 Pre-Register'}
+                          {myResponse ? '✏️ Update RSVP' : '📋 Pre-Register'}
                         </button>
                       )}
                       {/* Show existing response badge for member */}

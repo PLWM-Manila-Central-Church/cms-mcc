@@ -10,7 +10,7 @@ const STATUS_COLORS = {
   Visitor:  { bg: '#fef9c3', color: '#ca8a04' },
 };
 
-function MemberCard({ m, onView, onEdit, canEdit }) {
+function MemberCard({ m, onView, onEdit, canEdit, isMember }) {
   return (
     <div style={{
       background: '#fff', borderRadius: 14, border: '1.5px solid #e8edf2',
@@ -30,9 +30,12 @@ function MemberCard({ m, onView, onEdit, canEdit }) {
           <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', lineHeight: 1.3 }}>
             {m.last_name}, {m.first_name}
           </div>
-          <span style={{ ...STATUS_COLORS[m.status], padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, flexShrink: 0, background: STATUS_COLORS[m.status]?.bg, color: STATUS_COLORS[m.status]?.color }}>
-            {m.status}
-          </span>
+          {/* Hide status badge for member view — it's an admin concept */}
+          {!isMember && (
+            <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, flexShrink: 0, background: STATUS_COLORS[m.status]?.bg, color: STATUS_COLORS[m.status]?.color }}>
+              {m.status}
+            </span>
+          )}
         </div>
         <div style={{ fontSize: 13, color: '#64748b', marginBottom: 3 }}>{m.email || '—'}</div>
         <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 10 }}>
@@ -51,8 +54,9 @@ function MemberCard({ m, onView, onEdit, canEdit }) {
 
 export default function MembersPage() {
   const navigate    = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const isMobile    = useIsMobile();
+  const isMember    = user?.roleName === 'Member';
   const canCreate   = hasPermission('members', 'create');
   const canEdit     = hasPermission('members', 'update');
 
@@ -87,13 +91,19 @@ export default function MembersPage() {
   const handleKey    = (e) => { if (e.key === 'Enter') handleSearch(); };
   const clearFilters = () => { setSearchInput(''); setSearch(''); setStatus(''); setPage(1); };
 
+  // Desktop table column definitions — members see a simplified, people-focused view
+  const adminCols   = ['Name', 'Email', 'Phone', 'Cell Group', 'Group', 'Status', 'Barcode', 'Actions'];
+  const memberCols  = ['Name', 'Email', 'Phone', 'Cell Group', 'Group', 'Actions'];
+  const tableCols   = isMember ? memberCols : adminCols;
+
   return (
     <div>
       {/* Page header */}
       <div className="cms-page-header">
         <div>
-          <h1 className="cms-page-title">Members</h1>
-          <p className="cms-page-sub">{total} total members</p>
+          {/* Members see "Church Directory" — feels like a community resource, not an admin panel */}
+          <h1 className="cms-page-title">{isMember ? 'Church Directory' : 'Members'}</h1>
+          <p className="cms-page-sub">{total} {isMember ? 'members in your church family' : 'total members'}</p>
         </div>
         {canCreate && (
           <button onClick={() => navigate('/members/new')} className="cms-add-btn">+ Add Member</button>
@@ -105,21 +115,26 @@ export default function MembersPage() {
         <div style={{ display:'flex', gap:8, flex:1, minWidth: isMobile ? '100%' : 280 }}>
           <input
             value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={handleKey}
-            placeholder="Search name, email, phone..."
+            placeholder={isMember ? 'Search by name, email...' : 'Search name, email, phone...'}
             style={{ flex:1, padding:'10px 14px', fontSize:15, border:'1.5px solid #e2e8f0', borderRadius:9, outline:'none', fontFamily:'inherit', minWidth:0 }}
           />
           <button onClick={handleSearch} style={{ background:'#005599', color:'#fff', border:'none', borderRadius:9, padding:'10px 16px', fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
             Search
           </button>
         </div>
-        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-          {['','Active','Inactive','Visitor'].map(s => (
-            <button key={s} onClick={() => { setPage(1); setStatus(s); }}
-              style={{ border:'none', borderRadius:20, padding:'7px 14px', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background: statusFilter===s ? '#005599' : '#f1f5f9', color: statusFilter===s ? '#fff' : '#475569', minHeight:38 }}>
-              {s || 'All'}
-            </button>
-          ))}
-        </div>
+
+        {/* Status tabs are admin concepts (Inactive, Visitor) — hide them for member view */}
+        {!isMember && (
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {['','Active','Inactive','Visitor'].map(s => (
+              <button key={s} onClick={() => { setPage(1); setStatus(s); }}
+                style={{ border:'none', borderRadius:20, padding:'7px 14px', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background: statusFilter===s ? '#005599' : '#f1f5f9', color: statusFilter===s ? '#fff' : '#475569', minHeight:38 }}>
+                {s || 'All'}
+              </button>
+            ))}
+          </div>
+        )}
+
         {(search || statusFilter) && (
           <button onClick={clearFilters} style={{ background:'none', border:'1px solid #e2e8f0', borderRadius:9, padding:'7px 14px', fontSize:13, color:'#94a3b8', cursor:'pointer', fontFamily:'inherit', minHeight:38 }}>✕ Clear</button>
         )}
@@ -135,7 +150,7 @@ export default function MembersPage() {
           ) : members.length === 0 ? (
             <div style={{ padding:'40px', textAlign:'center', color:'#94a3b8', background:'#fff', borderRadius:14 }}>No members found.</div>
           ) : members.map(m => (
-            <MemberCard key={m.id} m={m} canEdit={canEdit}
+            <MemberCard key={m.id} m={m} canEdit={canEdit} isMember={isMember}
               onView={id => navigate(`/members/${id}`)}
               onEdit={id => navigate(`/members/${id}/edit`)}
             />
@@ -148,20 +163,21 @@ export default function MembersPage() {
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead style={{ background:'#f8fafc' }}>
                 <tr>
-                  {['Name','Email','Phone','Cell Group','Group','Status','Barcode','Actions'].map(h => (
+                  {tableCols.map(h => (
                     <th key={h} style={{ padding:'12px 16px', textAlign:'left', fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #e2e8f0', whiteSpace:'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={8} style={{ padding:'48px', textAlign:'center', color:'#94a3b8' }}>Loading...</td></tr>
+                  <tr><td colSpan={tableCols.length} style={{ padding:'48px', textAlign:'center', color:'#94a3b8' }}>Loading...</td></tr>
                 ) : members.length === 0 ? (
-                  <tr><td colSpan={8} style={{ padding:'48px', textAlign:'center', color:'#94a3b8' }}>No members found.</td></tr>
+                  <tr><td colSpan={tableCols.length} style={{ padding:'48px', textAlign:'center', color:'#94a3b8' }}>No members found.</td></tr>
                 ) : members.map((m, i) => (
                   <tr key={m.id} style={{ background: i%2===0 ? '#fff' : '#f8fafc', transition:'background 0.12s' }}
                     onMouseEnter={e => e.currentTarget.style.background='#e8f4fd'}
                     onMouseLeave={e => e.currentTarget.style.background = i%2===0 ? '#fff' : '#f8fafc'}>
+                    {/* Name */}
                     <td style={{ padding:'13px 16px', borderBottom:'1px solid #f1f5f9' }}>
                       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                         <div style={{ width:34, height:34, borderRadius:'50%', background:'linear-gradient(135deg,#005599,#13B5EA)', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, flexShrink:0 }}>
@@ -170,14 +186,25 @@ export default function MembersPage() {
                         <span style={{ fontWeight:600, color:'#0f172a', fontSize:14 }}>{m.last_name}, {m.first_name}</span>
                       </div>
                     </td>
+                    {/* Email */}
                     <td style={{ padding:'13px 16px', fontSize:14, color:'#374151', borderBottom:'1px solid #f1f5f9' }}>{m.email || '—'}</td>
+                    {/* Phone */}
                     <td style={{ padding:'13px 16px', fontSize:14, color:'#374151', borderBottom:'1px solid #f1f5f9' }}>{m.phone || '—'}</td>
+                    {/* Cell Group */}
                     <td style={{ padding:'13px 16px', fontSize:14, color:'#374151', borderBottom:'1px solid #f1f5f9' }}>{m.cellGroup?.name || '—'}</td>
+                    {/* Group */}
                     <td style={{ padding:'13px 16px', fontSize:14, color:'#374151', borderBottom:'1px solid #f1f5f9' }}>{m.group?.name || '—'}</td>
-                    <td style={{ padding:'13px 16px', borderBottom:'1px solid #f1f5f9' }}>
-                      <span style={{ background:STATUS_COLORS[m.status]?.bg, color:STATUS_COLORS[m.status]?.color, padding:'3px 10px', borderRadius:20, fontSize:12, fontWeight:600 }}>{m.status}</span>
-                    </td>
-                    <td style={{ padding:'13px 16px', fontSize:12, color:'#374151', fontFamily:'monospace', borderBottom:'1px solid #f1f5f9' }}>{m.barcode}</td>
+                    {/* Status — admin only */}
+                    {!isMember && (
+                      <td style={{ padding:'13px 16px', borderBottom:'1px solid #f1f5f9' }}>
+                        <span style={{ background:STATUS_COLORS[m.status]?.bg, color:STATUS_COLORS[m.status]?.color, padding:'3px 10px', borderRadius:20, fontSize:12, fontWeight:600 }}>{m.status}</span>
+                      </td>
+                    )}
+                    {/* Barcode — admin only */}
+                    {!isMember && (
+                      <td style={{ padding:'13px 16px', fontSize:12, color:'#374151', fontFamily:'monospace', borderBottom:'1px solid #f1f5f9' }}>{m.barcode}</td>
+                    )}
+                    {/* Actions */}
                     <td style={{ padding:'13px 16px', borderBottom:'1px solid #f1f5f9' }}>
                       <div style={{ display:'flex', gap:6 }}>
                         <button onClick={() => navigate(`/members/${m.id}`)} style={{ background:'#e8f4fd', color:'#0066b3', border:'none', borderRadius:6, padding:'5px 12px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>View</button>

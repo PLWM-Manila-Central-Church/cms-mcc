@@ -26,8 +26,9 @@ const STATUS_ACTION_STYLE = {
 
 export default function EventsPage() {
   const navigate        = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const canCreate       = hasPermission('events', 'create');
+  const isMember        = user?.roleName === 'Member';
 
   const [events, setEvents]         = useState([]);
   const [total, setTotal]           = useState(0);
@@ -143,6 +144,12 @@ export default function EventsPage() {
     const hr = parseInt(h);
     return ` · ${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
   };
+
+  // Members only see Published/Completed — Draft and Cancelled are admin workflow states
+  const filterOptions = isMember
+    ? [{ key: '', label: 'All' }, { key: 'published', label: 'Published' }, { key: 'completed', label: 'Completed' }]
+    : [{ key: '', label: 'All' }, { key: 'draft', label: 'Draft' }, { key: 'published', label: 'Published' }, { key: 'completed', label: 'Completed' }, { key: 'cancelled', label: 'Cancelled' }];
+
   return (
     <div style={s.page}>
       <div style={s.pageHeader}>
@@ -150,45 +157,40 @@ export default function EventsPage() {
           <h1 style={s.title}>Events</h1>
           <p style={s.subtitle}>{total} total events</p>
         </div>
-        {canCreate && (
+        {/* + New Event is an admin action — hidden from members */}
+        {canCreate && !isMember && (
           <button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} style={s.addBtn}>
             {showForm ? '✕ Cancel' : '+ New Event'}
           </button>
         )}
       </div>
 
-      {/* Form */}
-      {showForm && (
+      {/* Create / Edit form — admin only */}
+      {showForm && !isMember && (
         <div style={s.formCard}>
           <h3 style={s.formTitle}>{editEvent ? 'Edit Event' : 'Create New Event'}</h3>
           {formError && <div style={s.errorBox}>{formError}</div>}
           <form onSubmit={handleSubmit} style={s.form}>
             <div style={s.formRow}>
-              <div style={{ ...s.field, flex: 2 }}>
-                <label style={s.label}>Title *</label>
-                <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="Event title" required style={s.input} />
-              </div>
               <div style={s.field}>
-                <label style={s.label}>Category *</label>
-                <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} required style={s.select}>
+                <label style={s.label}>Category</label>
+                <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} style={s.select}>
                   <option value="">— Select —</option>
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <div style={s.field}>
-                <label style={s.label}>Status</label>
-                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} style={s.select}>
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                </select>
+              <div style={{ ...s.field, flex: 2 }}>
+                <label style={s.label}>Title *</label>
+                <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="Event title" required style={s.input} />
               </div>
             </div>
 
             <div style={s.field}>
               <label style={s.label}>Description</label>
               <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                rows={3} placeholder="Event description..." style={{ ...s.input, resize: 'vertical' }} />
+                rows={3} placeholder="Optional description"
+                style={{ ...s.input, resize: 'vertical', fontFamily: 'inherit' }} />
             </div>
 
             <div style={s.formRow}>
@@ -203,6 +205,13 @@ export default function EventsPage() {
               <div style={s.field}>
                 <label style={s.label}>Start Time</label>
                 <input type="time" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} style={s.input} />
+              </div>
+              <div style={s.field}>
+                <label style={s.label}>Status</label>
+                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} style={s.select}>
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
               </div>
             </div>
 
@@ -234,12 +243,12 @@ export default function EventsPage() {
         </div>
       )}
 
-      {/* Status filter */}
+      {/* Status filter — members see only relevant states (Published/Completed) */}
       <div style={s.filterBar}>
-        {['', 'draft', 'published', 'completed', 'cancelled'].map(st => (
-          <button key={st} onClick={() => { setStatusFilter(st); setPage(1); }}
-            style={{ ...s.filterChip, background: statusFilter === st ? '#005599' : '#f1f5f9', color: statusFilter === st ? '#fff' : '#475569' }}>
-            {st ? STATUS_META[st].label : 'All'}
+        {filterOptions.map(opt => (
+          <button key={opt.key} onClick={() => { setStatusFilter(opt.key); setPage(1); }}
+            style={{ ...s.filterChip, background: statusFilter === opt.key ? '#005599' : '#f1f5f9', color: statusFilter === opt.key ? '#fff' : '#475569' }}>
+            {opt.label}
           </button>
         ))}
       </div>
@@ -255,7 +264,7 @@ export default function EventsPage() {
         <div style={s.grid}>
           {events.map(ev => {
             const meta        = STATUS_META[ev.status] || STATUS_META.draft;
-            const nextStatuses = canCreate ? STATUS_FLOW[ev.status] : [];
+            const nextStatuses = (canCreate && !isMember) ? STATUS_FLOW[ev.status] : [];
             const regCount    = ev.EventRegistrations?.length ?? 0;
 
             return (
@@ -284,7 +293,8 @@ export default function EventsPage() {
 
                 <div style={s.cardActions}>
                   <button onClick={() => navigate(`/events/${ev.id}`)} style={s.viewBtn}>View</button>
-                  {canCreate && (
+                  {/* Edit / status / delete — admin only, never shown to members */}
+                  {canCreate && !isMember && (
                     <>
                       <button onClick={() => openEdit(ev)} style={s.editBtn}>Edit</button>
                       {nextStatuses.map(ns => (
