@@ -124,7 +124,7 @@ export function WorldMissionPage() {
                 Manila Central Church stands as the mother church of PLWM — the Philippine Life Word Mission. Through decades of faithful ministry, we have grown to plant churches and establish mission branches across every region of the Philippines.
               </p>
               <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
-                {[['50+','PLWM Churches'],['120+','Mission Branches'],['3','Major Island Groups']].map(([num,label])=>(
+                {[['108','PLWM Churches'],['60','Mission Branches'],['3','Major Island Groups']].map(([num,label])=>(
                   <div key={label} style={{ flex:1, minWidth:100, background:C.off, border:`1.5px solid ${C.border}`, borderRadius:10, padding:'14px', textAlign:'center' }}>
                     <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.8rem', fontWeight:900, color:C.blue }}>{num}</div>
                     <div style={{ fontSize:11, color:C.muted, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.5px', marginTop:3 }}>{label}</div>
@@ -168,7 +168,7 @@ export function MissionStatusPage() {
     'Angat Church','Lapidario Church','Dasmariñas Church','Palawan Church','Calauan Church',
     'Ligao Church','San Jose Del Monte Church','Bato Catanduanes Church','Manila City Church','Castillejos Church',
     'Kaylavay Church','Davao Toril Church','Siit Church','Cebu Church','Cagayan De Oro Church',
-    'Tanauan Church','Sultan Kudarat Church','Malusqui Church','Iloilo Church','Palawan Quezon Church',
+    'Tanauan Church (Taal Galilee Retreat Center)','Sultan Kudarat Church','Malasiqui Church','Iloilo Church','Palawan Quezon Church',
     'Hilongos, Leyte Church','Angeles Church','Virac Church','Dumaguete Church','Cabiao Church',
     'Caloocan Church','Sta. Magdalena Church','Bagong Silang Church','Santa Rosa Church','Marilao Church',
     'Tambac Church','Tanza Church','San Narciso Church','Ilagan Church','Tarlac Church',
@@ -223,8 +223,8 @@ export function MissionStatusPage() {
           {/* Stats */}
           <div style={{ display:'flex', gap:16, marginBottom:56, flexWrap:'wrap' }}>
             {[
-              ['50+','PLWM Churches','Mother churches across the Philippines'],
-              ['120+','Mission Branches','Active branch missions nationwide'],
+              ['108','PLWM Churches','Mother churches across the Philippines'],
+              ['60','Mission Branches','Active branch missions nationwide'],
               ['3','Island Groups','Luzon, Visayas, and Mindanao'],
               ['17','Metro Cellgroups','Active cellgroups in Manila'],
             ].map(([num,label,sub])=>(
