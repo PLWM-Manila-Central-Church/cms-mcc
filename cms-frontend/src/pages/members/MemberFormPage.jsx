@@ -221,6 +221,13 @@ function Field({ label, name, value, onChange, type = 'text', required }) {
         onFocus={e => e.target.style.borderColor = '#0066b3'}
         onBlur={e => e.target.style.borderColor = '#e2e8f0'}
       />
+      <style>{`
+        @media (max-width: 768px) {
+          [style*="gridTemplateColumns: '1fr 1fr'"],
+          [style*="grid-template-columns: '1fr 1fr'"] { grid-template-columns: 1fr !important; }
+          [style*="padding: '32px'"] { padding: 16px !important; }
+        }
+      `}</style>
     </div>
   );
 }

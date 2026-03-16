@@ -333,6 +333,21 @@ export default function CellGroupsPage() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
         table tr:hover td { background: #f0f6ff !important; }
+        /* ── Responsive tables ── */
+        table { width: 100%; border-collapse: collapse; }
+        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        @media (max-width: 768px) {
+          table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
+        }
+        @media (max-width: 480px) {
+          table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
+        }
+`}</style>
+      <style>{`
+        @media (max-width: 768px) {
+          [style*="justifyContent: 'space-between'"] { flex-wrap: wrap !important; gap: 10px !important; }
+          [style*="padding: '10px 36px"] { width: 100% !important; box-sizing: border-box !important; }
+        }
       `}</style>
     </div>
   );

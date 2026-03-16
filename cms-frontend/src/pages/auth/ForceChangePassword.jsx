@@ -108,6 +108,15 @@ export default function ForceChangePassword() {
           </button>
         </form>
       </div>
+      <style>{`
+        @media (max-width: 480px) {
+          [style*="maxWidth: '480px'"], [style*="maxWidth: '440px'"], [style*="maxWidth: '420px'"] {
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 16px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

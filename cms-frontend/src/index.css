@@ -1,13 +1,83 @@
+/* ── Base reset ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'DM Sans', 'Segoe UI', -apple-system, BlinkMacSystemFont,
+    'Roboto', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent text inflation on rotate in iOS/Android */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
+
+/* ── Responsive CSS custom properties ───────────────────────── */
+:root {
+  --page-pad:    32px;
+  --card-pad:    24px;
+  --font-sm:     13px;
+  --font-base:   14px;
+  --font-lg:     16px;
+  --sidebar-w:   244px;
+  --header-h:    64px;
+}
+@media (max-width: 1024px) {
+  :root { --page-pad: 24px; --sidebar-w: 68px; }
+}
+@media (max-width: 768px) {
+  :root { --page-pad: 16px; --card-pad: 16px; --font-sm: 12px; --font-base: 13px; --sidebar-w: 0px; }
+}
+@media (max-width: 480px) {
+  :root { --page-pad: 12px; --card-pad: 12px; }
+}
+@media (max-width: 320px) {
+  :root { --page-pad: 8px; --card-pad: 10px; --font-sm: 11px; --font-base: 12px; }
+}
+
+/* ── Responsive table helper — use on all CMS tables ─────────── */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+}
+
+/* ── Responsive grid helpers ─────────────────────────────────── */
+.resp-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.resp-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.resp-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+@media (max-width: 1024px) {
+  .resp-grid-4 { grid-template-columns: 1fr 1fr; }
+  .resp-grid-3 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  .resp-grid-2, .resp-grid-3, .resp-grid-4 { grid-template-columns: 1fr; }
+}
+
+/* ── Utility: hide/show at breakpoints ───────────────────────── */
+.hide-mobile  { display: block; }
+.show-mobile  { display: none;  }
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: block !important; }
+}
+
+/* ── Smooth scrolling ────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+
+/* ── Prevent horizontal scroll globally ─────────────────────── */
+html, body { overflow-x: hidden; max-width: 100vw; }
+
+/* ── Touch targets — minimum 44px for accessibility ─────────── */
+button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+
+/* ── Google Translate bar suppression ───────────────────────── */
+.goog-te-banner-frame { display: none !important; }
+body { top: 0 !important; }

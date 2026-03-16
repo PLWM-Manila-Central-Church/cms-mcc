@@ -423,6 +423,24 @@ export function CIPage() {
           </div>
         </div>
       </section>
+      <style>{`
+        @media (max-width: 900px) {
+          [style*="grid-template-columns: '1fr 1fr'"],
+          [style*="gridTemplateColumns:'1fr 1fr'"],
+          [style*="gridTemplateColumns: '1fr 1fr'"],
+          [style*="gridTemplateColumns:'1fr 380px'"],
+          [style*="gridTemplateColumns: '1fr 380px'"],
+          [style*="gridTemplateColumns:'280px 1fr'"],
+          [style*="gridTemplateColumns: '280px 1fr'"] { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 600px) {
+          section { padding-left: 12px !important; padding-right: 12px !important; }
+          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr 1fr !important; }
+        }
+        @media (max-width: 380px) {
+          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </PublicLayout>
   );
 }

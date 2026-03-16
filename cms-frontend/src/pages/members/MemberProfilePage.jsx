@@ -250,6 +250,13 @@ function DetailRow({ label, value }) {
     <div style={styles.detailRow}>
       <span style={styles.detailLabel}>{label}</span>
       <span style={styles.detailValue}>{value || '—'}</span>
+      <style>{`
+        @media (max-width: 768px) {
+          [style*="gridTemplateColumns: '1fr 1fr'"],
+          [style*="grid-template-columns: '1fr 1fr'"],
+          [style*="twoCol"] { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }

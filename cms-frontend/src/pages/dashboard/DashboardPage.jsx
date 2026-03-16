@@ -207,7 +207,19 @@ export default function DashboardPage() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: '14px' }}>
       <div style={{ width: '36px', height: '36px', border: `3px solid ${acLight}`, borderTop: `3px solid ${accent}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       <span style={{ color: '#94a3b8', fontSize: '14px' }}>Loading your dashboard...</span>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }
+        /* Responsive stat grid — already uses auto-fill minmax, scales naturally */
+        /* Fix grid2 (sections like transactions/giving) */
+        @media (max-width: 768px) {
+          [style*="gridTemplateColumns: '1fr 1fr'"] { grid-template-columns: 1fr !important; }
+          [style*="padding: '24px 28px'"] { padding: 16px !important; }
+        }
+        @media (max-width: 480px) {
+          [style*="minmax(175px"] { grid-template-columns: 1fr 1fr !important; }
+        }
+        @media (max-width: 320px) {
+          [style*="minmax(175px"] { grid-template-columns: 1fr !important; }
+        }`}</style>
     </div>
   );
 

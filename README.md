@@ -1,6 +1,13 @@
 # PLWM-MCC Church Management System
 
-A full-stack Church Management System for **Philippine League of Women in Ministry – Manila Central Church (PLWM-MCC)**.
+**Philippine Life Word Mission — Manila Central Church**  
+Parañaque City, Philippines
+
+---
+
+## Overview
+
+A full-stack Church Management System (CMS) built for PLWM Manila Central Church. The system includes a **public-facing church website** and a **protected internal management system** for staff and members.
 
 ---
 
@@ -8,10 +15,14 @@ A full-stack Church Management System for **Philippine League of Women in Minist
 
 | Layer | Technology |
 |---|---|
-| Frontend | React.js (Create React App) |
-| Backend | Node.js + Express |
-| Database | MySQL + Sequelize ORM |
-| Auth | JWT (Access + Refresh tokens) + RBAC |
+| **Frontend** | React.js (Create React App) |
+| **Backend** | Node.js + Express + Sequelize |
+| **Database** | MySQL (hosted on Railway) |
+| **Auth** | JWT (8h access token + 7d refresh token) |
+| **Email** | Brevo API (`BREVO_API_KEY`) |
+| **Frontend hosting** | Vercel |
+| **Backend hosting** | Railway |
+| **ORM migrations** | sequelize-cli |
 
 ---
 
@@ -19,221 +30,244 @@ A full-stack Church Management System for **Philippine League of Women in Minist
 
 ```
 cms-mcc/
-├── cms-api/          # Backend (Node.js/Express)
-│   ├── migrations/   # Sequelize migrations
-│   ├── seeders/      # Seed data
+├── cms-frontend/          # React frontend (deployed to Vercel)
+│   ├── public/
+│   │   ├── index.html     # viewport-fit=cover for notch/fold support
+│   │   ├── logo.jpg       # Church logo
+│   │   ├── mcc.jpg        # MCC building photo (login page background)
+│   │   └── smr.jpg        # Summer retreat photo
 │   └── src/
-│       ├── config/
-│       ├── controllers/
-│       ├── middlewares/
-│       ├── models/
+│       ├── api/           # Axios instance + interceptors
+│       ├── components/
+│       │   └── layout/
+│       │       ├── MainLayout.jsx   # Responsive: drawer on mobile, collapse on tablet
+│       │       ├── Sidebar.jsx      # Nav sidebar with mobile drawer mode
+│       │       └── Header.jsx       # Top bar with hamburger + notifications
+│       ├── context/
+│       │   └── AuthContext.jsx      # JWT auth + permissions
+│       ├── pages/
+│       │   ├── public/              # Public church website (no auth)
+│       │   │   ├── PublicLayout.jsx # Shared nav + footer + Google Translate
+│       │   │   ├── HomePage.jsx     # Landing page with YouTube video hero
+│       │   │   ├── BibleSeminarPage.jsx
+│       │   │   ├── BibleSeminarAdultsPage.jsx  # 5 video series
+│       │   │   ├── BibleSeminarSchedulePage.jsx
+│       │   │   ├── LatestSermonPage.jsx
+│       │   │   └── OtherPages.jsx   # Sermon, World Mission, Introduction, Beliefs, CI
+│       │   ├── auth/
+│       │   │   ├── LoginPage.jsx    # Split layout (mcc.jpg bg + form)
+│       │   │   ├── ForgotPasswordPage.jsx
+│       │   │   ├── ResetPasswordPage.jsx
+│       │   │   └── ForceChangePassword.jsx
+│       │   └── [cms pages]/         # Dashboard, Members, Finance, Events, etc.
 │       ├── routes/
-│       └── services/
-└── cms-frontend/     # Frontend (React)
+│       │   ├── AppRoute.jsx         # Route definitions (public + protected)
+│       │   └── ProtectedRoute.jsx   # Guards: unauthenticated → /login
+│       ├── utils/
+│       │   └── constants.js         # NAV_ITEMS, permissions, role constants
+│       ├── index.css                # Global responsive CSS + breakpoints
+│       └── index.js
+│
+└── cms-api/               # Express backend (deployed to Railway)
+    ├── migrations/        # Sequelize migration files
+    ├── seeders/           # Seed data
     └── src/
-        ├── api/
-        ├── components/
-        ├── context/
-        ├── pages/
-        ├── routes/
+        ├── app.js         # Express app + CORS + route registration
+        ├── server.js      # DB connect + listen
+        ├── config/        # DB + Sequelize config
+        ├── controllers/   # Request handlers
+        ├── services/      # Business logic
+        ├── models/        # Sequelize models (37 tables)
+        ├── routes/        # Express routers
+        ├── middlewares/   # verifyToken, authorize, errorHandler
+        ├── helpers/
+        │   └── auditLog.helper.js   # Fire-and-forget audit logging
         └── utils/
+            └── mailer.js            # Brevo API email
 ```
 
 ---
 
-## Prerequisites
+## Roles & Permissions
 
-- Node.js v18+
-- MySQL 8+ (or MariaDB 10.6+)
-- npm
+| Role | Description |
+|---|---|
+| **System Admin** | Full access to all modules |
+| **Pastor** | Dashboard, members, finance view, events, audit logs |
+| **Registration Team** | Members, events, services, attendance |
+| **Finance Team** | Finance, members view |
+| **Cell Group Leader** | Cell groups, members view, events, inventory requests |
+| **Group Leader** | Group view, events, inventory requests |
+| **Member** | My giving, events (self-registration), services |
 
 ---
 
-## Backend Setup (`cms-api`)
+## Public Website Routes
 
-### 1. Install dependencies
+| Path | Page |
+|---|---|
+| `/` | Home (YouTube video hero, gatherings, events, mission) |
+| `/bible-seminar` | Bible Seminar introduction (7 topics) |
+| `/bible-seminar/adults` | 5-video adult seminar series |
+| `/bible-seminar/schedule` | 2026 seminar & retreat schedule |
+| `/sermon/latest` | Latest sermon (playlist embed) |
+| `/sermon/sunday` | Sunday sermon archive |
+| `/sermon/christian-life` | Christian Life Seminar series |
+| `/world-mission` | PLWM overview (108 churches, 60 branches) |
+| `/world-mission/status` | Full church & branch list |
+| `/introduction` | Church introduction |
+| `/introduction/beliefs` | What We Believe (7 doctrinal statements) |
+| `/introduction/ci` | Church Identity |
 
-```bash
-cd cms-api
-npm install
-```
+---
 
-### 2. Create the `.env` file
+## CMS Routes (Protected)
 
-Create a file named `.env` in the `cms-api/` root:
+| Path | Module |
+|---|---|
+| `/dashboard` | Role-specific dashboard with stats |
+| `/members` | Member directory, profiles, form |
+| `/cell-groups` | Cell group management |
+| `/ministry` | Ministry roles and assignments |
+| `/users` | User account management |
+| `/attendance` | Service attendance overview |
+| `/services` | Service schedules + attendance |
+| `/finance` | Financial records + giving |
+| `/events` | Events + registration |
+| `/inventory` | Inventory items + requests |
+| `/archives` | Document archive + versions |
+| `/audit-logs` | System audit log |
+| `/settings` | System settings |
+
+---
+
+## Environment Variables
+
+### Frontend (Vercel)
 
 ```env
-# Server
-NODE_ENV=development
+REACT_APP_API_URL=https://your-railway-app.railway.app
+```
+
+### Backend (Railway)
+
+```env
 PORT=5000
-ALLOWED_ORIGIN=http://localhost:3000
+NODE_ENV=production
 
 # Database
-DB_HOST=localhost
+DB_HOST=your-railway-db-host
 DB_PORT=3306
-DB_NAME=church_management_database
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
+DB_NAME=cms_mcc
+DB_USER=root
+DB_PASSWORD=your-password
 
 # JWT
-JWT_SECRET=your_jwt_secret_here
-JWT_EXPIRES_IN=15m
-REFRESH_TOKEN_SECRET=your_refresh_secret_here
+JWT_SECRET=your-jwt-secret
+JWT_EXPIRES_IN=8h
+REFRESH_TOKEN_SECRET=your-refresh-secret
 REFRESH_TOKEN_EXPIRES_IN=7d
 
-# Security
-BCRYPT_ROUNDS=12
+# CORS
+ALLOWED_ORIGIN=https://cms-mcc.vercel.app,https://your-other-origin.com
 
-# SMTP (required for password reset emails)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_app_password
-SMTP_FROM=PLWM-MCC <your_email@gmail.com>
+# Email (Brevo)
+BREVO_API_KEY=your-brevo-api-key
+SMTP_FROM=PLWM-MCC <noreply@yourdomain.com>
+
+# Frontend URL (for password reset links)
+FRONTEND_URL=https://cms-mcc.vercel.app
+
+# Misc
+BCRYPT_ROUNDS=10
 ```
-
-> **Note:** Use a strong random string for `JWT_SECRET` and `REFRESH_TOKEN_SECRET`.
-> You can generate one with: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`
-
-### 3. Create the database
-
-```sql
-CREATE DATABASE church_management_database CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-### 4. Run migrations
-
-```bash
-npx sequelize-cli db:migrate
-```
-
-### 5. Run seeders (initial roles, permissions, admin user)
-
-```bash
-npx sequelize-cli db:seed:all
-```
-
-### 6. Start the backend
-
-```bash
-# Development (with auto-reload)
-npm run dev
-
-# Production
-npm start
-```
-
-The API will be available at `http://localhost:5000`.
 
 ---
 
-## Frontend Setup (`cms-frontend`)
+## Local Development
 
-### 1. Install dependencies
-
+### Frontend
 ```bash
 cd cms-frontend
 npm install
-```
-
-### 2. Create the `.env` file
-
-Create a file named `.env` in the `cms-frontend/` root:
-
-```env
-REACT_APP_API_URL=http://localhost:5000/api
-```
-
-For production, point this to your deployed API URL.
-
-### 3. Add public assets
-
-Place the following files in `cms-frontend/public/`:
-
-- `logo.png` — PLWM-MCC church logo
-- `smr.jpg` — church background photo (used on the login page)
-
-### 4. Start the frontend
-
-```bash
-# Development
+# Create .env.local:
+echo "REACT_APP_API_URL=http://localhost:5000" > .env.local
 npm start
-
-# Production build
-npm run build
 ```
 
-The app will be available at `http://localhost:3000`.
+### Backend
+```bash
+cd cms-api
+npm install
+# Create .env file with variables above (DB pointing to local MySQL)
+npx sequelize-cli db:migrate
+npx sequelize-cli db:seed:all
+npm run dev
+```
 
 ---
 
-## Default Admin Account
+## Deployment
 
-After running seeders, log in with:
+### Vercel (Frontend)
+1. Connect GitHub repo to Vercel
+2. Set `REACT_APP_API_URL` in Vercel environment variables
+3. Build command: `npm run build`
+4. Output directory: `build`
 
-```
-Email:    admin@plwmmcc.com
-Password: admin123
-```
-
-> **Change this password immediately after first login.**
+### Railway (Backend)
+1. Connect GitHub repo to Railway
+2. Set all backend environment variables in Railway dashboard
+3. Start command: `npx sequelize-cli db:migrate && node src/server.js`
 
 ---
 
-## API Endpoints Overview
+## Responsive Design
 
-| Module | Base Path |
+The entire app is optimized for all device sizes:
+
+| Breakpoint | Target devices |
 |---|---|
-| Auth | `/api/auth` |
-| Members | `/api/members` |
-| Users | `/api/users` |
-| Cell Groups | `/api/cellgroups` |
-| Ministry | `/api/ministry` |
-| Services | `/api/services` |
-| Attendance | `/api/attendance` |
-| Finance | `/api/finance` |
-| Events | `/api/events` |
-| Inventory | `/api/inventory` |
-| Archives | `/api/archives` |
-| Notifications | `/api/notifications` |
-| Settings | `/api/settings` |
-| Audit Logs | `/api/audit-logs` |
-| Dashboard | `/api/dashboard` |
+| `≤ 320px` | Samsung Galaxy Z Fold (closed), very small phones |
+| `≤ 480px` | Small phones (iPhone SE, Galaxy A series) |
+| `≤ 768px` | Phones (iPhone 14, Galaxy S24) |
+| `≤ 1024px` | Tablets (iPad, Galaxy Tab, iPad mini) |
+| `> 1024px` | Laptops and desktops |
+
+**Mobile behavior:**
+- CMS sidebar becomes a full-screen drawer with backdrop overlay
+- Header shows hamburger menu; hides email and role tag
+- All data tables scroll horizontally
+- All multi-column grids stack to single column
+- Login page shows form only (photo panel hidden)
+
+**Public website:**
+- Navigation dropdowns are click-toggle (works on touch)
+- Language bar + nav bar scroll as one unit (no floating gap)
+- YouTube video hero disabled on mobile (replaced with solid background)
+- All section grids collapse at 900px → 600px → 320px progressively
 
 ---
 
-## ⚠️ Security Notes
+## PLWM Mission Data
 
-- **Never commit `.env` files to version control.** Add `.env` to `.gitignore` immediately if not already done.
-- Rotate `JWT_SECRET` and `REFRESH_TOKEN_SECRET` before deploying to production.
-- Change the default admin password on first login.
-- Set `NODE_ENV=production` in your production environment.
-- Configure SMTP credentials for password reset emails to work.
+- **108 PLWM Churches** across Luzon, Visayas, Mindanao, and Palawan
+- **60 Mission Branches** nationwide
+- Scripture: *"I shall not die, but live, and declare the works of the LORD."* — Psalm 118:17
 
 ---
 
-## Modules
+## Known Placeholders
 
-| Module | Status |
-|---|---|
-| Authentication (Login, Forgot/Reset Password) | ✅ |
-| Dashboard | ✅ |
-| Members (CRUD, Profile, Emergency Contacts) | ✅ |
-| Cell Groups (CRUD) | ✅ |
-| Ministry (Roles + Assignments) | ✅ |
-| Users & Role Management | ✅ |
-| Services (CRUD, Status Flow) | ✅ |
-| Attendance (Barcode Check-in) | ✅ |
-| Finance (Records, Summary) | ✅ |
-| Events (CRUD, Registration) | ✅ |
-| Inventory (Items, Requests) | ✅ |
-| Archives (Upload, Versioning) | ✅ |
-| Notifications (Bell, Polling) | ✅ |
-| Audit Logs | ✅ |
-| Settings | ✅ |
+The following contact information is currently placeholder and should be updated:
+
+- Church address (Parañaque City, Philippines)
+- Church phone number
+- Church email address
 
 ---
 
 ## License
 
-Internal use only — PLWM Manila Central Church.
+© 2026 Manila Central Church · Philippine Life Word Mission (PLWM)  
+All rights reserved. Built for community, powered by faith.
