@@ -307,7 +307,7 @@ const METHOD_STYLE = {
 };
 
 const styles = {
-  page:          { fontFamily: "'Segoe UI', sans-serif" },
+  page:          { fontFamily: "'Inter', sans-serif" },
   loading:       { padding: '48px', textAlign: 'center', color: '#94a3b8' },
   backBtn:       { background: 'none', border: 'none', color: '#0066b3', fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: '0 0 20px 0', display: 'block' },
   serviceCard:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px 24px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },

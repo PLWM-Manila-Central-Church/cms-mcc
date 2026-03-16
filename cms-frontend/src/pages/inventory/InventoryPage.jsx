@@ -459,7 +459,7 @@ export default function InventoryPage() {
 }
 
 const s = {
-  page:         { fontFamily: "'Segoe UI', sans-serif" },
+  page:         { fontFamily: "'Inter', sans-serif" },
   pageHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
   title:        { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   subtitle:     { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },

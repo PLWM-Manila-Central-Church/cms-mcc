@@ -354,7 +354,7 @@ export default function CellGroupsPage() {
 }
 
 const S = {
-  page:        { padding: '32px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif" },
+  page:        { padding: '32px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" },
 
   pageHeader:  { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' },
   pageTitle:   { fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px' },

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const STATUS_COLORS = {
   Active:   { bg: '#dcfce7', color: '#16a34a' },
@@ -9,320 +10,196 @@ const STATUS_COLORS = {
   Visitor:  { bg: '#fef9c3', color: '#ca8a04' },
 };
 
-export default function MembersPage() {
-  const navigate = useNavigate();
-  const { hasPermission } = useAuth();
-
-  const [members, setMembers]   = useState([]);
-  const [total, setTotal]       = useState(0);
-  const [page, setPage]         = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
-
-  const [search, setSearch]         = useState('');
-  const [statusFilter, setStatus]   = useState('');
-  const [searchInput, setSearchInput] = useState('');
-
-  const limit = 20;
-
-  const fetchMembers = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams({ page, limit });
-      if (search)       params.append('search', search);
-      if (statusFilter) params.append('status', statusFilter);
-
-      const res = await axiosInstance.get(`/members?${params}`);
-      const d   = res.data.data;
-      setMembers(d.members);
-      setTotal(d.total);
-      setTotalPages(d.total_pages);
-    } catch (err) {
-      setError('Failed to load members.');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search, statusFilter]);
-
-  useEffect(() => { fetchMembers(); }, [fetchMembers]);
-
-  const handleSearch = () => {
-    setPage(1);
-    setSearch(searchInput);
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleSearch();
-  };
-
-  const handleStatusFilter = (val) => {
-    setPage(1);
-    setStatus(val);
-  };
-
-  const clearFilters = () => {
-    setSearchInput('');
-    setSearch('');
-    setStatus('');
-    setPage(1);
-  };
-
+function MemberCard({ m, onView, onEdit, canEdit }) {
   return (
-    <div style={styles.page}>
-      {/* Header */}
-      <div style={styles.pageHeader}>
-        <div>
-          <h1 style={styles.pageTitle}>Members</h1>
-          <p style={styles.pageSubtitle}>{total} total members</p>
-        </div>
-        {hasPermission('members', 'create') && (
-          <button onClick={() => navigate('/members/new')} style={styles.addBtn}>
-            + Add Member
-          </button>
-        )}
+    <div style={{
+      background: '#fff', borderRadius: 14, border: '1.5px solid #e8edf2',
+      padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+      display: 'flex', alignItems: 'flex-start', gap: 14,
+    }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
+        background: 'linear-gradient(135deg,#005599,#13B5EA)',
+        color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 16, fontWeight: 800,
+      }}>
+        {m.first_name[0]}{m.last_name[0]}
       </div>
-
-      {/* Filters */}
-      <div style={styles.filterBar}>
-        <div style={styles.searchWrap}>
-          <input
-            type="text"
-            value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Search by name, email, phone, barcode..."
-            style={styles.searchInput}
-          />
-          <button onClick={handleSearch} style={styles.searchBtn}>Search</button>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', lineHeight: 1.3 }}>
+            {m.last_name}, {m.first_name}
+          </div>
+          <span style={{ ...STATUS_COLORS[m.status], padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, flexShrink: 0, background: STATUS_COLORS[m.status]?.bg, color: STATUS_COLORS[m.status]?.color }}>
+            {m.status}
+          </span>
         </div>
-
-        <div style={styles.filterGroup}>
-          {['', 'Active', 'Inactive', 'Visitor'].map(s => (
-            <button
-              key={s}
-              onClick={() => handleStatusFilter(s)}
-              style={{
-                ...styles.filterChip,
-                background: statusFilter === s ? '#005599' : '#f1f5f9',
-                color:      statusFilter === s ? '#fff'    : '#475569',
-              }}
-            >
-              {s || 'All'}
-            </button>
-          ))}
+        <div style={{ fontSize: 13, color: '#64748b', marginBottom: 3 }}>{m.email || '—'}</div>
+        <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 10 }}>
+          {m.cellGroup?.name ? `📍 ${m.cellGroup.name}` : ''}
+          {m.cellGroup?.name && m.phone ? ' · ' : ''}
+          {m.phone || ''}
         </div>
-
-        {(search || statusFilter) && (
-          <button onClick={clearFilters} style={styles.clearBtn}>✕ Clear</button>
-        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => onView(m.id)} style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', background: '#e8f4fd', color: '#0066b3', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>View</button>
+          {canEdit && <button onClick={() => onEdit(m.id)} style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', background: '#f0fdf4', color: '#16a34a', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Edit</button>}
+        </div>
       </div>
-
-      {/* Error */}
-      {error && <div style={styles.errorBox}>{error}</div>}
-
-      {/* Table */}
-      <div style={styles.tableWrap}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.thead}>
-              <th style={styles.th}>Name</th>
-              <th style={styles.th}>Email</th>
-              <th style={styles.th}>Phone</th>
-              <th style={styles.th}>Cell Group</th>
-              <th style={styles.th}>Group</th>
-              <th style={styles.th}>Status</th>
-              <th style={styles.th}>Barcode</th>
-              <th style={styles.th}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={8} style={styles.centerCell}>Loading...</td>
-              </tr>
-            ) : members.length === 0 ? (
-              <tr>
-                <td colSpan={8} style={styles.centerCell}>No members found.</td>
-              </tr>
-            ) : members.map((m, i) => (
-              <tr
-                key={m.id}
-                style={{ ...styles.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
-                onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
-              >
-                <td style={styles.td}>
-                  <div style={styles.nameCell}>
-                    <div style={styles.avatar}>
-                      {m.first_name[0]}{m.last_name[0]}
-                    </div>
-                    <span style={styles.fullName}>
-                      {m.last_name}, {m.first_name}
-                    </span>
-                  </div>
-                </td>
-                <td style={styles.td}>{m.email || '—'}</td>
-                <td style={styles.td}>{m.phone || '—'}</td>
-                <td style={styles.td}>{m.cellGroup?.name || '—'}</td>
-                <td style={styles.td}>{m.group?.name || '—'}</td>
-                <td style={styles.td}>
-                  <span style={{
-                    ...styles.badge,
-                    background: STATUS_COLORS[m.status]?.bg,
-                    color:      STATUS_COLORS[m.status]?.color,
-                  }}>
-                    {m.status}
-                  </span>
-                </td>
-                <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: '12px' }}>
-                  {m.barcode}
-                </td>
-                <td style={styles.td}>
-                  <div style={styles.actions}>
-                    <button
-                      onClick={() => navigate(`/members/${m.id}`)}
-                      style={styles.viewBtn}
-                    >
-                      View
-                    </button>
-                    {hasPermission('members', 'update') && (
-                      <button
-                        onClick={() => navigate(`/members/${m.id}/edit`)}
-                        style={styles.editBtn}
-                      >
-                        Edit
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div style={styles.pagination}>
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-            style={{ ...styles.pageBtn, opacity: page === 1 ? 0.4 : 1 }}
-          >
-            ← Prev
-          </button>
-          <span style={styles.pageInfo}>Page {page} of {totalPages}</span>
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            style={{ ...styles.pageBtn, opacity: page === totalPages ? 0.4 : 1 }}
-          >
-            Next →
-          </button>
-        </div>
-      )}
-      <style>{`
-        /* ── Responsive tables ── */
-        table { width: 100%; border-collapse: collapse; }
-        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        @media (max-width: 768px) {
-          table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
-        }
-        @media (max-width: 480px) {
-          table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
-        }
-
-      `}</style>
     </div>
   );
 }
 
-const styles = {
-  page: { fontFamily: "'Segoe UI', sans-serif" },
-  pageHeader: {
-    display: 'flex', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: '24px'
-  },
-  pageTitle:    { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
-  pageSubtitle: { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
-  addBtn: {
-    background: 'linear-gradient(135deg, #005599, #13B5EA)',
-    color: '#fff', border: 'none', borderRadius: '8px',
-    padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer'
-  },
-  filterBar: {
-    display: 'flex', gap: '12px', alignItems: 'center',
-    marginBottom: '20px', flexWrap: 'wrap'
-  },
-  searchWrap:  { display: 'flex', gap: '8px', flex: 1, minWidth: '280px' },
-  searchInput: {
-    flex: 1, padding: '10px 14px', fontSize: '14px',
-    border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none'
-  },
-  searchBtn: {
-    background: '#005599', color: '#fff', border: 'none',
-    borderRadius: '8px', padding: '10px 16px', fontSize: '14px',
-    fontWeight: '600', cursor: 'pointer'
-  },
-  filterGroup: { display: 'flex', gap: '6px' },
-  filterChip: {
-    border: 'none', borderRadius: '20px', padding: '6px 14px',
-    fontSize: '13px', fontWeight: '500', cursor: 'pointer'
-  },
-  clearBtn: {
-    background: 'none', border: '1px solid #e2e8f0', borderRadius: '8px',
-    padding: '6px 12px', fontSize: '13px', color: '#94a3b8', cursor: 'pointer'
-  },
-  errorBox: {
-    background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
-    borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '14px'
-  },
-  tableWrap: {
-    background: '#fff', borderRadius: '12px',
-    boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'hidden'
-  },
-  table:      { width: '100%', borderCollapse: 'collapse' },
-  thead:      { background: '#f8fafc' },
-  th: {
-    padding: '12px 16px', textAlign: 'left', fontSize: '12px',
-    fontWeight: '600', color: '#64748b', textTransform: 'uppercase',
-    letterSpacing: '0.5px', borderBottom: '1px solid #e2e8f0'
-  },
-  row:        { transition: 'background 0.15s' },
-  td:         { padding: '14px 16px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
-  centerCell: { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
-  nameCell:   { display: 'flex', alignItems: 'center', gap: '10px' },
-  avatar: {
-    width: '34px', height: '34px', borderRadius: '50%',
-    background: 'linear-gradient(135deg, #005599, #13B5EA)',
-    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '12px', fontWeight: '700', flexShrink: 0
-  },
-  fullName:   { fontWeight: '600', color: '#0f172a' },
-  badge: {
-    padding: '3px 10px', borderRadius: '20px',
-    fontSize: '12px', fontWeight: '600'
-  },
-  actions:    { display: 'flex', gap: '6px' },
-  viewBtn: {
-    background: '#e8f4fd', color: '#0066b3', border: 'none',
-    borderRadius: '6px', padding: '5px 12px', fontSize: '12px',
-    fontWeight: '600', cursor: 'pointer'
-  },
-  editBtn: {
-    background: '#f0fdf4', color: '#16a34a', border: 'none',
-    borderRadius: '6px', padding: '5px 12px', fontSize: '12px',
-    fontWeight: '600', cursor: 'pointer'
-  },
-  pagination: {
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    gap: '16px', marginTop: '24px'
-  },
-  pageBtn: {
-    background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px',
-    padding: '8px 16px', fontSize: '14px', cursor: 'pointer', fontWeight: '500'
-  },
-  pageInfo: { fontSize: '14px', color: '#64748b' }
-};
+export default function MembersPage() {
+  const navigate    = useNavigate();
+  const { hasPermission } = useAuth();
+  const isMobile    = useIsMobile();
+  const canCreate   = hasPermission('members', 'create');
+  const canEdit     = hasPermission('members', 'update');
+
+  const [members, setMembers]     = useState([]);
+  const [total, setTotal]         = useState(0);
+  const [page, setPage]           = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState('');
+  const [search, setSearch]       = useState('');
+  const [statusFilter, setStatus] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+
+  const limit = isMobile ? 15 : 20;
+
+  const fetchMembers = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const params = new URLSearchParams({ page, limit });
+      if (search)       params.append('search', search);
+      if (statusFilter) params.append('status', statusFilter);
+      const res = await axiosInstance.get(`/members?${params}`);
+      const d   = res.data.data;
+      setMembers(d.members); setTotal(d.total); setTotalPages(d.total_pages);
+    } catch { setError('Failed to load members.'); }
+    finally { setLoading(false); }
+  }, [page, search, statusFilter, limit]);
+
+  useEffect(() => { fetchMembers(); }, [fetchMembers]);
+
+  const handleSearch = () => { setPage(1); setSearch(searchInput); };
+  const handleKey    = (e) => { if (e.key === 'Enter') handleSearch(); };
+  const clearFilters = () => { setSearchInput(''); setSearch(''); setStatus(''); setPage(1); };
+
+  return (
+    <div>
+      {/* Page header */}
+      <div className="cms-page-header">
+        <div>
+          <h1 className="cms-page-title">Members</h1>
+          <p className="cms-page-sub">{total} total members</p>
+        </div>
+        {canCreate && (
+          <button onClick={() => navigate('/members/new')} className="cms-add-btn">+ Add Member</button>
+        )}
+      </div>
+
+      {/* Search + filters */}
+      <div className="cms-filter-bar">
+        <div style={{ display:'flex', gap:8, flex:1, minWidth: isMobile ? '100%' : 280 }}>
+          <input
+            value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={handleKey}
+            placeholder="Search name, email, phone..."
+            style={{ flex:1, padding:'10px 14px', fontSize:15, border:'1.5px solid #e2e8f0', borderRadius:9, outline:'none', fontFamily:'inherit', minWidth:0 }}
+          />
+          <button onClick={handleSearch} style={{ background:'#005599', color:'#fff', border:'none', borderRadius:9, padding:'10px 16px', fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+            Search
+          </button>
+        </div>
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+          {['','Active','Inactive','Visitor'].map(s => (
+            <button key={s} onClick={() => { setPage(1); setStatus(s); }}
+              style={{ border:'none', borderRadius:20, padding:'7px 14px', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background: statusFilter===s ? '#005599' : '#f1f5f9', color: statusFilter===s ? '#fff' : '#475569', minHeight:38 }}>
+              {s || 'All'}
+            </button>
+          ))}
+        </div>
+        {(search || statusFilter) && (
+          <button onClick={clearFilters} style={{ background:'none', border:'1px solid #e2e8f0', borderRadius:9, padding:'7px 14px', fontSize:13, color:'#94a3b8', cursor:'pointer', fontFamily:'inherit', minHeight:38 }}>✕ Clear</button>
+        )}
+      </div>
+
+      {error && <div className="cms-error-box">{error}</div>}
+
+      {/* Mobile: card list */}
+      {isMobile ? (
+        <div className="mobile-card-list">
+          {loading ? (
+            <div style={{ padding:'40px', textAlign:'center', color:'#94a3b8' }}>Loading...</div>
+          ) : members.length === 0 ? (
+            <div style={{ padding:'40px', textAlign:'center', color:'#94a3b8', background:'#fff', borderRadius:14 }}>No members found.</div>
+          ) : members.map(m => (
+            <MemberCard key={m.id} m={m} canEdit={canEdit}
+              onView={id => navigate(`/members/${id}`)}
+              onEdit={id => navigate(`/members/${id}/edit`)}
+            />
+          ))}
+        </div>
+      ) : (
+        /* Desktop: table */
+        <div className="desktop-table" style={{ background:'#fff', borderRadius:12, boxShadow:'0 1px 8px rgba(0,0,0,0.06)', overflow:'hidden' }}>
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse' }}>
+              <thead style={{ background:'#f8fafc' }}>
+                <tr>
+                  {['Name','Email','Phone','Cell Group','Group','Status','Barcode','Actions'].map(h => (
+                    <th key={h} style={{ padding:'12px 16px', textAlign:'left', fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #e2e8f0', whiteSpace:'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={8} style={{ padding:'48px', textAlign:'center', color:'#94a3b8' }}>Loading...</td></tr>
+                ) : members.length === 0 ? (
+                  <tr><td colSpan={8} style={{ padding:'48px', textAlign:'center', color:'#94a3b8' }}>No members found.</td></tr>
+                ) : members.map((m, i) => (
+                  <tr key={m.id} style={{ background: i%2===0 ? '#fff' : '#f8fafc', transition:'background 0.12s' }}
+                    onMouseEnter={e => e.currentTarget.style.background='#e8f4fd'}
+                    onMouseLeave={e => e.currentTarget.style.background = i%2===0 ? '#fff' : '#f8fafc'}>
+                    <td style={{ padding:'13px 16px', borderBottom:'1px solid #f1f5f9' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <div style={{ width:34, height:34, borderRadius:'50%', background:'linear-gradient(135deg,#005599,#13B5EA)', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, flexShrink:0 }}>
+                          {m.first_name[0]}{m.last_name[0]}
+                        </div>
+                        <span style={{ fontWeight:600, color:'#0f172a', fontSize:14 }}>{m.last_name}, {m.first_name}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding:'13px 16px', fontSize:14, color:'#374151', borderBottom:'1px solid #f1f5f9' }}>{m.email || '—'}</td>
+                    <td style={{ padding:'13px 16px', fontSize:14, color:'#374151', borderBottom:'1px solid #f1f5f9' }}>{m.phone || '—'}</td>
+                    <td style={{ padding:'13px 16px', fontSize:14, color:'#374151', borderBottom:'1px solid #f1f5f9' }}>{m.cellGroup?.name || '—'}</td>
+                    <td style={{ padding:'13px 16px', fontSize:14, color:'#374151', borderBottom:'1px solid #f1f5f9' }}>{m.group?.name || '—'}</td>
+                    <td style={{ padding:'13px 16px', borderBottom:'1px solid #f1f5f9' }}>
+                      <span style={{ background:STATUS_COLORS[m.status]?.bg, color:STATUS_COLORS[m.status]?.color, padding:'3px 10px', borderRadius:20, fontSize:12, fontWeight:600 }}>{m.status}</span>
+                    </td>
+                    <td style={{ padding:'13px 16px', fontSize:12, color:'#374151', fontFamily:'monospace', borderBottom:'1px solid #f1f5f9' }}>{m.barcode}</td>
+                    <td style={{ padding:'13px 16px', borderBottom:'1px solid #f1f5f9' }}>
+                      <div style={{ display:'flex', gap:6 }}>
+                        <button onClick={() => navigate(`/members/${m.id}`)} style={{ background:'#e8f4fd', color:'#0066b3', border:'none', borderRadius:6, padding:'5px 12px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>View</button>
+                        {canEdit && <button onClick={() => navigate(`/members/${m.id}/edit`)} style={{ background:'#f0fdf4', color:'#16a34a', border:'none', borderRadius:6, padding:'5px 12px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Edit</button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="cms-pagination">
+          <button onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1} className="cms-page-btn" style={{ opacity: page===1 ? 0.35 : 1 }}>← Prev</button>
+          <span style={{ fontSize:14, color:'#64748b' }}>Page {page} of {totalPages}</span>
+          <button onClick={() => setPage(p => Math.min(totalPages,p+1))} disabled={page===totalPages} className="cms-page-btn" style={{ opacity: page===totalPages ? 0.35 : 1 }}>Next →</button>
+        </div>
+      )}
+    </div>
+  );
+}

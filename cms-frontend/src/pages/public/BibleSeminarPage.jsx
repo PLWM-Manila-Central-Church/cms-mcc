@@ -27,13 +27,13 @@ export default function BibleSeminarPage() {
 
       {/* Intro */}
       <section style={{ background: C.white, padding: '72px 24px' }}>
-        <div style={{ maxWidth: 1060, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'start', marginBottom: 56 }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: C.blue }}>
                 <span style={{ width: 20, height: 2, background: C.blue, borderRadius: 2, display: 'inline-block' }} />What is the Bible Seminar?
               </div>
-              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:'clamp(1.5rem,2.5vw,2rem)', fontWeight:700, color:C.text, marginBottom:16, lineHeight:1.3 }}>
+              <h2 style={{ fontFamily:"'Lora',serif", fontSize:'clamp(1.5rem,2.5vw,2rem)', fontWeight:700, color:C.text, marginBottom:16, lineHeight:1.3 }}>
                 The Gospel shared through 7 powerful sermons
               </h2>
               <p className="prose" style={{ marginBottom: 20 }}>
@@ -59,7 +59,7 @@ export default function BibleSeminarPage() {
             </div>
             <div style={{ background: C.navy, borderRadius:14, overflow:'hidden' }}>
               <div style={{ padding:'24px 24px 20px', borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.4rem', fontWeight:700, color:'#fff', marginBottom:8 }}>"The greatest problem in life"</div>
+                <div style={{ fontFamily:"'Lora',serif", fontSize:'1.4rem', fontWeight:700, color:'#fff', marginBottom:8 }}>"The greatest problem in life"</div>
                 <p style={{ fontSize:13.5, color:'rgba(255,255,255,0.6)', lineHeight:1.7 }}>
                   Throughout a person's life, there are countless things to learn and accomplish. However, among them, there are a few absolute issues that must be understood and resolved — questions about God, the Bible, and eternal life.
                 </p>
@@ -87,7 +87,7 @@ export default function BibleSeminarPage() {
 
           {/* 7 Topics */}
           <div>
-            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.5rem', fontWeight:700, color:C.text, marginBottom:24 }}>The 7 Seminar Topics</h3>
+            <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.5rem', fontWeight:700, color:C.text, marginBottom:24 }}>The 7 Seminar Topics</h3>
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               {TOPICS.map(t => (
                 <div key={t.n} style={{ display:'flex', gap:16, alignItems:'flex-start', background:C.off, border:`1.5px solid ${C.border}`, borderRadius:12, padding:'20px 22px', transition:'all 0.2s' }}
@@ -95,7 +95,7 @@ export default function BibleSeminarPage() {
                   onMouseLeave={e => { e.currentTarget.style.background=C.off; e.currentTarget.style.borderColor=C.border; }}>
                   <div style={{ width:36, height:36, background:C.navy, color:'#fff', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:700, flexShrink:0 }}>{t.n}</div>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1rem', fontWeight:600, color:C.text, marginBottom:4, lineHeight:1.35 }}>{t.title}</div>
+                    <div style={{ fontFamily:"'Lora',serif", fontSize:'1rem', fontWeight:600, color:C.text, marginBottom:4, lineHeight:1.35 }}>{t.title}</div>
                     <div style={{ fontSize:11, color:C.blue, fontWeight:700, marginBottom:6, letterSpacing:'0.4px' }}>{t.verse}</div>
                     <div style={{ fontSize:13.5, color:C.sub, lineHeight:1.65 }}>{t.body}</div>
                   </div>

@@ -418,7 +418,7 @@ export default function ArchivesPage() {
 }
 
 const s = {
-  page:           { fontFamily: "'Segoe UI', sans-serif" },
+  page:           { fontFamily: "'Inter', sans-serif" },
   layout:         { display: 'flex', gap: '24px', alignItems: 'flex-start', flexWrap: 'wrap' },
   leftPanel:      { flex: 1, minWidth: 0 },
   detailPanel:    { width: 'min(360px, 100%)', flexShrink: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', position: 'sticky', top: '24px' },

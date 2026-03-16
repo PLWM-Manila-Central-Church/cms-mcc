@@ -233,7 +233,7 @@ export default function UsersPage() {
 }
 
 const styles = {
-  page:        { fontFamily: "'Segoe UI', sans-serif" },
+  page:        { fontFamily: "'Inter', sans-serif" },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
   pageTitle:   { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   pageSubtitle:{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
