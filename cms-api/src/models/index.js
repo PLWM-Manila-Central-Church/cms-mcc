@@ -192,7 +192,7 @@ Event.belongsTo(EventCategory, { foreignKey: "category_id", as: "category" });
 Event.hasMany(EventRegistration, { foreignKey: "event_id" });
 EventRegistration.belongsTo(Event, { foreignKey: "event_id" });
 Member.hasMany(EventRegistration, { foreignKey: "member_id" });
-EventRegistration.belongsTo(Member, { foreignKey: "member_id" });
+EventRegistration.belongsTo(Member, { foreignKey: "member_id", as: "member" });
 Event.belongsTo(User, { foreignKey: "created_by", as: "creator" });
 Event.belongsTo(User, { foreignKey: "deleted_by", as: "deletedByUser" });
 
