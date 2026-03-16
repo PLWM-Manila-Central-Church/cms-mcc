@@ -403,7 +403,7 @@ export default function PublicLayout({ children }) {
               <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:'1.25rem', fontWeight:700, color:C.text, marginBottom:8 }}>Manila Central Church</div>
               <div style={{ fontSize:14, color:C.muted, lineHeight:1.75, marginBottom:20, maxWidth:280 }}>Mother Church of Philippine Life Word Mission (PLWM). Serving Manila and the Philippines through the Word of God.</div>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                {[['📍','Address','Parañaque City, Philippines'],['✉️','Email','info@plwm-mcc.org']].map(([icon,label,value]) => (
+                {[['📍','Address','Lot 2 Block 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City'],['📞','Tel','(02) 7745-6212'],['📱','Senior Pastor','0915-807-6300'],['🌐','Website','www.jbch.org.ph']].map(([icon,label,value]) => (
                   <div key={label} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
                     <div style={{ width:28, height:28, background:'rgba(21,101,192,0.1)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}>{icon}</div>
                     <div>
@@ -422,12 +422,18 @@ export default function PublicLayout({ children }) {
                     onMouseEnter={e => e.currentTarget.style.color=C.blue}
                     onMouseLeave={e => e.currentTarget.style.color=C.muted}>{label}</Link>
                 ))}
+                <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none' }}
+                  onMouseEnter={e => e.currentTarget.style.color='#FF0000'}
+                  onMouseLeave={e => e.currentTarget.style.color=C.muted}>▶ YouTube Channel</a>
+                <a href="https://www.facebook.com/group/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none' }}
+                  onMouseEnter={e => e.currentTarget.style.color='#1877F2'}
+                  onMouseLeave={e => e.currentTarget.style.color=C.muted}>📘 Facebook Group</a>
               </div>
             </div>
             <div>
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:C.text, marginBottom:16 }}>Service Times</div>
               <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
-                {['☀️ Sunday 9:30 AM — Filipino Service','☀️ Sunday 2:00 PM — Korean Service','📖 Wednesday 7:00 PM — Midweek','🏘️ Saturday 2:00 PM — HS Fellowship','🏘️ Saturday 7:00 PM — YAG Fellowship','🔵 Tue & Thu 7:00 PM — Cell Groups'].map(s => (
+                {['☀️ Sunday 9:30–11:10 AM — Filipino Service (Main Hall)','☀️ Sunday 2:00–4:00 PM — Korean Service (Medium Hall)','📖 Wednesday 7:00–9:00 PM — Midweek Sermon (Main Hall)','🏘️ Saturday 2:00–4:00 PM — High School Fellowship','🏘️ Saturday 7:00–9:00 PM — Young Adult Fellowship','🔵 Tue & Thu 7:00 PM — Cell Group Meetings'].map(s => (
                   <span key={s} style={{ fontSize:13, color:C.muted, lineHeight:1.5 }}>{s}</span>
                 ))}
               </div>
