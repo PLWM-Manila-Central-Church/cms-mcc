@@ -276,6 +276,22 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+      <style>{`
+        /* Settings responsive */
+        @media (max-width: 768px) {
+          /* Stack sidebar above content */
+          [style*="display: 'flex', gap: '24px'"] { flex-direction: column !important; }
+          /* Full-width sidebar nav on mobile */
+        }
+        @media (max-width: 600px) {
+          [style*="width: '200px'"] { width: 100% !important; position: static !important; }
+          [style*="width: 'clamp(140px"] { width: 100% !important; }
+          [style*="display: 'flex', alignItems: 'center', gap: '16px'"] { flex-direction: column !important; align-items: flex-start !important; }
+        }
+        @media (max-width: 400px) {
+          [style*="padding: '16px 24px'"] { padding: 12px 14px !important; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -292,9 +308,9 @@ const s = {
   saveBtn:     { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 24px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'opacity 0.15s' },
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '10px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
   changesBanner: { background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '16px' },
-  layout:      { display: 'flex', gap: '24px', alignItems: 'flex-start' },
+  layout:      { display: 'flex', gap: '24px', alignItems: 'flex-start', flexWrap: 'wrap' },
   // Sidebar
-  sidebar:     { width: '200px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '4px', position: 'sticky', top: '24px' },
+  sidebar:     { width: '200px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '4px', position: 'sticky', top: '24px', minWidth: 0 },
   navItem:     { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', border: 'none', background: 'transparent', cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 0.12s' },
   navItemActive: { background: '#e8f4fd' },
   navIcon:     { fontSize: '18px', lineHeight: 1 },
@@ -309,7 +325,7 @@ const s = {
   settingsList:{ background: '#fff', border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 14px 14px', overflow: 'hidden' },
   settingRow:  { display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 24px', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' },
   settingRowDirty: { background: '#fefce8' },
-  settingLeft: { width: '220px', flexShrink: 0 },
+  settingLeft: { width: 'clamp(140px, 30%, 220px)', flexShrink: 0 },
   settingLabel:{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '3px' },
   settingKey:  { fontSize: '11px', color: '#94a3b8', fontFamily: "'Fira Code', 'Courier New', monospace", background: '#f8fafc', padding: '1px 6px', borderRadius: '4px' },
   settingRight:{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' },

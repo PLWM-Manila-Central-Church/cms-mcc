@@ -400,15 +400,28 @@ export default function ArchivesPage() {
           </div>
         )}
       </div>
+      <style>{`
+        /* Archives responsive */
+        @media (max-width: 900px) {
+          [style*="flex-start'][style*='gap: '24px'"] { flex-direction: column !important; }
+        }
+        @media (max-width: 768px) {
+          [style*="min(360px"] { width: 100% !important; position: static !important; }
+          [style*="justifyContent: 'space-between'][style*='marginBottom: '20px'"] { flex-direction: column !important; gap: 10px !important; }
+        }
+        @media (max-width: 480px) {
+          [style*="padding: '0 0 32px'"] { padding: 0 !important; }
+        }
+      `}</style>
     </div>
   );
 }
 
 const s = {
   page:           { fontFamily: "'Segoe UI', sans-serif" },
-  layout:         { display: 'flex', gap: '24px', alignItems: 'flex-start' },
+  layout:         { display: 'flex', gap: '24px', alignItems: 'flex-start', flexWrap: 'wrap' },
   leftPanel:      { flex: 1, minWidth: 0 },
-  detailPanel:    { width: '360px', flexShrink: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', position: 'sticky', top: '24px' },
+  detailPanel:    { width: 'min(360px, 100%)', flexShrink: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', position: 'sticky', top: '24px' },
   pageHeader:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
   title:          { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   subtitle:       { fontSize: '14px', color: '#64748b', margin: '4px 0 0' },

@@ -313,6 +313,12 @@ export default function EventsPage() {
           <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={s.pageBtn}>Next →</button>
         </div>
       )}
+      <style>{`
+        @media (max-width: 768px) {
+          [style*="grid-template-columns: '1fr 1fr'"],
+          [style*="gridTemplateColumns: '1fr 1fr'"] { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }

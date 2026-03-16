@@ -38,7 +38,7 @@ export default function LoginPage() {
   return (
     <div style={S.page}>
       {/* ── Left panel — church photo with overlay ── */}
-      <div style={S.left}>
+      <div style={S.left} className="login-left">
         {/* Background photo */}
         <div style={{ ...S.bgPhoto, backgroundImage: `url(${BG_URL})` }} />
         {/* Gradient overlay */}
@@ -71,7 +71,7 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right panel — login form ── */}
-      <div style={S.right}>
+      <div style={S.right} className="login-right">
         <div style={S.card}>
           {/* Card top accent */}
           <div style={S.cardAccent} />
@@ -191,6 +191,18 @@ export default function LoginPage() {
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+        /* Mobile: hide left photo panel, full-width form */
+        @media (max-width: 768px) {
+          .login-left  { display: none !important; }
+          .login-right { flex: 1 !important; }
+        }
+        /* Fold: tighter card padding */
+        @media (max-width: 360px) {
+          .login-card-body { padding: 22px 18px 18px !important; }
+        }
+        @media (max-width: 320px) {
+          .login-card-body { padding: 18px 12px 14px !important; }
         }
       `}</style>
     </div>

@@ -410,6 +410,18 @@ export default function FinancePage() {
           <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={s.pageBtn}>Next →</button>
         </div>
       )}
+      <style>{`
+        /* ── Responsive tables ── */
+        table { width: 100%; border-collapse: collapse; }
+        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        @media (max-width: 768px) {
+          table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
+        }
+        @media (max-width: 480px) {
+          table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
+        }
+
+      `}</style>
     </div>
   );
 }

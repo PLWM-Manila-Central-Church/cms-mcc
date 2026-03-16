@@ -53,7 +53,29 @@ export default function MinistryPage() {
       {tab === 'roles'       && <RolesTab />}
       {tab === 'substitutes' && <SubstituteRequestsTab />}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }
+        /* ── Responsive tables ── */
+        table { width: 100%; border-collapse: collapse; }
+        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        @media (max-width: 768px) {
+          table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
+        }
+        @media (max-width: 480px) {
+          table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
+        }
+`}</style>
+      <style>{`
+        /* Ministry page responsive */
+        table { width: 100%; border-collapse: collapse; }
+        @media (max-width: 768px) {
+          table td, table th { font-size: 11px !important; padding: 7px 8px !important; white-space: nowrap; }
+          [style*="justifyContent: 'space-between'"] { flex-wrap: wrap !important; gap: 8px !important; }
+          [style*="display: 'flex', gap: '12px'"][style*="marginBottom"] { flex-wrap: wrap !important; }
+        }
+        @media (max-width: 480px) {
+          table td, table th { font-size: 10.5px !important; padding: 6px !important; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -463,10 +463,23 @@ export default function HomePage() {
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
         @keyframes arrowBounce { 0%,100%{transform:rotate(45deg) translateY(0);} 50%{transform:rotate(45deg) translateY(5px);} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(28px);} to{opacity:1;transform:translateY(0);} }
+
+        /* Collapse all 2-col grids on tablet and below */
         @media(max-width:900px) {
           section > div > div[style*="grid-template-columns: minmax"] { grid-template-columns: 1fr !important; }
           section > div > div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
           section > div > div[style*="grid-template-columns: 1fr 300px"] { grid-template-columns: 1fr !important; }
+        }
+
+        /* Mobile: hero CTAs stack */
+        @media(max-width:600px) {
+          section > div > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+        }
+
+        /* Samsung Fold closed (280px) */
+        @media(max-width:320px) {
+          section { padding-left: 8px !important; padding-right: 8px !important; }
         }
       `}</style>
     </PublicLayout>

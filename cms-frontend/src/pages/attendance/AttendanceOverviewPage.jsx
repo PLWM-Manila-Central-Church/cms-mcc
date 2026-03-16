@@ -239,6 +239,12 @@ export default function AttendanceOverviewPage() {
           </div>
         )}
       </div>
+      <style>{`
+        @media (max-width: 768px) {
+          [style*="grid-template-columns: '1fr 1fr'"],
+          [style*="gridTemplateColumns: '1fr 1fr'"] { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }
