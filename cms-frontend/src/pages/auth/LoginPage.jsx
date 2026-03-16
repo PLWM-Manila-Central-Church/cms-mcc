@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const LOGO = process.env.PUBLIC_URL + '/logo.jpg';
 
-const BG_URL = process.env.PUBLIC_URL + '/smr.jpg';
+const BG_URL = process.env.PUBLIC_URL + '/mcc.jpg';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -172,6 +172,13 @@ export default function LoginPage() {
               </div>
             </form>
 
+            <div style={{ textAlign: 'center', marginBottom: 10 }}>
+              <Link to="/" style={{ fontSize: 12.5, color: '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 500, transition: 'color 0.18s' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#005599'}
+                onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}>
+                ← Back to Website
+              </Link>
+            </div>
             <p style={S.footer}>
               PLWM-MCC &copy; {new Date().getFullYear()} &nbsp;·&nbsp; All rights reserved
             </p>

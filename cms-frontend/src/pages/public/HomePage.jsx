@@ -137,7 +137,7 @@ export default function HomePage() {
         {!isMobile && <HeroVideo />}
 
         {/* Overlay */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: isMobile ? C.navy : 'linear-gradient(to bottom, rgba(11,36,71,0.75) 0%, rgba(11,36,71,0.60) 40%, rgba(11,36,71,0.75) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: isMobile ? C.navy : 'linear-gradient(to bottom, rgba(11,36,71,0.88) 0%, rgba(11,36,71,0.78) 40%, rgba(11,36,71,0.88) 100%)' }} />
         <div style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'radial-gradient(ellipse 70% 55% at 55% 0%, rgba(21,101,192,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
         {/* Grid texture */}
@@ -154,15 +154,15 @@ export default function HomePage() {
             Welcome to Our <em style={{ color: C.gold, fontStyle: 'normal' }}>Church</em>
           </h1>
 
-          <p style={{ fontFamily: "'Playfair Display',serif", fontStyle: 'italic', fontSize: 'clamp(0.9rem,2vw,1.1rem)', color: 'rgba(255,255,255,0.52)', marginBottom: 16, animation: 'fadeUp 0.7s ease 0.15s both' }}>
+          <p style={{ fontFamily: "'Playfair Display',serif", fontStyle: 'italic', fontSize: 'clamp(0.9rem,2vw,1.1rem)', color: 'rgba(255,255,255,0.82)', marginBottom: 16, animation: 'fadeUp 0.7s ease 0.15s both' }}>
             Join us in Sermons, Fellowships, and Retreats
           </p>
 
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', marginBottom: 32, fontStyle: 'italic', animation: 'fadeUp 0.7s ease 0.2s both' }}>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', marginBottom: 32, fontStyle: 'italic', animation: 'fadeUp 0.7s ease 0.2s both' }}>
             "I shall not die, but live, and declare the works of the LORD" — Psalm 118:17
           </p>
 
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.65)', marginBottom: 40, maxWidth: 480, margin: '0 auto 40px', animation: 'fadeUp 0.7s ease 0.25s both', lineHeight: 1.7 }}>
+          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.88)', marginBottom: 40, maxWidth: 480, margin: '0 auto 40px', animation: 'fadeUp 0.7s ease 0.25s both', lineHeight: 1.7 }}>
             A community rooted in faith, love, and mission — serving Manila and the Philippines for His glory.
           </p>
 
@@ -402,7 +402,7 @@ export default function HomePage() {
                   Manila Central Church stands as the mother church of PLWM — the Philippine Life Word Mission. Through decades of faithful ministry, we have grown to plant churches and establish mission branches across every region of the Philippines.
                 </p>
                 <div style={{ display: 'flex', gap: 16 }}>
-                  {[['50+', 'PLWM Churches'], ['120+', 'Mission Branches'], ['3', 'Major Islands']].map(([num, label]) => (
+                  {[['108', 'PLWM Churches'], ['60', 'Mission Branches'], ['3', 'Major Islands']].map(([num, label]) => (
                     <div key={label} style={{ flex: 1, background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 16, textAlign: 'center' }}>
                       <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.8rem', fontWeight: 900, color: C.blue }}>{num}</div>
                       <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 3 }}>{label}</div>
@@ -425,7 +425,7 @@ export default function HomePage() {
                   <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: dot, flexShrink: 0 }} />
                     <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', flex: 1 }}>{name}</span>
-                    <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.38)' }}>{sub}</span>
+                    <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.72)' }}>{sub}</span>
                   </div>
                 ))}
               </div>
