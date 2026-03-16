@@ -90,20 +90,45 @@ exports.getEventRegistrations = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// Self-register or admin register a specific member (member_id in body)
 exports.registerMember = async (req, res, next) => {
   try {
-    // Allow self-registration: if no member_id in body, use the logged-in user's member
     const memberId = req.body.member_id || req.user.memberId;
-    if (!memberId) return res.status(400).json({ success: false, message: "No member profile linked to this account" });
+    if (!memberId)
+      return res.status(400).json({ success: false, message: "No member profile linked to this account" });
     const result = await eventsService.registerMember(req.params.id, memberId, req.user.userId);
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
 };
 
+// Bulk register — body: { member_ids: [1, 2, 3] }
+exports.bulkRegisterMembers = async (req, res, next) => {
+  try {
+    const { member_ids } = req.body;
+    if (!Array.isArray(member_ids) || member_ids.length === 0)
+      return res.status(400).json({ success: false, message: "member_ids must be a non-empty array" });
+    const result = await eventsService.bulkRegisterMembers(req.params.id, member_ids, req.user.userId);
+    res.status(201).json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
+// Self-unregister (no memberId in path)
 exports.unregisterMember = async (req, res, next) => {
   try {
     const memberId = req.body.member_id || req.user.memberId;
-    if (!memberId) return res.status(400).json({ success: false, message: "No member profile linked to this account" });
+    if (!memberId)
+      return res.status(400).json({ success: false, message: "No member profile linked to this account" });
+    const result = await eventsService.unregisterMember(req.params.id, memberId, req.user.userId);
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
+// Admin remove specific member by memberId URL param
+exports.unregisterMemberById = async (req, res, next) => {
+  try {
+    const memberId = parseInt(req.params.memberId, 10);
+    if (!memberId)
+      return res.status(400).json({ success: false, message: "Invalid member ID" });
     const result = await eventsService.unregisterMember(req.params.id, memberId, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }

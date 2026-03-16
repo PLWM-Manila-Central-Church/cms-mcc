@@ -11,17 +11,22 @@ const STATUS_META = {
 };
 
 export default function EventDetailPage() {
-  const { id }            = useParams();
-  const navigate          = useNavigate();
+  const { id }   = useParams();
+  const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
-  const canCreate         = hasPermission('events', 'create');
+  const canCreate = hasPermission('events', 'create');
+  const canDelete = hasPermission('events', 'delete');
 
-  const [event, setEvent]       = useState(null);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
+  const [event, setEvent]           = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
   const [regLoading, setRegLoading] = useState(false);
   const [regMessage, setRegMessage] = useState('');
   const [regError, setRegError]     = useState('');
+
+  // Admin: remove-specific-row state
+  const [removingId, setRemovingId] = useState(null);
+  const [removeMsg, setRemoveMsg]   = useState('');
 
   const fetchEvent = useCallback(async () => {
     setLoading(true); setError('');
@@ -35,12 +40,14 @@ export default function EventDetailPage() {
 
   useEffect(() => { fetchEvent(); }, [fetchEvent]);
 
-  const isRegistered = event?.EventRegistrations?.some(r => r.member_id === user?.memberId);
-  const regCount     = event?.EventRegistrations?.length ?? 0;
-  const isFull       = event?.capacity && regCount >= event.capacity;
+  // isRegistered now works correctly because getEventById returns member_id
+  const isRegistered   = event?.EventRegistrations?.some(r => r.member_id === user?.memberId);
+  const regCount       = event?.EventRegistrations?.length ?? 0;
+  const isFull         = event?.capacity && regCount >= event.capacity;
   const deadlinePassed = event?.registration_deadline && new Date() > new Date(event.registration_deadline);
-  const canRegister  = event?.status === 'published' && !deadlinePassed && !isFull;
+  const canRegister    = event?.status === 'published' && !deadlinePassed && !isFull;
 
+  // Member self-register / self-unregister
   const handleRegister = async () => {
     setRegLoading(true); setRegMessage(''); setRegError('');
     try {
@@ -57,15 +64,24 @@ export default function EventDetailPage() {
     } finally { setRegLoading(false); }
   };
 
+  // Admin remove a specific member — uses the correct /:id/registrations/:memberId route
   const handleRemoveReg = async (memberId, name) => {
     if (!window.confirm(`Remove registration for ${name}?`)) return;
+    setRemovingId(memberId); setRemoveMsg('');
     try {
       await axiosInstance.delete(`/events/${id}/registrations/${memberId}`);
+      setRemoveMsg(`Registration for ${name} has been removed.`);
       fetchEvent();
-    } catch (err) { setError(err.response?.data?.message || 'Failed to remove registration.'); }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to remove registration.');
+    } finally { setRemovingId(null); }
   };
 
-  const formatDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+  const formatDate = (d) =>
+    d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    }) : '—';
+
   const formatTime = (t) => {
     if (!t) return '';
     const [h, m] = t.split(':');
@@ -101,7 +117,8 @@ export default function EventDetailPage() {
               <div style={s.detailLabel}>Date</div>
               <div style={s.detailValue}>
                 {formatDate(event.start_date)}
-                {event.end_date && event.end_date !== event.start_date && ` – ${formatDate(event.end_date)}`}
+                {event.end_date && event.end_date !== event.start_date
+                  && ` – ${formatDate(event.end_date)}`}
               </div>
             </div>
           </div>
@@ -136,7 +153,10 @@ export default function EventDetailPage() {
               <div>
                 <div style={s.detailLabel}>Registration Deadline</div>
                 <div style={{ ...s.detailValue, color: deadlinePassed ? '#dc2626' : '#0f172a' }}>
-                  {new Date(event.registration_deadline).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {new Date(event.registration_deadline).toLocaleDateString('en-PH', {
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit',
+                  })}
                   {deadlinePassed && ' (Closed)'}
                 </div>
               </div>
@@ -144,7 +164,7 @@ export default function EventDetailPage() {
           )}
         </div>
 
-        {/* Member register/unregister button */}
+        {/* Member register / unregister */}
         {user?.memberId && event.status === 'published' && (
           <div style={{ marginTop: '20px' }}>
             {regMessage && <div style={s.successBox}>{regMessage}</div>}
@@ -170,10 +190,13 @@ export default function EventDetailPage() {
         )}
       </div>
 
-      {/* Registrations list — visible to admins/creators */}
+      {/* Admin registrations list */}
       {canCreate && (
         <div style={s.regSection}>
           <h2 style={s.regTitle}>Registrations ({regCount})</h2>
+
+          {removeMsg && <div style={s.successBox}>{removeMsg}</div>}
+
           {event.EventRegistrations?.length === 0 ? (
             <div style={s.emptyReg}>No registrations yet.</div>
           ) : (
@@ -184,36 +207,56 @@ export default function EventDetailPage() {
                     <th style={s.th}>#</th>
                     <th style={s.th}>Member</th>
                     <th style={s.th}>Email</th>
+                    <th style={s.th}>Phone</th>
                     <th style={s.th}>Barcode</th>
                     <th style={s.th}>Registered At</th>
-                    <th style={s.th}>Action</th>
+                    {canDelete && <th style={s.th}>Action</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {event.EventRegistrations.map((r, i) => (
-                    <tr key={r.id}
-                      style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                    <tr key={r.id} style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
                       <td style={{ ...s.td, color: '#94a3b8' }}>{i + 1}</td>
                       <td style={s.td}>
                         <div style={s.memberCell}>
-                          <div style={s.avatar}>{r.Member?.first_name?.[0]}{r.Member?.last_name?.[0]}</div>
+                          <div style={s.avatar}>
+                            {r.member?.first_name?.[0]}{r.member?.last_name?.[0]}
+                          </div>
                           <span style={{ fontWeight: '600', color: '#0f172a' }}>
-                            {r.Member?.last_name}, {r.Member?.first_name}
+                            {r.member?.last_name}, {r.member?.first_name}
                           </span>
                         </div>
                       </td>
-                      <td style={{ ...s.td, color: '#64748b' }}>{r.Member?.email || '—'}</td>
-                      <td style={{ ...s.td, fontFamily: 'monospace', fontSize: '12px', color: '#64748b' }}>{r.Member?.barcode || '—'}</td>
+                      <td style={{ ...s.td, color: '#64748b' }}>{r.member?.email || '—'}</td>
+                      <td style={{ ...s.td, color: '#64748b' }}>{r.member?.phone || '—'}</td>
+                      <td style={{ ...s.td, fontFamily: 'monospace', fontSize: '12px', color: '#64748b' }}>
+                        {r.member?.barcode || '—'}
+                      </td>
                       <td style={{ ...s.td, color: '#64748b' }}>
-                        {new Date(r.registered_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {r.registered_at
+                          ? new Date(r.registered_at).toLocaleDateString('en-PH', {
+                              month: 'short', day: 'numeric', year: 'numeric',
+                            })
+                          : '—'}
                       </td>
-                      <td style={s.td}>
-                        <button
-                          onClick={() => handleRemoveReg(r.member_id, `${r.Member?.first_name} ${r.Member?.last_name}`)}
-                          style={s.removeBtn}>
-                          Remove
-                        </button>
-                      </td>
+                      {canDelete && (
+                        <td style={s.td}>
+                          <button
+                            onClick={() => handleRemoveReg(
+                              r.member_id,
+                              `${r.member?.first_name} ${r.member?.last_name}`
+                            )}
+                            disabled={removingId === r.member_id}
+                            style={{
+                              ...s.removeBtn,
+                              opacity: removingId === r.member_id ? 0.6 : 1,
+                              cursor: removingId === r.member_id ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {removingId === r.member_id ? '...' : 'Remove'}
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -259,5 +302,5 @@ const s = {
   td:           { padding: '12px 14px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
   memberCell:   { display: 'flex', alignItems: 'center', gap: '10px' },
   avatar:       { width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
-  removeBtn:    { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+  removeBtn:    { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', fontWeight: '600' },
 };
