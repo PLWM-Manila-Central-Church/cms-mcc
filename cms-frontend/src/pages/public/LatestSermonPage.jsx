@@ -20,7 +20,7 @@ export default function LatestSermonPage() {
       </div>
 
       <section style={{ background: C.white, padding: '72px 24px' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           {/* Main playlist player */}
           <div style={{ marginBottom: 36 }}>
             <PlaylistEmbed
@@ -51,7 +51,7 @@ export default function LatestSermonPage() {
           {/* Other sermon links */}
           <div style={{ background: C.navy, borderRadius: 14, padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.05rem', color:'#fff', fontWeight:700, marginBottom:6 }}>More Sermon Resources</div>
+              <div style={{ fontFamily:"'Lora',serif", fontSize:'1.05rem', color:'#fff', fontWeight:700, marginBottom:6 }}>More Sermon Resources</div>
               <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>Watch Sunday sermons or the Christian Life Seminar series.</p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

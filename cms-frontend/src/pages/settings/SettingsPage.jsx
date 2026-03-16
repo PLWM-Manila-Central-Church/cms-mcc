@@ -297,7 +297,7 @@ export default function SettingsPage() {
 }
 
 const s = {
-  page:        { fontFamily: "'Segoe UI', sans-serif", maxWidth: '1100px' },
+  page:        { fontFamily: "'Inter', sans-serif", maxWidth: '1100px' },
   centered:    { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px' },
   spinner:     { width: '36px', height: '36px', border: '3px solid #e5e7eb', borderTop: '3px solid #1e4080', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },

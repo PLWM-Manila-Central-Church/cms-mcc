@@ -29,7 +29,7 @@ export function SermonPage() {
     <PublicLayout>
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'Sermon'}]} title="Sermon" sub="Messages from the Word of God — for the building up of the Church." />
       <section style={{ background: C.white, padding: '72px 24px' }}>
-        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {items.map(item => (
               <Link key={item.path} to={item.path} style={{ display:'flex', gap:20, alignItems:'center', background:C.off, border:`1.5px solid ${C.border}`, borderRadius:14, padding:'24px 28px', transition:'all 0.22s' }}
@@ -37,7 +37,7 @@ export function SermonPage() {
                 onMouseLeave={e => { e.currentTarget.style.background=C.off; e.currentTarget.style.borderColor=C.border; e.currentTarget.style.boxShadow='none'; }}>
                 <div style={{ width:54, height:54, background:'rgba(21,101,192,0.10)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, flexShrink:0 }}>{item.icon}</div>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.1rem', fontWeight:700, color:C.text, marginBottom:5 }}>{item.title}</div>
+                  <div style={{ fontFamily:"'Lora',serif", fontSize:'1.1rem', fontWeight:700, color:C.text, marginBottom:5 }}>{item.title}</div>
                   <div style={{ fontSize:14, color:C.sub, lineHeight:1.55 }}>{item.desc}</div>
                 </div>
                 <div style={{ fontSize:20, color:C.light, flexShrink:0 }}>→</div>
@@ -56,7 +56,7 @@ export function SundaySermonPage() {
     <PublicLayout>
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'Sermon',path:'/sermon'},{label:'Sunday Sermon'}]} title="Sunday Sermon" sub="Messages preached every Sunday at Manila Central Church" />
       <section style={{ background: C.white, padding: '72px 24px' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ marginBottom: 32 }}>
             <div style={{ display:'flex', gap:20, flexWrap:'wrap', marginBottom:24 }}>
               {[{time:'9:30 AM', label:'Filipino Sunday Service', pastor:'Pastor Park HS'},{time:'2:00 PM', label:'Korean Sunday Service', pastor:'Pastor Park HS'}].map(s => (
@@ -88,7 +88,7 @@ export function ChristianLifePage() {
     <PublicLayout>
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'Sermon',path:'/sermon'},{label:'Christian Life Seminar'}]} title="Christian Life Seminar" sub="Teachings on living a godly, Spirit-filled Christian life" />
       <section style={{ background: C.white, padding: '72px 24px' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ maxWidth:600, marginBottom:32 }}>
             <p style={{ fontSize:15, color:C.sub, lineHeight:1.75 }}>The Christian Life Seminar is a teaching series that helps believers understand what it means to live as a child of God — walking in the Spirit, growing in faith, and bearing fruit for His Kingdom.</p>
           </div>
@@ -112,12 +112,12 @@ export function WorldMissionPage() {
     <PublicLayout>
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'World Mission'}]} title="World Mission" sub="Spreading the Gospel across every island of the Philippines and beyond" />
       <section style={{ background: C.white, padding: '72px 24px' }}>
-        <div style={{ maxWidth: 1060, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:48, alignItems:'start', marginBottom:56 }}>
             <div>
               <div style={{ background:C.navy, borderRadius:12, padding:'20px 22px', marginBottom:24, position:'relative', overflow:'hidden' }}>
-                <div style={{ position:'absolute', right:12, top:-10, fontFamily:"'Playfair Display',serif", fontSize:80, color:'rgba(255,255,255,0.05)', lineHeight:1 }}>"</div>
-                <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.05rem', color:'#fff', lineHeight:1.6, marginBottom:8 }}>"I shall not die, but live, And declare the works of the LORD."</p>
+                <div style={{ position:'absolute', right:12, top:-10, fontFamily:"'Lora',serif", fontSize:80, color:'rgba(255,255,255,0.05)', lineHeight:1 }}>"</div>
+                <p style={{ fontFamily:"'Lora',serif", fontSize:'1.05rem', color:'#fff', lineHeight:1.6, marginBottom:8 }}>"I shall not die, but live, And declare the works of the LORD."</p>
                 <span style={{ fontSize:12, color:C.gold, fontWeight:700 }}>— Psalm 118:17</span>
               </div>
               <p style={{ fontSize:15, color:C.sub, lineHeight:1.75, marginBottom:20 }}>
@@ -126,7 +126,7 @@ export function WorldMissionPage() {
               <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
                 {[['108','PLWM Churches'],['60','Mission Branches'],['3','Major Island Groups']].map(([num,label])=>(
                   <div key={label} style={{ flex:1, minWidth:100, background:C.off, border:`1.5px solid ${C.border}`, borderRadius:10, padding:'14px', textAlign:'center' }}>
-                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.8rem', fontWeight:900, color:C.blue }}>{num}</div>
+                    <div style={{ fontFamily:"'Lora',serif", fontSize:'1.8rem', fontWeight:900, color:C.blue }}>{num}</div>
                     <div style={{ fontSize:11, color:C.muted, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.5px', marginTop:3 }}>{label}</div>
                   </div>
                 ))}
@@ -229,7 +229,7 @@ export function MissionStatusPage() {
               ['17','Metro Cellgroups','Active cellgroups in Manila'],
             ].map(([num,label,sub])=>(
               <div key={label} style={{ flex:1, minWidth:200, background:C.off, border:`1.5px solid ${C.border}`, borderRadius:14, padding:'22px 20px', textAlign:'center' }}>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'2.2rem', fontWeight:900, color:C.blue, lineHeight:1 }}>{num}</div>
+                <div style={{ fontFamily:"'Lora',serif", fontSize:'2.2rem', fontWeight:900, color:C.blue, lineHeight:1 }}>{num}</div>
                 <div style={{ fontSize:13, fontWeight:700, color:C.text, margin:'6px 0 3px' }}>{label}</div>
                 <div style={{ fontSize:11.5, color:C.muted }}>{sub}</div>
               </div>
@@ -238,7 +238,7 @@ export function MissionStatusPage() {
 
           {/* PLWM Churches */}
           <div style={{ marginBottom:48 }}>
-            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:6, display:'flex', alignItems:'center', gap:10 }}>
+            <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:6, display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ width:30, height:3, background:C.blue, borderRadius:2, display:'inline-block' }} />PLWM Churches
             </h3>
             <p style={{ fontSize:13, color:C.muted, marginBottom:20 }}>Mother churches across the Philippines — {CHURCHES.length} total</p>
@@ -247,7 +247,7 @@ export function MissionStatusPage() {
 
           {/* Mission Branches */}
           <div style={{ marginBottom:48 }}>
-            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:6, display:'flex', alignItems:'center', gap:10 }}>
+            <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:6, display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ width:30, height:3, background:C.gold, borderRadius:2, display:'inline-block' }} />Mission Branches
             </h3>
             <p style={{ fontSize:13, color:C.muted, marginBottom:20 }}>Active mission branches nationwide — {MISSION_BRANCHES.length} total</p>
@@ -256,7 +256,7 @@ export function MissionStatusPage() {
 
           {/* CTA */}
           <div style={{ background:C.navy, borderRadius:14, padding:'28px 32px', textAlign:'center' }}>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.3rem', color:'#fff', fontWeight:700, marginBottom:10 }}>See the Full 2026 PLWM Map</div>
+            <div style={{ fontFamily:"'Lora',serif", fontSize:'1.3rem', color:'#fff', fontWeight:700, marginBottom:10 }}>See the Full 2026 PLWM Map</div>
             <p style={{ fontSize:14, color:'rgba(255,255,255,0.6)', marginBottom:18, lineHeight:1.6 }}>For the complete list of all PLWM churches and mission branches, visit the PLWM International website.</p>
             <a href="https://www.jbch.org/en/mission/?cId=451" target="_blank" rel="noopener noreferrer">
               <button style={{ background:C.gold, color:C.navy, border:'none', padding:'12px 28px', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Visit PLWM International →</button>
@@ -281,7 +281,7 @@ export function IntroductionPage() {
               <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14, fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:C.blue }}>
                 <span style={{ width:20, height:2, background:C.blue, borderRadius:2, display:'inline-block' }} />Our Purpose
               </div>
-              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:'clamp(1.5rem,2.5vw,2rem)', fontWeight:700, color:C.text, marginBottom:20, lineHeight:1.3 }}>Three Core Commitments</h2>
+              <h2 style={{ fontFamily:"'Lora',serif", fontSize:'clamp(1.5rem,2.5vw,2rem)', fontWeight:700, color:C.text, marginBottom:20, lineHeight:1.3 }}>Three Core Commitments</h2>
               {[
                 { icon:'⚡', title:'Prove the existence of God', body:'You can meet the living God who created the heavens and the earth, governs the history of mankind, loves humanity, solidifies the foundation of righteousness, and judges the world with righteousness and holiness.' },
                 { icon:'📖', title:'Testify to the truthfulness of the Bible', body:"The Bible is written by the inspiration of God that contains the amazing grace of the living God, the destiny of mankind and the gospel of Jesus Christ. The beginning and the end of human history is written in the Bible. The Bible is not a mere religious book but God's history." },
@@ -291,7 +291,7 @@ export function IntroductionPage() {
                   <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
                     <div style={{ width:38, height:38, background:'rgba(21,101,192,0.10)', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, flexShrink:0, marginTop:2 }}>{item.icon}</div>
                     <div>
-                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1rem', fontWeight:700, color:C.text, marginBottom:6 }}>{item.title}</div>
+                      <div style={{ fontFamily:"'Lora',serif", fontSize:'1rem', fontWeight:700, color:C.text, marginBottom:6 }}>{item.title}</div>
                       <div style={{ fontSize:14, color:C.sub, lineHeight:1.7 }}>{item.body}</div>
                     </div>
                   </div>
@@ -300,7 +300,7 @@ export function IntroductionPage() {
             </div>
             <div>
               <div style={{ background:C.navy, borderRadius:14, padding:'28px', marginBottom:20 }}>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.25rem', color:'#fff', fontWeight:700, marginBottom:8 }}>Manila Central Church</div>
+                <div style={{ fontFamily:"'Lora',serif", fontSize:'1.25rem', color:'#fff', fontWeight:700, marginBottom:8 }}>Manila Central Church</div>
                 <div style={{ fontSize:12, color:C.gold, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:16 }}>PLWM — Parañaque City, Philippines</div>
                 <p style={{ fontSize:14, color:'rgba(255,255,255,0.65)', lineHeight:1.75, marginBottom:20 }}>
                   Manila Central Church is the mother church of the Philippine Life Word Mission (PLWM) — a Gospel-centered, Bible-based mission organization with churches and mission branches across all major islands of the Philippines.
@@ -355,7 +355,7 @@ export function WhatWeBelievePage() {
               <div key={i} style={{ background:C.off, border:`1.5px solid ${C.border}`, borderRadius:12, padding:'22px 24px', transition:'all 0.2s' }}
                 onMouseEnter={e=>{ e.currentTarget.style.background='#fff'; e.currentTarget.style.borderColor='rgba(21,101,192,0.3)'; }}
                 onMouseLeave={e=>{ e.currentTarget.style.background=C.off; e.currentTarget.style.borderColor=C.border; }}>
-                <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.1rem', fontWeight:700, color:C.text, marginBottom:12, display:'flex', alignItems:'center', gap:12 }}>
+                <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.1rem', fontWeight:700, color:C.text, marginBottom:12, display:'flex', alignItems:'center', gap:12 }}>
                   <span style={{ width:26, height:26, background:C.navy, color:'#fff', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, flexShrink:0 }}>{i+1}</span>
                   {b.title}
                 </h3>
@@ -387,13 +387,13 @@ export function CIPage() {
             <div>
               {/* Symbol placeholder */}
               <div style={{ background:C.navy, borderRadius:16, aspectRatio:'1', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, padding:32 }}>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:72, fontWeight:900, color:C.gold, lineHeight:1 }}>M</div>
+                <div style={{ fontFamily:"'Lora',serif", fontSize:72, fontWeight:900, color:C.gold, lineHeight:1 }}>M</div>
                 <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', letterSpacing:'2px', textTransform:'uppercase' }}>Manila Central Church</div>
                 <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', letterSpacing:'1px' }}>PLWM Philippines</div>
               </div>
             </div>
             <div>
-              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.5rem', fontWeight:700, color:C.text, marginBottom:20 }}>Philippine Life Word Mission</h2>
+              <h2 style={{ fontFamily:"'Lora',serif", fontSize:'1.5rem', fontWeight:700, color:C.text, marginBottom:20 }}>Philippine Life Word Mission</h2>
               <p style={{ fontSize:15, color:C.sub, lineHeight:1.75, marginBottom:20 }}>
                 The name "Life Word Mission" comes from the core mission of the organization: to bring the <strong>Word of Life</strong> — the Gospel of Jesus Christ — to all people across the Philippines and the world.
               </p>
@@ -416,7 +416,7 @@ export function CIPage() {
 
           {/* Verse */}
           <div style={{ background:C.navy, borderRadius:14, padding:'28px 32px', textAlign:'center' }}>
-            <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.3rem', color:'#fff', lineHeight:1.65, marginBottom:10, fontStyle:'italic' }}>
+            <p style={{ fontFamily:"'Lora',serif", fontSize:'1.3rem', color:'#fff', lineHeight:1.65, marginBottom:10, fontStyle:'italic' }}>
               "I shall not die, but live, And declare the works of the LORD."
             </p>
             <span style={{ fontSize:13, color:C.gold, fontWeight:700 }}>— Psalm 118:17</span>

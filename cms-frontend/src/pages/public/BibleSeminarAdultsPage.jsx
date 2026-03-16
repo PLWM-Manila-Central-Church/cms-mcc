@@ -25,7 +25,7 @@ export default function BibleSeminarAdultsPage() {
       </div>
 
       <section style={{ background: C.white, padding: '72px 24px' }}>
-        <div style={{ maxWidth: 1060, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ marginBottom: 40, maxWidth: 640 }}>
             <p style={{ fontSize: 15, color: C.sub, lineHeight: 1.75 }}>
               These five sessions cover the essential truths of the Bible — from creation and the history of Israel, to the end of human history and eternal salvation through Jesus Christ. Each video starts at the key teaching section.
@@ -41,7 +41,7 @@ export default function BibleSeminarAdultsPage() {
               <VideoEmbed videoId={VIDEOS[0].id} title={VIDEOS[0].title} start={227} />
               <div>
                 <div style={{ background: C.navy, color: '#fff', fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 5, display: 'inline-block', marginBottom: 12 }}>Session 1</div>
-                <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:10, lineHeight:1.3 }}>{VIDEOS[0].title}</h3>
+                <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:10, lineHeight:1.3 }}>{VIDEOS[0].title}</h3>
                 <div style={{ fontSize: 12, color: C.blue, fontWeight: 700, marginBottom: 12 }}>{VIDEOS[0].verse}</div>
                 <p style={{ fontSize: 14, color: C.sub, lineHeight: 1.7 }}>
                   You can meet the living God who created the heavens and the earth, governs the history of mankind, loves humanity, and judges the world with righteousness and holiness.
@@ -51,7 +51,7 @@ export default function BibleSeminarAdultsPage() {
           </div>
 
           {/* Sessions 2–5 grid */}
-          <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.2rem', fontWeight:700, color:C.text, marginBottom:20 }}>More Sessions</h3>
+          <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.2rem', fontWeight:700, color:C.text, marginBottom:20 }}>More Sessions</h3>
           <div className="grid2">
             {VIDEOS.slice(1).map(v => (
               <div key={v.id} style={{ background: C.off, border: `1.5px solid ${C.border}`, borderRadius: 14, overflow: 'hidden', transition: 'all 0.2s' }}
@@ -60,7 +60,7 @@ export default function BibleSeminarAdultsPage() {
                 <VideoEmbed videoId={v.id} title={`Session ${v.n}: ${v.title}`} start={227} style={{ borderRadius: 0 }} />
                 <div style={{ padding: '16px 18px' }}>
                   <div style={{ fontSize: 10.5, fontWeight: 700, color: C.blue, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 5 }}>Session {v.n} · {v.verse}</div>
-                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'0.95rem', fontWeight:600, color:C.text, lineHeight:1.35 }}>{v.title}</div>
+                  <div style={{ fontFamily:"'Lora',serif", fontSize:'0.95rem', fontWeight:600, color:C.text, lineHeight:1.35 }}>{v.title}</div>
                 </div>
               </div>
             ))}
@@ -69,7 +69,7 @@ export default function BibleSeminarAdultsPage() {
           {/* CTA */}
           <div style={{ marginTop: 48, background: C.navy, borderRadius: 14, padding: '28px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1.1rem', color:'#fff', fontWeight:700, marginBottom:6 }}>Want to attend a live Bible Seminar?</div>
+              <div style={{ fontFamily:"'Lora',serif", fontSize:'1.1rem', color:'#fff', fontWeight:700, marginBottom:6 }}>Want to attend a live Bible Seminar?</div>
               <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>Check our schedule and join an upcoming session near you.</p>
             </div>
             <Link to="/bible-seminar/schedule">

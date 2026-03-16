@@ -34,7 +34,7 @@ export default function BibleSeminarSchedulePage() {
       </div>
 
       <section style={{ background: C.white, padding: '72px 24px' }}>
-        <div style={{ maxWidth: 1060, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
           {/* Upcoming events */}
           <div style={{ marginBottom: 60 }}>
@@ -48,7 +48,7 @@ export default function BibleSeminarSchedulePage() {
                     <div style={{ fontSize: 13, fontWeight: 700, color: ev.color }}>{ev.date}</div>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:'1rem', fontWeight:700, color:C.text, marginBottom:5 }}>{ev.title}</div>
+                    <div style={{ fontFamily:"'Lora',serif", fontSize:'1rem', fontWeight:700, color:C.text, marginBottom:5 }}>{ev.title}</div>
                     <div style={{ fontSize: 12.5, color: C.muted, marginBottom: ev.note ? 4 : 0, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {ev.location}</div>
                     {ev.note && <div style={{ fontSize: 12, color: C.sub, fontStyle: 'italic' }}>{ev.note}</div>}
                   </div>

@@ -150,11 +150,11 @@ export default function HomePage() {
             Philippine Life Word Mission — Manila Central Church
           </div>
 
-          <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 'clamp(2rem,5vw,3.4rem)', fontWeight: 700, color: '#fff', marginBottom: 8, animation: 'fadeUp 0.7s ease 0.1s both', lineHeight: 1.2 }}>
+          <h1 style={{ fontFamily: "'Lora',serif", fontSize: 'clamp(2rem,5vw,3.4rem)', fontWeight: 700, color: '#fff', marginBottom: 8, animation: 'fadeUp 0.7s ease 0.1s both', lineHeight: 1.2 }}>
             Welcome to Our <em style={{ color: C.gold, fontStyle: 'normal' }}>Church</em>
           </h1>
 
-          <p style={{ fontFamily: "'Playfair Display',serif", fontStyle: 'italic', fontSize: 'clamp(0.9rem,2vw,1.1rem)', color: 'rgba(255,255,255,0.82)', marginBottom: 16, animation: 'fadeUp 0.7s ease 0.15s both' }}>
+          <p style={{ fontFamily: "'Lora',serif", fontStyle: 'italic', fontSize: 'clamp(0.9rem,2vw,1.1rem)', color: 'rgba(255,255,255,0.82)', marginBottom: 16, animation: 'fadeUp 0.7s ease 0.15s both' }}>
             Join us in Sermons, Fellowships, and Retreats
           </p>
 
@@ -168,7 +168,7 @@ export default function HomePage() {
 
           {/* Cellgroups stat */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16, marginBottom: 40, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 14, padding: '18px 36px', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(8px)', animation: 'fadeUp 0.7s ease 0.3s both' }}>
-            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.6rem', fontWeight: 900, color: C.gold, lineHeight: 1, letterSpacing: '-1px' }}>
+            <div style={{ fontFamily: "'Lora',serif", fontSize: '2.6rem', fontWeight: 900, color: C.gold, lineHeight: 1, letterSpacing: '-1px' }}>
               {cgCount !== null ? cgCount : '—'}
             </div>
             <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.18)' }} />
@@ -202,7 +202,7 @@ export default function HomePage() {
 
       {/* PLWM Banner */}
       <div style={{ background: C.navyMid, borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '18px 24px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <span style={{ background: C.blue, color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 4, letterSpacing: '0.5px', textTransform: 'uppercase', flexShrink: 0 }}>PLWM</span>
           <span style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.68)' }}>
             <strong style={{ color: 'rgba(255,255,255,0.90)' }}>Philippine Life Word Mission</strong> — Manila Central Church is the mother church of PLWM, with churches and mission branches across the Philippines.
@@ -213,13 +213,13 @@ export default function HomePage() {
 
       {/* ── GATHERINGS ── */}
       <section style={{ background: C.white, padding: '84px 24px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <Reveal>
             <div style={{ marginBottom: 48 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: C.blue }}>
                 <span style={{ width: 20, height: 2, background: C.blue, borderRadius: 2, display: 'inline-block' }} />Weekly Schedule
               </div>
-              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 'clamp(1.6rem,3vw,2.3rem)', fontWeight: 700, color: C.text, marginBottom: 8 }}>Church Gatherings Schedule</h2>
+              <h2 style={{ fontFamily: "'Lora',serif", fontSize: 'clamp(1.6rem,3vw,2.3rem)', fontWeight: 700, color: C.text, marginBottom: 8 }}>Church Gatherings Schedule</h2>
               <p style={{ fontSize: 15, color: C.muted }}>Join us every week for worship, Word, and fellowship.</p>
             </div>
           </Reveal>
@@ -240,7 +240,7 @@ export default function HomePage() {
                       <div style={{ width: 34, height: 34, background: 'rgba(21,101,192,0.10)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, marginBottom: 12 }}>{s.icon}</div>
                       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: s.langColor, marginBottom: 4 }}>{s.lang}</div>
                       <div style={{ fontSize: 11, color: C.blue, fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: 5 }}>{s.time}</div>
-                      <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '0.95rem', fontWeight: 600, color: C.text, marginBottom: 6, lineHeight: 1.35 }}>{s.title}</div>
+                      <div style={{ fontFamily: "'Lora',serif", fontSize: '0.95rem', fontWeight: 600, color: C.text, marginBottom: 6, lineHeight: 1.35 }}>{s.title}</div>
                       <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{s.pastor}</div>
                       <div style={{ fontSize: 11.5, color: C.sub, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {s.loc}</div>
                     </div>
@@ -284,13 +284,13 @@ export default function HomePage() {
 
       {/* ── EVENTS ── */}
       <section id="events" style={{ background: C.off, padding: '84px 24px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <Reveal>
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: C.blue }}>
                 <span style={{ width: 20, height: 2, background: C.blue, borderRadius: 2, display: 'inline-block' }} />Events & Retreats
               </div>
-              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 'clamp(1.6rem,3vw,2.3rem)', fontWeight: 700, color: C.text, marginBottom: 8 }}>Upcoming Retreats / Events</h2>
+              <h2 style={{ fontFamily: "'Lora',serif", fontSize: 'clamp(1.6rem,3vw,2.3rem)', fontWeight: 700, color: C.text, marginBottom: 8 }}>Upcoming Retreats / Events</h2>
               <p style={{ fontSize: 15, color: C.muted, marginBottom: 16 }}>Events posted by our Registration Team and Admins.</p>
             </div>
           </Reveal>
@@ -318,7 +318,7 @@ export default function HomePage() {
                   <span style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(11,36,71,0.65)', color: 'rgba(255,255,255,0.9)', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.4px', backdropFilter: 'blur(4px)' }}>{ev.type}</span>
                 </div>
                 <div style={{ padding: 16 }}>
-                  <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '0.92rem', fontWeight: 600, color: C.text, lineHeight: 1.4, marginBottom: 8 }}>{ev.title}</div>
+                  <div style={{ fontFamily: "'Lora',serif", fontSize: '0.92rem', fontWeight: 600, color: C.text, lineHeight: 1.4, marginBottom: 8 }}>{ev.title}</div>
                   <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {ev.venue}</div>
                   <button style={{ background: C.blue, color: '#fff', border: 'none', borderRadius: 7, padding: '8px 0', width: '100%', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Register</button>
                 </div>
@@ -336,14 +336,14 @@ export default function HomePage() {
 
       {/* ── BIBLE SEMINAR PROMO ── */}
       <section style={{ background: C.white, padding: '84px 24px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'center' }}>
             <Reveal>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: C.blue }}>
                   <span style={{ width: 20, height: 2, background: C.blue, borderRadius: 2, display: 'inline-block' }} />Bible Seminar
                 </div>
-                <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 'clamp(1.6rem,3vw,2.3rem)', fontWeight: 700, color: C.text, marginBottom: 16, lineHeight: 1.25 }}>
+                <h2 style={{ fontFamily: "'Lora',serif", fontSize: 'clamp(1.6rem,3vw,2.3rem)', fontWeight: 700, color: C.text, marginBottom: 16, lineHeight: 1.25 }}>
                   Are you looking for answers about life and eternal life?
                 </h2>
                 <p style={{ fontSize: 15, color: C.sub, lineHeight: 1.75, marginBottom: 24 }}>
@@ -387,13 +387,13 @@ export default function HomePage() {
 
       {/* ── MISSION SECTION ── */}
       <section style={{ background: C.off, padding: '84px 24px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'center' }}>
             <Reveal>
               <div>
                 <div style={{ background: C.navy, borderRadius: 12, padding: '20px 22px', marginBottom: 24, position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', right: 12, top: -10, fontFamily: "'Playfair Display',serif", fontSize: 80, color: 'rgba(255,255,255,0.06)', lineHeight: 1 }}>"</div>
-                  <p style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.05rem', color: '#fff', lineHeight: 1.6, marginBottom: 8 }}>
+                  <div style={{ position: 'absolute', right: 12, top: -10, fontFamily: "'Lora',serif", fontSize: 80, color: 'rgba(255,255,255,0.06)', lineHeight: 1 }}>"</div>
+                  <p style={{ fontFamily: "'Lora',serif", fontSize: '1.05rem', color: '#fff', lineHeight: 1.6, marginBottom: 8 }}>
                     "I shall not die, but live, And declare the works of the LORD."
                   </p>
                   <span style={{ fontSize: 12, color: C.gold, fontWeight: 700 }}>— Psalm 118:17</span>
@@ -404,7 +404,7 @@ export default function HomePage() {
                 <div style={{ display: 'flex', gap: 16 }}>
                   {[['108', 'PLWM Churches'], ['60', 'Mission Branches'], ['3', 'Major Islands']].map(([num, label]) => (
                     <div key={label} style={{ flex: 1, background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 16, textAlign: 'center' }}>
-                      <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.8rem', fontWeight: 900, color: C.blue }}>{num}</div>
+                      <div style={{ fontFamily: "'Lora',serif", fontSize: '1.8rem', fontWeight: 900, color: C.blue }}>{num}</div>
                       <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 3 }}>{label}</div>
                     </div>
                   ))}
@@ -414,7 +414,7 @@ export default function HomePage() {
             <Reveal delay={0.2}>
               <div style={{ background: C.navy, borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '18px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ fontFamily: "'Playfair Display',serif", color: '#fff', fontSize: '1rem', marginBottom: 2 }}>2026 Philippine Life Word Mission</div>
+                  <div style={{ fontFamily: "'Lora',serif", color: '#fff', fontSize: '1rem', marginBottom: 2 }}>2026 Philippine Life Word Mission</div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>Churches & Mission Branches Nationwide</div>
                 </div>
                 <div style={{ padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, background: 'radial-gradient(ellipse at 50% 40%, rgba(21,101,192,0.22) 0%, transparent 70%)' }}>
@@ -438,7 +438,7 @@ export default function HomePage() {
       <section style={{ background: C.navy, padding: '80px 24px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 65% 75% at 100% 50%, rgba(21,101,192,0.22) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', zIndex: 2, maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 'clamp(1.8rem,3.5vw,2.4rem)', fontWeight: 700, color: '#fff', marginBottom: 16 }}>
+          <h2 style={{ fontFamily: "'Lora',serif", fontSize: 'clamp(1.8rem,3.5vw,2.4rem)', fontWeight: 700, color: '#fff', marginBottom: 16 }}>
             Become a <em style={{ color: C.gold, fontStyle: 'normal' }}>Member</em>
           </h2>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 28, flexWrap: 'wrap', marginBottom: 24 }}>

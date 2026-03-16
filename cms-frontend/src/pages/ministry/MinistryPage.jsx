@@ -854,7 +854,7 @@ function SubstituteRequestsTab() {
    Styles
 ───────────────────────────────────────────────────────────── */
 const S = {
-  page:       { padding:'28px 32px', fontFamily:"'Segoe UI',-apple-system,sans-serif" },
+  page:       { padding:'28px 32px', fontFamily:"'Inter',-apple-system,sans-serif" },
   header:     { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px' },
   title:      { fontSize:'24px', fontWeight:'800', color:'#0f172a', margin:'0 0 4px', letterSpacing:'-0.3px' },
   subtitle:   { fontSize:'14px', color:'#64748b', margin:0 },
