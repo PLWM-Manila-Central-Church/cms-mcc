@@ -207,7 +207,7 @@ export default function HomePage() {
           <span style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.68)' }}>
             <strong style={{ color: 'rgba(255,255,255,0.90)' }}>Philippine Life Word Mission</strong> — Manila Central Church is the mother church of PLWM, with churches and mission branches across the Philippines.
           </span>
-          <span style={{ marginLeft: 'auto', fontSize: 12, fontStyle: 'italic', color: 'rgba(255,255,255,0.35)', whiteSpace: 'nowrap' }}>"I shall not die, but live…" — Ps 118:17</span>
+          <span style={{ marginLeft: 'auto', fontSize: 12, fontStyle: 'italic', color: 'rgba(255,255,255,0.35)', whiteSpace: 'nowrap' }}>One Mind · Obedience · Sacrifice</span>
         </div>
       </div>
 
@@ -228,10 +228,10 @@ export default function HomePage() {
             <div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 {[
-                  { icon: '🇵🇭', lang: 'Filipino Service', langColor: '#c62828', time: 'Sunday 9:30 AM', title: 'Filipino Sunday Sermon Service', pastor: 'Pastor Park HS', loc: 'Main Hall (3rd Floor)' },
-                  { icon: '🇰🇷', lang: 'Korean Service',   langColor: C.blue,    time: 'Sunday 2:00 PM', title: 'Korean Sunday Sermon Service', pastor: 'Pastor Park HS', loc: 'Small Hall (2nd Floor)' },
-                  { icon: '📖', lang: 'Midweek Service',  langColor: '#5c35b5', time: 'Wednesday 7:00 PM', title: 'Wednesday Midweek Sermon', pastor: 'Various Pastors', loc: 'Main Hall (3rd Floor)' },
-                  { icon: '🏘️', lang: 'Youth & Young Adults', langColor: '#c07b0a', time: 'Saturday 2:00 PM & 7:00 PM', title: 'HS & YAG Fellowships', pastor: 'Evg. Leonell / Evg. Romnick', loc: 'Medium Hall (2nd Floor)' },
+                  { icon: '🇵🇭', lang: 'Filipino Service', langColor: '#c62828', time: 'Sunday 9:30–11:10 AM', title: 'Filipino Sunday Sermon Service', pastor: 'Sr. Pastor Park Heung Soon', loc: 'Main Hall (3rd Floor)' },
+                  { icon: '🇰🇷', lang: 'Korean Service',   langColor: C.blue,    time: 'Sunday 2:00–4:00 PM', title: 'Korean Sunday Sermon Service', pastor: 'Sr. Pastor Park Heung Soon', loc: 'Medium Hall (2nd Floor)' },
+                  { icon: '📖', lang: 'Midweek Service',  langColor: '#5c35b5', time: 'Wednesday 7:00–9:00 PM', title: 'Wednesday Midweek Sermon', pastor: 'Pastor Jayson Rolusta', loc: 'Main Hall (3rd Floor)' },
+                  { icon: '🏘️', lang: 'Youth & Young Adults', langColor: '#c07b0a', time: 'Saturday 2:00 PM & 7:00 PM', title: 'HS & YAG Fellowships', pastor: 'Evg. Romnick Dadangue', loc: 'Medium Hall (2nd Floor)' },
                 ].map((s, i) => (
                   <Reveal key={i} delay={i * 0.08}>
                     <div style={{ background: C.off, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: 20, transition: 'all 0.22s', cursor: 'default' }}
@@ -262,11 +262,11 @@ export default function HomePage() {
                   <span style={{ flex: 1, height: 1, background: C.border, display: 'inline-block' }} />
                 </div>
                 {[
-                  { title: 'Cellgroup Bible Seminar', date: 'March 21–24, 2026' },
-                  { title: 'Rosario Batangas Mission', date: "Bro. Arman's hometown outreach" },
-                  { title: "Women's Group Fellowship", date: 'Friday 7:00 PM — Pastor Jayson' },
-                  { title: 'Seoul Central Church Media Team', date: 'Documentary Team visit to MCC' },
-                  { title: '2026 Summer Retreat Preparation', date: 'Home Visitation ongoing' },
+                  { title: 'Rosario Batangas Bible Seminar', date: 'March 16–20, 2026 · 6PM–8PM' },
+                  { title: '2026 Summer Retreat — Batch 1', date: 'Apr 2–4 · Taal Galilee Retreat Center' },
+                  { title: '2026 Summer Retreat — Batch 2', date: 'Apr 9–11 · Taal Galilee Retreat Center' },
+                  { title: "Women's Group Fellowship", date: 'March 20 · 7PM–9PM · Medium Hall' },
+                  { title: 'Men\'s Group Fellowship', date: 'March 21 · 7PM–9PM · Small Hall' },
                 ].map((a, i) => (
                   <div key={i} style={{ padding: '10px 0', borderBottom: i < 4 ? `1px solid ${C.border}` : 'none', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <div style={{ width: 7, height: 7, background: C.blue, borderRadius: '50%', marginTop: 6, flexShrink: 0 }} />
@@ -303,11 +303,11 @@ export default function HomePage() {
 
           <div style={{ display: 'flex', gap: 18, overflowX: 'auto', paddingBottom: 12 }}>
             {[
-              { title: '2026 Summer Retreat — Batch 1 (Manila Region)', date: 'Apr 2–4', type: 'Retreat', venue: 'PLWM Taal Galilee Retreat Center', bg: `linear-gradient(135deg, ${C.navy}, ${C.navySoft})`, emoji: '🏕️' },
-              { title: '2026 Summer Retreat — Batch 2', date: 'Apr 9–11', type: 'Retreat', venue: 'PLWM Taal Galilee Retreat Center', bg: `linear-gradient(135deg, ${C.navyMid}, ${C.navy})`, emoji: '⛺' },
-              { title: 'Murcia & Pontevedra Mission Trip', date: 'Apr 19–26', type: 'Mission', venue: 'Negros Occidental', bg: 'linear-gradient(135deg, #1a3d2e, #0f2416)', emoji: '🌿' },
-              { title: 'Cellgroup Bible Seminar', date: 'Mar 21–24', type: 'Seminar', venue: 'Main Hall, MCC', bg: 'linear-gradient(135deg, #4a1a1a, #2d0f0f)', emoji: '📖' },
-              { title: 'Jinju Church Mission Team Collaboration', date: 'TBA', type: 'Mission', venue: 'Manila Central Church', bg: 'linear-gradient(135deg, #1a3a5e, #0f1e3a)', emoji: '✝️' },
+              { title: '2026 Summer Retreat — Batch 1 (Manila Region)', date: 'Apr 2–4', type: 'Retreat', venue: 'Taal Galilee Retreat Center', bg: `linear-gradient(135deg, ${C.navy}, ${C.navySoft})`, emoji: '🏕️', fee: '₱900 (Adult)' },
+              { title: '2026 Summer Retreat — Batch 2', date: 'Apr 9–11', type: 'Retreat', venue: 'Taal Galilee Retreat Center', bg: `linear-gradient(135deg, ${C.navyMid}, ${C.navy})`, emoji: '⛺', fee: '₱900 (Adult)' },
+              { title: 'Murcia & Pontevedra Mission Trip', date: 'Apr 19–26', type: 'Mission', venue: 'Negros Occidental', bg: 'linear-gradient(135deg, #1a3d2e, #0f2416)', emoji: '🌿', fee: null },
+              { title: 'Rosario Batangas Bible Seminar', date: 'Mar 16–20', type: 'Seminar', venue: 'Brgy. Bagong Pook, Rosario, Batangas', bg: 'linear-gradient(135deg, #4a1a1a, #2d0f0f)', emoji: '📖', fee: null },
+              { title: 'Jinju Church Mission Team Collaboration', date: 'TBA', type: 'Mission', venue: 'Manila Central Church', bg: 'linear-gradient(135deg, #1a3a5e, #0f1e3a)', emoji: '✝️', fee: null },
             ].map((ev, i) => (
               <div key={i} style={{ flexShrink: 0, width: 250, background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', transition: 'all 0.22s', cursor: 'default' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = C.blue; e.currentTarget.style.boxShadow = '0 8px 28px rgba(11,36,71,0.13)'; e.currentTarget.style.transform = 'translateY(-3px)'; }}
@@ -318,8 +318,9 @@ export default function HomePage() {
                   <span style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(11,36,71,0.65)', color: 'rgba(255,255,255,0.9)', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.4px', backdropFilter: 'blur(4px)' }}>{ev.type}</span>
                 </div>
                 <div style={{ padding: 16 }}>
-                  <div style={{ fontFamily: "'Lora',serif", fontSize: '0.92rem', fontWeight: 600, color: C.text, lineHeight: 1.4, marginBottom: 8 }}>{ev.title}</div>
-                  <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {ev.venue}</div>
+                  <div style={{ fontFamily: "'Lora',serif", fontSize: '0.92rem', fontWeight: 600, color: C.text, lineHeight: 1.4, marginBottom: 6 }}>{ev.title}</div>
+                  <div style={{ fontSize: 11.5, color: C.muted, marginBottom: ev.fee ? 5 : 12, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {ev.venue}</div>
+                  {ev.fee && <div style={{ fontSize: 11.5, color: C.blue, fontWeight: 700, marginBottom: 12 }}>💳 {ev.fee}</div>}
                   <button style={{ background: C.blue, color: '#fff', border: 'none', borderRadius: 7, padding: '8px 0', width: '100%', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Register</button>
                 </div>
               </div>
@@ -399,7 +400,10 @@ export default function HomePage() {
                   <span style={{ fontSize: 12, color: C.gold, fontWeight: 700 }}>— Psalm 118:17</span>
                 </div>
                 <p style={{ fontSize: 15, color: C.sub, lineHeight: 1.75, marginBottom: 20 }}>
-                  Manila Central Church stands as the mother church of PLWM — the Philippine Life Word Mission. Through decades of faithful ministry, we have grown to plant churches and establish mission branches across every region of the Philippines.
+                  Manila Central Church stands as the mother church of PLWM — the Philippine Life Word Mission. Through faithful ministry, we have grown to plant churches and establish mission branches across every region of the Philippines.
+                </p>
+                <p style={{ fontSize: 13, color: C.blue, fontWeight: 700, fontStyle: 'italic', marginBottom: 20 }}>
+                  Vision 26/800 · "Love One Another" · One Mind | Obedience | Sacrifice
                 </p>
                 <div style={{ display: 'flex', gap: 16 }}>
                   {[['108', 'PLWM Churches'], ['60', 'Mission Branches'], ['3', 'Major Islands']].map(([num, label]) => (
@@ -414,20 +418,33 @@ export default function HomePage() {
             <Reveal delay={0.2}>
               <div style={{ background: C.navy, borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '18px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ fontFamily: "'Lora',serif", color: '#fff', fontSize: '1rem', marginBottom: 2 }}>2026 Philippine Life Word Mission</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>Churches & Mission Branches Nationwide</div>
+                  <div style={{ fontFamily: "'Lora',serif", color: '#fff', fontSize: '1rem', marginBottom: 2 }}>Manila Central Church Leadership</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>Philippine Life Word Mission · Parañaque City</div>
                 </div>
-                <div style={{ padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, background: 'radial-gradient(ellipse at 50% 40%, rgba(21,101,192,0.22) 0%, transparent 70%)' }}>
-                  <div style={{ fontSize: 64, opacity: 0.5 }}>🗺️</div>
-                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.40)', textAlign: 'center' }}>Churches & mission branches<br />across Luzon, Visayas, and Mindanao</p>
-                </div>
-                {[['#4FC3F7', 'Luzon Region', 'Manila, Cavite, Batangas & more'], ['#81C784', 'Visayas Region', 'Cebu, Iloilo, Leyte & more'], ['#FFB74D', 'Mindanao Region', 'CDO, Davao, Cotabato & more'], ['#CE93D8', 'Palawan & Islands', 'Palawan, Masbate, Catanduanes']].map(([dot, name, sub]) => (
-                  <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: dot, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', flex: 1 }}>{name}</span>
-                    <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.72)' }}>{sub}</span>
+                {[
+                  { role: 'Senior Pastor', name: 'Park Heung Soon', phone: '0915-807-6300', icon: '✝️' },
+                  { role: 'Pastor',        name: 'Jayson Rolusta',  phone: '0948-425-8472', icon: '📖' },
+                  { role: 'Evangelist',    name: 'Romnick Dadangue', phone: '0938-891-0092', icon: '🕊️' },
+                ].map(p => (
+                  <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{p.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{p.name}</div>
+                      <div style={{ fontSize: 11, color: C.gold, fontWeight: 600, marginTop: 1 }}>{p.role}</div>
+                    </div>
+                    <a href={`tel:${p.phone.replace(/-/g,'')}`} style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>{p.phone}</a>
                   </div>
                 ))}
+                <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Contact & Online</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>📞 (02) 7745-6212</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>📍 Lot 2 Blk 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City</div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                    <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer" style={{ background: '#FF0000', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>▶ YouTube</a>
+                    <a href="https://www.facebook.com/group/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ background: '#1877F2', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>📘 Facebook</a>
+                    <a href="https://www.jbch.org.ph" target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>🌐 Website</a>
+                  </div>
+                </div>
               </div>
             </Reveal>
           </div>
