@@ -103,11 +103,17 @@ export default function ArchivesPage() {
       Object.entries(form).forEach(([k, v]) => { if (v) formData.append(k, v); });
       if (selectedFile) formData.append('file', selectedFile);
 
+      // Content-Type must be explicitly set to null — not omitted — so axios clears
+      // the instance-level 'application/json' default and lets the browser set
+      // 'multipart/form-data; boundary=...' automatically with the correct boundary.
+      // Without this, multer receives the request as application/json and req.file is undefined.
+      const uploadHeaders = { 'Content-Type': null };
+
       if (editRecord) {
-        await axiosInstance.put(`/archives/${editRecord.id}`, formData);
+        await axiosInstance.put(`/archives/${editRecord.id}`, formData, { headers: uploadHeaders });
       } else {
         if (!selectedFile) { setFormError('Please select a file to upload.'); setSaving(false); return; }
-        await axiosInstance.post('/archives', formData);
+        await axiosInstance.post('/archives', formData, { headers: uploadHeaders });
       }
       setShowForm(false); resetForm(); fetchRecords();
     } catch (err) { setFormError(err.response?.data?.message || 'Failed to save record.'); }
