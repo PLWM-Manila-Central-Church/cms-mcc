@@ -149,11 +149,14 @@ exports.createAttendanceForService = async (req, res, next) => {
 exports.deleteAttendanceForService = async (req, res, next) => {
   try {
     const { Attendance } = require("../models");
+    // Find the record first to get its id
     const record = await Attendance.findOne({
       where: { service_id: req.params.id, member_id: req.params.memberId },
     });
     if (!record) throw { status: 404, message: "Attendance record not found" };
-    await record.destroy();
+    // FIX: route through the service layer so syncSummary fires and the
+    // attendance bar decrements correctly when Undo is clicked.
+    await attendanceService.deleteAttendance(record.id);
     res.json({ success: true, message: "Attendance removed." });
   } catch (err) { next(err); }
 };

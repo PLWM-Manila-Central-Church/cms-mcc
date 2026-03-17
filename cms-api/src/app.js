@@ -15,7 +15,6 @@ app.set("trust proxy", 1);
 
 // ── Security & Logging ───────────────────────────────────────
 app.use(helmet({
-  // FIX BUG 1: allow serving local uploaded files
   crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 app.use(cors({
@@ -33,9 +32,13 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── FIX BUG 1: Serve uploaded archive files as static assets ─
-// Download links in ArchivesPage build: `${API_URL}/uploads/archives/<filename>`
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// ── Static file serving for archive uploads ──────────────────
+// Mounted at BOTH paths because REACT_APP_API_URL on Vercel ends with /api,
+// so the frontend builds download URLs as:  <API_URL>/uploads/... = .../api/uploads/...
+// We serve under /uploads as well for direct Railway URL access.
+const uploadsDir = path.join(__dirname, "../uploads");
+app.use("/uploads",     express.static(uploadsDir)); // direct:  https://railway.app/uploads/...
+app.use("/api/uploads", express.static(uploadsDir)); // via /api: https://railway.app/api/uploads/...
 
 // ── Rate Limiters ─────────────────────────────────────────────
 const loginLimiter = rateLimit({
@@ -43,13 +46,11 @@ const loginLimiter = rateLimit({
   max: 10,
   message: { message: "Too many login attempts. Try again later." },
 });
-
 const forgotPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: { message: "Too many password reset requests. Try again later." },
 });
-
 const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
@@ -60,7 +61,7 @@ app.use("/api/auth/login",           loginLimiter);
 app.use("/api/auth/forgot-password", forgotPasswordLimiter);
 app.use("/api/auth/refresh-token",   refreshLimiter);
 
-// ── Public Routes (no auth — for landing page) ───────────────
+// ── Public Routes (no auth) ───────────────────────────────────
 app.use("/api/public",        require("./routes/public.routes"));
 // ── Routes ───────────────────────────────────────────────────
 app.use("/api/auth",          require("./routes/auth.routes"));
