@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 
 const ACTION_COLORS = {
@@ -148,8 +148,8 @@ export default function AuditLogPage() {
               const hasValues   = log.old_values || log.new_values;
 
               return (
-                <>
-                  <tr key={log.id}
+                <Fragment key={log.id}>
+                  <tr
                     style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc', cursor: hasValues ? 'pointer' : 'default' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
                     onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
@@ -209,7 +209,7 @@ export default function AuditLogPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
           </tbody>

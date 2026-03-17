@@ -27,7 +27,7 @@ export const NAV_ITEMS = [
     label: 'Users',
     path: '/users',
     icon: '🔑',
-    permissions: { module: 'users', action: 'create' }
+    permissions: { module: 'users', action: 'read' }
   },
   {
     label: 'Attendance',
