@@ -8,12 +8,13 @@ const PAYMENT_LABELS = {
 };
 
 export default function MyGivingPage() {
-  const [records, setRecords]       = useState([]);
-  const [total, setTotal]           = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage]             = useState(1);
-  const [loading, setLoading]       = useState(false);
-  const [error, setError]           = useState('');
+  const [records, setRecords]         = useState([]);
+  const [total, setTotal]             = useState(0);
+  const [totalPages, setTotalPages]   = useState(1);
+  const [totalAmount, setTotalAmount] = useState(0); // server-side sum across ALL pages
+  const [page, setPage]               = useState(1);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo]     = useState('');
 
@@ -31,6 +32,8 @@ export default function MyGivingPage() {
       setRecords(d.records);
       setTotal(d.total);
       setTotalPages(d.total_pages);
+      // Use server-provided total_amount so the card reflects ALL records, not just this page
+      setTotalAmount(d.total_amount || 0);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load your giving records.');
     } finally {
@@ -40,22 +43,21 @@ export default function MyGivingPage() {
 
   useEffect(() => { fetchGiving(); }, [fetchGiving]);
 
-  const totalAmount = records.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
   const formatDate   = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
-  const formatAmount = (a) => parseFloat(a).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' });
+  const formatAmount = (a) => parseFloat(a || 0).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' });
 
   return (
     <div style={s.page}>
       <div style={s.pageHeader}>
         <div>
           <h1 style={s.title}>My Giving</h1>
-          <p style={s.subtitle}>Your personal tithes & offerings history</p>
+          <p style={s.subtitle}>Your personal tithes &amp; offerings history</p>
         </div>
       </div>
 
-      {/* Running total for this view */}
+      {/* Total card — now shows server-side total across all pages, not just current page */}
       <div style={s.totalCard}>
-        <div style={s.totalLabel}>Total shown below</div>
+        <div style={s.totalLabel}>Total Giving</div>
         <div style={s.totalNum}>{formatAmount(totalAmount)}</div>
         <div style={s.totalSub}>{total} records</div>
       </div>
@@ -124,7 +126,8 @@ export default function MyGivingPage() {
               >
                 <td style={s.td}>{formatDate(r.transaction_date)}</td>
                 <td style={s.td}>
-                  <span style={s.categoryTag}>{r.FinancialCategory?.name}</span>
+                  {/* Fixed: was r.FinancialCategory?.name — the association alias is 'category' */}
+                  <span style={s.categoryTag}>{r.category?.name || '—'}</span>
                 </td>
                 <td style={{ ...s.td, fontWeight: '700', color: '#0f172a', fontSize: '15px' }}>
                   {formatAmount(r.amount)}

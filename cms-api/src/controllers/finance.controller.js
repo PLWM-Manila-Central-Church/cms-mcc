@@ -41,7 +41,7 @@ exports.createRecord = async (req, res, next) => {
 
 exports.updateRecord = async (req, res, next) => {
   try {
-    const result = await financeService.updateRecord(req.params.id, req.body);
+    const result = await financeService.updateRecord(req.params.id, req.body, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

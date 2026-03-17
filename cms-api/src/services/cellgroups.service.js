@@ -76,10 +76,13 @@ exports.getCellGroupHistory = async (memberId) => {
 
 // ── Create Cell Group History ────────────────────────────────
 exports.createCellGroupHistory = async (data, changedBy) => {
-  const { member_id, old_cell_group_id, new_cell_group_id, reason } = data;
+  const { member_id, new_cell_group_id, reason } = data;
 
   const member = await Member.findByPk(member_id);
   if (!member) throw { status: 404, message: "Member not found" };
+
+  // Derive old_cell_group_id from the DB — never trust the client
+  const old_cell_group_id = member.cell_group_id || null;
 
   if (new_cell_group_id) {
     const cellGroup = await CellGroup.findByPk(new_cell_group_id);
@@ -89,11 +92,20 @@ exports.createCellGroupHistory = async (data, changedBy) => {
   // Update member's cell group
   await member.update({ cell_group_id: new_cell_group_id || null });
 
-  return await CellGroupHistory.create({
+  const history = await CellGroupHistory.create({
     member_id,
-    old_cell_group_id: old_cell_group_id || null,
+    old_cell_group_id,
     new_cell_group_id: new_cell_group_id || null,
     changed_by: changedBy,
     reason: reason || null,
   });
+
+  auditLog.log({
+    userId: changedBy,
+    action: "CHANGE_MEMBER_CELL_GROUP",
+    targetTable: "cell_group_history",
+    targetId: history.id,
+  });
+
+  return history;
 };

@@ -1,20 +1,8 @@
 "use strict";
+// This migration is intentionally a no-op.
+// The payment_method column was already added by 20260312000001.
+// Kept here to preserve migration history without breaking existing deployments.
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    const tableDesc = await queryInterface.describeTable("financial_records");
-    if (!tableDesc.payment_method) {
-      await queryInterface.addColumn("financial_records", "payment_method", {
-        type: Sequelize.ENUM("cash", "gcash", "bank_transfer"),
-        allowNull: true,
-        defaultValue: "cash",
-        after: "amount",
-      });
-      console.log("payment_method column added successfully");
-    } else {
-      console.log("payment_method column already exists, skipping");
-    }
-  },
-  down: async (queryInterface) => {
-    await queryInterface.removeColumn("financial_records", "payment_method");
-  },
+  up: async () => {},
+  down: async () => {},
 };
