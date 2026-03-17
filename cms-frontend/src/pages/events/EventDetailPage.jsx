@@ -14,8 +14,11 @@ export default function EventDetailPage() {
   const { id }   = useParams();
   const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
-  const canCreate = hasPermission('events', 'create');
-  const canDelete = hasPermission('events', 'delete');
+  const canCreate    = hasPermission('events', 'create');
+  const canDelete    = hasPermission('events', 'delete');
+  // Self-registration requires events:create; self-unregister requires events:delete
+  const canSelfRegister   = hasPermission('events', 'create');
+  const canSelfUnregister = hasPermission('events', 'delete');
 
   const [event, setEvent]           = useState(null);
   const [loading, setLoading]       = useState(true);
@@ -24,7 +27,6 @@ export default function EventDetailPage() {
   const [regMessage, setRegMessage] = useState('');
   const [regError, setRegError]     = useState('');
 
-  // Admin: remove-specific-row state
   const [removingId, setRemovingId] = useState(null);
   const [removeMsg, setRemoveMsg]   = useState('');
 
@@ -40,14 +42,12 @@ export default function EventDetailPage() {
 
   useEffect(() => { fetchEvent(); }, [fetchEvent]);
 
-  // isRegistered now works correctly because getEventById returns member_id
   const isRegistered   = event?.EventRegistrations?.some(r => r.member_id === user?.memberId);
   const regCount       = event?.EventRegistrations?.length ?? 0;
   const isFull         = event?.capacity && regCount >= event.capacity;
   const deadlinePassed = event?.registration_deadline && new Date() > new Date(event.registration_deadline);
   const canRegister    = event?.status === 'published' && !deadlinePassed && !isFull;
 
-  // Member self-register / self-unregister
   const handleRegister = async () => {
     setRegLoading(true); setRegMessage(''); setRegError('');
     try {
@@ -64,7 +64,6 @@ export default function EventDetailPage() {
     } finally { setRegLoading(false); }
   };
 
-  // Admin remove a specific member — uses the correct /:id/registrations/:memberId route
   const handleRemoveReg = async (memberId, name) => {
     if (!window.confirm(`Remove registration for ${name}?`)) return;
     setRemovingId(memberId); setRemoveMsg('');
@@ -164,7 +163,8 @@ export default function EventDetailPage() {
           )}
         </div>
 
-        {/* Member register / unregister */}
+        {/* Member self-register / self-unregister
+            Only shown when the user has a member profile AND the correct permissions */}
         {user?.memberId && event.status === 'published' && (
           <div style={{ marginTop: '20px' }}>
             {regMessage && <div style={s.successBox}>{regMessage}</div>}
@@ -173,14 +173,18 @@ export default function EventDetailPage() {
             {isRegistered ? (
               <div style={s.regRow}>
                 <span style={s.regConfirmed}>✅ You are registered for this event</span>
-                <button onClick={handleRegister} disabled={regLoading} style={s.cancelRegBtn}>
-                  {regLoading ? '...' : 'Cancel Registration'}
-                </button>
+                {canSelfUnregister && (
+                  <button onClick={handleRegister} disabled={regLoading} style={s.cancelRegBtn}>
+                    {regLoading ? '...' : 'Cancel Registration'}
+                  </button>
+                )}
               </div>
-            ) : canRegister ? (
+            ) : canRegister && canSelfRegister ? (
               <button onClick={handleRegister} disabled={regLoading} style={s.registerBtn}>
                 {regLoading ? 'Registering...' : '+ Register for this Event'}
               </button>
+            ) : canRegister && !canSelfRegister ? (
+              <div style={s.closedBox}>Registration available — contact the office to register.</div>
             ) : (
               <div style={s.closedBox}>
                 {isFull ? '⚠️ This event is full.' : deadlinePassed ? '⚠️ Registration is closed.' : ''}

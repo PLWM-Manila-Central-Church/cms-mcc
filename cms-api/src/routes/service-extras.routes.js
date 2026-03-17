@@ -24,10 +24,12 @@ router.post("/:id/attendance",             auth, authorize("attendance", "create
 router.delete("/:id/attendance/:memberId", auth, authorize("attendance", "delete"), ctrl.deleteAttendanceForService);
 
 // ── Substitute Requests ──────────────────────────────────────
-router.get("/substitutes",          auth, authorize("ministry", "read"),   ctrl.getAllSubstituteRequests);
-router.get("/substitutes/:id",      auth, authorize("ministry", "read"),   ctrl.getSubstituteRequestById);
-router.post("/substitutes",         auth, authorize("services", "create"), ctrl.createSubstituteRequest);
-router.put("/substitutes/:id/resolve", auth, authorize("ministry", "update"), ctrl.resolveSubstituteRequest);
-router.delete("/substitutes/:id",   auth, authorize("ministry", "delete"), ctrl.deleteSubstituteRequest);
+// /mine MUST come before /substitutes/:id to avoid being shadowed
+router.get("/substitutes/mine",           auth, authorize("services", "create"), ctrl.getMySubstituteRequests);
+router.get("/substitutes",                auth, authorize("ministry", "read"),   ctrl.getAllSubstituteRequests);
+router.get("/substitutes/:id",            auth, authorize("ministry", "read"),   ctrl.getSubstituteRequestById);
+router.post("/substitutes",               auth, authorize("services", "create"), ctrl.createSubstituteRequest);
+router.put("/substitutes/:id/resolve",    auth, authorize("ministry", "update"), ctrl.resolveSubstituteRequest);
+router.delete("/substitutes/:id",         auth, authorize("ministry", "delete"), ctrl.deleteSubstituteRequest);
 
 module.exports = router;
