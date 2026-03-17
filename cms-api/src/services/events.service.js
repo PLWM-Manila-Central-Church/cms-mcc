@@ -1,7 +1,7 @@
 "use strict";
 
 const { Op } = require("sequelize");
-const auditLog = require("../helpers/auditLog.helper");
+const auditLog     = require("../helpers/auditLog.helper");
 const notifService = require("./notifications.service");
 const {
   Event,
@@ -21,7 +21,6 @@ const eventIncludes = [
   },
 ];
 
-// Full registration include — member data + timestamps
 const registrationIncludes = [
   {
     model: Member,
@@ -31,23 +30,16 @@ const registrationIncludes = [
   },
 ];
 
-// Remap Sequelize aliases to match what the frontend expects
 const remapEvent = (e) => {
   const plain = typeof e.toJSON === "function" ? e.toJSON() : e;
-  plain.EventCategory    = plain.category || null;
+  plain.EventCategory      = plain.category || null;
   plain.EventRegistrations = plain.EventRegistrations || [];
   return plain;
 };
 
 // ── Get All Events (paginated + filtered) ───────────────────
 exports.getAllEvents = async ({
-  page = 1,
-  limit = 15,
-  status,
-  search,
-  category_id,
-  start_from,
-  start_to,
+  page = 1, limit = 15, status, search, category_id, start_from, start_to,
 } = {}) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where  = { is_deleted: 0 };
@@ -65,14 +57,8 @@ exports.getAllEvents = async ({
     where,
     include: [
       ...eventIncludes,
-      {
-        model: EventRegistration,
-        // member_id needed so frontend isRegistered check works
-        attributes: ["id", "member_id"],
-        required: false,
-      },
+      { model: EventRegistration, attributes: ["id", "member_id"], required: false },
     ],
-    // Upcoming events first — most useful default for a church
     order: [["start_date", "ASC"]],
     limit: parseInt(limit),
     offset,
@@ -94,7 +80,6 @@ exports.getEventById = async (id) => {
       ...eventIncludes,
       {
         model: EventRegistration,
-        // member_id for isRegistered + full Member data for admin table
         attributes: ["id", "member_id", "registered_at", "registered_by"],
         include: registrationIncludes,
         required: false,
@@ -146,7 +131,8 @@ exports.createEvent = async (data, createdBy) => {
 
 // ── Update Event ─────────────────────────────────────────────
 exports.updateEvent = async (id, data, updatedBy) => {
-  const event = await Event.findOne({ where: { id } });
+  // FIX BUG 7: add is_deleted: 0 so soft-deleted events cannot be updated
+  const event = await Event.findOne({ where: { id, is_deleted: 0 } });
   if (!event) throw { status: 404, message: "Event not found" };
 
   if (event.status === "completed" || event.status === "cancelled")
@@ -204,19 +190,17 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
 
   await event.update({ status: newStatus });
 
-  // Notify registered members when event is published
   if (newStatus === "published") {
     try {
       const registrations = await EventRegistration.findAll({ where: { event_id: id } });
       for (const reg of registrations) {
         const userRecord = await User.findOne({
-          where: { member_id: reg.member_id, is_active: true },
-          attributes: ["id"],
+          where: { member_id: reg.member_id, is_active: true }, attributes: ["id"],
         });
         if (userRecord) {
           await notifService.createNotification({
             user_id: userRecord.id,
-            type: "event_published",
+            type:    "event_published",
             message: `Event "${event.title}" is now open for registration.`,
           });
         }
@@ -228,15 +212,15 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
 
   auditLog.log({
     userId: updatedBy, action: "UPDATE_EVENT_STATUS",
-    targetTable: "events", targetId: id,
-    newValues: { status: newStatus },
+    targetTable: "events", targetId: id, newValues: { status: newStatus },
   });
   return await exports.getEventById(id);
 };
 
 // ── Soft Delete Event ────────────────────────────────────────
 exports.deleteEvent = async (id, deletedBy) => {
-  const event = await Event.findOne({ where: { id } });
+  // FIX BUG 7: add is_deleted: 0 so already-deleted events cannot be re-deleted
+  const event = await Event.findOne({ where: { id, is_deleted: 0 } });
   if (!event) throw { status: 404, message: "Event not found" };
 
   if (event.status === "completed")
@@ -283,7 +267,6 @@ exports.updateCategory = async (id, data) => {
 exports.deleteCategory = async (id) => {
   const category = await EventCategory.findByPk(id);
   if (!category) throw { status: 404, message: "Event category not found" };
-  // Use unscoped() to include soft-deleted events in the count
   const inUse = await Event.unscoped().count({ where: { category_id: id } });
   if (inUse > 0)
     throw { status: 400, message: `Cannot delete category. ${inUse} event(s) are using it` };
@@ -327,7 +310,6 @@ exports.registerMember = async (eventId, memberId, registeredBy) => {
     registered_at: new Date(), registered_by: registeredBy,
   });
 
-  // Notify the member's linked user account
   try {
     const userRecord = await User.findOne({
       where: { member_id: memberId, is_active: true }, attributes: ["id"],
@@ -358,7 +340,6 @@ exports.unregisterMember = async (eventId, memberId, unregisteredBy) => {
   const event = await Event.findOne({ where: { id: eventId } });
   await registration.destroy();
 
-  // Notify the member their registration was cancelled
   try {
     if (event) {
       const userRecord = await User.findOne({

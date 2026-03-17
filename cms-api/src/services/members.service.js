@@ -21,7 +21,7 @@ const memberIncludes = [
 // ── Get All Members (paginated) ──────────────────────────────
 exports.getAllMembers = async ({ page = 1, limit = 20, search, status } = {}) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
-  const where = { is_deleted: 0 };
+  const where  = { is_deleted: 0 };
 
   if (status) where.status = status;
 
@@ -33,6 +33,9 @@ exports.getAllMembers = async ({ page = 1, limit = 20, search, status } = {}) =>
       { last_name:  { [Op.like]: like } },
       { email:      { [Op.like]: like } },
       { phone:      { [Op.like]: like } },
+      // FIX BUG 10: barcode was missing — AttendancePage and MembersPage
+      // both advertise "search by barcode" but the backend never filtered on it.
+      { barcode:    { [Op.like]: like } },
     ];
   }
 
@@ -46,8 +49,8 @@ exports.getAllMembers = async ({ page = 1, limit = 20, search, status } = {}) =>
   });
 
   return {
-    members: rows,
-    total: count,
+    members:     rows,
+    total:       count,
     total_pages: Math.ceil(count / parseInt(limit)),
   };
 };
@@ -58,11 +61,7 @@ exports.getMemberById = async (id) => {
     where: { id },
     include: [
       ...memberIncludes,
-      {
-        model: EmergencyContact,
-        as: 'emergencyContacts',
-        required: false,
-      },
+      { model: EmergencyContact, as: "emergencyContacts", required: false },
     ],
   });
   if (!member) throw { status: 404, message: "Member not found" };
@@ -72,20 +71,9 @@ exports.getMemberById = async (id) => {
 // ── Create Member ────────────────────────────────────────────
 exports.createMember = async (data, createdBy) => {
   const {
-    first_name,
-    last_name,
-    email,
-    phone,
-    birthdate,
-    spiritual_birthday,
-    address,
-    gender,
-    status,
-    cell_group_id,
-    group_id,
-    referred_by,
-    profile_photo_url,
-    barcode,
+    first_name, last_name, email, phone, birthdate, spiritual_birthday,
+    address, gender, status, cell_group_id, group_id, referred_by,
+    profile_photo_url, barcode,
   } = data;
 
   if (email) {
@@ -111,18 +99,18 @@ exports.createMember = async (data, createdBy) => {
   const member = await Member.create({
     first_name,
     last_name,
-    email: email || null,
-    phone: phone || null,
-    birthdate: birthdate || null,
+    email:             email             || null,
+    phone:             phone             || null,
+    birthdate:         birthdate         || null,
     spiritual_birthday: spiritual_birthday || null,
-    address: address || null,
-    gender: gender || null,
-    status: status || "Active",
-    cell_group_id: cell_group_id || null,
-    group_id: group_id || null,
-    referred_by: referred_by || null,
+    address:           address           || null,
+    gender:            gender            || null,
+    status:            status            || "Active",
+    cell_group_id:     cell_group_id     || null,
+    group_id:          group_id          || null,
+    referred_by:       referred_by       || null,
     profile_photo_url: profile_photo_url || null,
-    barcode: barcode || null,
+    barcode:           barcode           || null,
     is_deleted: 0,
   });
 
@@ -137,20 +125,9 @@ exports.updateMember = async (id, data, updatedBy) => {
   if (!member) throw { status: 404, message: "Member not found" };
 
   const {
-    first_name,
-    last_name,
-    email,
-    phone,
-    birthdate,
-    spiritual_birthday,
-    address,
-    gender,
-    status,
-    cell_group_id,
-    group_id,
-    referred_by,
-    profile_photo_url,
-    barcode,
+    first_name, last_name, email, phone, birthdate, spiritual_birthday,
+    address, gender, status, cell_group_id, group_id, referred_by,
+    profile_photo_url, barcode,
   } = data;
 
   if (email && email !== member.email) {
@@ -174,20 +151,20 @@ exports.updateMember = async (id, data, updatedBy) => {
   }
 
   await member.update({
-    ...(first_name && { first_name }),
-    ...(last_name && { last_name }),
-    ...(email !== undefined && { email }),
-    ...(phone !== undefined && { phone }),
-    ...(birthdate !== undefined && { birthdate }),
-    ...(spiritual_birthday !== undefined && { spiritual_birthday }),
-    ...(address !== undefined && { address }),
-    ...(gender !== undefined && { gender }),
-    ...(status !== undefined && { status }),
-    ...(cell_group_id !== undefined && { cell_group_id }),
-    ...(group_id !== undefined && { group_id }),
-    ...(referred_by !== undefined && { referred_by }),
-    ...(profile_photo_url !== undefined && { profile_photo_url }),
-    ...(barcode !== undefined && { barcode }),
+    ...(first_name          && { first_name }),
+    ...(last_name           && { last_name }),
+    ...(email               !== undefined && { email }),
+    ...(phone               !== undefined && { phone }),
+    ...(birthdate           !== undefined && { birthdate }),
+    ...(spiritual_birthday  !== undefined && { spiritual_birthday }),
+    ...(address             !== undefined && { address }),
+    ...(gender              !== undefined && { gender }),
+    ...(status              !== undefined && { status }),
+    ...(cell_group_id       !== undefined && { cell_group_id }),
+    ...(group_id            !== undefined && { group_id }),
+    ...(referred_by         !== undefined && { referred_by }),
+    ...(profile_photo_url   !== undefined && { profile_photo_url }),
+    ...(barcode             !== undefined && { barcode }),
   });
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_MEMBER", targetTable: "members", targetId: id });

@@ -46,10 +46,12 @@ exports.markAsRead = async (id, userId) => {
   });
   if (!notification) throw { status: 404, message: "Notification not found" };
 
-  if (notification.is_read)
-    throw { status: 400, message: "Notification already marked as read" };
+  // FIX BUG 3: was throwing 400 if already read, causing race-condition failures.
+  // Now it's a no-op — if already read, just return it unchanged.
+  if (!notification.is_read) {
+    await notification.update({ is_read: 1, read_at: new Date() });
+  }
 
-  await notification.update({ is_read: 1, read_at: new Date() });
   return notification;
 };
 
@@ -68,7 +70,6 @@ exports.deleteNotification = async (id, userId) => {
     where: { id, user_id: userId },
   });
   if (!notification) throw { status: 404, message: "Notification not found" };
-
   await notification.destroy();
   return { message: "Notification deleted successfully." };
 };

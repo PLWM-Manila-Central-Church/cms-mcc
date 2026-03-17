@@ -1,22 +1,25 @@
 "use strict";
 
 const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
+const cors    = require("cors");
+const helmet  = require("helmet");
+const morgan  = require("morgan");
+const path    = require("path");
 const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
 const errorHandler = require("./middlewares/errorHandler");
 
 const app = express();
-app.set('trust proxy', 1);
-  
+app.set("trust proxy", 1);
+
 // ── Security & Logging ───────────────────────────────────────
-app.use(helmet());
+app.use(helmet({
+  // FIX BUG 1: allow serving local uploaded files
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (curl, mobile apps) or matching allowed origins
     const allowed = (process.env.ALLOWED_ORIGIN || "").split(",").map(o => o.trim()).filter(Boolean);
     if (!origin || allowed.includes(origin) || allowed.includes("*")) {
       callback(null, true);
@@ -29,6 +32,10 @@ app.use(cors({
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ── FIX BUG 1: Serve uploaded archive files as static assets ─
+// Download links in ArchivesPage build: `${API_URL}/uploads/archives/<filename>`
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // ── Rate Limiters ─────────────────────────────────────────────
 const loginLimiter = rateLimit({
@@ -57,7 +64,7 @@ app.use("/api/auth/refresh-token",   refreshLimiter);
 app.use("/api/public",        require("./routes/public.routes"));
 // ── Routes ───────────────────────────────────────────────────
 app.use("/api/auth",          require("./routes/auth.routes"));
-app.use("/api/dashboard",     require("./routes/dashboard.routes")); // ← was missing
+app.use("/api/dashboard",     require("./routes/dashboard.routes"));
 app.use("/api/users",         require("./routes/users.routes"));
 app.use("/api/roles",         require("./routes/roles.routes"));
 app.use("/api/members",       require("./routes/members.routes"));
