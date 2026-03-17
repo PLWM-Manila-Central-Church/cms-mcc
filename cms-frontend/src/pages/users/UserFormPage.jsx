@@ -2,16 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 
-const ROLES = [
-  { id: 1, name: 'System Admin' },
-  { id: 2, name: 'Pastor' },
-  { id: 3, name: 'Registration Team' },
-  { id: 4, name: 'Finance Team' },
-  { id: 5, name: 'Cell Group Leader' },
-  { id: 6, name: 'Group Leader' },
-  { id: 7, name: 'Member' },
-];
-
 export default function UserFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -20,19 +10,23 @@ export default function UserFormPage() {
   const [form, setForm] = useState({
     email: '', password: '', role_id: '', member_id: ''
   });
-  const [members, setMembers]   = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [saving, setSaving]     = useState(false);
-  const [error, setError]       = useState('');
+  const [roles,   setRoles]   = useState([]);   // fetched from API
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [error,   setError]   = useState('');
+
+  // Load roles from API — never rely on hardcoded IDs
+  useEffect(() => {
+    axiosInstance.get('/roles')
+      .then(res => setRoles(res.data.data || []))
+      .catch(() => {}); // roles list failure is non-critical; user sees empty dropdown
+  }, []);
 
   useEffect(() => {
-    const loadMembers = async () => {
-      try {
-        const res = await axiosInstance.get('/members?limit=200');
-        setMembers(res.data.data?.members || []);
-      } catch {}
-    };
-    loadMembers();
+    axiosInstance.get('/members?limit=200')
+      .then(res => setMembers(res.data.data?.members || []))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -156,10 +150,13 @@ export default function UserFormPage() {
               style={styles.select}
             >
               <option value="">— Select Role —</option>
-              {ROLES.map(r => (
-                <option key={r.id} value={r.id}>{r.name}</option>
+              {roles.map(r => (
+                <option key={r.id} value={r.id}>{r.role_name}</option>
               ))}
             </select>
+            {roles.length === 0 && (
+              <p style={{ ...styles.hint, color: '#d97706' }}>Loading roles…</p>
+            )}
           </div>
 
           <div style={{ ...styles.fieldWrap, marginTop: '16px' }}>

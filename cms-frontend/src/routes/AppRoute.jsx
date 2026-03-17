@@ -77,8 +77,8 @@ const AppRoutes = () => {
 
       {/* ── CMS (protected) ── */}
       <Route path="/dashboard"  element={<ProtectedRoute><MainLayout><DashboardPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/settings"   element={<ProtectedRoute><MainLayout><SettingsPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/audit-logs" element={<ProtectedRoute><MainLayout><AuditLogPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/settings"   element={<ProtectedRoute module="settings" action="read"><MainLayout><SettingsPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/audit-logs" element={<ProtectedRoute module="audit" action="read"><MainLayout><AuditLogPage /></MainLayout></ProtectedRoute>} />
       <Route path="/archives"   element={<ProtectedRoute><MainLayout><ArchivesPage /></MainLayout></ProtectedRoute>} />
       <Route path="/inventory"  element={<ProtectedRoute><MainLayout><InventoryPage /></MainLayout></ProtectedRoute>} />
       <Route path="/events"     element={<ProtectedRoute><MainLayout><EventsPage /></MainLayout></ProtectedRoute>} />
@@ -88,9 +88,9 @@ const AppRoutes = () => {
       <Route path="/finance/my-giving" element={<ProtectedRoute><MainLayout><MyGivingPage /></MainLayout></ProtectedRoute>} />
       <Route path="/services"          element={<ProtectedRoute><MainLayout><ServicesPage /></MainLayout></ProtectedRoute>} />
       <Route path="/services/:id/attendance" element={<ProtectedRoute><MainLayout><AttendancePage /></MainLayout></ProtectedRoute>} />
-      <Route path="/users"      element={<ProtectedRoute><MainLayout><UsersPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/users/new"  element={<ProtectedRoute><MainLayout><UserFormPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/users/:id/edit" element={<ProtectedRoute><MainLayout><UserFormPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/users"      element={<ProtectedRoute module="users" action="read"><MainLayout><UsersPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/users/new"  element={<ProtectedRoute module="users" action="create"><MainLayout><UserFormPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/users/:id/edit" element={<ProtectedRoute module="users" action="update"><MainLayout><UserFormPage /></MainLayout></ProtectedRoute>} />
       <Route path="/members"        element={<ProtectedRoute><MainLayout><MembersPage /></MainLayout></ProtectedRoute>} />
       <Route path="/members/new"    element={<ProtectedRoute><MainLayout><MemberFormPage /></MainLayout></ProtectedRoute>} />
       <Route path="/members/:id"    element={<ProtectedRoute><MainLayout><MemberProfilePage /></MainLayout></ProtectedRoute>} />
