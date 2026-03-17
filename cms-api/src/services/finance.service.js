@@ -60,10 +60,12 @@ exports.getAllRecords = async ({ page = 1, limit = 20, category_id, payment_meth
 };
 
 // ── Get Finance Summary ──────────────────────────────────────
-exports.getSummary = async ({ date_from, date_to } = {}) => {
+exports.getSummary = async ({ date_from, date_to, category_id, payment_method } = {}) => {
   const { Op, fn, col, literal } = require("sequelize");
   const where = { is_deleted: 0 };
 
+  if (category_id)    where.category_id    = category_id;
+  if (payment_method) where.payment_method = payment_method;
   if (date_from || date_to) {
     where.transaction_date = {};
     if (date_from) where.transaction_date[Op.gte] = date_from;
@@ -139,7 +141,7 @@ exports.createRecord = async (data, recordedBy) => {
 };
 
 // ── Update Financial Record ──────────────────────────────────
-exports.updateRecord = async (id, data) => {
+exports.updateRecord = async (id, data, updatedBy) => {
   const record = await FinancialRecord.findOne({ where: { id } });
   if (!record) throw { status: 404, message: "Financial record not found" };
 
@@ -177,7 +179,7 @@ exports.updateRecord = async (id, data) => {
   });
 
   const updated = await exports.getRecordById(id);
-  auditLog.log({ userId: updated.recorded_by, action: "UPDATE_FINANCE_RECORD", targetTable: "financial_records", targetId: id });
+  auditLog.log({ userId: updatedBy, action: "UPDATE_FINANCE_RECORD", targetTable: "financial_records", targetId: id });
   return updated;
 };
 
@@ -199,6 +201,7 @@ exports.deleteRecord = async (id, deletedBy) => {
 // ── Get All Categories ───────────────────────────────────────
 exports.getAllCategories = async () => {
   return await FinancialCategory.findAll({
+    where: { is_active: 1 },
     order: [["name", "ASC"]],
   });
 };
@@ -263,7 +266,7 @@ exports.deleteCategory = async (id) => {
 };
 // ── Get My Giving (member's own records) ─────────────────────
 exports.getMyGiving = async (memberId, { page = 1, limit = 20, date_from, date_to } = {}) => {
-  const { Op } = require("sequelize");
+  const { Op, fn, col } = require("sequelize");
   if (!memberId) throw { status: 400, message: "No member profile linked to this account" };
 
   const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -275,21 +278,30 @@ exports.getMyGiving = async (memberId, { page = 1, limit = 20, date_from, date_t
     if (date_to)   where.transaction_date[Op.lte] = date_to;
   }
 
-  const { count, rows } = await FinancialRecord.findAndCountAll({
-    where,
-    include: [
-      { model: FinancialCategory, as: "category", attributes: ["id", "name"], required: false },
-    ],
-    order: [["transaction_date", "DESC"]],
-    limit: parseInt(limit),
-    offset,
-    distinct: true,
-    subQuery: false,
-  });
+  // Run paginated records fetch and total sum in parallel
+  const [{ count, rows }, sumResult] = await Promise.all([
+    FinancialRecord.findAndCountAll({
+      where,
+      include: [
+        { model: FinancialCategory, as: "category", attributes: ["id", "name"], required: false },
+      ],
+      order: [["transaction_date", "DESC"]],
+      limit: parseInt(limit),
+      offset,
+      distinct: true,
+      subQuery: false,
+    }),
+    FinancialRecord.findOne({
+      where,
+      attributes: [[fn("SUM", col("amount")), "total_amount"]],
+      raw: true,
+    }),
+  ]);
 
   return {
     records: rows,
     total: count,
     total_pages: Math.ceil(count / parseInt(limit)),
+    total_amount: parseFloat(sumResult?.total_amount) || 0,
   };
 };

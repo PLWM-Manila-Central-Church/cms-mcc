@@ -84,7 +84,7 @@ const AppRoutes = () => {
       <Route path="/events"     element={<ProtectedRoute><MainLayout><EventsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/events/:id" element={<ProtectedRoute><MainLayout><EventDetailPage /></MainLayout></ProtectedRoute>} />
       <Route path="/attendance" element={<ProtectedRoute><MainLayout><AttendanceOverviewPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/finance"    element={<ProtectedRoute><MainLayout><FinancePage /></MainLayout></ProtectedRoute>} />
+      <Route path="/finance"    element={<ProtectedRoute module="finance" action="read"><MainLayout><FinancePage /></MainLayout></ProtectedRoute>} />
       <Route path="/finance/my-giving" element={<ProtectedRoute><MainLayout><MyGivingPage /></MainLayout></ProtectedRoute>} />
       <Route path="/services"          element={<ProtectedRoute><MainLayout><ServicesPage /></MainLayout></ProtectedRoute>} />
       <Route path="/services/:id/attendance" element={<ProtectedRoute><MainLayout><AttendancePage /></MainLayout></ProtectedRoute>} />
@@ -95,7 +95,7 @@ const AppRoutes = () => {
       <Route path="/members/new"    element={<ProtectedRoute><MainLayout><MemberFormPage /></MainLayout></ProtectedRoute>} />
       <Route path="/members/:id"    element={<ProtectedRoute><MainLayout><MemberProfilePage /></MainLayout></ProtectedRoute>} />
       <Route path="/members/:id/edit" element={<ProtectedRoute><MainLayout><MemberFormPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/cell-groups" element={<ProtectedRoute><MainLayout><CellGroupsPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/cell-groups" element={<ProtectedRoute module="cellgroups" action="read"><MainLayout><CellGroupsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/ministry"    element={<ProtectedRoute><MainLayout><MinistryPage /></MainLayout></ProtectedRoute>} />
 
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
