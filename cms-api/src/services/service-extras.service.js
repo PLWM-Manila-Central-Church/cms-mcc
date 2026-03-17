@@ -7,6 +7,7 @@ const {
   MinistryAssignment,
   Service,
   Member,
+  User,
 } = require("../models");
 
 // ── Service Attendance Summary ───────────────────────────────
@@ -106,35 +107,69 @@ exports.deleteResponse = async (id) => {
 };
 
 // ── Substitute Requests ──────────────────────────────────────
-exports.getAllSubstituteRequests = async () => {
-  return await SubstituteRequest.findAll({
+
+// Shared includes so Service and proposed Member always appear
+const substituteIncludes = [
+  {
+    model: MinistryAssignment,
+    as: "assignment",
+    required: false,
     include: [
       {
-        model: MinistryAssignment,
-        as: "assignment",
+        model: Service,
+        attributes: ["id", "title", "service_date", "service_time"],
         required: false,
       },
     ],
+  },
+  {
+    // proposed_substitute is a User FK; include the linked Member via User.member_id
+    model: User,
+    as: "proposedSubstituteUser",
+    attributes: ["id", "member_id"],
+    required: false,
+    include: [
+      {
+        model: Member,
+        as: "member",
+        attributes: ["id", "first_name", "last_name"],
+        required: false,
+      },
+    ],
+  },
+];
+
+exports.getAllSubstituteRequests = async () => {
+  return await SubstituteRequest.findAll({
+    include: substituteIncludes,
+    order: [["created_at", "DESC"]],
+  });
+};
+
+// Get only the requests submitted by the calling user's linked member
+exports.getMySubstituteRequests = async (userId) => {
+  return await SubstituteRequest.findAll({
+    where: { requested_by: userId },
+    include: substituteIncludes,
     order: [["created_at", "DESC"]],
   });
 };
 
 exports.getSubstituteRequestById = async (id) => {
   const request = await SubstituteRequest.findByPk(id, {
-    include: [{ model: MinistryAssignment, as: "assignment", required: false }],
+    include: substituteIncludes,
   });
   if (!request) throw { status: 404, message: "Substitute request not found" };
   return request;
 };
 
 exports.createSubstituteRequest = async (data, requestedBy) => {
-  const { assignment_id, service_id, proposed_substitute, proposed_member_id, reason } = data;
+  const { assignment_id, service_id, proposed_member_id, reason } = data;
 
   let resolvedAssignmentId = assignment_id;
 
   // If frontend sends service_id instead of assignment_id, look up the assignment
   if (!resolvedAssignmentId && service_id && requestedBy) {
-    const { User } = require("../models");
     const user = await User.findByPk(requestedBy, { attributes: ["member_id"] });
     if (user?.member_id) {
       const assignment = await MinistryAssignment.findOne({
@@ -156,17 +191,29 @@ exports.createSubstituteRequest = async (data, requestedBy) => {
   if (existing)
     throw { status: 409, message: "A pending substitute request already exists for this assignment" };
 
+  // proposed_substitute is a User FK - look up the user linked to the proposed member
+  let proposedUserId = null;
+  if (proposed_member_id) {
+    const proposedUser = await User.findOne({
+      where: { member_id: proposed_member_id },
+      attributes: ["id"],
+    });
+    proposedUserId = proposedUser?.id || null;
+  }
+
   return await SubstituteRequest.create({
     assignment_id:       resolvedAssignmentId,
     requested_by:        requestedBy,
-    proposed_substitute: proposed_substitute || proposed_member_id || null,
+    proposed_substitute: proposedUserId,
     reason:              reason || null,
     status:              "pending",
   });
 };
 
 exports.resolveSubstituteRequest = async (id, status, resolvedBy) => {
-  const request = await SubstituteRequest.findByPk(id);
+  const request = await SubstituteRequest.findByPk(id, {
+    include: [{ model: User, as: "proposedSubstituteUser", attributes: ["id", "member_id"], required: false }],
+  });
   if (!request) throw { status: 404, message: "Substitute request not found" };
 
   if (request.status !== "pending")
@@ -175,11 +222,15 @@ exports.resolveSubstituteRequest = async (id, status, resolvedBy) => {
   if (!["approved", "rejected"].includes(status))
     throw { status: 400, message: "Status must be approved or rejected" };
 
+  // On approval, update the assignment's member to the proposed substitute's linked member
   if (status === "approved" && request.proposed_substitute) {
-    await MinistryAssignment.update(
-      { member_id: request.proposed_substitute },
-      { where: { id: request.assignment_id } },
-    );
+    const proposedMemberId = request.proposedSubstituteUser?.member_id;
+    if (proposedMemberId) {
+      await MinistryAssignment.update(
+        { member_id: proposedMemberId },
+        { where: { id: request.assignment_id } },
+      );
+    }
   }
 
   await request.update({ status, resolved_by: resolvedBy });

@@ -58,7 +58,7 @@ export default function MemberProfilePage() {
     setEcSaving(true);
     setEcError('');
     try {
-      await axiosInstance.post(`/members/${id}/emergency-contacts`, ecForm);
+      await axiosInstance.post(`/members/emergency-contacts/${id}`, ecForm);
       setEcForm({ name: '', relationship: '', phone: '' });
       setShowEcForm(false);
       fetchMember();
@@ -72,7 +72,7 @@ export default function MemberProfilePage() {
   const handleEcDelete = async (contactId) => {
     if (!window.confirm('Remove this emergency contact?')) return;
     try {
-      await axiosInstance.delete(`/members/${id}/emergency-contacts/${contactId}`);
+      await axiosInstance.delete(`/members/emergency-contacts/${contactId}`);
       fetchMember();
     } catch {}
   };

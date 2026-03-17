@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
 
@@ -85,7 +85,9 @@ export default function MinistryPage() {
 ───────────────────────────────────────────────────────────── */
 function AssignmentsTab() {
   const { hasPermission } = useAuth();
-  const canWrite = hasPermission('ministry', 'create');
+  const canAdd    = hasPermission('ministry', 'create');
+  const canEdit   = hasPermission('ministry', 'update');
+  const canRemove = hasPermission('ministry', 'delete');
   const [assignments, setAssignments] = useState([]);
   const [roles,       setRoles]       = useState([]);
   const [members,     setMembers]     = useState([]);
@@ -210,7 +212,7 @@ function AssignmentsTab() {
           {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
         </div>
         <div style={S.countBadge}>{filtered.length} assignment{filtered.length !== 1 ? 's' : ''}</div>
-        {canWrite && <button style={S.addBtn} onClick={openAdd}>+ New Assignment</button>}
+        {canAdd && <button style={S.addBtn} onClick={openAdd}>+ New Assignment</button>}
       </div>
 
       {error && (
@@ -274,8 +276,8 @@ function AssignmentsTab() {
                       </div>
                     </td>
                     <td style={{ ...S.td, textAlign:'right' }}>
-                      {canWrite && <button style={S.editBtn} onClick={() => openEdit(a)}>Edit</button>}
-                      {canWrite && <button style={S.deleteBtn} onClick={() => { setDelTarget(a); setDelErr(''); }}>Remove</button>}
+                      {canEdit && <button style={S.editBtn} onClick={() => openEdit(a)}>Edit</button>}
+                      {canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(a); setDelErr(''); }}>Remove</button>}
                     </td>
                   </tr>
                 );
@@ -424,7 +426,9 @@ function AssignmentsTab() {
 ───────────────────────────────────────────────────────────── */
 function RolesTab() {
   const { hasPermission } = useAuth();
-  const canWrite = hasPermission('ministry', 'create');
+  const canAdd    = hasPermission('ministry', 'create');
+  const canEdit   = hasPermission('ministry', 'update');
+  const canRemove = hasPermission('ministry', 'delete');
   const [roles,   setRoles]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
@@ -503,7 +507,7 @@ function RolesTab() {
           {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
         </div>
         <div style={S.countBadge}>{filtered.length} role{filtered.length !== 1 ? 's' : ''}</div>
-        {canWrite && <button style={S.addBtn} onClick={openAdd}>+ New Role</button>}
+        {canAdd && <button style={S.addBtn} onClick={openAdd}>+ New Role</button>}
       </div>
 
       {error && (
@@ -544,8 +548,8 @@ function RolesTab() {
                     </div>
                   </td>
                   <td style={{ ...S.td, textAlign:'right' }}>
-                    {canWrite && <button style={S.editBtn} onClick={() => openEdit(r)}>Edit</button>}
-                    {canWrite && <button style={S.deleteBtn} onClick={() => { setDelTarget(r); setDelErr(''); }}>Delete</button>}
+                    {canEdit && <button style={S.editBtn} onClick={() => openEdit(r)}>Edit</button>}
+                    {canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(r); setDelErr(''); }}>Delete</button>}
                   </td>
                 </tr>
               ))}
@@ -637,7 +641,8 @@ function SubstituteRequestsTab() {
   const [form, setForm]             = useState({ service_id: '', reason: '', proposed_member_id: '' });
   const [memberSearch, setMemberSearch]   = useState('');
   const [memberResults, setMemberResults] = useState([]);
-  let searchTimeout = null;
+  // useRef keeps timeout ID stable across renders — fixes the broken debounce
+  const searchTimeout = useRef(null);
 
   const STATUS_META = {
     pending:  { bg: '#fffbeb', color: '#d97706', label: 'Pending' },
@@ -649,11 +654,11 @@ function SubstituteRequestsTab() {
     setLoading(true);
     try {
       const [subRes, svcRes] = await Promise.all([
-        axiosInstance.get('/services/substitutes'),
+        // Use /mine so Members only see their own requests (requires services:create)
+        axiosInstance.get('/services/substitutes/mine'),
         axiosInstance.get('/services?limit=100'),
       ]);
-      // Filter to only this member's requests
-      const all = subRes.data.data?.requests || subRes.data.data || [];
+      const all = subRes.data.data || [];
       setRequests(Array.isArray(all) ? all : []);
       setServices(svcRes.data.data?.services || []);
     } catch {
@@ -667,9 +672,9 @@ function SubstituteRequestsTab() {
 
   const handleMemberSearch = (val) => {
     setMemberSearch(val);
-    clearTimeout(searchTimeout);
+    clearTimeout(searchTimeout.current);
     if (!val.trim()) { setMemberResults([]); return; }
-    searchTimeout = setTimeout(async () => {
+    searchTimeout.current = setTimeout(async () => {
       try {
         const res = await axiosInstance.get(`/members?search=${encodeURIComponent(val)}&limit=5`);
         setMemberResults(res.data.data?.members || []);
@@ -823,15 +828,19 @@ function SubstituteRequestsTab() {
             <tbody>
               {requests.map(r => {
                 const meta = STATUS_META[r.status] || STATUS_META.pending;
+                // Service comes via assignment.Service (nested include)
+                const serviceTitle = r.assignment?.Service?.title || `Service #${r.assignment?.service_id || '—'}`;
+                // Proposed replacement via proposedSubstituteUser.member
+                const proposed = r.proposedSubstituteUser?.member;
                 return (
                   <tr key={r.id} style={S.row}>
                     <td style={{ ...S.td, fontWeight: '600', color: '#0f172a' }}>
-                      {r.Service?.title || `Service #${r.service_id}`}
+                      {serviceTitle}
                     </td>
                     <td style={{ ...S.td, maxWidth: '220px', color: '#374151' }}>{r.reason}</td>
                     <td style={S.td}>
-                      {r.ProposedMember
-                        ? `${r.ProposedMember.last_name}, ${r.ProposedMember.first_name}`
+                      {proposed
+                        ? `${proposed.last_name}, ${proposed.first_name}`
                         : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>None</span>
                       }
                     </td>

@@ -18,13 +18,13 @@ const FILE_ICONS = {
   pdf: '📄', docx: '📝', xlsx: '📊', jpg: '🖼️', png: '🖼️', mp4: '🎬', mp3: '🎵'
 };
 
-const APPROVER_ROLES = [1, 2]; // Admin, Pastor
-
 export default function ArchivesPage() {
   const { user, hasPermission } = useAuth();
   const canUpload  = hasPermission('archives', 'create');
   const canApprove = hasPermission('archives', 'update');
-  const isApprover = APPROVER_ROLES.includes(user?.roleId);
+  // isApprover: anyone with archives:update permission (System Admin, Pastor)
+  // Fixed: was using user?.roleId which doesn't exist in the stored user object
+  const isApprover = canApprove;
 
   const [records, setRecords]       = useState([]);
   const [total, setTotal]           = useState(0);
@@ -139,7 +139,6 @@ export default function ArchivesPage() {
     try {
       const res = await axiosInstance.get(`/archives/${record.id}`);
       setDetailRecord(res.data.data);
-      // Fetch access logs for approvers
       if (isApprover) {
         setLogsLoading(true);
         try {
@@ -199,7 +198,7 @@ export default function ArchivesPage() {
                     <select value={form.visibility} onChange={e => setForm(f => ({ ...f, visibility: e.target.value }))} style={s.select}>
                       <option value="public">Public</option>
                       <option value="restricted">Restricted</option>
-                      <option value="confidential">Confidential</option>
+                      {isApprover && <option value="confidential">Confidential</option>}
                     </select>
                   </div>
                 </div>
@@ -277,7 +276,6 @@ export default function ArchivesPage() {
                     <div style={s.recordSub}>{record.category?.name} · {formatDate(record.document_date)}</div>
                     <div style={s.recordSub}>Uploaded by {record.uploadedByUser?.email}</div>
 
-                    {/* Pending banner for approvers */}
                     {record.status === 'pending' && isApprover && (
                       <div style={s.pendingActions} onClick={e => e.stopPropagation()}>
                         <button onClick={() => handleApprove(record.id)} style={s.approveBtn}>✓ Approve</button>
@@ -346,13 +344,11 @@ export default function ArchivesPage() {
                 </div>
               )}
 
-              {/* File download */}
               <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${detailRecord.file_url}`}
                 target="_blank" rel="noreferrer" style={s.downloadBtn}>
                 ⬇ Download File
               </a>
 
-              {/* Versions */}
               {detailRecord.ArchiveVersions?.length > 0 && (
                 <div style={s.versionsSection}>
                   <div style={s.sectionTitle}>Version History ({detailRecord.ArchiveVersions.length})</div>
@@ -369,18 +365,18 @@ export default function ArchivesPage() {
 
               {/* Actions */}
               <div style={s.detailActions}>
-                {canUpload && (detailRecord.uploaded_by === user?.userId || isApprover) && (
+                {canUpload && (detailRecord.uploaded_by === user?.id || isApprover) && (
                   <button onClick={() => openEdit(detailRecord)} style={s.editBtn}>Edit</button>
                 )}
                 {detailRecord.status === 'pending' && canApprove && (
                   <button onClick={() => handleApprove(detailRecord.id)} style={s.approveBtn}>✓ Approve</button>
                 )}
-                {(detailRecord.uploaded_by === user?.userId || isApprover) && (
+                {(detailRecord.uploaded_by === user?.id || isApprover) && (
                   <button onClick={() => handleDelete(detailRecord.id)} style={s.deleteBtn}>Delete</button>
                 )}
               </div>
 
-              {/* Access logs for approvers */}
+              {/* Access logs — only for users with archives:update (Pastor, Admin) */}
               {isApprover && (
                 <div style={s.versionsSection}>
                   <div style={s.sectionTitle}>Access Log</div>
@@ -400,19 +396,6 @@ export default function ArchivesPage() {
           </div>
         )}
       </div>
-      <style>{`
-        /* Archives responsive */
-        @media (max-width: 900px) {
-          [style*="flex-start'][style*='gap: '24px'"] { flex-direction: column !important; }
-        }
-        @media (max-width: 768px) {
-          [style*="min(360px"] { width: 100% !important; position: static !important; }
-          [style*="justifyContent: 'space-between'][style*='marginBottom: '20px'"] { flex-direction: column !important; gap: 10px !important; }
-        }
-        @media (max-width: 480px) {
-          [style*="padding: '0 0 32px'"] { padding: 0 !important; }
-        }
-      `}</style>
     </div>
   );
 }
@@ -458,8 +441,7 @@ const s = {
   pagination:     { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '20px' },
   pageBtn:        { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', cursor: 'pointer' },
   pageInfo:       { fontSize: '13px', color: '#64748b' },
-  // Detail panel
-  detailHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '20px 20px 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' },
+  detailHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '20px 20px 16px', borderBottom: '1px solid #f1f5f9' },
   detailTitle:    { fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0, flex: 1, paddingRight: '10px', wordBreak: 'break-word' },
   closeBtn:       { background: 'none', border: 'none', fontSize: '16px', color: '#94a3b8', cursor: 'pointer', flexShrink: 0 },
   detailBody:     { padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' },

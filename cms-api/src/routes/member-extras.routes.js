@@ -6,6 +6,7 @@ const auth = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 
 // ── Emergency Contacts ───────────────────────────────────────
+// Canonical: /emergency-contacts/:memberId
 router.get(
   "/emergency-contacts/:memberId",
   auth,
@@ -15,7 +16,7 @@ router.get(
 router.post(
   "/emergency-contacts/:memberId",
   auth,
-  authorize("members", "create"),
+  authorize("members", "update"),
   ctrl.createEmergencyContact,
 );
 router.put(
@@ -27,8 +28,26 @@ router.put(
 router.delete(
   "/emergency-contacts/:id",
   auth,
-  authorize("members", "delete"),
+  authorize("members", "update"),
   ctrl.deleteEmergencyContact,
+);
+
+// ── Emergency Contact path aliases (MemberProfilePage calls /:memberId/emergency-contacts) ──
+router.post(
+  "/:memberId/emergency-contacts",
+  auth,
+  authorize("members", "update"),
+  ctrl.createEmergencyContact,
+);
+router.delete(
+  "/:memberId/emergency-contacts/:id",
+  auth,
+  authorize("members", "update"),
+  (req, res, next) => {
+    // Map /:memberId/emergency-contacts/:id → deleteEmergencyContact using :id
+    req.params.id = req.params.id;
+    ctrl.deleteEmergencyContact(req, res, next);
+  },
 );
 
 // ── Member Notes ─────────────────────────────────────────────

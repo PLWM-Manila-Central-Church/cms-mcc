@@ -65,6 +65,16 @@ exports.getAllSubstituteRequests = async (req, res, next) => {
   }
 };
 
+// Returns only the requests submitted by the calling user
+exports.getMySubstituteRequests = async (req, res, next) => {
+  try {
+    const data = await serviceExtrasService.getMySubstituteRequests(req.user.userId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getSubstituteRequestById = async (req, res, next) => {
   try {
     const data = await serviceExtrasService.getSubstituteRequestById(req.params.id);
@@ -152,14 +162,12 @@ exports.deleteAttendanceForService = async (req, res, next) => {
 exports.getResponsesByServiceAlias = async (req, res, next) => {
   try {
     const responses = await serviceExtrasService.getResponsesByService(req.params.id);
-    // Wrap in { responses } so frontend can do res.data.data.responses
     res.json({ success: true, data: { responses } });
   } catch (err) { next(err); }
 };
 
 exports.createOrUpdateResponseAlias = async (req, res, next) => {
   try {
-    // Fall back to the logged-in user's memberId for self pre-registration
     const member_id = req.body.member_id || req.user.memberId;
     if (!member_id) return res.status(400).json({ success: false, message: "No member profile linked to this account" });
     const { member_id: _m, ...responseData } = req.body;
