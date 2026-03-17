@@ -21,11 +21,18 @@ exports.createEmergencyContact = async (memberId, data) => {
   if (!member) throw { status: 404, message: "Member not found" };
 
   const { name, relationship, phone } = data;
+
+  // FIX BUG 11: prevent creating contacts with an empty name,
+  // guarding against UI bypasses or direct API calls.
+  if (!name || !name.trim()) {
+    throw { status: 400, message: "Contact name is required" };
+  }
+
   return await EmergencyContact.create({
     member_id: memberId,
-    name,
-    relationship,
-    phone,
+    name:         name.trim(),
+    relationship: relationship || null,
+    phone:        phone        || null,
   });
 };
 
@@ -34,10 +41,15 @@ exports.updateEmergencyContact = async (id, data) => {
   if (!contact) throw { status: 404, message: "Emergency contact not found" };
 
   const { name, relationship, phone } = data;
+
+  if (name !== undefined && !name.trim()) {
+    throw { status: 400, message: "Contact name cannot be empty" };
+  }
+
   await contact.update({
-    ...(name && { name }),
+    ...(name         && { name: name.trim() }),
     ...(relationship && { relationship }),
-    ...(phone && { phone }),
+    ...(phone        && { phone }),
   });
   return contact;
 };
@@ -102,11 +114,11 @@ exports.createMemberStatusHistory = async (memberId, data, changedBy) => {
   await member.update({ status: new_status });
 
   return await MemberStatusHistory.create({
-    member_id: memberId,
+    member_id:  memberId,
     old_status,
     new_status,
     changed_by: changedBy,
-    reason: reason || null,
+    reason:     reason || null,
   });
 };
 
@@ -128,7 +140,7 @@ exports.createInvite = async (data, invitedBy) => {
   if (existing) throw { status: 409, message: "Email already invited" };
 
   const invite_token = crypto.randomBytes(32).toString("hex");
-  const expires_at = new Date(Date.now() + 7 * 24 * 3600 * 1000); // 7 days
+  const expires_at   = new Date(Date.now() + 7 * 24 * 3600 * 1000); // 7 days
 
   return await InvitedMember.create({
     email,

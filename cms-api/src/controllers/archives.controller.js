@@ -1,6 +1,19 @@
 "use strict";
 
+const path            = require("path");
 const archivesService = require("../services/archives.service");
+
+// ── Helper: extract file info from multer req.file ───────────
+const extractFileFields = (file) => {
+  if (!file) return {};
+  const ext = path.extname(file.originalname).toLowerCase().replace(".", "");
+  return {
+    // Store as a URL path so the frontend can build the download link
+    file_url:  `/uploads/archives/${file.filename}`,
+    file_type: ext || file.mimetype.split("/")[1] || "unknown",
+    file_size: file.size,
+  };
+};
 
 // ── Records ──────────────────────────────────────────────────
 exports.getAllRecords = async (req, res, next) => {
@@ -19,14 +32,21 @@ exports.getRecordById = async (req, res, next) => {
 
 exports.createRecord = async (req, res, next) => {
   try {
-    const data = await archivesService.createRecord(req.body, req.user.userId);
+    // FIX BUG 1: merge text fields from req.body with file fields from req.file
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "A file is required." });
+    }
+    const payload = { ...req.body, ...extractFileFields(req.file) };
+    const data    = await archivesService.createRecord(payload, req.user.userId);
     res.status(201).json({ success: true, data });
   } catch (err) { next(err); }
 };
 
 exports.updateRecord = async (req, res, next) => {
   try {
-    const data = await archivesService.updateRecord(req.params.id, req.body, req.user.userId);
+    // FIX BUG 1: merge file fields if a new file was uploaded; otherwise keep existing file
+    const payload = { ...req.body, ...extractFileFields(req.file) };
+    const data    = await archivesService.updateRecord(req.params.id, payload, req.user.userId);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };

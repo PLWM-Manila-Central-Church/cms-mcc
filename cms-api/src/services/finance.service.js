@@ -8,9 +8,12 @@ const {
   User,
 } = require("../models");
 
+// FIX BUG 14 (finance): was using Member.unscoped() which can throw a Sequelize
+// EagerLoadingError. The association FinancialRecord.belongsTo(Member) was defined
+// with plain Member, so that is the correct reference to use in includes.
 const recordIncludes = [
   {
-    model: Member.unscoped(),
+    model: Member,
     attributes: ["id", "first_name", "last_name"],
     required: false,
   },
@@ -61,7 +64,7 @@ exports.getAllRecords = async ({ page = 1, limit = 20, category_id, payment_meth
 
 // ── Get Finance Summary ──────────────────────────────────────
 exports.getSummary = async ({ date_from, date_to, category_id, payment_method } = {}) => {
-  const { Op, fn, col, literal } = require("sequelize");
+  const { Op, fn, col } = require("sequelize");
   const where = { is_deleted: 0 };
 
   if (category_id)    where.category_id    = category_id;
@@ -162,20 +165,18 @@ exports.updateRecord = async (id, data, updatedBy) => {
 
   if (category_id) {
     const category = await FinancialCategory.findByPk(category_id);
-    if (!category)
-      throw { status: 404, message: "Financial category not found" };
-    if (!category.is_active)
-      throw { status: 400, message: "Financial category is inactive" };
+    if (!category) throw { status: 404, message: "Financial category not found" };
+    if (!category.is_active) throw { status: 400, message: "Financial category is inactive" };
   }
 
   await record.update({
-    ...(member_id && { member_id }),
-    ...(category_id && { category_id }),
+    ...(member_id           && { member_id }),
+    ...(category_id         && { category_id }),
     ...(receipt_number !== undefined && { receipt_number }),
-    ...(amount !== undefined && { amount }),
+    ...(amount         !== undefined && { amount }),
     ...(payment_method !== undefined && { payment_method }),
-    ...(transaction_date && { transaction_date }),
-    ...(notes !== undefined && { notes }),
+    ...(transaction_date             && { transaction_date }),
+    ...(notes          !== undefined && { notes }),
   });
 
   const updated = await exports.getRecordById(id);
@@ -236,14 +237,13 @@ exports.updateCategory = async (id, data) => {
 
   if (name && name !== category.name) {
     const existing = await FinancialCategory.findOne({ where: { name } });
-    if (existing)
-      throw { status: 409, message: "Category name already exists" };
+    if (existing) throw { status: 409, message: "Category name already exists" };
   }
 
   await category.update({
-    ...(name && { name }),
+    ...(name        && { name }),
     ...(description !== undefined && { description }),
-    ...(is_active !== undefined && { is_active }),
+    ...(is_active   !== undefined && { is_active }),
   });
 
   return category;
@@ -256,14 +256,12 @@ exports.deleteCategory = async (id) => {
 
   const inUse = await FinancialRecord.count({ where: { category_id: id } });
   if (inUse > 0)
-    throw {
-      status: 400,
-      message: `Cannot delete category. ${inUse} record(s) are using it`,
-    };
+    throw { status: 400, message: `Cannot delete category. ${inUse} record(s) are using it` };
 
   await category.destroy();
   return { message: "Financial category deleted successfully." };
 };
+
 // ── Get My Giving (member's own records) ─────────────────────
 exports.getMyGiving = async (memberId, { page = 1, limit = 20, date_from, date_to } = {}) => {
   const { Op, fn, col } = require("sequelize");
@@ -278,7 +276,6 @@ exports.getMyGiving = async (memberId, { page = 1, limit = 20, date_from, date_t
     if (date_to)   where.transaction_date[Op.lte] = date_to;
   }
 
-  // Run paginated records fetch and total sum in parallel
   const [{ count, rows }, sumResult] = await Promise.all([
     FinancialRecord.findAndCountAll({
       where,

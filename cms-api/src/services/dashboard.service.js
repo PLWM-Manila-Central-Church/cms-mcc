@@ -14,8 +14,11 @@ exports.getStats = async ({ memberId, roleId } = {}) => {
   // ── Members ───────────────────────────────────────────────
   const totalMembers  = await Member.count();
   const activeMembers = await Member.count({ where: { status: "Active" } });
-  const newThisMonth  = await Member.count({
-    where: { createdAt: { [Op.gte]: thisMonth } },
+
+  // FIX BUG 4: was using camelCase `createdAt` which can silently return 0
+  // on some Sequelize+MySQL setups. Use the explicit snake_case column name.
+  const newThisMonth = await Member.count({
+    where: { created_at: { [Op.gte]: thisMonth } },
   });
 
   // ── Finance ───────────────────────────────────────────────
@@ -26,13 +29,16 @@ exports.getStats = async ({ memberId, roleId } = {}) => {
     where: financeWhere,
   })) || 0;
 
+  // FIX BUG 14: was using Member.unscoped() which can cause a Sequelize
+  // EagerLoadingError because the stored association reference is plain Member.
+  // Using Member directly is correct; required: false handles missing joins safely.
   const recentRecords = await FinancialRecord.findAll({
     order: [["transaction_date", "DESC"]],
     limit: 5,
     ...(isMember && memberId ? { where: { member_id: memberId } } : {}),
     include: [
-      { model: Member.unscoped(), attributes: ["id", "first_name", "last_name"], required: false },
-      { model: FinancialCategory, as: "category", attributes: ["id", "name"], required: false },
+      { model: Member,            attributes: ["id", "first_name", "last_name"], required: false },
+      { model: FinancialCategory, as: "category", attributes: ["id", "name"],   required: false },
     ],
   });
 
