@@ -131,7 +131,6 @@ exports.createEvent = async (data, createdBy) => {
 
 // ── Update Event ─────────────────────────────────────────────
 exports.updateEvent = async (id, data, updatedBy) => {
-  // FIX BUG 7: add is_deleted: 0 so soft-deleted events cannot be updated
   const event = await Event.findOne({ where: { id, is_deleted: 0 } });
   if (!event) throw { status: 404, message: "Event not found" };
 
@@ -219,13 +218,15 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
 
 // ── Soft Delete Event ────────────────────────────────────────
 exports.deleteEvent = async (id, deletedBy) => {
-  // FIX BUG 7: add is_deleted: 0 so already-deleted events cannot be re-deleted
   const event = await Event.findOne({ where: { id, is_deleted: 0 } });
   if (!event) throw { status: 404, message: "Event not found" };
 
-  if (event.status === "completed")
-    throw { status: 400, message: "Cannot delete a completed event" };
+  // Block deleting a published event — it has active registrations.
+  // Admins must cancel it first (published → cancelled), then delete.
+  if (event.status === "published")
+    throw { status: 400, message: "Cannot delete a published event. Cancel it first." };
 
+  // draft, completed, and cancelled events can all be deleted.
   await event.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy });
   auditLog.log({ userId: deletedBy, action: "DELETE_EVENT", targetTable: "events", targetId: id });
   return { message: "Event deleted successfully." };

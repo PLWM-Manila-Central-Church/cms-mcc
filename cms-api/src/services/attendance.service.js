@@ -1,6 +1,6 @@
 "use strict";
 
-const { Attendance, Member, Service, User } = require("../models");
+const { Attendance, Member, Service, ServiceAttendanceSummary, User } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
 
 const attendanceIncludes = [
@@ -16,6 +16,23 @@ const attendanceIncludes = [
   },
 ];
 
+// ── Helper: recount actual attendance rows and sync the summary table ────────
+// Called after every check-in and undo so the summary is always accurate.
+const syncSummary = async (serviceId) => {
+  const total_attended = await Attendance.count({ where: { service_id: serviceId } });
+
+  const service = await Service.findByPk(serviceId, { attributes: ["capacity"] });
+  const total_expected = service?.capacity || 0;
+  const total_absent   = Math.max(0, total_expected - total_attended);
+
+  await ServiceAttendanceSummary.upsert({
+    service_id:    serviceId,
+    total_attended,
+    total_expected,
+    total_absent,
+  });
+};
+
 // ── Get All Attendance Records ───────────────────────────────
 exports.getAllAttendance = async () => {
   return await Attendance.findAll({
@@ -26,9 +43,7 @@ exports.getAllAttendance = async () => {
 
 // ── Get Attendance By ID ─────────────────────────────────────
 exports.getAttendanceById = async (id) => {
-  const record = await Attendance.findByPk(id, {
-    include: attendanceIncludes,
-  });
+  const record = await Attendance.findByPk(id, { include: attendanceIncludes });
   if (!record) throw { status: 404, message: "Attendance record not found" };
   return record;
 };
@@ -46,10 +61,7 @@ exports.createAttendance = async (data, recordedBy) => {
   const member = await Member.findByPk(member_id);
   if (!member) throw { status: 404, message: "Member not found" };
 
-  // Prevent duplicate check-in
-  const existing = await Attendance.findOne({
-    where: { service_id, member_id },
-  });
+  const existing = await Attendance.findOne({ where: { service_id, member_id } });
   if (existing)
     throw { status: 409, message: "Member already checked in to this service" };
 
@@ -58,11 +70,20 @@ exports.createAttendance = async (data, recordedBy) => {
     member_id,
     check_in_method,
     checked_in_at: checked_in_at || new Date(),
-    recorded_by: recordedBy || null,
+    recorded_by:   recordedBy || null,
   });
 
+  // FIX BUG 2: sync summary so attendance bars reflect real data
+  try { await syncSummary(service_id); } catch (err) {
+    console.error("[Attendance] Failed to sync summary:", err.message);
+  }
+
   const created = await exports.getAttendanceById(record.id);
-  auditLog.log({ userId: recordedBy, action: "CHECK_IN", targetTable: "attendances", targetId: created.id, newValues: { service_id, member_id } });
+  auditLog.log({
+    userId: recordedBy, action: "CHECK_IN",
+    targetTable: "attendances", targetId: created.id,
+    newValues: { service_id, member_id },
+  });
   return created;
 };
 
@@ -72,10 +93,9 @@ exports.updateAttendance = async (id, data) => {
   if (!record) throw { status: 404, message: "Attendance record not found" };
 
   const { check_in_method, checked_in_at } = data;
-
   await record.update({
     ...(check_in_method && { check_in_method }),
-    ...(checked_in_at && { checked_in_at }),
+    ...(checked_in_at   && { checked_in_at }),
   });
 
   return await exports.getAttendanceById(id);
@@ -86,6 +106,13 @@ exports.deleteAttendance = async (id) => {
   const record = await Attendance.findByPk(id);
   if (!record) throw { status: 404, message: "Attendance record not found" };
 
+  const serviceId = record.service_id;
   await record.destroy();
+
+  // FIX BUG 2: sync summary after undo so the count decrements correctly
+  try { await syncSummary(serviceId); } catch (err) {
+    console.error("[Attendance] Failed to sync summary on delete:", err.message);
+  }
+
   return { message: "Attendance record deleted successfully." };
 };

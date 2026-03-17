@@ -423,7 +423,9 @@ export default function EventsPage() {
                           {STATUS_ACTION_LABEL[ns]}
                         </button>
                       ))}
-                      {ev.status === 'draft' && (
+                      {/* FIX BUG 4: was only 'draft'. Admins must also be able to
+                          delete completed and cancelled events to clean up the list. */}
+                      {['draft', 'completed', 'cancelled'].includes(ev.status) && (
                         <button onClick={() => handleDelete(ev.id)} style={s.deleteBtn}>
                           Delete
                         </button>

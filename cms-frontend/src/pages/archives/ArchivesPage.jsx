@@ -104,14 +104,10 @@ export default function ArchivesPage() {
       if (selectedFile) formData.append('file', selectedFile);
 
       if (editRecord) {
-        await axiosInstance.put(`/archives/${editRecord.id}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        await axiosInstance.put(`/archives/${editRecord.id}`, formData);
       } else {
         if (!selectedFile) { setFormError('Please select a file to upload.'); setSaving(false); return; }
-        await axiosInstance.post('/archives', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        await axiosInstance.post('/archives', formData);
       }
       setShowForm(false); resetForm(); fetchRecords();
     } catch (err) { setFormError(err.response?.data?.message || 'Failed to save record.'); }
