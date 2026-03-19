@@ -136,8 +136,12 @@ export default function AttendancePage() {
       {/* Summary Cards */}
       <div style={styles.summaryRow}>
         <div style={styles.summaryCard}>
-          <div style={styles.summaryNum}>{summary?.total_attended ?? 0}</div>
-          <div style={styles.summaryLabel}>Attended</div>
+          <div style={styles.summaryNum}>{records.filter(r => !r.is_pre_reg).length}</div>
+          <div style={styles.summaryLabel}>Checked In</div>
+        </div>
+        <div style={{ ...styles.summaryCard, borderTop: '3px solid #7c3aed' }}>
+          <div style={{ ...styles.summaryNum, color: '#7c3aed' }}>{records.filter(r => r.is_pre_reg).length}</div>
+          <div style={styles.summaryLabel}>Pre-registered</div>
         </div>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryNum, color: '#0066b3' }}>{service?.capacity ?? 0}</div>
@@ -145,13 +149,13 @@ export default function AttendancePage() {
         </div>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryNum, color: '#16a34a' }}>
-            {service?.capacity ? Math.round(((summary?.total_attended ?? 0) / service.capacity) * 100) : 0}%
+            {service?.capacity ? Math.round(((records.filter(r => !r.is_pre_reg).length) / service.capacity) * 100) : 0}%
           </div>
           <div style={styles.summaryLabel}>Fill Rate</div>
         </div>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryNum, color: '#d97706' }}>
-            {Math.max(0, (service?.capacity ?? 0) - (summary?.total_attended ?? 0))}
+            {Math.max(0, (service?.capacity ?? 0) - records.filter(r => !r.is_pre_reg).length)}
           </div>
           <div style={styles.summaryLabel}>Remaining</div>
         </div>
@@ -245,19 +249,24 @@ export default function AttendancePage() {
               <tr><td colSpan={canRecord && isPublished ? 6 : 5} style={styles.centerCell}>No check-ins yet.</td></tr>
             ) : records.map((r, i) => (
               <tr key={r.id}
-                style={{ ...styles.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
-                onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
+                style={{ ...styles.row, background: r.is_pre_reg ? '#faf5ff' : (i % 2 === 0 ? '#fff' : '#f8fafc') }}
+                onMouseEnter={e => e.currentTarget.style.background = r.is_pre_reg ? '#f3e8ff' : '#e8f4fd'}
+                onMouseLeave={e => e.currentTarget.style.background = r.is_pre_reg ? '#faf5ff' : (i % 2 === 0 ? '#fff' : '#f8fafc')}
               >
                 <td style={{ ...styles.td, color: '#94a3b8', fontWeight: '600' }}>{i + 1}</td>
                 <td style={styles.td}>
                   <div style={styles.memberCell}>
-                    <div style={styles.avatar}>
-                      {r.Member?.first_name[0]}{r.Member?.last_name[0]}
+                    <div style={{ ...styles.avatar, background: r.is_pre_reg ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'linear-gradient(135deg,#005599,#13B5EA)' }}>
+                      {r.Member?.first_name?.[0]}{r.Member?.last_name?.[0]}
                     </div>
-                    <span style={styles.memberName}>
-                      {r.Member?.last_name}, {r.Member?.first_name}
-                    </span>
+                    <div>
+                      <span style={styles.memberName}>
+                        {r.Member?.last_name}, {r.Member?.first_name}
+                      </span>
+                      {r.is_pre_reg && (
+                        <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, marginTop: 2 }}>Pre-registered — not yet checked in</div>
+                      )}
+                    </div>
                   </div>
                 </td>
                 <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: '12px', color: '#64748b' }}>
@@ -265,18 +274,22 @@ export default function AttendancePage() {
                 </td>
                 <td style={styles.td}>
                   <span style={{ ...styles.methodBadge, ...METHOD_STYLE[r.check_in_method] }}>
-                    {r.check_in_method}
+                    {r.check_in_method === 'pre-reg' ? 'pre-reg' : r.check_in_method}
                   </span>
                 </td>
-                <td style={{ ...styles.td, color: '#64748b' }}>{formatCheckedIn(r.checked_in_at)}</td>
+                <td style={{ ...styles.td, color: '#64748b' }}>
+                  {r.is_pre_reg ? <span style={{ color: '#a78bfa', fontSize: 12 }}>Pending check-in</span> : formatCheckedIn(r.checked_in_at)}
+                </td>
                 {canRecord && isPublished && (
                   <td style={styles.td}>
-                    <button
-                      onClick={() => handleUndoCheckIn(r.member_id, `${r.Member?.first_name} ${r.Member?.last_name}`)}
-                      style={styles.undoBtn}
-                    >
-                      Undo
-                    </button>
+                    {!r.is_pre_reg && (
+                      <button
+                        onClick={() => handleUndoCheckIn(r.member_id, `${r.Member?.first_name} ${r.Member?.last_name}`)}
+                        style={styles.undoBtn}
+                      >
+                        Undo
+                      </button>
+                    )}
                   </td>
                 )}
               </tr>

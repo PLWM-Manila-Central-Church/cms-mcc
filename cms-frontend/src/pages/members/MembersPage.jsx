@@ -6,9 +6,10 @@ import useIsMobile from '../../hooks/useIsMobile';
 
 /* ── Status colours (admin view only) ─────────────────────────── */
 const STATUS_COLORS = {
-  Active:   { bg: '#dcfce7', color: '#16a34a' },
-  Inactive: { bg: '#f3f4f6', color: '#6b7280' },
-  Visitor:  { bg: '#fef9c3', color: '#ca8a04' },
+  New:           { bg: '#eff6ff', color: '#3b82f6' },
+  Active:        { bg: '#dcfce7', color: '#16a34a' },
+  'Semi-Active': { bg: '#fef9c3', color: '#ca8a04' },
+  Inactive:      { bg: '#f3f4f6', color: '#6b7280' },
 };
 
 /* ── Avatar gradient pool ───────────────────────────────────────── */
@@ -91,35 +92,57 @@ function MemberCard({ m, onView, onEdit, canEdit, isMember }) {
   );
 }
 
-/* ── Admin Table Row ─────────────────────────────────────────────── */
-function TableRow({ m, idx, canEdit, onView, onEdit }) {
+/* ── Age / date helpers ──────────────────────────────────────────── */
+const calcAge = (d) => {
+  if (!d) return null;
+  const b = new Date(d), n = new Date();
+  let a = n.getFullYear() - b.getFullYear();
+  if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--;
+  return a >= 0 ? a : null;
+};
+const fmtBday = (d) => {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+/* ── Admin Table Row  (masterfile / spreadsheet style) ──────────── */
+function TableRow({ m, idx, rowNum, canEdit, onView, onEdit }) {
   const [hov, setHov] = useState(false);
-  const grad = avatarGradient(m.first_name + m.last_name);
+  const sc = STATUS_COLORS[m.status] || { bg: '#f3f4f6', color: '#6b7280' };
+  const fleshAge = calcAge(m.birthdate);
+  const spiritAge = calcAge(m.spiritual_birthday);
   return (
     <tr
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      style={{ background: hov ? '#f0f7ff' : idx % 2 === 0 ? '#fff' : '#fafbfc', transition: 'background 0.12s' }}
+      onClick={() => onView(m.id)}
+      style={{ background: hov ? '#e8f4fd' : idx % 2 === 0 ? '#fff' : '#fafbfc', transition: 'background 0.12s', cursor: 'pointer' }}
     >
-      <td style={tdStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: '50%', background: grad, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
-            {m.first_name[0]}{m.last_name[0]}
-          </div>
-          <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 14 }}>{m.last_name}, {m.first_name}</span>
-        </div>
+      <td style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', fontSize: 12, width: 40 }}>{rowNum}</td>
+      <td style={{ ...tdStyle, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>
+        {m.last_name}, {m.first_name}
       </td>
-      <td style={tdStyle}>{m.email || '—'}</td>
-      <td style={tdStyle}>{m.phone || '—'}</td>
-      <td style={tdStyle}>{m.cellGroup?.name || '—'}</td>
-      <td style={tdStyle}>{m.group?.name || '—'}</td>
+      <td style={{ ...tdStyle, textAlign: 'center', width: 50 }}>
+        {m.gender ? m.gender.charAt(0) : '—'}
+      </td>
+      <td style={{ ...tdStyle, fontSize: 13 }}>{m.cellGroup?.name || '—'}</td>
+      <td style={{ ...tdStyle, fontSize: 13 }}>{m.group?.name || '—'}</td>
       <td style={tdStyle}>
-        <span style={{ background: STATUS_COLORS[m.status]?.bg, color: STATUS_COLORS[m.status]?.color, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+        <span style={{ background: sc.bg, color: sc.color, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
           {m.status}
         </span>
       </td>
-      <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 12 }}>{m.barcode}</td>
-      <td style={tdStyle}>
+      <td style={{ ...tdStyle, textAlign: 'center', fontSize: 13 }}>
+        {fleshAge !== null ? fleshAge : '—'}
+      </td>
+      <td style={{ ...tdStyle, fontSize: 13, whiteSpace: 'nowrap' }}>{fmtBday(m.birthdate)}</td>
+      <td style={{ ...tdStyle, textAlign: 'center', fontSize: 13 }}>
+        {spiritAge !== null ? spiritAge : '—'}
+      </td>
+      <td style={{ ...tdStyle, fontSize: 13, whiteSpace: 'nowrap' }}>{fmtBday(m.spiritual_birthday)}</td>
+      <td style={{ ...tdStyle, fontSize: 13 }}>{m.phone || '—'}</td>
+      <td style={tdStyle} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={() => onView(m.id)} style={actionBtnSm('#e8f4fd', '#0066b3')}>View</button>
           {canEdit && <button onClick={() => onEdit(m.id)} style={actionBtnSm('#f0fdf4', '#16a34a')}>Edit</button>}
@@ -149,6 +172,8 @@ export default function MembersPage() {
   const [error, setError]             = useState('');
   const [search, setSearch]           = useState('');
   const [statusFilter, setStatus]     = useState('');
+  const [cgFilter, setCgFilter]       = useState('');
+  const [cellGroups, setCellGroups]   = useState([]);
   const [searchInput, setSearchInput] = useState('');
 
   const limit = isMobile ? 15 : 20;
@@ -159,18 +184,26 @@ export default function MembersPage() {
       const params = new URLSearchParams({ page, limit });
       if (search)       params.append('search', search);
       if (statusFilter) params.append('status', statusFilter);
+      if (cgFilter)     params.append('cell_group_id', cgFilter);
       const res = await axiosInstance.get(`/members?${params}`);
       const d   = res.data.data;
       setMembers(d.members); setTotal(d.total); setTotalPages(d.total_pages);
     } catch { setError('Failed to load members.'); }
     finally { setLoading(false); }
-  }, [page, search, statusFilter, limit]);
+  }, [page, search, statusFilter, cgFilter, limit]);
 
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
+  // Load cell groups for filter dropdown
+  useEffect(() => {
+    axiosInstance.get('/cellgroups')
+      .then(res => setCellGroups(res.data.data || []))
+      .catch(() => {});
+  }, []);
+
   const handleSearch = () => { setPage(1); setSearch(searchInput); };
   const handleKey    = (e) => { if (e.key === 'Enter') handleSearch(); };
-  const clearFilters = () => { setSearchInput(''); setSearch(''); setStatus(''); setPage(1); };
+  const clearFilters = () => { setSearchInput(''); setSearch(''); setStatus(''); setCgFilter(''); setPage(1); };
 
   /* ── Shared pagination ──────────────────────────────────────── */
   const Pagination = () => totalPages > 1 ? (
@@ -272,7 +305,7 @@ export default function MembersPage() {
   }
 
   /* ── ADMIN / STAFF view ──────────────────────────────────────── */
-  const tableCols = ['Name', 'Email', 'Phone', 'Cell Group', 'Group', 'Status', 'Barcode', 'Actions'];
+  const tableCols = ['#', 'Name', 'M/F', 'Cell Group', 'Group', 'Status', 'Flesh Age', 'Flesh Birthday', 'Spirit Age', 'Spiritual Birthday', 'Mobile', 'Actions'];
 
   return (
     <div>
@@ -294,20 +327,36 @@ export default function MembersPage() {
             value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={handleKey}
             placeholder="Search name, email, phone…"
             style={{ flex: 1, padding: '10px 14px', fontSize: 15, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', fontFamily: 'inherit', minWidth: 0 }}
+            onFocus={e => e.target.style.borderColor = '#0066b3'}
+            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
           />
           <button onClick={handleSearch} style={{ background: '#005599', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
             Search
           </button>
         </div>
+
+        {/* Cell group filter */}
+        <select
+          value={cgFilter}
+          onChange={e => { setPage(1); setCgFilter(e.target.value); }}
+          style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: cgFilter ? '#005599' : '#64748b', fontWeight: cgFilter ? 600 : 400, minHeight: 38 }}
+        >
+          <option value="">All Cell Groups</option>
+          {cellGroups.map(cg => (
+            <option key={cg.id} value={cg.id}>{cg.name}</option>
+          ))}
+        </select>
+
+        {/* Status filter buttons */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {['', 'Active', 'Inactive', 'Visitor'].map(s => (
+          {['', 'New', 'Active', 'Semi-Active', 'Inactive'].map(s => (
             <button key={s} onClick={() => { setPage(1); setStatus(s); }}
               style={{ border: 'none', borderRadius: 20, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: statusFilter === s ? '#005599' : '#f1f5f9', color: statusFilter === s ? '#fff' : '#475569', minHeight: 38 }}>
               {s || 'All'}
             </button>
           ))}
         </div>
-        {(search || statusFilter) && (
+        {(search || statusFilter || cgFilter) && (
           <button onClick={clearFilters} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 9, padding: '7px 14px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', minHeight: 38 }}>✕ Clear</button>
         )}
       </div>
@@ -345,7 +394,7 @@ export default function MembersPage() {
                 ) : members.length === 0 ? (
                   <tr><td colSpan={tableCols.length} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No members found.</td></tr>
                 ) : members.map((m, i) => (
-                  <TableRow key={m.id} m={m} idx={i} canEdit={canEdit}
+                  <TableRow key={m.id} m={m} idx={i} rowNum={(page - 1) * limit + i + 1} canEdit={canEdit}
                     onView={id => navigate(`/members/${id}`)}
                     onEdit={id => navigate(`/members/${id}/edit`)}
                   />

@@ -19,11 +19,12 @@ const memberIncludes = [
 ];
 
 // ── Get All Members (paginated) ──────────────────────────────
-exports.getAllMembers = async ({ page = 1, limit = 20, search, status } = {}) => {
+exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_group_id } = {}) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where  = { is_deleted: 0 };
 
-  if (status) where.status = status;
+  if (status)        where.status        = status;
+  if (cell_group_id) where.cell_group_id = parseInt(cell_group_id);
 
   if (search) {
     const { Op } = require("sequelize");

@@ -5,6 +5,9 @@ const ctrl = require("../controllers/roles.controller");
 const auth = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 
+// ── Public list endpoint (any authenticated user — needed for user creation form) ──
+router.get("/list", auth, ctrl.listRoles);
+
 router.get("/", auth, authorize("roles", "read"), ctrl.getAllRoles);
 router.get("/:id", auth, authorize("roles", "read"), ctrl.getRoleById);
 router.post("/", auth, authorize("roles", "create"), ctrl.createRole);

@@ -3,8 +3,19 @@ import { NavLink, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useAuth } from '../../context/AuthContext';
-import { NAV_ITEMS } from '../../utils/constants';
+import { NAV_ITEMS, NAV_ICONS } from '../../utils/constants';
 import { LANGS, getLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
+
+function NavIcon({ name, size = 20 }) {
+  const MORE_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
+  const svg = NAV_ICONS[name] || MORE_SVG;
+  return (
+    <span
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      dangerouslySetInnerHTML={{ __html: svg.replace(/width="18"/g, `width="${size}"`).replace(/height="18"/g, `height="${size}"`) }}
+    />
+  );
+}
 
 const BP_TABLET = 1024;
 const BP_MOBILE = 768;
@@ -23,11 +34,11 @@ function useWindowWidth() {
 
 /* ── Mobile bottom tab bar ─────────────────────────────────── */
 const BOTTOM_TABS = [
-  { label: 'Home',    path: '/dashboard',  icon: '🏠' },
-  { label: 'Members', path: '/members',    icon: '👥', permissions: { module: 'members',  action: 'read' } },
-  { label: 'Events',  path: '/events',     icon: '📅', permissions: { module: 'events',   action: 'read' } },
-  { label: 'Finance', path: '/finance',    icon: '💰', permissions: { module: 'finance',  action: 'read' } },
-  { label: 'More',    path: '__more__',    icon: '☰' },
+  { label: 'Home',    path: '/dashboard',  icon: 'dashboard' },
+  { label: 'Members', path: '/members',    icon: 'members',  permissions: { module: 'members',  action: 'read' } },
+  { label: 'Events',  path: '/events',     icon: 'events',   permissions: { module: 'events',   action: 'read' } },
+  { label: 'Finance', path: '/finance',    icon: 'finance',  permissions: { module: 'finance',  action: 'read' } },
+  { label: 'More',    path: '__more__',    icon: 'more' },
 ];
 
 function BottomTabBar({ onMoreOpen }) {
@@ -68,7 +79,7 @@ function BottomTabBar({ onMoreOpen }) {
               color: '#94a3b8', fontFamily: 'inherit',
             }}
           >
-            <span style={{ fontSize: 20 }}>☰</span>
+            <NavIcon name="more" size={20} />
             <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.2px' }}>More</span>
           </button>
         ) : (
@@ -91,7 +102,7 @@ function BottomTabBar({ onMoreOpen }) {
                 borderRadius: '0 0 3px 3px',
               }} />
             )}
-            <span style={{ fontSize: 20 }}>{tab.icon}</span>
+            <NavIcon name={tab.icon} size={20} />
             <span style={{ fontSize: 10, fontWeight: active ? 700 : 600, letterSpacing: '0.2px' }}>
               {tab.label}
             </span>
@@ -183,7 +194,7 @@ function MobileMoreDrawer({ open, onClose }) {
                   fontSize: 13,
                 }}
               >
-                <span style={{ fontSize: 18 }}>{item.icon}</span>
+                <NavIcon name={item.icon} size={18} />
                 <span>{item.label}</span>
               </NavLink>
             );

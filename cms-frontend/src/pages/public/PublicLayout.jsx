@@ -133,6 +133,8 @@ export default function PublicLayout({ children }) {
 
   useEffect(() => {
     setMobileOpen(false); setOpenNav(null); setMobileSub(null); setLangOpen(false);
+    // Scroll to top on every navigation — prevents staying at bottom when clicking quick links
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, [location]);
 
   useEffect(() => {

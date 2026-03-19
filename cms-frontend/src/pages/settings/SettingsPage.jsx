@@ -96,9 +96,22 @@ export default function SettingsPage() {
   const getValue = (key) =>
     key in changes ? changes[key] : (settings[key]?.value ?? '');
 
-  const handleChange = (key, value) => {
+  const handleChange = async (key, value) => {
     setChanges(prev => ({ ...prev, [key]: value }));
     setSaved(false);
+    // Auto-save boolean toggles immediately
+    if (value === 'true' || value === 'false') {
+      try {
+        await api.put('/settings', { [key]: value });
+        setSettings(prev => ({
+          ...prev,
+          [key]: { ...prev[key], value },
+        }));
+        setChanges(prev => { const n = { ...prev }; delete n[key]; return n; });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } catch { /* silent — user can still use Save button */ }
+    }
   };
 
   const handleSave = async () => {
@@ -147,7 +160,7 @@ export default function SettingsPage() {
             style={{ ...s.toggle, background: isOn ? '#005599' : '#d1d5db' }}
             aria-label={`Toggle ${setting.label}`}
           >
-            <span style={{ ...s.toggleThumb, transform: isOn ? 'translateX(22px)' : 'translateX(2px)' }} />
+            <span style={{ ...s.toggleThumb, left: isOn ? '24px' : '3px', transform: 'none' }} />
           </button>
           <span style={{ ...s.toggleLabel, color: isOn ? '#005599' : '#6b7280' }}>
             {isOn ? 'Enabled' : 'Disabled'}
@@ -164,13 +177,31 @@ export default function SettingsPage() {
       );
     }
 
+    if (type === 'number') {
+      return (
+        <input
+          type="number"
+          style={s.input}
+          value={value}
+          min="0"
+          onChange={e => handleChange(key, e.target.value.replace(/[^0-9]/g, ''))}
+          onKeyDown={e => {
+            if (!/[0-9]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab'].includes(e.key)) {
+              e.preventDefault();
+            }
+          }}
+          placeholder="Enter number..."
+        />
+      );
+    }
+
     return (
       <input
-        type={type === 'number' ? 'number' : type === 'email' ? 'email' : type === 'password' ? 'password' : 'text'}
+        type={type === 'email' ? 'email' : type === 'password' ? 'password' : 'text'}
         style={s.input}
         value={value}
         onChange={e => handleChange(key, e.target.value)}
-        placeholder={`Enter ${setting.label.toLowerCase()}…`}
+        placeholder={`Enter ${setting.label.toLowerCase()}...`}
       />
     );
   };
@@ -297,7 +328,7 @@ export default function SettingsPage() {
 }
 
 const s = {
-  page:        { fontFamily: "'Inter', sans-serif", maxWidth: '1100px' },
+  page:        { fontFamily: "'Inter', sans-serif" },
   centered:    { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px' },
   spinner:     { width: '36px', height: '36px', border: '3px solid #e5e7eb', borderTop: '3px solid #1e4080', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
@@ -323,9 +354,9 @@ const s = {
   panelTitle:  { fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 },
   panelSub:    { fontSize: '13px', color: '#64748b', margin: '2px 0 0' },
   settingsList:{ background: '#fff', border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 14px 14px', overflow: 'hidden' },
-  settingRow:  { display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 24px', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' },
+  settingRow:  { display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 24px', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s', flexWrap: 'wrap' },
   settingRowDirty: { background: '#fefce8' },
-  settingLeft: { width: 'clamp(140px, 30%, 220px)', flexShrink: 0 },
+  settingLeft: { minWidth: '180px', width: 'clamp(160px, 32%, 240px)', flexShrink: 0 },
   settingLabel:{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '3px' },
   settingKey:  { fontSize: '11px', color: '#94a3b8', fontFamily: "'Fira Code', 'Courier New', monospace", background: '#f8fafc', padding: '1px 6px', borderRadius: '4px' },
   settingRight:{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' },
@@ -333,6 +364,6 @@ const s = {
   revertBtn:   { background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', color: '#64748b', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   toggleRow:   { display: 'flex', alignItems: 'center', gap: '10px' },
   toggle:      { width: '46px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 },
-  toggleThumb: { position: 'absolute', top: '3px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'transform 0.2s' },
+  toggleThumb: { position: 'absolute', top: '3px', left: '3px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' },
   toggleLabel: { fontSize: '13px', fontWeight: '600' },
 };
