@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
+import { LANGS, saveLangCode, applyGTLang } from '../../utils/langUtils';
 
 const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
 const API_IMG = (process.env.REACT_APP_API_URL || '').replace(/\/api$/, '');
@@ -18,16 +19,6 @@ const FONTS = [
   { name:'Helvetica',     google:false, system:true    },
 ];
 
-const LANGS = [
-  { code:'en',  label:'English',            flag:'🇺🇸' },
-  { code:'ko',  label:'Korean',             flag:'🇰🇷' },
-  { code:'tl',  label:'Filipino (Tagalog)', flag:'🇵🇭' },
-  { code:'ceb', label:'Cebuano',            flag:'🇵🇭' },
-  { code:'ilo', label:'Ilocano',            flag:'🇵🇭' },
-  { code:'hil', label:'Hiligaynon',         flag:'🇵🇭' },
-  { code:'war', label:'Waray',              flag:'🇵🇭' },
-  { code:'bcl', label:'Bikol',              flag:'🇵🇭' },
-];
 
 const RESOLUTIONS = [
   { value:0.5,  label:'50%'  },
@@ -104,6 +95,12 @@ export default function MemberPortalSettings() {
     const updated = {...prefs,[key]:val};
     setPrefs(updated);
     savePrefs(updated);
+    if (key === 'language') {
+      saveLangCode(val); // sets cookie + localStorage + plwm_prefs atomically
+      const lang = LANGS.find(l => l.code === val);
+      if (lang) applyGTLang(lang);
+      window.dispatchEvent(new CustomEvent('plwm-lang-change', { detail: { code: val } }));
+    }
   };
 
   const handleFontSizeBlur = () => {
@@ -254,7 +251,7 @@ export default function MemberPortalSettings() {
             <label style={lbl}>Language</label>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               {LANGS.map(lang=>(
-                <ChipBtn key={lang.code} active={(prefs.language||'en')===lang.code} onClick={()=>updatePref('language',lang.code)}>
+                <ChipBtn key={lang.code} active={(localStorage.getItem('plwm_lang')||prefs.language||'en')===lang.code} onClick={()=>updatePref('language',lang.code)}>
                   {lang.flag} {lang.label}
                 </ChipBtn>
               ))}

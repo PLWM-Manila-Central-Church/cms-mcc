@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { LANGS, getLangCode, saveLangCode, loadGTScript, applyGTLang } from '../../utils/langUtils';
 
 // ── Constants ─────────────────────────────────────────────────
 const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
@@ -482,7 +483,6 @@ function FinanceTab({finance,c,f,t,fmtDate,PHP}) {
           <span style={{fontSize:f.stat,fontWeight:900,color:c.t1}}>{PHP(finance.ytdTotal)}</span>
         </div>
       )}
-      <div style={{padding:'14px 20px',borderTop:`1px solid ${c.borderL}`,background:c.surfaceAlt,textAlign:'center',fontStyle:'italic',fontSize:f.sm,color:c.t3}}>{t.verse}</div>
     </div>
   );
 }
@@ -499,8 +499,49 @@ export default function MemberPortal() {
   const fontFamily = prefs.fontFamily || 'DM Sans';
   const fontSize   = prefs.fontSize   || 16;
   const zoom       = prefs.resolution || 1;
-  const lk = prefs.language || 'en';
-  const t  = LBL[lk] || LBL.en;
+
+  // Language as reactive state — updates instantly when portal settings or landing page changes it
+  const [lang, setLang] = useState(() => getLangCode());
+  const t = LBL[lang] || LBL.en;
+
+  // Load Google Translate once for the portal (it's outside MainLayout so needs its own load)
+  useEffect(() => {
+    const restoreSaved = () => {
+      const code = getLangCode();
+      if (code && code !== 'en') {
+        const saved = LANGS.find(l => l.code === code);
+        if (saved) {
+          // Re-set cookie on every portal load so GT doesn't lose state when user presses X
+          saveLangCode(code);
+          applyGTLang(saved);
+        }
+      }
+    };
+    loadGTScript('google_translate_element_portal', restoreSaved);
+  }, []); // eslint-disable-line
+
+  // Listen for language changes from settings page or landing page
+  useEffect(() => {
+    const handler = (e) => {
+      const code = e.detail?.code || getLangCode();
+      setLang(code);
+      // Also apply GT for non-en/tl languages
+      if (code && code !== 'en') {
+        const saved = LANGS.find(l => l.code === code);
+        if (saved) applyGTLang(saved);
+      }
+    };
+    const storageHandler = () => {
+      const code = getLangCode();
+      setLang(code);
+    };
+    window.addEventListener('plwm-lang-change', handler);
+    window.addEventListener('storage', storageHandler);
+    return () => {
+      window.removeEventListener('plwm-lang-change', handler);
+      window.removeEventListener('storage', storageHandler);
+    };
+  }, []);
 
   // Load selected Google Font dynamically
   useEffect(() => {
@@ -699,6 +740,8 @@ export default function MemberPortal() {
 
   return (
     <div style={{minHeight:'100vh',background:c.bg,fontFamily:`'${fontFamily}',system-ui,sans-serif`,fontSize:`${fontSize}px`,zoom}}>
+      {/* Hidden GT widget — GT script loaded in useEffect above */}
+      <div id="google_translate_element_portal" style={{position:'fixed',bottom:-200,left:0,opacity:0,pointerEvents:'none',zIndex:-1}}/>
       <style>{`
         @keyframes shimmer{0%{background-position:400% 0}100%{background-position:-400% 0}}
         @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
