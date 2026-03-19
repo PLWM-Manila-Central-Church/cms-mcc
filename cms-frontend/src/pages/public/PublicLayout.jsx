@@ -219,8 +219,8 @@ export default function PublicLayout({ children }) {
               <img src={process.env.PUBLIC_URL + '/logo.jpg'} alt="PLWM-MCC"
                 style={{ width:40, height:40, borderRadius:8, objectFit:'contain', background:'rgba(255,255,255,0.1)', padding:2, flexShrink:0 }} />
               <div className="logo-text-hide">
-                <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:13, fontWeight:700, color:'#fff', lineHeight:1.2, whiteSpace:'nowrap' }}>Manila Central Church</div>
-                <div style={{ fontSize:9.5, color:'rgba(255,255,255,0.48)', letterSpacing:'0.5px', textTransform:'uppercase' }}>PLWM — Parañaque City</div>
+                <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:15, fontWeight:700, color:'#fff', lineHeight:1.2, whiteSpace:'nowrap' }}>Manila Central Church</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', letterSpacing:'0.5px', textTransform:'uppercase' }}>PLWM — Manila Central Church</div>
               </div>
             </Link>
 
@@ -375,7 +375,7 @@ export default function PublicLayout({ children }) {
               <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:'1.25rem', fontWeight:700, color:C.text, marginBottom:8 }}>Manila Central Church</div>
               <div style={{ fontSize:14, color:C.muted, lineHeight:1.75, marginBottom:20, maxWidth:280 }}>Mother Church of Philippine Life Word Mission (PLWM). Serving Manila and the Philippines through the Word of God.</div>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                {[['📍','Address','Lot 2 Block 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City'],['📞','Tel','(02) 7745-6212'],['📱','Senior Pastor','0915-807-6300'],['🌐','Website','www.jbch.org.ph']].map(([icon,label,value]) => (
+                {[['📍','Address','Lot 2 Block 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City'],['📞','Tel','(02) 7745-6212'],['📱','Senior Pastor','0915-807-6300']].map(([icon,label,value]) => (
                   <div key={label} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
                     <div style={{ width:28, height:28, background:'rgba(21,101,192,0.1)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}>{icon}</div>
                     <div>
@@ -384,6 +384,18 @@ export default function PublicLayout({ children }) {
                     </div>
                   </div>
                 ))}
+                <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                  <div style={{ width:28, height:28, background:'rgba(21,101,192,0.1)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}>🌐</div>
+                  <div>
+                    <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.5px' }}>Website</div>
+                    <a href="https://www.jbch.org/en/" target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize:13, color:C.blue, textDecoration:'none' }}
+                      onMouseEnter={e => e.currentTarget.style.textDecoration='underline'}
+                      onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>
+                      https://www.jbch.org/en/
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
             <div>
@@ -405,7 +417,7 @@ export default function PublicLayout({ children }) {
             <div>
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:C.text, marginBottom:16 }}>Service Times</div>
               <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
-                {['☀️ Sunday 9:30–11:10 AM — Filipino Service (Main Hall)','☀️ Sunday 2:00–4:00 PM — Korean Service (Medium Hall)','📖 Wednesday 7:00–9:00 PM — Midweek Sermon (Main Hall)','🏘️ Saturday 2:00–4:00 PM — High School Fellowship','🏘️ Saturday 7:00–9:00 PM — Young Adult Fellowship','🔵 Tue & Thu 7:00 PM — Cell Group Meetings'].map(s => (
+                {['☀️ Sunday 9:30–11:10 AM — Filipino Service (Main Hall)','☀️ Sunday 2:00–4:00 PM — Korean Service (Medium Hall)','📖 Wednesday 7:00–9:00 PM — Midweek Sermon (Main Hall)','🏘️ Saturday 2:00–4:00 PM — High School Fellowship','🏘️ Saturday 7:00–9:00 PM — Young Adult Fellowship'].map(s => (
                   <span key={s} style={{ fontSize:13, color:C.muted, lineHeight:1.5 }}>{s}</span>
                 ))}
               </div>
@@ -413,9 +425,7 @@ export default function PublicLayout({ children }) {
           </div>
           <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:20, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
             <p style={{ fontSize:12, color:C.light, margin:0 }}>© 2026 Manila Central Church · Philippine Life Word Mission (PLWM) · All rights reserved.</p>
-            <Link to="/login" style={{ display:'inline-flex', alignItems:'center', gap:7, background:C.navy, color:'#fff', fontSize:12, fontWeight:600, padding:'7px 14px', borderRadius:8, textDecoration:'none' }}>
-              🔐 Church Management System
-            </Link>
+
           </div>
         </div>
       </footer>

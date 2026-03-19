@@ -107,7 +107,7 @@ const fmtBday = (d) => {
 };
 
 /* ── Admin Table Row  (masterfile / spreadsheet style) ──────────── */
-function TableRow({ m, idx, rowNum, canEdit, onView, onEdit }) {
+function TableRow({ m, idx, rowNum, canEdit, selected, onToggleSelect, onView, onEdit }) {
   const [hov, setHov] = useState(false);
   const sc = STATUS_COLORS[m.status] || { bg: '#f3f4f6', color: '#6b7280' };
   const fleshAge = calcAge(m.birthdate);
@@ -117,8 +117,11 @@ function TableRow({ m, idx, rowNum, canEdit, onView, onEdit }) {
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       onClick={() => onView(m.id)}
-      style={{ background: hov ? '#e8f4fd' : idx % 2 === 0 ? '#fff' : '#fafbfc', transition: 'background 0.12s', cursor: 'pointer' }}
+      style={{ background: selected ? '#fef2f2' : hov ? '#e8f4fd' : idx % 2 === 0 ? '#fff' : '#fafbfc', transition: 'background 0.12s', cursor: 'pointer' }}
     >
+      <td style={{ padding:'10px 12px', width:36, borderBottom:'1px solid #f1f5f9', verticalAlign:'middle' }} onClick={e=>e.stopPropagation()}>
+        <input type="checkbox" checked={!!selected} onChange={onToggleSelect} style={{ cursor:'pointer', width:15, height:15 }} />
+      </td>
       <td style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', fontSize: 12, width: 40 }}>{rowNum}</td>
       <td style={{ ...tdStyle, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>
         {m.last_name}, {m.first_name}
@@ -173,8 +176,13 @@ export default function MembersPage() {
   const [search, setSearch]           = useState('');
   const [statusFilter, setStatus]     = useState('');
   const [cgFilter, setCgFilter]       = useState('');
+  const [groupFilter, setGroupFilter] = useState('');
   const [cellGroups, setCellGroups]   = useState([]);
+  const [groups, setGroups]           = useState([]);
   const [searchInput, setSearchInput] = useState('');
+  const [sorts, setSorts]             = useState([]);
+  const [selected, setSelected]       = useState(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const limit = isMobile ? 15 : 20;
 
@@ -185,12 +193,13 @@ export default function MembersPage() {
       if (search)       params.append('search', search);
       if (statusFilter) params.append('status', statusFilter);
       if (cgFilter)     params.append('cell_group_id', cgFilter);
+      if (groupFilter)  params.append('group_id', groupFilter);
       const res = await axiosInstance.get(`/members?${params}`);
       const d   = res.data.data;
       setMembers(d.members); setTotal(d.total); setTotalPages(d.total_pages);
     } catch { setError('Failed to load members.'); }
     finally { setLoading(false); }
-  }, [page, search, statusFilter, cgFilter, limit]);
+  }, [page, search, statusFilter, cgFilter, groupFilter, limit]);
 
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
@@ -203,7 +212,60 @@ export default function MembersPage() {
 
   const handleSearch = () => { setPage(1); setSearch(searchInput); };
   const handleKey    = (e) => { if (e.key === 'Enter') handleSearch(); };
-  const clearFilters = () => { setSearchInput(''); setSearch(''); setStatus(''); setCgFilter(''); setPage(1); };
+  const clearFilters = () => { setSearchInput(''); setSearch(''); setStatus(''); setCgFilter(''); setGroupFilter(''); setPage(1); setSorts([]); setSelected(new Set()); };
+
+  // ── Multi-sort ──────────────────────────────────────────────
+  const toggleSort = (col) => {
+    setSorts(prev => {
+      const idx = prev.findIndex(s => s.col === col);
+      if (idx === -1) return [...prev, { col, dir: 'asc' }];
+      if (prev[idx].dir === 'asc') { const next = [...prev]; next[idx] = { col, dir: 'desc' }; return next; }
+      return prev.filter((_, i) => i !== idx);
+    });
+    setSelected(new Set());
+  };
+
+  const sortedMembers = [...members].sort((a, b) => {
+    for (const { col, dir } of sorts) {
+      let av = '', bv = '';
+      if (col === 'name')   { av = `${a.last_name} ${a.first_name}`.toLowerCase(); bv = `${b.last_name} ${b.first_name}`.toLowerCase(); }
+      if (col === 'gender') { av = a.gender || ''; bv = b.gender || ''; }
+      if (col === 'cg')     { av = a.cellGroup?.name || ''; bv = b.cellGroup?.name || ''; }
+      if (col === 'group')  { av = a.group?.name || ''; bv = b.group?.name || ''; }
+      if (col === 'status') { av = a.status || ''; bv = b.status || ''; }
+      if (av < bv) return dir === 'asc' ? -1 : 1;
+      if (av > bv) return dir === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
+  const SortIndicator = ({ col }) => {
+    const idx = sorts.findIndex(s => s.col === col);
+    if (idx === -1) return <span style={{ color:'#cbd5e1', marginLeft:3, fontSize:10 }}>⇅</span>;
+    return (
+      <span style={{ color:'#005599', marginLeft:3, fontSize:10, fontWeight:700 }}>
+        {sorts[idx].dir === 'asc' ? '↑' : '↓'}
+        {sorts.length > 1 && <sup style={{ fontSize:8 }}>{idx + 1}</sup>}
+      </span>
+    );
+  };
+
+  // ── Bulk delete ─────────────────────────────────────────────
+  const toggleSelect = (id) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll    = () => setSelected(prev => prev.size === sortedMembers.length ? new Set() : new Set(sortedMembers.map(m => m.id)));
+
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!window.confirm(`Delete ${selected.size} selected member${selected.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all([...selected].map(id => axiosInstance.delete(`/members/${id}`)));
+      setSelected(new Set());
+      fetchMembers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Some deletes failed.');
+    } finally { setBulkDeleting(false); }
+  };
 
   /* ── Shared pagination ──────────────────────────────────────── */
   const Pagination = () => totalPages > 1 ? (
@@ -305,7 +367,7 @@ export default function MembersPage() {
   }
 
   /* ── ADMIN / STAFF view ──────────────────────────────────────── */
-  const tableCols = ['#', 'Name', 'M/F', 'Cell Group', 'Group', 'Status', 'Flesh Age', 'Flesh Birthday', 'Spirit Age', 'Spiritual Birthday', 'Mobile', 'Actions'];
+  // tableCols replaced by sortable headers below
 
   return (
     <div>
@@ -378,23 +440,47 @@ export default function MembersPage() {
           ))}
         </div>
       ) : (
+        {selected.size > 0 && (
+          <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10, marginBottom:10 }}>
+            <span style={{ fontSize:13, color:'#dc2626', fontWeight:600 }}>{selected.size} member{selected.size>1?'s':''} selected</span>
+            <button onClick={handleBulkDelete} disabled={bulkDeleting}
+              style={{ background:'#dc2626', color:'#fff', border:'none', borderRadius:8, padding:'6px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity:bulkDeleting?0.6:1 }}>
+              {bulkDeleting ? 'Deleting…' : '🗑 Delete Selected'}
+            </button>
+            <button onClick={() => setSelected(new Set())}
+              style={{ background:'none', border:'1px solid #e2e8f0', borderRadius:8, padding:'6px 12px', fontSize:13, color:'#94a3b8', cursor:'pointer', fontFamily:'inherit' }}>
+              Cancel
+            </button>
+          </div>
+        )}
         <div className="desktop-table" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ background: '#f8fafc' }}>
                 <tr>
-                  {tableCols.map(h => (
-                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th style={{ padding:'10px 12px', width:36 }}>
+                    <input type="checkbox" checked={sortedMembers.length>0 && selected.size===sortedMembers.length}
+                      onChange={toggleAll} style={{ cursor:'pointer', width:15, height:15 }} />
+                  </th>
+                  {[['#','',40],['Name','name',null],['M/F','gender',50],['Cell Group','cg',null],['Group','group',null],['Status','status',null],['Flesh Age',null,80],['Flesh Birthday',null,130],['Spirit Age',null,80],['Spiritual Birthday',null,130],['Mobile',null,120],['Actions',null,null]].map(([label, col, w]) => (
+                    <th key={label} onClick={col ? ()=>toggleSort(col) : undefined}
+                      style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #e2e8f0', whiteSpace:'nowrap', cursor:col?'pointer':'default', userSelect:'none', width:w||undefined, transition:'background 0.1s' }}
+                      onMouseEnter={e=>{if(col)e.currentTarget.style.background='#f0f7ff';}}
+                      onMouseLeave={e=>{e.currentTarget.style.background='';}}
+                    >
+                      {label}{col && <SortIndicator col={col} />}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={tableCols.length} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>Loading…</td></tr>
-                ) : members.length === 0 ? (
-                  <tr><td colSpan={tableCols.length} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No members found.</td></tr>
-                ) : members.map((m, i) => (
-                  <TableRow key={m.id} m={m} idx={i} rowNum={(page - 1) * limit + i + 1} canEdit={canEdit}
+                  <tr><td colSpan={13} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>Loading…</td></tr>
+                ) : sortedMembers.length === 0 ? (
+                  <tr><td colSpan={13} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No members found.</td></tr>
+                ) : sortedMembers.map((m, i) => (
+                  <TableRow key={m.id} m={m} idx={i} rowNum={(page-1)*limit+i+1} canEdit={canEdit}
+                    selected={selected.has(m.id)} onToggleSelect={() => toggleSelect(m.id)}
                     onView={id => navigate(`/members/${id}`)}
                     onEdit={id => navigate(`/members/${id}/edit`)}
                   />

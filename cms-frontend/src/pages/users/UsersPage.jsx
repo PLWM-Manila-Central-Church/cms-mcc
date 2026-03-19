@@ -29,6 +29,10 @@ export default function UsersPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError]   = useState('');
 
+  // Bulk delete
+  const [selected, setSelected]         = useState(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   const fetchUsers = async () => {
     setLoading(true);
     setError('');
@@ -54,6 +58,21 @@ export default function UsersPage() {
       (u.member && `${u.member.first_name} ${u.member.last_name}`.toLowerCase().includes(q))
     ));
   }, [users, search]);
+
+  const toggleSelect  = (id) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll     = () => setSelected(prev => prev.size === filtered.length ? new Set() : new Set(filtered.map(u => u.id)));
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!window.confirm(`Delete ${selected.size} selected user${selected.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all([...selected].map(id => axiosInstance.delete(`/users/${id}`)));
+      setSelected(new Set());
+      fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Some deletes failed.');
+    } finally { setBulkDeleting(false); }
+  };
 
   const handleToggleActive = async (user) => {
     setActionLoading(user.id);
@@ -119,10 +138,30 @@ export default function UsersPage() {
         )}
       </div>
 
+      {selected.size > 0 && (
+        <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10, marginBottom:12 }}>
+          <span style={{ fontSize:13, color:'#dc2626', fontWeight:600 }}>{selected.size} user{selected.size > 1 ? 's' : ''} selected</span>
+          <button onClick={handleBulkDelete} disabled={bulkDeleting}
+            style={{ background:'#dc2626', color:'#fff', border:'none', borderRadius:8, padding:'6px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity:bulkDeleting ? 0.6 : 1 }}>
+            {bulkDeleting ? 'Deleting…' : '🗑 Delete Selected'}
+          </button>
+          <button onClick={() => setSelected(new Set())}
+            style={{ background:'none', border:'1px solid #e2e8f0', borderRadius:8, padding:'6px 12px', fontSize:13, color:'#94a3b8', cursor:'pointer', fontFamily:'inherit' }}>
+            Cancel
+          </button>
+        </div>
+      )}
+
       <div style={styles.tableWrap}>
         <table style={styles.table}>
           <thead>
             <tr style={styles.thead}>
+              <th style={{ ...styles.th, width:36 }}>
+                <input type="checkbox"
+                  checked={filtered.length > 0 && selected.size === filtered.length}
+                  onChange={toggleAll}
+                  style={{ cursor:'pointer', width:15, height:15 }} />
+              </th>
               <th style={styles.th}>User</th>
               <th style={styles.th}>Role</th>
               <th style={styles.th}>Linked Member</th>
@@ -133,16 +172,20 @@ export default function UsersPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} style={styles.centerCell}>Loading...</td></tr>
+              <tr><td colSpan={7} style={styles.centerCell}>Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={6} style={styles.centerCell}>{search ? 'No users match your search.' : 'No users found.'}</td></tr>
+              <tr><td colSpan={7} style={styles.centerCell}>{search ? 'No users match your search.' : 'No users found.'}</td></tr>
             ) : filtered.map((u, i) => (
               <tr
                 key={u.id}
-                style={{ ...styles.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
-                onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
+                style={{ ...styles.row, background: selected.has(u.id) ? '#fef2f2' : i % 2 === 0 ? '#fff' : '#f8fafc' }}
+                onMouseEnter={e => e.currentTarget.style.background = selected.has(u.id) ? '#fee2e2' : '#e8f4fd'}
+                onMouseLeave={e => e.currentTarget.style.background = selected.has(u.id) ? '#fef2f2' : i % 2 === 0 ? '#fff' : '#f8fafc'}
               >
+                <td style={{ ...styles.td, width:36 }} onClick={e => e.stopPropagation()}>
+                  <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelect(u.id)}
+                    style={{ cursor:'pointer', width:15, height:15 }} />
+                </td>
                 <td style={styles.td}>
                   <div style={styles.userCell}>
                     <div style={styles.avatar}>{u.email[0].toUpperCase()}</div>
