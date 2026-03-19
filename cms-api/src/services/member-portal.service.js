@@ -7,7 +7,7 @@ const path     = require("path");
 const fs       = require("fs");
 const {
   Member, CellGroup, Group, EmergencyContact,
-  Attendance, Service,
+  Attendance, Service, ServiceResponse,
   FinancialRecord, FinancialCategory,
   Event, EventRegistration, EventCategory,
   MinistryAssignment, MinistryRole, Notification,
@@ -322,6 +322,78 @@ exports.uploadProfilePhoto = async (memberId, filePath) => {
 
   await member.update({ profile_photo_url: filePath });
   return exports.getMyProfile(memberId);
+};
+
+// ── Get Service Details with Member's RSVP ───────────────────
+exports.getServiceDetails = async (serviceId, memberId) => {
+  const service = await Service.findByPk(serviceId, {
+    attributes: ["id", "title", "service_date", "service_time", "capacity", "status", "response_deadline"],
+  });
+  if (!service) throw { status: 404, message: "Service not found" };
+
+  const myResponse = await ServiceResponse.findOne({
+    where: { service_id: serviceId, member_id: memberId },
+    attributes: ["id", "attendance_status", "seat_number", "parking_slot"],
+  });
+
+  const registrationCount = await ServiceResponse.count({
+    where: { service_id: serviceId, attendance_status: "ATTENDING" },
+  });
+
+  return {
+    ...service.toJSON(),
+    my_response: myResponse ? myResponse.toJSON() : null,
+    attending_count: registrationCount,
+  };
+};
+
+// ── Submit Service RSVP (creates Attendance pre-reg for ATTENDING) ─
+exports.submitServiceResponse = async (memberId, serviceId, attendanceStatus) => {
+  const service = await Service.findByPk(serviceId);
+  if (!service) throw { status: 404, message: "Service not found" };
+
+  const validStatuses = ["ATTENDING", "NOT_ATTENDING", "UNDECIDED"];
+  if (!validStatuses.includes(attendanceStatus))
+    throw { status: 400, message: "Invalid attendance status" };
+
+  // Upsert the ServiceResponse
+  const existing = await ServiceResponse.findOne({
+    where: { service_id: serviceId, member_id: memberId },
+  });
+
+  if (existing) {
+    await existing.update({ attendance_status: attendanceStatus });
+  } else {
+    await ServiceResponse.create({
+      service_id: serviceId,
+      member_id: memberId,
+      attendance_status: attendanceStatus,
+    });
+  }
+
+  // Sync Attendance pre-reg record
+  if (attendanceStatus === "ATTENDING") {
+    // Create a pre-reg Attendance record if one doesn't exist
+    const existingAttendance = await Attendance.findOne({
+      where: { service_id: serviceId, member_id: memberId, check_in_method: "pre-reg" },
+    });
+    if (!existingAttendance) {
+      await Attendance.create({
+        service_id:      serviceId,
+        member_id:       memberId,
+        check_in_method: "pre-reg",
+        checked_in_at:   new Date(),
+        recorded_by:     null,
+      });
+    }
+  } else {
+    // Remove any pre-reg Attendance record when member says not attending or undecided
+    await Attendance.destroy({
+      where: { service_id: serviceId, member_id: memberId, check_in_method: "pre-reg" },
+    });
+  }
+
+  return exports.getServiceDetails(serviceId, memberId);
 };
 
 // ── Get My Ministry Assignments ───────────────────────────────
