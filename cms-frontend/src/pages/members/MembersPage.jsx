@@ -440,6 +440,7 @@ export default function MembersPage() {
           ))}
         </div>
       ) : (
+        <>
         {selected.size > 0 && (
           <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10, marginBottom:10 }}>
             <span style={{ fontSize:13, color:'#dc2626', fontWeight:600 }}>{selected.size} member{selected.size>1?'s':''} selected</span>
@@ -489,6 +490,7 @@ export default function MembersPage() {
             </table>
           </div>
         </div>
+        </>
       )}
 
       <Pagination />
