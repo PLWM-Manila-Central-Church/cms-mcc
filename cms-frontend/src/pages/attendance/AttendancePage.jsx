@@ -18,7 +18,7 @@ export default function AttendancePage() {
 
   const [service, setService]     = useState(null);
   const [records, setRecords]     = useState([]);
-  const [summary, setSummary]     = useState(null);
+  const [, setSummary]     = useState(null);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
 
