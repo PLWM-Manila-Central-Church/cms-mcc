@@ -3,14 +3,14 @@
 export const LANG_KEY = 'plwm_lang';
 
 export const LANGS = [
-  { code:'en',  label:'English',            flag:'🇺🇸', searchText:'English'    },
-  { code:'ko',  label:'Korean',             flag:'🇰🇷', searchText:'Korean'     },
-  { code:'tl',  label:'Filipino (Tagalog)', flag:'🇵🇭', searchText:'Filipino'   },
-  { code:'ceb', label:'Cebuano',            flag:'🇵🇭', searchText:'Cebuano'    },
-  { code:'ilo', label:'Ilocano',            flag:'🇵🇭', searchText:'Ilocano'    },
-  { code:'hil', label:'Hiligaynon',         flag:'🇵🇭', searchText:'Hiligaynon' },
-  { code:'war', label:'Waray',              flag:'🇵🇭', searchText:'Waray'      },
-  { code:'bcl', label:'Bikol',              flag:'🇵🇭', searchText:'Bikol'      },
+  { code:'en',  label:'English',            flag:'🇺🇸', native:'English',   searchText:'English'    },
+  { code:'ko',  label:'Korean',             flag:'🇰🇷', native:'한국어',     searchText:'Korean'     },
+  { code:'tl',  label:'Filipino (Tagalog)', flag:'🇵🇭', native:'Filipino',  searchText:'Filipino'   },
+  { code:'ceb', label:'Cebuano',            flag:'🇵🇭', native:'Bisaya',    searchText:'Cebuano'    },
+  { code:'ilo', label:'Ilocano',            flag:'🇵🇭', native:'Ilokano',   searchText:'Ilocano'    },
+  { code:'hil', label:'Hiligaynon',         flag:'🇵🇭', native:'Ilonggo',   searchText:'Hiligaynon' },
+  { code:'war', label:'Waray',              flag:'🇵🇭', native:'Winaray',   searchText:'Waray'      },
+  { code:'bcl', label:'Bikol',              flag:'🇵🇭', native:'Bikolano',  searchText:'Bikol'      },
 ];
 
 export const getLangCode = () => localStorage.getItem(LANG_KEY) || 'en';

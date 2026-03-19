@@ -33,19 +33,7 @@ const NAV = [
   ]},
 ];
 
-// ── Language definitions ──────────────────────────────────────
-// 'searchText': what to look for inside Google Translate's option labels.
-// Bicol fix: GT doesn't have 'bcl'; we search for 'Bikol' by option text.
-const LANGS = [
-  { code:'en',  label:'English',            flag:'🇺🇸', native:'English',  searchText:'English'    },
-  { code:'ko',  label:'Korean',             flag:'🇰🇷', native:'한국어',    searchText:'Korean'     },
-  { code:'tl',  label:'Filipino (Tagalog)', flag:'🇵🇭', native:'Filipino', searchText:'Filipino'   },
-  { code:'ceb', label:'Cebuano',            flag:'🇵🇭', native:'Bisaya',   searchText:'Cebuano'    },
-  { code:'ilo', label:'Ilocano',            flag:'🇵🇭', native:'Ilokano',  searchText:'Ilocano'    },
-  { code:'hil', label:'Hiligaynon',         flag:'🇵🇭', native:'Ilonggo',  searchText:'Hiligaynon' },
-  { code:'war', label:'Waray',              flag:'🇵🇭', native:'Winaray',  searchText:'Waray'      },
-  { code:'bcl', label:'Bikol',              flag:'🇵🇭', native:'Bikolano', searchText:'Bikol'      },
-];
+
 
 // ── Shared exported components ────────────────────────────────
 
