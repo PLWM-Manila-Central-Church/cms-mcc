@@ -41,6 +41,8 @@ router.post  ("/events/:eventId/register",                   auth, ctrl.register
 router.delete("/events/:eventId/register",                   auth, ctrl.cancelEventRegistration);
 
 router.get   ("/services",                                   auth, ctrl.getUpcomingServices);
+router.get   ("/services/:serviceId",                        auth, ctrl.getServiceDetails);
+router.post  ("/services/:serviceId/respond",                auth, ctrl.submitServiceResponse);
 
 router.post  ("/change-password",                            auth, ctrl.changeMyPassword);
 

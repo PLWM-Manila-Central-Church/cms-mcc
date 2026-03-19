@@ -99,6 +99,27 @@ exports.uploadProfilePhoto = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.getServiceDetails = async (req, res, next) => {
+  try {
+    if (!req.user.memberId)
+      return res.status(400).json({ message: "No member profile linked to this account" });
+    const data = await portalService.getServiceDetails(req.params.serviceId, req.user.memberId);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.submitServiceResponse = async (req, res, next) => {
+  try {
+    if (!req.user.memberId)
+      return res.status(400).json({ message: "No member profile linked to this account" });
+    const { attendance_status } = req.body;
+    const data = await portalService.submitServiceResponse(
+      req.user.memberId, req.params.serviceId, attendance_status
+    );
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
 // ── Ministry ─────────────────────────────────────────────────
 exports.getMyAssignments = async (req, res, next) => {
   try {
