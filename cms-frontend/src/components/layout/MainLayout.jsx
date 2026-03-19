@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { useAuth } from '../../context/AuthContext';
 import { NAV_ITEMS } from '../../utils/constants';
-import { LANGS, getLangCode, applyGTLang } from '../../utils/langUtils';
+import { LANGS, getLangCode, saveLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
 
 const BP_TABLET = 1024;
 const BP_MOBILE = 768;
@@ -218,7 +218,7 @@ export default function MainLayout({ children }) {
   const [drawerOpen,  setDrawerOpen]  = useState(false);
   const [moreOpen,    setMoreOpen]    = useState(false);
 
-  // ── Google Translate: load once and restore saved language ──
+  // ── Google Translate: load once, restore saved language, suppress banner ──
   useEffect(() => {
     const restoreSaved = () => {
       const code = getLangCode();
@@ -227,24 +227,7 @@ export default function MainLayout({ children }) {
         if (saved) applyGTLang(saved);
       }
     };
-
-    if (document.getElementById('gt-script')) {
-      restoreSaved();
-      return;
-    }
-    window.googleTranslateElementInit = () => {
-      // eslint-disable-next-line no-new
-      new window.google.translate.TranslateElement(
-        { pageLanguage: 'en', autoDisplay: false },
-        'google_translate_element_cms'
-      );
-      restoreSaved();
-    };
-    const s = document.createElement('script');
-    s.id  = 'gt-script';
-    s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-    s.async = true;
-    document.head.appendChild(s);
+    loadGTScript('google_translate_element_cms', restoreSaved);
   }, []); // eslint-disable-line
 
   // Listen for language changes from portal settings or landing page
@@ -285,10 +268,6 @@ export default function MainLayout({ children }) {
     <div style={S.root}>
       {/* Hidden Google Translate widget for CMS */}
       <div id="google_translate_element_cms" style={{ position:'fixed', bottom:-200, left:0, opacity:0, pointerEvents:'none', zIndex:-1 }} />
-      <style>{`
-        .goog-te-banner-frame, .skiptranslate { display:none !important; }
-        body { top: 0 !important; }
-      `}</style>
       {/* Desktop/tablet: sidebar + backdrop */}
       {isMobile && drawerOpen && (
         <div onClick={() => setDrawerOpen(false)} style={S.backdrop} aria-hidden="true" />

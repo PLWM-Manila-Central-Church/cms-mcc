@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { LANGS, getLangCode, saveLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
 
 const C = {
   navy:'#0B2447', navyMid:'#14305E', navySoft:'#1A3D72',
@@ -117,52 +118,6 @@ export function SectionHeader({ eyebrow, title, sub }) {
   );
 }
 
-// ── Shared language key (syncs portal ↔ landing page) ────────
-const LANG_KEY = 'plwm_lang';
-const getLangCode  = () => localStorage.getItem(LANG_KEY) || 'en';
-const saveLangCode = (code) => {
-  localStorage.setItem(LANG_KEY, code);
-  // Keep plwm_prefs in sync so the portal picks it up
-  try {
-    const p = JSON.parse(localStorage.getItem('plwm_prefs') || '{}');
-    p.language = code;
-    localStorage.setItem('plwm_prefs', JSON.stringify(p));
-  } catch (_) {}
-};
-
-// Module-level GT applier — safe to call from anywhere, retries until GT loads
-function applyGTLang(lang) {
-  if (!lang || lang.code === 'en') {
-    // Reset to English: clear GT cookie and reload is most reliable,
-    // but just toggling the select to empty works for most cases
-    try {
-      const sel = document.querySelector('.goog-te-combo');
-      if (sel) { sel.value = ''; sel.dispatchEvent(new Event('change')); }
-    } catch (_) {}
-    return;
-  }
-  const attempt = () => {
-    try {
-      const sel = document.querySelector('.goog-te-combo');
-      if (!sel) return false;
-      if (sel.querySelector(`option[value="${lang.code}"]`)) {
-        sel.value = lang.code;
-        sel.dispatchEvent(new Event('change'));
-        return true;
-      }
-      const match = Array.from(sel.options).find(o =>
-        o.text.toLowerCase().includes((lang.searchText || lang.label).toLowerCase())
-      );
-      if (match) { sel.value = match.value; sel.dispatchEvent(new Event('change')); return true; }
-    } catch (_) {}
-    return false;
-  };
-  if (!attempt()) {
-    let tries = 0;
-    const iv = setInterval(() => { tries++; if (attempt() || tries > 40) clearInterval(iv); }, 150);
-  }
-}
-
 // ── Main layout ───────────────────────────────────────────────
 
 export default function PublicLayout({ children }) {
@@ -205,7 +160,7 @@ export default function PublicLayout({ children }) {
     return () => document.removeEventListener('mousedown', fn);
   }, [openNav]);
 
-  // Load Google Translate widget (hidden) + restore saved language after init
+  // Load Google Translate + restore saved language + suppress banner
   useEffect(() => {
     const restoreSaved = () => {
       const code = getLangCode();
@@ -214,25 +169,10 @@ export default function PublicLayout({ children }) {
         if (saved) applyGTLang(saved);
       }
     };
-
-    if (document.getElementById('gt-script')) {
-      // Script already injected (SPA navigation) — just restore language
-      restoreSaved();
-      return;
-    }
-    window.googleTranslateElementInit = () => {
-      // eslint-disable-next-line no-new
-      new window.google.translate.TranslateElement({ pageLanguage:'en', autoDisplay:false }, 'google_translate_element');
-      // Restore saved language immediately after widget initialises
-      restoreSaved();
-    };
-    const s = document.createElement('script');
-    s.id  = 'gt-script';
-    s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-    s.async = true;
-    document.head.appendChild(s);
+    loadGTScript('google_translate_element', restoreSaved);
   }, []); // eslint-disable-line
 
+  // Listen for language changes fired by the member portal
   // Listen for language changes fired by the member portal
   useEffect(() => {
     const handler = (e) => {
@@ -499,10 +439,13 @@ export default function PublicLayout({ children }) {
         a { text-decoration:none; color:inherit; }
         img { max-width:100%; }
 
-        /* Google Translate suppression */
+        /* Google Translate suppression — keep page layout clean */
         .goog-te-banner-frame, .skiptranslate { display:none !important; }
-        .goog-te-gadget { display:none !important; }
-        body { top:0 !important; }
+        .goog-te-gadget                        { display:none !important; }
+        #goog-gt-tt, .goog-tooltip             { display:none !important; }
+        .goog-text-highlight                   { background:none !important; box-shadow:none !important; }
+        body.translated-ltr, body.translated-rtl { top:0 !important; }
+        html                                   { margin-top:0 !important; }
         .VIpgJd-ZVi9od-aZ2wEe-wOHMyf, .VIpgJd-ZVi9od-aZ2wEe { display:none !important; }
 
         /* Nav breakpoints */
