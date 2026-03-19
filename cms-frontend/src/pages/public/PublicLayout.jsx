@@ -117,6 +117,52 @@ export function SectionHeader({ eyebrow, title, sub }) {
   );
 }
 
+// ── Shared language key (syncs portal ↔ landing page) ────────
+const LANG_KEY = 'plwm_lang';
+const getLangCode  = () => localStorage.getItem(LANG_KEY) || 'en';
+const saveLangCode = (code) => {
+  localStorage.setItem(LANG_KEY, code);
+  // Keep plwm_prefs in sync so the portal picks it up
+  try {
+    const p = JSON.parse(localStorage.getItem('plwm_prefs') || '{}');
+    p.language = code;
+    localStorage.setItem('plwm_prefs', JSON.stringify(p));
+  } catch (_) {}
+};
+
+// Module-level GT applier — safe to call from anywhere, retries until GT loads
+function applyGTLang(lang) {
+  if (!lang || lang.code === 'en') {
+    // Reset to English: clear GT cookie and reload is most reliable,
+    // but just toggling the select to empty works for most cases
+    try {
+      const sel = document.querySelector('.goog-te-combo');
+      if (sel) { sel.value = ''; sel.dispatchEvent(new Event('change')); }
+    } catch (_) {}
+    return;
+  }
+  const attempt = () => {
+    try {
+      const sel = document.querySelector('.goog-te-combo');
+      if (!sel) return false;
+      if (sel.querySelector(`option[value="${lang.code}"]`)) {
+        sel.value = lang.code;
+        sel.dispatchEvent(new Event('change'));
+        return true;
+      }
+      const match = Array.from(sel.options).find(o =>
+        o.text.toLowerCase().includes((lang.searchText || lang.label).toLowerCase())
+      );
+      if (match) { sel.value = match.value; sel.dispatchEvent(new Event('change')); return true; }
+    } catch (_) {}
+    return false;
+  };
+  if (!attempt()) {
+    let tries = 0;
+    const iv = setInterval(() => { tries++; if (attempt() || tries > 40) clearInterval(iv); }, 150);
+  }
+}
+
 // ── Main layout ───────────────────────────────────────────────
 
 export default function PublicLayout({ children }) {
@@ -124,7 +170,11 @@ export default function PublicLayout({ children }) {
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [mobileSub,   setMobileSub]   = useState(null);
   const [langOpen,    setLangOpen]    = useState(false);
-  const [currentLang, setCurrentLang] = useState('English');
+  const [currentLang, setCurrentLang] = useState(() => {
+    // Restore language label from shared key instantly — no flash
+    const saved = LANGS.find(l => l.code === getLangCode());
+    return saved ? saved.label : 'English';
+  });
   const [scrolled,    setScrolled]    = useState(false);
 
   const location = useLocation();
@@ -155,60 +205,52 @@ export default function PublicLayout({ children }) {
     return () => document.removeEventListener('mousedown', fn);
   }, [openNav]);
 
-  // Load Google Translate widget (hidden)
+  // Load Google Translate widget (hidden) + restore saved language after init
   useEffect(() => {
-    if (document.getElementById('gt-script')) return;
+    const restoreSaved = () => {
+      const code = getLangCode();
+      if (code && code !== 'en') {
+        const saved = LANGS.find(l => l.code === code);
+        if (saved) applyGTLang(saved);
+      }
+    };
+
+    if (document.getElementById('gt-script')) {
+      // Script already injected (SPA navigation) — just restore language
+      restoreSaved();
+      return;
+    }
     window.googleTranslateElementInit = () => {
       // eslint-disable-next-line no-new
       new window.google.translate.TranslateElement({ pageLanguage:'en', autoDisplay:false }, 'google_translate_element');
+      // Restore saved language immediately after widget initialises
+      restoreSaved();
     };
     const s = document.createElement('script');
-    s.id = 'gt-script';
+    s.id  = 'gt-script';
     s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
     s.async = true;
     document.head.appendChild(s);
+  }, []); // eslint-disable-line
+
+  // Listen for language changes fired by the member portal
+  useEffect(() => {
+    const handler = (e) => {
+      const code = e.detail?.code;
+      const lang = LANGS.find(l => l.code === code);
+      if (lang) { setCurrentLang(lang.label); applyGTLang(lang); }
+    };
+    window.addEventListener('plwm-lang-change', handler);
+    return () => window.removeEventListener('plwm-lang-change', handler);
   }, []);
 
-  // ── Bicol fix: match by option TEXT content, not by code value ──
-  // Google Translate doesn't always have all language codes (e.g. 'bcl').
-  // We iterate <option> elements and find one whose text includes searchText.
+  // ── Language switch — saves to shared key so portal picks it up instantly ──
   const switchLang = (lang) => {
     setCurrentLang(lang.label);
     setLangOpen(false);
-
-    const apply = () => {
-      try {
-        const sel = document.querySelector('.goog-te-combo');
-        if (!sel) return false;
-
-        // First try direct code match (works for most langs)
-        if (sel.querySelector(`option[value="${lang.code}"]`)) {
-          sel.value = lang.code;
-          sel.dispatchEvent(new Event('change'));
-          return true;
-        }
-
-        // Fallback: search option text (fixes Bikol / bcl)
-        const opts = Array.from(sel.options);
-        const match = opts.find(o =>
-          o.text.toLowerCase().includes(lang.searchText.toLowerCase())
-        );
-        if (match) {
-          sel.value = match.value;
-          sel.dispatchEvent(new Event('change'));
-          return true;
-        }
-      } catch (_) {}
-      return false;
-    };
-
-    if (!apply()) {
-      let t = 0;
-      const iv = setInterval(() => {
-        t++;
-        if (apply() || t > 30) clearInterval(iv);
-      }, 200);
-    }
+    saveLangCode(lang.code);
+    window.dispatchEvent(new CustomEvent('plwm-lang-change', { detail: { code: lang.code } }));
+    applyGTLang(lang);
   };
 
   useEffect(() => {

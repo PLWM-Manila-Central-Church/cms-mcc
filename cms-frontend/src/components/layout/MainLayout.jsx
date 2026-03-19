@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { useAuth } from '../../context/AuthContext';
 import { NAV_ITEMS } from '../../utils/constants';
+import { LANGS, getLangCode, applyGTLang } from '../../utils/langUtils';
 
 const BP_TABLET = 1024;
 const BP_MOBILE = 768;
@@ -217,6 +218,55 @@ export default function MainLayout({ children }) {
   const [drawerOpen,  setDrawerOpen]  = useState(false);
   const [moreOpen,    setMoreOpen]    = useState(false);
 
+  // ── Google Translate: load once and restore saved language ──
+  useEffect(() => {
+    const restoreSaved = () => {
+      const code = getLangCode();
+      if (code && code !== 'en') {
+        const saved = LANGS.find(l => l.code === code);
+        if (saved) applyGTLang(saved);
+      }
+    };
+
+    if (document.getElementById('gt-script')) {
+      restoreSaved();
+      return;
+    }
+    window.googleTranslateElementInit = () => {
+      // eslint-disable-next-line no-new
+      new window.google.translate.TranslateElement(
+        { pageLanguage: 'en', autoDisplay: false },
+        'google_translate_element_cms'
+      );
+      restoreSaved();
+    };
+    const s = document.createElement('script');
+    s.id  = 'gt-script';
+    s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    s.async = true;
+    document.head.appendChild(s);
+  }, []); // eslint-disable-line
+
+  // Listen for language changes from portal settings or landing page
+  useEffect(() => {
+    const handler = (e) => {
+      const code = e.detail?.code;
+      const lang = LANGS.find(l => l.code === code);
+      if (lang) applyGTLang(lang);
+    };
+    const storageHandler = () => {
+      const code = getLangCode();
+      const lang = LANGS.find(l => l.code === code);
+      if (lang) applyGTLang(lang);
+    };
+    window.addEventListener('plwm-lang-change', handler);
+    window.addEventListener('storage', storageHandler);
+    return () => {
+      window.removeEventListener('plwm-lang-change', handler);
+      window.removeEventListener('storage', storageHandler);
+    };
+  }, []);
+
   useEffect(() => {
     if (isMobile)               { setCollapsed(true); setDrawerOpen(false); }
     if (isTablet)               { setCollapsed(true); }
@@ -233,6 +283,12 @@ export default function MainLayout({ children }) {
 
   return (
     <div style={S.root}>
+      {/* Hidden Google Translate widget for CMS */}
+      <div id="google_translate_element_cms" style={{ position:'fixed', bottom:-200, left:0, opacity:0, pointerEvents:'none', zIndex:-1 }} />
+      <style>{`
+        .goog-te-banner-frame, .skiptranslate { display:none !important; }
+        body { top: 0 !important; }
+      `}</style>
       {/* Desktop/tablet: sidebar + backdrop */}
       {isMobile && drawerOpen && (
         <div onClick={() => setDrawerOpen(false)} style={S.backdrop} aria-hidden="true" />
