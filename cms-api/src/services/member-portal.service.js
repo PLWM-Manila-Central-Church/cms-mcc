@@ -7,7 +7,7 @@ const path     = require("path");
 const fs       = require("fs");
 const {
   Member, CellGroup, Group, EmergencyContact,
-  Attendance, Service, ServiceResponse,
+  Attendance, Service, ServiceResponse, ServiceAttendanceSummary,
   FinancialRecord, FinancialCategory,
   Event, EventRegistration, EventCategory,
   MinistryAssignment, MinistryRole, Notification,
@@ -15,6 +15,19 @@ const {
 } = require("../models");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
+
+// ── Sync ServiceAttendanceSummary after pre-reg changes ──────
+const syncAttendanceSummary = async (serviceId) => {
+  try {
+    const total_attended = await Attendance.count({ where: { service_id: serviceId } });
+    const service = await Service.findByPk(serviceId, { attributes: ["capacity"] });
+    const total_expected = service?.capacity || 0;
+    const total_absent   = Math.max(0, total_expected - total_attended);
+    await ServiceAttendanceSummary.upsert({ service_id: serviceId, total_attended, total_expected, total_absent });
+  } catch (err) {
+    console.warn("[Portal] syncAttendanceSummary failed:", err.message);
+  }
+};
 
 // ── Helpers ──────────────────────────────────────────────────
 const fmtMemberId = (id) => `MEM-${String(id).padStart(4, "0")}`;
@@ -386,11 +399,13 @@ exports.submitServiceResponse = async (memberId, serviceId, attendanceStatus) =>
         recorded_by:     null,
       });
     }
+    await syncAttendanceSummary(serviceId);
   } else {
     // Remove any pre-reg Attendance record when member says not attending or undecided
     await Attendance.destroy({
       where: { service_id: serviceId, member_id: memberId, check_in_method: "pre-reg" },
     });
+    await syncAttendanceSummary(serviceId);
   }
 
   return exports.getServiceDetails(serviceId, memberId);
