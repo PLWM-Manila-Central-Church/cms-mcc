@@ -178,7 +178,6 @@ export default function MembersPage() {
   const [cgFilter, setCgFilter]       = useState('');
   const [groupFilter, setGroupFilter] = useState('');
   const [cellGroups, setCellGroups]   = useState([]);
-  const [groups, setGroups]           = useState([]);
   const [searchInput, setSearchInput] = useState('');
   const [sorts, setSorts]             = useState([]);
   const [selected, setSelected]       = useState(new Set());
