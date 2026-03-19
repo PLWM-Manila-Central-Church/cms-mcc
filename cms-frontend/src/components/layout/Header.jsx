@@ -2,6 +2,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import { LANGS, getLangCode, saveLangCode, applyGTLang } from '../../utils/langUtils';
 
 const POLL_INTERVAL = 30000;
 
@@ -30,6 +31,41 @@ export default function Header({ sidebarWidth, isMobile = false, onHamburger, dr
   const [panelOpen, setPanelOpen] = useState(false);
   const [loading,   setLoading]   = useState(false);
   const panelRef = useRef(null);
+
+  // Language state
+  const [langOpen,    setLangOpen]    = useState(false);
+  const [currentLang, setCurrentLang] = useState(() => {
+    const saved = LANGS.find(l => l.code === getLangCode());
+    return saved ? saved.label : 'English';
+  });
+  const langRef = useRef(null);
+
+  // Close lang dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (langRef.current && !langRef.current.contains(e.target)) setLangOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Keep in sync with portal/landing page language changes
+  useEffect(() => {
+    const handler = (e) => {
+      const lang = LANGS.find(l => l.code === (e.detail?.code || getLangCode()));
+      if (lang) setCurrentLang(lang.label);
+    };
+    window.addEventListener('plwm-lang-change', handler);
+    return () => window.removeEventListener('plwm-lang-change', handler);
+  }, []);
+
+  const switchLang = (lang) => {
+    setCurrentLang(lang.label);
+    setLangOpen(false);
+    saveLangCode(lang.code);
+    window.dispatchEvent(new CustomEvent('plwm-lang-change', { detail: { code: lang.code } }));
+    applyGTLang(lang);
+  };
 
   const fetchNotifs = useCallback(async () => {
     try {
@@ -146,6 +182,43 @@ export default function Header({ sidebarWidth, isMobile = false, onHamburger, dr
             <span style={S.email}>{user?.email}</span>
           </>
         )}
+
+        {/* Language picker */}
+        <div ref={langRef} style={{ position:'relative' }}>
+          <button
+            onClick={() => setLangOpen(p => !p)}
+            style={{ background: langOpen ? '#e8f4fd' : 'transparent', border:'1px solid #e2e8f0', borderRadius:8, padding:'5px 10px', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', gap:5, whiteSpace:'nowrap', color:'#374151', fontFamily:'inherit', fontWeight:500 }}
+            title="Change language"
+          >
+            <span style={{ fontSize:15 }}>{LANGS.find(l => l.label === currentLang)?.flag || '🌐'}</span>
+            {!isMobile && <span style={{ fontSize:12, fontWeight:600, color:'#64748b' }}>{currentLang === 'English' ? 'EN' : currentLang.slice(0,2).toUpperCase()}</span>}
+          </button>
+
+          {langOpen && (
+            <div style={{ position:'absolute', top:'calc(100% + 8px)', right:0, background:'#fff', borderRadius:12, boxShadow:'0 8px 32px rgba(0,0,0,0.12)', border:'1px solid #e2e8f0', zIndex:300, minWidth:200, overflow:'hidden', animation:'slideDown 0.18s ease' }}>
+              <div style={{ padding:'8px 14px 6px', fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.8px' }}>Language</div>
+              {[{groupLabel:'International', langs:LANGS.slice(0,2)},{groupLabel:'Filipino Languages', langs:LANGS.slice(2)}].map(group => (
+                <div key={group.groupLabel}>
+                  <div style={{ padding:'4px 14px 2px', fontSize:10, color:'#94a3b8', fontWeight:600 }}>{group.groupLabel}</div>
+                  {group.langs.map(lang => (
+                    <button key={lang.code} onClick={() => switchLang(lang)}
+                      style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 14px', fontSize:13, fontWeight: currentLang===lang.label ? 700 : 400, color: currentLang===lang.label ? '#005599' : '#374151', background: currentLang===lang.label ? '#eff6ff' : 'transparent', border:'none', width:'100%', cursor:'pointer', fontFamily:'inherit', textAlign:'left', transition:'background 0.12s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = currentLang===lang.label ? '#eff6ff' : '#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background = currentLang===lang.label ? '#eff6ff' : 'transparent'}
+                    >
+                      <span style={{ fontSize:16 }}>{lang.flag}</span>
+                      <span>{lang.label}</span>
+                      {currentLang===lang.label && <span style={{ marginLeft:'auto', color:'#005599', fontSize:12 }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+              ))}
+              <div style={{ padding:'8px 14px', borderTop:'1px solid #f1f5f9', fontSize:11, color:'#94a3b8', textAlign:'center' }}>
+                Powered by Google Translate
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Notifications bell */}
         <div ref={panelRef} style={S.bellWrap}>
