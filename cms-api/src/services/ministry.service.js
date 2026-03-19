@@ -1,11 +1,13 @@
 "use strict";
 
-const auditLog = require("../helpers/auditLog.helper");
+const auditLog    = require("../helpers/auditLog.helper");
+const notifService = require("./notifications.service");
 const {
   MinistryRole,
   MinistryAssignment,
   Member,
   Service,
+  User,
 } = require("../models");
 
 const assignmentIncludes = [
@@ -148,6 +150,26 @@ exports.createAssignment = async (data, createdBy) => {
 
   const created = await exports.getAssignmentById(assignment.id);
   auditLog.log({ userId: createdBy, action: "CREATE_MINISTRY_ASSIGNMENT", targetTable: "ministry_assignments", targetId: created.id });
+
+  // Notify the member so they can confirm in their portal
+  try {
+    const userRecord = await User.findOne({
+      where: { member_id, is_active: 1 }, attributes: ["id"],
+    });
+    if (userRecord) {
+      const serviceTitle = created.Service?.title      || "an upcoming service";
+      const serviceDate  = created.Service?.service_date || "";
+      const roleName     = created.ministryRole?.name  || "a ministry role";
+      await notifService.createNotification({
+        user_id: userRecord.id,
+        type:    "ministry_assigned",
+        message: `You have been assigned as ${roleName} for "${serviceTitle}"${serviceDate ? ` on ${serviceDate}` : ""}. Please confirm your assignment in your portal.`,
+      });
+    }
+  } catch (err) {
+    console.error("[Ministry] Notification failed:", err.message);
+  }
+
   return created;
 };
 
