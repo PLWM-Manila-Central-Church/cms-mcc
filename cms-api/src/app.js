@@ -94,6 +94,7 @@ app.use("/api/notifications", require("./routes/notifications.routes"));
 app.use("/api/settings",      require("./routes/settings.routes"));
 app.use("/api/audit",         require("./routes/audit.routes"));
 app.use("/api/audit-logs",    require("./routes/audit.routes"));
+app.use("/api/member-portal", require("./routes/member-portal.routes"));
 
 // ── Dropdown aliases for frontend member form ────────────────
 const { CellGroup, Group } = require("./models");

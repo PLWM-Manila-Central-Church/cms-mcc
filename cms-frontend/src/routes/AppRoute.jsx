@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
 import MainLayout from '../components/layout/MainLayout';
@@ -13,6 +13,8 @@ import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 import MembersPage       from '../pages/members/MembersPage';
 import MemberFormPage    from '../pages/members/MemberFormPage';
 import MemberProfilePage from '../pages/members/MemberProfilePage';
+import MemberPortal      from '../pages/members/MemberPortal';
+import MemberPortalSettings from '../pages/members/MemberPortalSettings';
 import CellGroupsPage    from '../pages/cellgroups/CellGroupsPage';
 import MinistryPage      from '../pages/ministry/MinistryPage';
 import UsersPage         from '../pages/users/UsersPage';
@@ -49,8 +51,25 @@ const UnauthorizedPage = () => (
   </div>
 );
 
+// Members can ONLY access /portal — redirect everyone else away from it
+const PortalRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.roleName !== 'Member') return <Navigate to="/dashboard" replace />;
+  // If first login, must change password first
+  if (user.forcePasswordChange && location.pathname !== '/force-change-password') {
+    return <Navigate to="/force-change-password" replace />;
+  }
+  return children;
+};
+
 const AppRoutes = () => {
   const { user } = useAuth();
+
+  // Where to redirect logged-in users trying to access login/public auth pages
+  const homeRedirect = user?.roleName === 'Member' ? '/portal' : '/dashboard';
 
   return (
     <Routes>
@@ -70,10 +89,14 @@ const AppRoutes = () => {
       <Route path="/introduction/ci"          element={<CIPage />} />
 
       {/* ── Auth ── */}
-      <Route path="/login"           element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
-      <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />} />
-      <Route path="/reset-password"  element={user ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />} />
+      <Route path="/login"           element={user ? <Navigate to={homeRedirect} replace /> : <LoginPage />} />
+      <Route path="/forgot-password" element={user ? <Navigate to={homeRedirect} replace /> : <ForgotPasswordPage />} />
+      <Route path="/reset-password"  element={user ? <Navigate to={homeRedirect} replace /> : <ResetPasswordPage />} />
       <Route path="/force-change-password" element={<ProtectedRoute><ForceChangePassword /></ProtectedRoute>} />
+
+      {/* ── Member Portal (Member role only, no sidebar) ── */}
+      <Route path="/portal"          element={<PortalRoute><MemberPortal /></PortalRoute>} />
+      <Route path="/portal/settings" element={<PortalRoute><MemberPortalSettings /></PortalRoute>} />
 
       {/* ── CMS (protected) ── */}
       <Route path="/dashboard"  element={<ProtectedRoute><MainLayout><DashboardPage /></MainLayout></ProtectedRoute>} />

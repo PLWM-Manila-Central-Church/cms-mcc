@@ -27,7 +27,13 @@ export default function LoginPage() {
     setError('');
     try {
       const { forcePasswordChange } = await login(form.email, form.password);
-      navigate(forcePasswordChange ? '/force-change-password' : '/dashboard');
+      if (forcePasswordChange) {
+        navigate('/force-change-password');
+      } else {
+        // Read roleName from the user object now stored in context
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        navigate(storedUser.roleName === 'Member' ? '/portal' : '/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
