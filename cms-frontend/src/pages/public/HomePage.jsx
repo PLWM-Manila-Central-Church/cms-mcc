@@ -110,8 +110,9 @@ function HeroVideo() {
 }
 
 export default function HomePage() {
-  const [cgCount, setCgCount] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [cgCount, setCgCount]         = useState(null);
+  const [liveEvents, setLiveEvents]   = useState([]);
+  const [isMobile, setIsMobile]       = useState(window.innerWidth < 768);
 
   useEffect(() => {
     const handle = () => setIsMobile(window.innerWidth < 768);
@@ -120,13 +121,15 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    // Fetch live cellgroup count from CMS public API
     const API = process.env.REACT_APP_API_URL || '';
-    if (!API) { setCgCount(17); return; }
-    fetch(`${API}/api/public/stats`)
+    const base = API.replace(/\/api$/, '');
+    fetch(`${base}/api/public/stats`)
       .then(r => r.json())
-      .then(d => setCgCount(d.data?.cellGroups ?? 17))
-      .catch(() => setCgCount(17));
+      .then(d => {
+        setCgCount(d.data?.cellGroups ?? 17);
+        setLiveEvents(d.data?.upcomingEvents ?? []);
+      })
+      .catch(() => { setCgCount(17); setLiveEvents([]); });
   }, []);
 
   return (
@@ -248,9 +251,7 @@ export default function HomePage() {
                 ))}
               </div>
               <Reveal delay={0.3}>
-                <div style={{ marginTop: 16, padding: '14px 16px', background: 'rgba(21,101,192,0.08)', border: '1px solid rgba(21,101,192,0.18)', borderRadius: 10, fontSize: 13, color: C.sub, lineHeight: 1.6 }}>
-                  <strong style={{ color: C.blue }}>Cell Group Meetings</strong> — Tuesday & Thursday evenings at 7:00 PM across various locations in Metro Manila.
-                </div>
+                <div style={{ marginTop: 16 }} />
               </Reveal>
             </div>
 
@@ -302,29 +303,35 @@ export default function HomePage() {
           </Reveal>
 
           <div style={{ display: 'flex', gap: 18, overflowX: 'auto', paddingBottom: 12 }}>
-            {[
-              { title: '2026 Summer Retreat — Batch 1 (Manila Region)', date: 'Apr 2–4', type: 'Retreat', venue: 'Taal Galilee Retreat Center', bg: `linear-gradient(135deg, ${C.navy}, ${C.navySoft})`, emoji: '🏕️', fee: '₱900 (Adult)' },
-              { title: '2026 Summer Retreat — Batch 2', date: 'Apr 9–11', type: 'Retreat', venue: 'Taal Galilee Retreat Center', bg: `linear-gradient(135deg, ${C.navyMid}, ${C.navy})`, emoji: '⛺', fee: '₱900 (Adult)' },
-              { title: 'Murcia & Pontevedra Mission Trip', date: 'Apr 19–26', type: 'Mission', venue: 'Negros Occidental', bg: 'linear-gradient(135deg, #1a3d2e, #0f2416)', emoji: '🌿', fee: null },
-              { title: 'Rosario Batangas Bible Seminar', date: 'Mar 16–20', type: 'Seminar', venue: 'Brgy. Bagong Pook, Rosario, Batangas', bg: 'linear-gradient(135deg, #4a1a1a, #2d0f0f)', emoji: '📖', fee: null },
-              { title: 'Jinju Church Mission Team Collaboration', date: 'TBA', type: 'Mission', venue: 'Manila Central Church', bg: 'linear-gradient(135deg, #1a3a5e, #0f1e3a)', emoji: '✝️', fee: null },
-            ].map((ev, i) => (
-              <div key={i} style={{ flexShrink: 0, width: 250, background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', transition: 'all 0.22s', cursor: 'default' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = C.blue; e.currentTarget.style.boxShadow = '0 8px 28px rgba(11,36,71,0.13)'; e.currentTarget.style.transform = 'translateY(-3px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}>
-                <div style={{ height: 130, background: ev.bg, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38, opacity: 0.6 }}>
-                  {ev.emoji}
-                  <span style={{ position: 'absolute', top: 10, left: 10, background: C.gold, color: C.navy, fontSize: 10.5, fontWeight: 800, padding: '3px 9px', borderRadius: 5 }}>{ev.date}</span>
-                  <span style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(11,36,71,0.65)', color: 'rgba(255,255,255,0.9)', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.4px', backdropFilter: 'blur(4px)' }}>{ev.type}</span>
-                </div>
-                <div style={{ padding: 16 }}>
-                  <div style={{ fontFamily: "'Lora',serif", fontSize: '0.92rem', fontWeight: 600, color: C.text, lineHeight: 1.4, marginBottom: 6 }}>{ev.title}</div>
-                  <div style={{ fontSize: 11.5, color: C.muted, marginBottom: ev.fee ? 5 : 12, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {ev.venue}</div>
-                  {ev.fee && <div style={{ fontSize: 11.5, color: C.blue, fontWeight: 700, marginBottom: 12 }}>💳 {ev.fee}</div>}
-                  <button style={{ background: C.blue, color: '#fff', border: 'none', borderRadius: 7, padding: '8px 0', width: '100%', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Register</button>
-                </div>
+            {liveEvents.length === 0 ? (
+              <div style={{ padding: '32px 24px', color: C.muted, fontSize: 14, fontStyle: 'italic' }}>
+                No upcoming events at this time. Check back soon!
               </div>
-            ))}
+            ) : liveEvents.map((ev, i) => {
+              const CAT_COLORS = ['linear-gradient(135deg,#0B2447,#1A3D72)', 'linear-gradient(135deg,#14305E,#0B2447)', 'linear-gradient(135deg,#1a3d2e,#0f2416)', 'linear-gradient(135deg,#4a1a1a,#2d0f0f)', 'linear-gradient(135deg,#1a3a5e,#0f1e3a)'];
+              const bg = CAT_COLORS[i % CAT_COLORS.length];
+              const catName = ev.category?.name || 'Event';
+              const fmtDate = (d) => { if (!d) return ''; const dt = new Date(d + 'T00:00:00'); return dt.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }); };
+              const dateStr = ev.end_date && ev.end_date !== ev.start_date
+                ? `${fmtDate(ev.start_date)}–${fmtDate(ev.end_date)}`
+                : fmtDate(ev.start_date);
+              return (
+                <div key={ev.id} style={{ flexShrink: 0, width: 250, background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', transition: 'all 0.22s', cursor: 'default' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = C.blue; e.currentTarget.style.boxShadow = '0 8px 28px rgba(11,36,71,0.13)'; e.currentTarget.style.transform = 'translateY(-3px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}>
+                  <div style={{ height: 130, background: bg, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span style={{ position: 'absolute', top: 10, left: 10, background: C.gold, color: C.navy, fontSize: 10.5, fontWeight: 800, padding: '3px 9px', borderRadius: 5 }}>{dateStr}</span>
+                    <span style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(11,36,71,0.65)', color: 'rgba(255,255,255,0.9)', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.4px', backdropFilter: 'blur(4px)' }}>{catName}</span>
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    <div style={{ fontFamily: "'Lora',serif", fontSize: '0.92rem', fontWeight: 600, color: C.text, lineHeight: 1.4, marginBottom: 6 }}>{ev.title}</div>
+                    {ev.location && <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {ev.location}</div>}
+                    <a href="/introduction" style={{ display: 'block', background: C.blue, color: '#fff', border: 'none', borderRadius: 7, padding: '8px 0', width: '100%', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', textDecoration: 'none' }}>Register</a>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <Reveal delay={0.2}>
@@ -441,8 +448,8 @@ export default function HomePage() {
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>📍 Lot 2 Blk 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City</div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
                     <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer" style={{ background: '#FF0000', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>▶ YouTube</a>
-                    <a href="https://www.facebook.com/group/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ background: '#1877F2', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>📘 Facebook</a>
-                    <a href="https://www.jbch.org.ph" target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>🌐 Website</a>
+                    <a href="https://www.facebook.com/groups/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ background: '#1877F2', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>📘 Facebook</a>
+                    <a href="https://www.jbch.org/en/" target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>🌐 Website</a>
                   </div>
                 </div>
               </div>

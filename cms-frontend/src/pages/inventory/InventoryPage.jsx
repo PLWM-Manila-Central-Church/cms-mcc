@@ -18,6 +18,7 @@ const STATUS_STYLE = {
 export default function InventoryPage() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission('inventory', 'create');
+  const canDelete = hasPermission('inventory', 'delete');
   const canRequest = !canManage;
 
   const [tab, setTab] = useState('items'); // items | requests
@@ -132,6 +133,14 @@ export default function InventoryPage() {
       setShowItemForm(false); resetItemForm(); fetchItems();
     } catch (err) { setItemFormErr(err.response?.data?.message || 'Failed to save item.'); }
     finally { setSavingItem(false); }
+  };
+
+  const handleDeleteItem = async (item) => {
+    if (!window.confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
+    try {
+      await axiosInstance.delete(`/inventory/${item.id}`);
+      fetchItems();
+    } catch (err) { setItemError(err.response?.data?.message || 'Failed to delete item.'); }
   };
 
   const handleReviewRequest = async (id, status) => {
@@ -266,7 +275,7 @@ export default function InventoryPage() {
                   <th style={s.th}>Unit</th>
                   <th style={s.th}>Type</th>
                   <th style={s.th}>Condition</th>
-                  {canManage && <th style={s.th}>Actions</th>}
+                  {(canManage || canDelete) && <th style={s.th}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -298,9 +307,12 @@ export default function InventoryPage() {
                       <td style={s.td}>
                         {item.condition && <span style={{ ...s.badge, background: condStyle.bg, color: condStyle.color }}>{item.condition}</span>}
                       </td>
-                      {canManage && (
+                      {(canManage || canDelete) && (
                         <td style={s.td}>
-                          <button onClick={() => openEditItem(item)} style={s.editBtn}>Edit</button>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            {canManage && <button onClick={() => openEditItem(item)} style={s.editBtn}>Edit</button>}
+                            {canDelete && <button onClick={() => handleDeleteItem(item)} style={{ ...s.editBtn, background: '#fef2f2', color: '#dc2626' }}>Delete</button>}
+                          </div>
                         </td>
                       )}
                     </tr>

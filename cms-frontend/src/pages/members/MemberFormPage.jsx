@@ -151,9 +151,10 @@ export default function MemberFormPage() {
             <div style={styles.fieldWrap}>
               <label style={styles.label}>Status</label>
               <select name="status" value={form.status} onChange={handleChange} style={styles.select}>
+                <option value="New">New</option>
                 <option value="Active">Active</option>
+                <option value="Semi-Active">Semi-Active</option>
                 <option value="Inactive">Inactive</option>
-                <option value="Visitor">Visitor</option>
               </select>
             </div>
 

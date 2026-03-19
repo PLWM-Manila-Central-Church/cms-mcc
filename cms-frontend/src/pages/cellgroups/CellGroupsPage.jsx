@@ -184,7 +184,7 @@ export default function CellGroupsPage() {
                 <th style={S.th}>#</th>
                 <th style={S.th}>Name</th>
                 <th style={S.th}>Area</th>
-                <th style={S.th}>Created</th>
+                <th style={S.th}>Members</th>
                 {(canUpdate || canDelete) && <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>}
               </tr>
             </thead>
@@ -207,8 +207,8 @@ export default function CellGroupsPage() {
                     }
                   </td>
                   <td style={S.td}>
-                    <span style={S.dateText}>
-                      {g.created_at ? new Date(g.created_at).toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' }) : '—'}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#eff6ff', color: '#1d4ed8', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
+                      {g.memberCount ?? 0}
                     </span>
                   </td>
                   {(canUpdate || canDelete) && (
@@ -354,7 +354,7 @@ export default function CellGroupsPage() {
 }
 
 const S = {
-  page:        { padding: '32px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" },
+  page:        { padding: '32px', fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" },
 
   pageHeader:  { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' },
   pageTitle:   { fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px' },

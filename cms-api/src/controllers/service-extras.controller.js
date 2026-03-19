@@ -117,7 +117,7 @@ const attendanceService = require("../services/attendance.service");
 
 exports.getAttendanceByService = async (req, res, next) => {
   try {
-    const { Attendance, Member, Service, ServiceAttendanceSummary } = require("../models");
+    const { Attendance, Member, Service, ServiceAttendanceSummary, ServiceResponse } = require("../models");
 
     const service = await Service.findByPk(req.params.id);
     if (!service) return res.status(404).json({ success: false, message: "Service not found" });
@@ -132,7 +132,27 @@ exports.getAttendanceByService = async (req, res, next) => {
       where: { service_id: req.params.id },
     });
 
-    res.json({ success: true, data: { service, records, summary: summary || null } });
+    // ── Merge pre-reg responses as virtual attendance rows ──────
+    // Include members who said they're attending but haven't checked in yet
+    const checkedInIds = new Set(records.map(r => r.member_id));
+    const preRegs = await ServiceResponse.findAll({
+      where: { service_id: req.params.id, attendance_status: "ATTENDING" },
+      include: [{ model: Member, attributes: ["id", "first_name", "last_name", "barcode"], required: false }],
+    });
+
+    const preRegRows = preRegs
+      .filter(pr => !checkedInIds.has(pr.member_id))
+      .map(pr => ({
+        id:              `prereg-${pr.id}`,
+        service_id:      pr.service_id,
+        member_id:       pr.member_id,
+        check_in_method: "pre-reg",
+        checked_in_at:   pr.created_at,
+        is_pre_reg:      true,
+        Member:          pr.Member,
+      }));
+
+    res.json({ success: true, data: { service, records: [...records, ...preRegRows], summary: summary || null } });
   } catch (err) { next(err); }
 };
 

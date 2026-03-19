@@ -27,6 +27,7 @@ export default function ServicesPage() {
   const navigate = useNavigate();
   const { hasPermission, user } = useAuth();
   const canCreate  = hasPermission('services', 'create');
+  const canDelete  = hasPermission('services', 'delete');
   const isMember   = user?.roleName === 'Member';
 
   const [services, setServices]     = useState([]);
@@ -117,8 +118,7 @@ export default function ServicesPage() {
     }
   };
 
-  const handleStatusChange = async (serviceId, newStatus) => {
-    setStatusUpdating(serviceId);
+  const handleStatusChange = async (serviceId, newStatus) => {    setStatusUpdating(serviceId);
     try {
       await axiosInstance.patch(`/services/${serviceId}/status`, { status: newStatus });
       fetchServices();
@@ -126,6 +126,16 @@ export default function ServicesPage() {
       setError(err.response?.data?.message || 'Failed to update status.');
     } finally {
       setStatusUpdating(null);
+    }
+  };
+
+  const handleDeleteService = async (service) => {
+    if (!window.confirm(`Delete "${service.title}"? This cannot be undone.`)) return;
+    try {
+      await axiosInstance.delete(`/services/${service.id}`);
+      fetchServices();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete service.');
     }
   };
 
@@ -338,6 +348,14 @@ export default function ServicesPage() {
                           {STATUS_ACTION_LABEL[ns]}
                         </button>
                       ))}
+                      {/* Delete button for completed/cancelled — admin/regteam only */}
+                      {canDelete && !isMember && ['completed', 'cancelled'].includes(s.status) && (
+                        <button
+                          onClick={() => handleDeleteService(s)}
+                          style={{ ...styles.statusBtn, background: '#fef2f2', color: '#dc2626' }}>
+                          Delete
+                        </button>
+                      )}
                       {/* Member: Pre-register button */}
                       {canPreReg && (
                         <button onClick={() => openPreReg(s)} style={styles.preRegBtn}>

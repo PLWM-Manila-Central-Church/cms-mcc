@@ -37,7 +37,7 @@ exports.getUserById = async (id) => {
 
 // ── Create User ──────────────────────────────────────────────
 exports.createUser = async (data, createdBy) => {
-  const { email, password, role_id, member_id, invited_member_id } = data;
+  const { email, password, role_id, member_id, invited_member_id, first_name, last_name } = data;
 
   const existing = await User.findOne({ where: { email } });
   if (existing) throw { status: 409, message: "Email already in use" };
@@ -47,11 +47,24 @@ exports.createUser = async (data, createdBy) => {
 
   const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
+  // Auto-create a minimal Member record if first/last name provided and no member linked
+  let resolvedMemberId = member_id || null;
+  if (!resolvedMemberId && first_name && last_name) {
+    const { Member } = require("../models");
+    const member = await Member.create({
+      first_name: first_name.trim(),
+      last_name:  last_name.trim(),
+      email:      email,
+      status:     "Active",
+    });
+    resolvedMemberId = member.id;
+  }
+
   const user = await User.create({
     email,
     password_hash,
     role_id,
-    member_id: member_id || null,
+    member_id: resolvedMemberId,
     invited_member_id: invited_member_id || null,
     is_active: 1,
     force_password_change: 1,
@@ -67,7 +80,7 @@ exports.updateUser = async (id, data, updatedBy) => {
   const user = await User.findByPk(id);
   if (!user) throw { status: 404, message: "User not found" };
 
-  const { email, role_id, member_id, invited_member_id, is_active } = data;
+  const { email, role_id, member_id, invited_member_id, is_active, first_name, last_name } = data;
 
   if (email && email !== user.email) {
     const existing = await User.findOne({ where: { email } });
@@ -86,6 +99,18 @@ exports.updateUser = async (id, data, updatedBy) => {
     ...(invited_member_id !== undefined && { invited_member_id }),
     ...(is_active !== undefined && { is_active }),
   });
+
+  // Sync name on the linked member record if provided
+  if ((first_name || last_name) && user.member_id) {
+    const { Member } = require("../models");
+    const member = await Member.findByPk(user.member_id);
+    if (member) {
+      await member.update({
+        ...(first_name && { first_name: first_name.trim() }),
+        ...(last_name  && { last_name:  last_name.trim() }),
+      });
+    }
+  }
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_USER", targetTable: "users", targetId: id });
   return await exports.getUserById(id);

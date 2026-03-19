@@ -115,10 +115,7 @@ exports.updateService = async (id, data, updatedBy) => {
 exports.deleteService = async (id, deletedBy) => {
   const service = await Service.findByPk(id);
   if (!service) throw { status: 404, message: "Service not found" };
-
-  if (service.status === "completed")
-    throw { status: 400, message: "Cannot delete a completed service" };
-
+  // Completed services can be deleted (admin request)
   await service.destroy();
   auditLog.log({ userId: deletedBy, action: "DELETE_SERVICE", targetTable: "services", targetId: id });
   return { message: "Service deleted successfully." };

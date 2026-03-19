@@ -22,9 +22,8 @@ export default function ArchivesPage() {
   const { user, hasPermission } = useAuth();
   const canUpload  = hasPermission('archives', 'create');
   const canApprove = hasPermission('archives', 'update');
-  // isApprover: anyone with archives:update permission (System Admin, Pastor)
-  // Fixed: was using user?.roleId which doesn't exist in the stored user object
   const isApprover = canApprove;
+  const isAdmin    = user?.roleName === 'System Admin';
 
   const [records, setRecords]       = useState([]);
   const [total, setTotal]           = useState(0);
@@ -281,7 +280,7 @@ export default function ArchivesPage() {
                     {record.status === 'pending' && isApprover && (
                       <div style={s.pendingActions} onClick={e => e.stopPropagation()}>
                         <button onClick={() => handleApprove(record.id)} style={s.approveBtn}>✓ Approve</button>
-                        <button onClick={() => handleDelete(record.id)} style={s.rejectBtn}>✕ Delete</button>
+                        {isAdmin && <button onClick={() => handleDelete(record.id)} style={s.rejectBtn}>✕ Delete</button>}
                       </div>
                     )}
                   </div>
@@ -373,7 +372,7 @@ export default function ArchivesPage() {
                 {detailRecord.status === 'pending' && canApprove && (
                   <button onClick={() => handleApprove(detailRecord.id)} style={s.approveBtn}>✓ Approve</button>
                 )}
-                {(detailRecord.uploaded_by === user?.id || isApprover) && (
+                {isAdmin && (
                   <button onClick={() => handleDelete(detailRecord.id)} style={s.deleteBtn}>Delete</button>
                 )}
               </div>

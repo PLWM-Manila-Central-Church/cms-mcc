@@ -18,6 +18,8 @@ export default function UsersPage() {
   const { hasPermission, user: currentUser } = useAuth();
 
   const [users, setUsers]             = useState([]);
+  const [filtered, setFiltered]       = useState([]);
+  const [search, setSearch]           = useState('');
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState('');
   const [actionLoading, setActionLoading] = useState(null);
@@ -33,6 +35,7 @@ export default function UsersPage() {
     try {
       const res = await axiosInstance.get('/users');
       setUsers(res.data.data);
+      setFiltered(res.data.data);
     } catch {
       setError('Failed to load users.');
     } finally {
@@ -41,6 +44,16 @@ export default function UsersPage() {
   };
 
   useEffect(() => { fetchUsers(); }, []);
+
+  useEffect(() => {
+    if (!search.trim()) { setFiltered(users); return; }
+    const q = search.toLowerCase();
+    setFiltered(users.filter(u =>
+      u.email.toLowerCase().includes(q) ||
+      u.role?.role_name?.toLowerCase().includes(q) ||
+      (u.member && `${u.member.first_name} ${u.member.last_name}`.toLowerCase().includes(q))
+    ));
+  }, [users, search]);
 
   const handleToggleActive = async (user) => {
     setActionLoading(user.id);
@@ -78,7 +91,7 @@ export default function UsersPage() {
       <div style={styles.pageHeader}>
         <div>
           <h1 style={styles.pageTitle}>Users</h1>
-          <p style={styles.pageSubtitle}>{users.length} total users</p>
+          <p style={styles.pageSubtitle}>{filtered.length} of {users.length} users</p>
         </div>
         {hasPermission('users', 'create') && (
           <button onClick={() => navigate('/users/new')} style={styles.addBtn}>
@@ -88,6 +101,23 @@ export default function UsersPage() {
       </div>
 
       {error && <div style={styles.errorBox}>{error}</div>}
+
+      {/* Search bar */}
+      <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search by email, role, or name…"
+          style={{ flex: 1, padding: '10px 14px', fontSize: 14, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', fontFamily: 'inherit' }}
+          onFocus={e => e.target.style.borderColor = '#0066b3'}
+          onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+        />
+        {search && (
+          <button onClick={() => setSearch('')} style={{ background: '#f1f5f9', border: 'none', borderRadius: 9, padding: '10px 14px', fontSize: 13, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
+            ✕ Clear
+          </button>
+        )}
+      </div>
 
       <div style={styles.tableWrap}>
         <table style={styles.table}>
@@ -104,9 +134,9 @@ export default function UsersPage() {
           <tbody>
             {loading ? (
               <tr><td colSpan={6} style={styles.centerCell}>Loading...</td></tr>
-            ) : users.length === 0 ? (
-              <tr><td colSpan={6} style={styles.centerCell}>No users found.</td></tr>
-            ) : users.map((u, i) => (
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={6} style={styles.centerCell}>{search ? 'No users match your search.' : 'No users found.'}</td></tr>
+            ) : filtered.map((u, i) => (
               <tr
                 key={u.id}
                 style={{ ...styles.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
