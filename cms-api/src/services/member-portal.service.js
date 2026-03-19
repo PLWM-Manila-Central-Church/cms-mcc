@@ -3,6 +3,8 @@
 const bcrypt   = require("bcrypt");
 const { Op }   = require("sequelize");
 const sequelize = require("../config/db");
+const path     = require("path");
+const fs       = require("fs");
 const {
   Member, CellGroup, Group, EmergencyContact,
   Attendance, Service,
@@ -17,6 +19,16 @@ const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
 // ── Helpers ──────────────────────────────────────────────────
 const fmtMemberId = (id) => `MEM-${String(id).padStart(4, "0")}`;
 
+const calcAge = (dateStr) => {
+  if (!dateStr) return null;
+  const birth = new Date(dateStr);
+  const now   = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return age >= 0 ? age : null;
+};
+
 // ── Get My Profile ───────────────────────────────────────────
 exports.getMyProfile = async (memberId) => {
   const member = await Member.findOne({
@@ -29,8 +41,17 @@ exports.getMyProfile = async (memberId) => {
   });
   if (!member) throw { status: 404, message: "Member profile not found" };
 
+  // Fetch linked user to get join date (user account creation = join date)
+  const userRecord = await User.findOne({
+    where: { member_id: memberId },
+    attributes: ["id", "created_at"],
+  });
+
   const plain = member.toJSON();
   plain.member_id_formatted = fmtMemberId(member.id);
+  plain.join_date            = userRecord?.created_at || member.created_at;
+  plain.flesh_age            = calcAge(member.birthdate);
+  plain.spiritual_age        = calcAge(member.spiritual_birthday);
   return plain;
 };
 
@@ -73,14 +94,14 @@ exports.getMyAttendance = async (memberId) => {
     order: [["checked_in_at", "DESC"]],
   });
 
-  // Build attendance rate: attended ÷ published+completed services in last 60 days
+  // Attendance rate: attended ÷ completed services in last 30 days
   const since = new Date();
-  since.setDate(since.getDate() - 60);
+  since.setDate(since.getDate() - 30);
 
   const totalServices = await Service.count({
     where: {
       service_date: { [Op.gte]: since },
-      status: { [Op.in]: ["published", "completed"] },
+      status: "completed",
     },
   });
 
@@ -268,6 +289,39 @@ exports.confirmMinistryAssignment = async (memberId, assignmentId) => {
   } catch {}
 
   return { message: "Assignment confirmed." };
+};
+
+// ── Get Upcoming Services ─────────────────────────────────────
+exports.getUpcomingServices = async () => {
+  const now = new Date();
+  return await Service.findAll({
+    where: {
+      service_date: { [Op.gte]: now },
+      status: "published",
+    },
+    attributes: ["id", "title", "service_date", "service_time", "status", "capacity"],
+    order: [["service_date", "ASC"]],
+    limit: 6,
+  });
+};
+
+// ── Upload Profile Photo ──────────────────────────────────────
+exports.uploadProfilePhoto = async (memberId, filePath) => {
+  const member = await Member.findOne({ where: { id: memberId } });
+  if (!member) throw { status: 404, message: "Member not found" };
+
+  // Delete the old photo file from disk if it exists
+  if (member.profile_photo_url) {
+    try {
+      const oldAbs = path.join(__dirname, "../../uploads", member.profile_photo_url);
+      if (fs.existsSync(oldAbs)) fs.unlinkSync(oldAbs);
+    } catch (err) {
+      console.warn("[Portal] Could not delete old profile photo:", err.message);
+    }
+  }
+
+  await member.update({ profile_photo_url: filePath });
+  return exports.getMyProfile(memberId);
 };
 
 // ── Get My Ministry Assignments ───────────────────────────────

@@ -80,6 +80,25 @@ exports.changeMyPassword = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.getUpcomingServices = async (req, res, next) => {
+  try {
+    const data = await portalService.getUpcomingServices();
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.uploadProfilePhoto = async (req, res, next) => {
+  try {
+    if (!req.user.memberId)
+      return res.status(400).json({ message: "No member profile linked to this account" });
+    if (!req.file)
+      return res.status(400).json({ message: "No file uploaded" });
+    const relativePath = `/profiles/${req.file.filename}`;
+    const data = await portalService.uploadProfilePhoto(req.user.memberId, relativePath);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
 // ── Ministry ─────────────────────────────────────────────────
 exports.getMyAssignments = async (req, res, next) => {
   try {
