@@ -61,6 +61,17 @@ app.use("/api/auth/login",           loginLimiter);
 app.use("/api/auth/forgot-password", forgotPasswordLimiter);
 app.use("/api/auth/refresh-token",   refreshLimiter);
 
+// ── Global API Rate Limiter ───────────────────────────────────
+// Catches runaway clients / frontend bugs before they exhaust the DB pool.
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 150,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests. Please slow down." },
+});
+app.use("/api/", globalLimiter);
+
 // ── Public Routes (no auth) ───────────────────────────────────
 app.use("/api/public",        require("./routes/public.routes"));
 // ── Routes ───────────────────────────────────────────────────
