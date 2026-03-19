@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { useAuth } from '../../context/AuthContext';
 import { NAV_ITEMS } from '../../utils/constants';
-import { LANGS, getLangCode, saveLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
+import { LANGS, getLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
 
 const BP_TABLET = 1024;
 const BP_MOBILE = 768;
