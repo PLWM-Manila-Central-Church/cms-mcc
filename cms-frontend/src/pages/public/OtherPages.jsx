@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PlaylistEmbed, VideoEmbed } from './PublicLayout';
 
@@ -430,117 +431,303 @@ export function WhatWeBelievePage() {
     },
   ];
 
+  // Scroll-reveal: observe each belief section
+  const rowRefs = useRef([]);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach(e => {
+        if (e.isIntersecting) e.target.classList.add('wwb-visible');
+      }),
+      { threshold: 0.15 }
+    );
+    rowRefs.current.forEach(el => { if (el) observer.observe(el); });
+    return () => observer.disconnect();
+  }, []);
+
+  // TOC dot active tracking
+  const tocRef = useRef([]);
+  useEffect(() => {
+    const sectionObserver = new IntersectionObserver(
+      (entries) => entries.forEach(e => {
+        const idx = rowRefs.current.indexOf(e.target);
+        if (idx !== -1 && tocRef.current[idx]) {
+          tocRef.current.forEach(d => d && d.classList.remove('wwb-dot-active'));
+          if (e.isIntersecting) tocRef.current[idx].classList.add('wwb-dot-active');
+        }
+      }),
+      { threshold: 0.4 }
+    );
+    rowRefs.current.forEach(el => { if (el) sectionObserver.observe(el); });
+    return () => sectionObserver.disconnect();
+  }, []);
+
+  const scrollTo = (i) => {
+    rowRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   return (
     <PublicLayout>
-      <PageHero
-        breadcrumbs={[{label:'Home',path:'/'},{label:'Introduction',path:'/introduction'},{label:'What We Believe'}]}
-        title="What We Believe"
-        sub="The doctrinal foundation of Manila Central Church — Philippine Life Word Mission"
-      />
-      <section style={{ background: C.off, padding: '72px 24px' }}>
-        <div style={{ maxWidth: 1060, margin: '0 auto' }}>
-
-          {/* Alternating rows — image one side, text the other */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {BELIEFS.map((b, i) => {
-              const imageLeft = i % 2 === 0;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 0,
-                    borderBottom: i < BELIEFS.length - 1 ? `1px solid ${C.border}` : 'none',
-                    background: i % 2 === 0 ? '#fff' : C.off,
-                  }}
-                  className="belief-row"
-                >
-                  {/* Image panel */}
-                  <div style={{ order: imageLeft ? 0 : 1, minHeight: 280, overflow: 'hidden', position: 'relative' }}>
-                    {b.image ? (
-                      <img
-                        src={process.env.PUBLIC_URL + b.image}
-                        alt={b.title}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', minHeight: 280 }}
-                      />
-                    ) : (
-                      <div style={{
-                        width: '100%', height: '100%', minHeight: 280,
-                        background: 'linear-gradient(135deg, #0B2447, #1A3D72)',
-                        display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', justifyContent: 'center', gap: 10,
-                      }}>
-                        <div style={{ fontSize: 48 }}>✝️</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', letterSpacing: '2px', textTransform: 'uppercase' }}>Image coming soon</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Text panel */}
-                  <div style={{
-                    order: imageLeft ? 1 : 0,
-                    padding: 'clamp(28px,4vw,48px)',
-                    display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                  }}>
-                    {/* Number + title */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        background: C.navy, color: '#fff',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 13, fontWeight: 700, flexShrink: 0,
-                      }}>
-                        {i + 1}
-                      </div>
-                      <h3 style={{
-                        fontFamily: "'Lora',Georgia,serif",
-                        fontSize: 'clamp(1rem,2vw,1.25rem)',
-                        fontWeight: 700, color: C.blue, margin: 0, lineHeight: 1.3,
-                      }}>
-                        {b.title}
-                      </h3>
-                    </div>
-
-                    {/* Points */}
-                    <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {b.items.map((item, j) => (
-                        <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: C.sub, lineHeight: 1.7 }}>
-                          <span style={{
-                            width: 20, height: 20, borderRadius: '50%',
-                            background: 'rgba(21,101,192,0.1)', color: C.blue,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 10, fontWeight: 700, flexShrink: 0, marginTop: 2,
-                          }}>
-                            {j + 1}
-                          </span>
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Scripture footer */}
-          <div style={{ marginTop: 56, background: C.navy, borderRadius: 14, padding: '28px 32px', textAlign: 'center' }}>
-            <p style={{ fontFamily: "'Lora',serif", fontSize: '1.15rem', color: '#fff', lineHeight: 1.65, marginBottom: 10, fontStyle: 'italic' }}>
-              "All Scripture is God-breathed and is useful for teaching, rebuking, correcting and training in righteousness."
-            </p>
-            <span style={{ fontSize: 13, color: C.gold, fontWeight: 700 }}>— 2 Timothy 3:16</span>
-          </div>
-        </div>
-      </section>
+      {/* Inject Playfair Display + Crimson Pro */}
       <style>{`
-        .belief-row { transition: background 0.2s; }
-        @media (max-width: 720px) {
-          .belief-row { grid-template-columns: 1fr !important; }
-          .belief-row > div { order: unset !important; }
-          .belief-row > div:first-child { min-height: 200px !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Crimson+Pro:wght@300;400;600&display=swap');
+
+        /* Scroll-reveal */
+        .wwb-row {
+          opacity: 0;
+          transform: translateY(28px);
+          transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .wwb-row.wwb-visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Image zoom on hover */
+        .wwb-img-wrap { overflow: hidden; }
+        .wwb-img-wrap img { transition: transform 0.6s ease; display: block; width: 100%; height: 100%; object-fit: cover; }
+        .wwb-row:hover .wwb-img-wrap img { transform: scale(1.04); }
+
+        /* TOC dots */
+        .wwb-toc {
+          position: fixed; right: 20px; top: 50%;
+          transform: translateY(-50%);
+          display: flex; flex-direction: column; gap: 10px;
+          z-index: 500;
+        }
+        .wwb-dot {
+          width: 9px; height: 9px; border-radius: 50%;
+          background: rgba(11,36,71,0.18);
+          border: 1.5px solid rgba(11,36,71,0.3);
+          cursor: pointer;
+          transition: all 0.25s;
+          position: relative;
+        }
+        .wwb-dot:hover, .wwb-dot.wwb-dot-active {
+          background: #C9A84C;
+          border-color: #C9A84C;
+          transform: scale(1.5);
+        }
+        .wwb-dot[data-label]:hover::before {
+          content: attr(data-label);
+          position: absolute; right: 18px; top: 50%;
+          transform: translateY(-50%);
+          background: #0B2447; color: #fff;
+          font-family: 'Inter', sans-serif;
+          font-size: 11px; font-weight: 500;
+          padding: 4px 10px; border-radius: 6px;
+          white-space: nowrap; pointer-events: none;
+        }
+
+        /* Scripture quote mark */
+        .wwb-scripture { position: relative; overflow: hidden; }
+        .wwb-scripture::before {
+          content: '"';
+          position: absolute; left: 50%; top: -60px;
+          transform: translateX(-50%);
+          font-family: 'Playfair Display', serif;
+          font-size: 20rem; line-height: 1;
+          color: rgba(255,255,255,0.03);
+          pointer-events: none; user-select: none;
+        }
+
+        @media (max-width: 800px) {
+          .wwb-row { grid-template-columns: 1fr !important; }
+          .wwb-row .wwb-img-panel { order: 0 !important; min-height: 220px !important; }
+          .wwb-row .wwb-text-panel { order: 1 !important; }
+          .wwb-watermark { display: none !important; }
+          .wwb-toc { display: none !important; }
         }
       `}</style>
+
+      {/* Page hero */}
+      <div className="page-hero">
+        <div className="breadcrumb">
+          <Link to="/">Home</Link> /&nbsp;
+          <Link to="/introduction">Introduction</Link> /&nbsp;
+          <span>What We Believe</span>
+        </div>
+        <h1 style={{ fontFamily: "'Playfair Display', 'Lora', Georgia, serif" }}>What We Believe</h1>
+        <p>The doctrinal foundation of Manila Central Church — Philippine Life Word Mission</p>
+      </div>
+
+      {/* Intro strip */}
+      <div style={{ background: '#F8F5F0', borderBottom: '1px solid #E8E2D8', padding: '28px 48px', textAlign: 'center' }}>
+        <p style={{ fontFamily: "'Crimson Pro', 'Georgia', serif", fontSize: '1.15rem', color: C.sub, lineHeight: 1.85, maxWidth: 660, margin: '0 auto', fontStyle: 'italic' }}>
+          These are the core beliefs that form the doctrinal foundation of our church, rooted in the Word of God and built on the Gospel of Jesus Christ.
+        </p>
+      </div>
+
+      {/* Belief rows */}
+      <div>
+        {BELIEFS.map((b, i) => {
+          const imageLeft = i % 2 === 0;
+          const padNum = String(i + 1).padStart(2, '0');
+          return (
+            <div
+              key={i}
+              ref={el => rowRefs.current[i] = el}
+              className="wwb-row"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                minHeight: 460,
+                borderBottom: i < BELIEFS.length - 1 ? '1px solid #E8E2D8' : 'none',
+                background: i % 2 === 0 ? '#FFFFFF' : '#F8F5F0',
+              }}
+            >
+              {/* Image panel */}
+              <div
+                className="wwb-img-panel wwb-img-wrap"
+                style={{ order: imageLeft ? 0 : 1, minHeight: 380, position: 'relative' }}
+              >
+                {b.image ? (
+                  <img
+                    src={process.env.PUBLIC_URL + b.image}
+                    alt={b.title}
+                    style={{ minHeight: 380 }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '100%', height: '100%', minHeight: 380,
+                    background: 'linear-gradient(135deg, #0B2447, #1A3D72)',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: 14,
+                  }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2">
+                      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                    </svg>
+                    <span style={{ fontFamily: "'Crimson Pro', serif", fontSize: 13, color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', textTransform: 'uppercase' }}>
+                      Image coming soon
+                    </span>
+                  </div>
+                )}
+                {/* Subtle diagonal overlay */}
+                <div style={{
+                  position: 'absolute', inset: 0, pointerEvents: 'none',
+                  background: imageLeft
+                    ? 'linear-gradient(to right, rgba(11,36,71,0.10), transparent)'
+                    : 'linear-gradient(to left, rgba(11,36,71,0.10), transparent)',
+                }} />
+              </div>
+
+              {/* Text panel */}
+              <div
+                className="wwb-text-panel"
+                style={{
+                  order: imageLeft ? 1 : 0,
+                  padding: 'clamp(36px, 5vw, 68px)',
+                  display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                  position: 'relative', overflow: 'hidden',
+                }}
+              >
+                {/* Watermark number */}
+                <div
+                  className="wwb-watermark"
+                  style={{
+                    position: 'absolute',
+                    [imageLeft ? 'right' : 'left']: -8,
+                    top: '50%', transform: 'translateY(-55%)',
+                    fontFamily: "'Playfair Display', serif",
+                    fontSize: 'clamp(7rem, 13vw, 10rem)',
+                    fontWeight: 700, lineHeight: 1,
+                    color: C.navy, opacity: 0.045,
+                    userSelect: 'none', pointerEvents: 'none',
+                    letterSpacing: -4,
+                  }}
+                >
+                  {padNum}
+                </div>
+
+                {/* Number badge */}
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  background: C.navy, color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 12, fontWeight: 700,
+                  marginBottom: 16, flexShrink: 0,
+                  position: 'relative', zIndex: 1,
+                }}>
+                  {i + 1}
+                </div>
+
+                {/* Gold accent + title */}
+                <div style={{ marginBottom: 22, position: 'relative', zIndex: 1 }}>
+                  <div style={{ width: 36, height: 3, background: C.gold, borderRadius: 2, marginBottom: 10 }} />
+                  <h2 style={{
+                    fontFamily: "'Playfair Display', 'Lora', Georgia, serif",
+                    fontSize: 'clamp(1.3rem, 2.5vw, 1.75rem)',
+                    fontWeight: 700, color: C.navy,
+                    lineHeight: 1.2, margin: 0,
+                  }}>
+                    {b.title}
+                  </h2>
+                </div>
+
+                {/* Belief points */}
+                <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 13, position: 'relative', zIndex: 1 }}>
+                  {b.items.map((item, j) => (
+                    <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <span style={{
+                        flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
+                        background: 'rgba(21,101,192,0.1)', color: C.blue,
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 10, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        marginTop: 3,
+                      }}>
+                        {j + 1}
+                      </span>
+                      <span style={{
+                        fontFamily: "'Crimson Pro', Georgia, serif",
+                        fontSize: '1.05rem', color: C.sub, lineHeight: 1.75,
+                      }}>
+                        {item}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Scripture footer */}
+      <div className="wwb-scripture" style={{ background: C.navy, padding: '72px 24px', textAlign: 'center' }}>
+        <blockquote style={{
+          fontFamily: "'Playfair Display', 'Lora', Georgia, serif",
+          fontSize: 'clamp(1.1rem, 2.8vw, 1.55rem)',
+          fontStyle: 'italic', color: 'rgba(255,255,255,0.88)',
+          lineHeight: 1.7, maxWidth: 680, margin: '0 auto 16px',
+          position: 'relative', zIndex: 1,
+        }}>
+          &ldquo;All Scripture is God-breathed and is useful for teaching, rebuking, correcting and training in righteousness.&rdquo;
+        </blockquote>
+        <cite style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: 12, fontWeight: 700,
+          color: C.gold, letterSpacing: '1.5px',
+          textTransform: 'uppercase',
+          position: 'relative', zIndex: 1,
+        }}>
+          — 2 Timothy 3:16
+        </cite>
+      </div>
+
+      {/* Sticky TOC dots */}
+      <div className="wwb-toc">
+        {BELIEFS.map((b, i) => (
+          <div
+            key={i}
+            ref={el => tocRef.current[i] = el}
+            className="wwb-dot"
+            data-label={b.title}
+            onClick={() => scrollTo(i)}
+          />
+        ))}
+      </div>
+
     </PublicLayout>
   );
 }
