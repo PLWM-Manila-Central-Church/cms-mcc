@@ -19,7 +19,6 @@ const FONTS = [
   { name:'Helvetica',     google:false, system:true    },
 ];
 
-
 const RESOLUTIONS = [
   { value:0.5,  label:'50%'  },
   { value:0.75, label:'75%'  },
@@ -28,8 +27,8 @@ const RESOLUTIONS = [
   { value:1.5,  label:'150%' },
 ];
 
-const getPrefs = () => { try { return JSON.parse(localStorage.getItem('plwm_prefs')||'{}'); } catch { return {}; } };
-const savePrefs = (p) => localStorage.setItem('plwm_prefs', JSON.stringify(p));
+const getPrefs   = () => { try { return JSON.parse(localStorage.getItem('plwm_prefs')||'{}'); } catch { return {}; } };
+const savePrefs  = (p) => localStorage.setItem('plwm_prefs', JSON.stringify(p));
 
 const makeC = (dk) => ({
   bg:dk?'#0e1420':'#f0f4f8', surface:dk?'#1a2332':'#fff',
@@ -46,8 +45,20 @@ function EyeIcon({open}) {
     : <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
 }
 
+function useWindowWidth() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1280);
+  useEffect(() => {
+    const fn = () => setW(window.innerWidth);
+    window.addEventListener('resize', fn, { passive: true });
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return w;
+}
+
 export default function MemberPortalSettings() {
   const navigate = useNavigate();
+  const width    = useWindowWidth();
+  const isMobile = width <= 768;
 
   const [prefs, setPrefs]         = useState(getPrefs());
   const c = makeC(prefs.theme==='dark');
@@ -69,14 +80,12 @@ export default function MemberPortalSettings() {
   const fileRef = useRef();
   const showToast = (msg, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
-  // Load current profile photo
   useEffect(()=>{
     axiosInstance.get('/member-portal/profile')
       .then(res=>{ const u=res.data.data?.profile_photo_url; if(u) setCurrentPhoto(`${API_IMG}/uploads${u}`); })
       .catch(()=>{});
   },[]);
 
-  // Load selected font
   useEffect(()=>{
     const font = FONTS.find(f=>f.name===(prefs.fontFamily||'DM Sans'));
     if(!font) return;
@@ -96,17 +105,17 @@ export default function MemberPortalSettings() {
     setPrefs(updated);
     savePrefs(updated);
     if (key === 'language') {
-      saveLangCode(val); // sets cookie + localStorage + plwm_prefs atomically
+      saveLangCode(val);
       const lang = LANGS.find(l => l.code === val);
-      if (lang) applyGTLang(lang);
-      window.dispatchEvent(new CustomEvent('plwm-lang-change', { detail: { code: val } }));
+      if (lang) {
+        applyGTLang(lang);
+        window.dispatchEvent(new CustomEvent('plwm-lang-change', { detail: { code: val } }));
+      }
     }
   };
 
   const handleFontSizeBlur = () => {
-    let v = parseInt(fontSizeInput);
-    if (isNaN(v)) v = 16;
-    v = Math.max(12, Math.min(40, v));
+    const v = Math.min(40, Math.max(12, parseInt(fontSizeInput)||16));
     setFontSizeInput(String(v));
     updatePref('fontSize', v);
   };
@@ -142,18 +151,18 @@ export default function MemberPortalSettings() {
     finally{setPwSaving(false);}
   };
 
-  const photoUrl = photoPreview || currentPhoto;
+  const photoUrl   = photoPreview || currentPhoto;
   const fontFamily = prefs.fontFamily||'DM Sans';
   const fontSize   = prefs.fontSize||16;
 
-  const card = {background:c.surface,borderRadius:14,border:`1px solid ${c.border}`,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',padding:'24px 28px',marginBottom:16};
-  const secTitle = {fontSize:17,fontWeight:700,color:c.t1,marginBottom:4};
-  const secSub   = {fontSize:13,color:c.t3,marginBottom:20};
+  const card    = {background:c.surface,borderRadius:14,border:`1px solid ${c.border}`,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',padding:isMobile?'18px 16px':'24px 28px',marginBottom:14};
+  const secTitle = {fontSize:isMobile?15:17,fontWeight:700,color:c.t1,marginBottom:4};
+  const secSub   = {fontSize:13,color:c.t3,marginBottom:16};
   const lbl      = {fontSize:12,color:c.t2,fontWeight:600,display:'block',marginBottom:6};
-  const input    = {width:'100%',padding:'10px 14px',fontSize:14,border:`1.5px solid ${c.border}`,borderRadius:8,outline:'none',fontFamily:'inherit',color:c.t1,background:c.surfaceAlt,boxSizing:'border-box'};
+  const inp      = {width:'100%',padding:'11px 14px',fontSize:16,border:`1.5px solid ${c.border}`,borderRadius:8,outline:'none',fontFamily:'inherit',color:c.t1,background:c.surfaceAlt,boxSizing:'border-box',minHeight:44};
 
   const ChipBtn = ({active,onClick,children}) => (
-    <button onClick={onClick} style={{padding:'7px 16px',borderRadius:8,fontSize:13,fontWeight:active?700:500,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${active?'#005599':c.border}`,background:active?c.accentL:'transparent',color:active?c.accentT:c.t2,transition:'all 0.15s'}}>
+    <button onClick={onClick} style={{padding:'9px 16px',borderRadius:8,fontSize:13,fontWeight:active?700:500,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${active?'#005599':c.border}`,background:active?c.accentL:'transparent',color:active?c.accentT:c.t2,transition:'all 0.15s',minHeight:40}}>
       {children}
     </button>
   );
@@ -163,33 +172,42 @@ export default function MemberPortalSettings() {
       <style>{`*{box-sizing:border-box}@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
       {/* Header */}
-      <div style={{background:BRAND,padding:'12px 24px',display:'flex',alignItems:'center',gap:14}}>
-        <button onClick={()=>navigate('/portal')} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.28)',color:'#fff',borderRadius:8,padding:'7px 14px',fontSize:13,cursor:'pointer',fontFamily:'inherit',fontWeight:500}}>← Back</button>
+      <div style={{background:BRAND,padding:isMobile?'10px 16px':'12px 24px',display:'flex',alignItems:'center',gap:12}}>
+        <button onClick={()=>navigate('/portal')} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.28)',color:'#fff',borderRadius:8,padding:'8px 14px',fontSize:13,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:40}}>← Back</button>
         <div style={{color:'#fff',fontWeight:800,fontSize:16}}>Settings</div>
       </div>
 
-      <div style={{maxWidth:600,margin:'32px auto',padding:'0 20px 60px'}}>
+      <div style={{maxWidth:isMobile?'100%':600,margin:isMobile?0:'24px auto',padding:isMobile?'14px 12px 80px':'0 20px 60px'}}>
 
         {/* ── Profile Photo ── */}
         <div style={card}>
           <div style={secTitle}>Profile Photo</div>
           <div style={secSub}>Shown in the portal header. Max 2MB, JPG/PNG/WebP.</div>
-          <div style={{display:'flex',alignItems:'center',gap:20}}>
+          <div style={{display:'flex',alignItems:'center',gap:isMobile?16:20,flexWrap:isMobile?'wrap':'nowrap'}}>
             <div style={{position:'relative',flexShrink:0}}>
               {photoUrl
                 ? <img src={photoUrl} alt="preview" style={{width:72,height:72,borderRadius:'50%',objectFit:'cover',border:`2px solid ${c.border}`}}/>
                 : <div style={{width:72,height:72,borderRadius:'50%',background:BRAND,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:800,color:'#fff'}}>?</div>}
               {photoUploading&&<div style={{position:'absolute',inset:0,borderRadius:'50%',background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center'}}><div style={{width:20,height:20,border:'3px solid rgba(255,255,255,0.3)',borderTop:'3px solid #fff',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/></div>}
             </div>
-            <div>
-              <button onClick={()=>fileRef.current?.click()} disabled={photoUploading}
-                style={{padding:'9px 20px',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer',background:c.accentL,color:c.accentT,border:`1px solid ${c.border}`,fontFamily:'inherit'}}>
-                {photoUploading?'Uploading…':'Choose Photo'}
+            <div style={{flex:1}}>
+              {/* Tap the whole area on mobile */}
+              <button
+                onClick={()=>fileRef.current?.click()}
+                disabled={photoUploading}
+                style={{
+                  width:isMobile?'100%':'auto',
+                  padding:'11px 20px',borderRadius:8,fontSize:14,fontWeight:600,
+                  cursor:'pointer',background:c.accentL,color:c.accentT,
+                  border:`1px solid ${c.border}`,fontFamily:'inherit',
+                  minHeight:44,display:'flex',alignItems:'center',justifyContent:'center',gap:8,
+                }}>
+                {photoUploading?'Uploading…':'📷 Choose Photo'}
               </button>
-              <div style={{fontSize:11,color:c.t3,marginTop:6}}>Click to upload or drag an image here</div>
+              <div style={{fontSize:11,color:c.t3,marginTop:6}}>Max 2MB · JPG, PNG, or WebP</div>
               {photoMsg&&<div style={{fontSize:12,color:c.danger,marginTop:6}}>{photoMsg}</div>}
             </div>
-            <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={handlePhotoChange} style={{display:'none'}}/>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp" capture="environment" onChange={handlePhotoChange} style={{display:'none'}}/>
           </div>
         </div>
 
@@ -198,8 +216,7 @@ export default function MemberPortalSettings() {
           <div style={secTitle}>Appearance</div>
           <div style={secSub}>Customize how your portal looks and feels.</div>
 
-          {/* Theme */}
-          <div style={{marginBottom:22}}>
+          <div style={{marginBottom:20}}>
             <label style={lbl}>Theme</label>
             <div style={{display:'flex',gap:10}}>
               <ChipBtn active={!prefs.theme||prefs.theme==='light'} onClick={()=>updatePref('theme','light')}>☀️ Light</ChipBtn>
@@ -207,46 +224,42 @@ export default function MemberPortalSettings() {
             </div>
           </div>
 
-          {/* Font Family */}
-          <div style={{marginBottom:22}}>
+          <div style={{marginBottom:20}}>
             <label style={lbl}>Font</label>
             <select value={fontFamily} onChange={e=>updatePref('fontFamily',e.target.value)}
-              style={{...input,width:'auto',minWidth:200,cursor:'pointer'}}>
+              style={{...inp,width:'auto',minWidth:200,cursor:'pointer',paddingRight:32}}>
               {FONTS.map(fn=>(
                 <option key={fn.name} value={fn.name}>{fn.name}{fn.system?' (system)':''}</option>
               ))}
             </select>
-            <div style={{fontSize:11,color:c.t3,marginTop:6}}>Preview: <span style={{fontFamily:`'${fontFamily}',system-ui,sans-serif`,fontWeight:500}}>The quick brown fox jumps over the lazy dog</span></div>
+            <div style={{fontSize:11,color:c.t3,marginTop:6}}>Preview: <span style={{fontFamily:`'${fontFamily}',system-ui,sans-serif`,fontWeight:500}}>The quick brown fox</span></div>
           </div>
 
-          {/* Font Size */}
-          <div style={{marginBottom:22}}>
+          <div style={{marginBottom:20}}>
             <label style={lbl}>Font Size (12–40 px)</label>
             <div style={{display:'flex',alignItems:'center',gap:12}}>
               <input type="number" min={12} max={40} value={fontSizeInput}
                 onChange={e=>setFontSizeInput(e.target.value)}
                 onBlur={handleFontSizeBlur}
                 onKeyDown={e=>{ if(e.key==='Enter') { e.target.blur(); } }}
-                style={{...input,width:90,textAlign:'center'}}/>
-              <span style={{fontSize:13,color:c.t3}}>px — current: <strong>{fontSize}px</strong></span>
+                style={{...inp,width:90,textAlign:'center'}}/>
+              <span style={{fontSize:13,color:c.t3}}>current: <strong>{fontSize}px</strong></span>
             </div>
             <div style={{marginTop:10,padding:'10px 14px',background:c.surfaceAlt,borderRadius:8,border:`1px solid ${c.border}`}}>
               <span style={{fontSize:`${fontSize}px`,fontFamily:`'${fontFamily}',system-ui`,color:c.t1}}>Sample text at {fontSize}px</span>
             </div>
           </div>
 
-          {/* Resolution / Zoom */}
-          <div style={{marginBottom:22}}>
+          <div style={{marginBottom:20}}>
             <label style={lbl}>Display Scale</label>
-            <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
               {RESOLUTIONS.map(r=>(
                 <ChipBtn key={r.value} active={(prefs.resolution||1)===r.value} onClick={()=>updatePref('resolution',r.value)}>{r.label}</ChipBtn>
               ))}
             </div>
-            <div style={{fontSize:11,color:c.t3,marginTop:6}}>Scales the entire portal. Takes effect when you return to the portal.</div>
+            <div style={{fontSize:11,color:c.t3,marginTop:6}}>Scales the entire portal.</div>
           </div>
 
-          {/* Language */}
           <div>
             <label style={lbl}>Language</label>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
@@ -281,17 +294,17 @@ export default function MemberPortalSettings() {
                 <div style={{position:'relative'}}>
                   <input type={show[showKey]?'text':'password'} value={pwForm[key]}
                     onChange={e=>{setPwForm({...pwForm,[key]:e.target.value});setPwError('');setPwSuccess('');}}
-                    style={{...input,paddingRight:44}} placeholder={hint||''}
+                    style={{...inp,paddingRight:48}} placeholder={hint||''}
                     onFocus={e=>e.target.style.borderColor='#005599'} onBlur={e=>e.target.style.borderColor=c.border}/>
                   <button type="button" onClick={()=>setShow({...show,[showKey]:!show[showKey]})}
-                    style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:c.t3,display:'flex',alignItems:'center',padding:2}}>
+                    style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:c.t3,display:'flex',alignItems:'center',padding:4,minHeight:44,minWidth:44,justifyContent:'center'}}>
                     <EyeIcon open={show[showKey]}/>
                   </button>
                 </div>
               </div>
             ))}
             <button type="submit" disabled={pwSaving}
-              style={{width:'100%',padding:'12px',background:BRAND,color:'#fff',border:'none',borderRadius:10,fontSize:15,fontWeight:700,cursor:pwSaving?'not-allowed':'pointer',fontFamily:'inherit',opacity:pwSaving?0.7:1,marginTop:4}}>
+              style={{width:'100%',padding:'14px',background:BRAND,color:'#fff',border:'none',borderRadius:10,fontSize:15,fontWeight:700,cursor:pwSaving?'not-allowed':'pointer',fontFamily:'inherit',opacity:pwSaving?0.7:1,marginTop:4,minHeight:52}}>
               {pwSaving?'Changing Password…':'Change Password'}
             </button>
           </form>
@@ -300,7 +313,7 @@ export default function MemberPortalSettings() {
       </div>
 
       {toast&&(
-        <div style={{position:'fixed',bottom:28,right:28,background:toast.type==='success'?'#16a34a':'#dc2626',color:'#fff',padding:'12px 20px',borderRadius:12,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',zIndex:9999,display:'flex',alignItems:'center',gap:10,fontSize:14,fontWeight:500,animation:'slideUp 0.3s ease'}}>
+        <div style={{position:'fixed',bottom:isMobile?24:28,right:isMobile?12:28,left:isMobile?12:'auto',background:toast.type==='success'?'#16a34a':'#dc2626',color:'#fff',padding:'12px 18px',borderRadius:12,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',zIndex:9999,display:'flex',alignItems:'center',gap:10,fontSize:14,fontWeight:500,animation:'slideUp 0.3s ease'}}>
           <span>{toast.type==='success'?'✓':'✕'}</span>{toast.msg}
         </div>
       )}

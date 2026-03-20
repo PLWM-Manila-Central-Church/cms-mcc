@@ -434,7 +434,7 @@ const S = {
   },
   input: {
     padding: '12px 16px 12px 40px',
-    fontSize: '14px',
+    fontSize: '16px',
     border: '1.5px solid #e2e8f0',
     borderRadius: '10px',
     outline: 'none',
@@ -469,6 +469,7 @@ const S = {
     transition: 'opacity 0.2s, transform 0.15s',
     letterSpacing: '0.3px',
     width: '100%',
+    minHeight: '52px',
   },
   loadingRow: {
     display: 'flex',

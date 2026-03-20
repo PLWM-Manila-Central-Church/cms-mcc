@@ -141,7 +141,7 @@ const styles = {
   card: {
     background: '#ffffff',
     borderRadius: '16px',
-    padding: '48px',
+    padding: 'clamp(24px, 5vw, 48px)',
     width: '100%',
     maxWidth: '420px',
     boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
@@ -191,14 +191,15 @@ const styles = {
   },
   input: {
     padding: '12px 16px',
-    fontSize: '14px',
+    fontSize: '16px',
     border: '1.5px solid #d1d5db',
     borderRadius: '8px',
     outline: 'none',
     transition: 'border-color 0.2s',
     width: '100%',
     boxSizing: 'border-box',
-    color: '#0f172a'
+    color: '#0f172a',
+    minHeight: '48px',
   },
   submitBtn: {
     background: 'linear-gradient(135deg, #005599, #13B5EA)',
@@ -209,7 +210,9 @@ const styles = {
     fontSize: '15px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'opacity 0.2s'
+    transition: 'opacity 0.2s',
+    minHeight: '52px',
+    width: '100%',
   },
   logoutBtn: {
     background: 'none',

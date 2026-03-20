@@ -46,11 +46,22 @@ const GOOGLE_FONTS = ['Inter','Open Sans','Lato','Roboto','DM Sans','Space Grote
 const FONTSHARE    = ['Satoshi'];
 
 const LBL = {
-  en:{tabs:['Overview','Events','My Attendance','My Tithes and Offerings'],portal:'Member Portal',welcome:'Welcome',settings:'Settings',logout:'Logout',attendanceRate:'Attendance Rate',last2mo:'Last month',totalOfferings:'Total Tithes & Offerings',thisYear:'This year',memberSince:'Member Since',myProfile:'My Profile',editProfile:'Edit Profile',save:'Save',cancel:'Cancel',memberId:'Member ID',memberName:'Member Name',spiritual:'Spiritual Birthday',cellGroup:'Cell Group',address:'Address',joinDate:'Join Date',group:'Group',contact:'Contact No',birthdate:'Flesh Birthday',status:'Status',ministry:'Ministry Assignments',services:'Upcoming Services',confirm:'Confirm',confirmed:'Confirmed ✓',noMinistry:'No ministry assignments.',noServices:'No upcoming services.',noEvents:'No upcoming events at this time.',registerNow:'Register Now',cancelReg:'Cancel Registration',closedReg:'Registration Closed',viewDetails:'View Details',myRegs:'My Registrations',regDeadline:'Deadline',of:'of',registered:'registered',attendanceHistory:'My Attendance History',noAttendance:'No attendance records found.',date:'Date',service:'Service',checkin:'Check-in Time',statusL:'Status',present:'Present',absent:'Absent',offeringsHistory:'My Tithes and Offering History',noOfferings:'No giving records.',type:'Type',amount:'Amount',totalYtd:'Total Year-to-Date Tithes and Offerings',verse:'"God loves a cheerful giver." — 2 Corinthians 9:7',excellent:'Excellent',good:'Good',improve:'Needs Improvement',willAttend:'I will attend',wontAttend:'Cannot attend',undecided:'Undecided',rsvp:'RSVP',closePanel:'Close',serviceDetails:'Service Details',eventDetails:'Event Details',attending:'Attending',notAttending:'Not attending',capacity:'Capacity',responseBy:'Response by',yourRsvp:'Your RSVP'},
-  tl:{tabs:['Pangkalahatang-tanaw','Mga Kaganapan','Aking Pagdalo','Aking mga Handog'],portal:'Portal ng Miyembro',welcome:'Maligayang pagdating',settings:'Mga Setting',logout:'Mag-logout',attendanceRate:'Rate ng Pagdalo',last2mo:'Nakaraang buwan',totalOfferings:'Kabuuang Ikapu at Handog',thisYear:'Ngayong taon',memberSince:'Miyembro Mula',myProfile:'Aking Profile',editProfile:'I-edit',save:'I-save',cancel:'Kanselahin',memberId:'Member ID',memberName:'Pangalan',spiritual:'Espirituwal na Kaarawan',cellGroup:'Cell Group',address:'Tirahan',joinDate:'Petsa ng Pagsali',group:'Grupo',contact:'Numero',birthdate:'Kaarawan',status:'Katayuan',ministry:'Mga Takdang Gawain',services:'Mga Paparating na Serbisyo',confirm:'Kumpirmahin',confirmed:'Nakumpirma ✓',noMinistry:'Walang mga takdang gawain.',noServices:'Walang paparating na serbisyo.',noEvents:'Walang mga kaganapan.',registerNow:'Mag-register Na',cancelReg:'Kanselahin',closedReg:'Sarado na',viewDetails:'Tingnan',myRegs:'Aking mga Pagpaparehistro',regDeadline:'Deadline',of:'sa',registered:'nakapag-register',attendanceHistory:'Kasaysayan ng Pagdalo',noAttendance:'Walang rekord ng pagdalo.',date:'Petsa',service:'Serbisyo',checkin:'Oras ng Pag-check in',statusL:'Katayuan',present:'Naroroon',absent:'Wala',offeringsHistory:'Kasaysayan ng Ikapu at Handog',noOfferings:'Walang rekord ng pagbibigay.',type:'Uri',amount:'Halaga',totalYtd:'Kabuuang Ikapu at Handog sa Taon',verse:'"Ang nagbibigay nang masaya ay mahal ng Diyos." — 2 Mga Taga-Corinto 9:7',excellent:'Kahusayan',good:'Mabuti',improve:'Kailangan ng Pagpabuti',willAttend:'Darating ako',wontAttend:'Hindi ako makakarating',undecided:'Hindi pa sigurado',rsvp:'RSVP',closePanel:'Isara',serviceDetails:'Detalye ng Serbisyo',eventDetails:'Detalye ng Kaganapan',attending:'Darating',notAttending:'Hindi darating',capacity:'Kapasidad',responseBy:'Sagot bago ang',yourRsvp:'Iyong RSVP'},
+  en:{tabs:['Overview','Events','Attendance','Tithes'],tabIcons:['🏠','📅','✅','💰'],portal:'Member Portal',welcome:'Welcome',settings:'Settings',logout:'Logout',attendanceRate:'Attendance Rate',last2mo:'Last month',totalOfferings:'Total Tithes & Offerings',thisYear:'This year',memberSince:'Member Since',myProfile:'My Profile',editProfile:'Edit Profile',save:'Save',cancel:'Cancel',memberId:'Member ID',memberName:'Member Name',spiritual:'Spiritual Birthday',cellGroup:'Cell Group',address:'Address',joinDate:'Join Date',group:'Group',contact:'Contact No',birthdate:'Flesh Birthday',status:'Status',ministry:'Ministry Assignments',services:'Upcoming Services',confirm:'Confirm',confirmed:'Confirmed ✓',noMinistry:'No ministry assignments.',noServices:'No upcoming services.',noEvents:'No upcoming events at this time.',registerNow:'Register Now',cancelReg:'Cancel Registration',closedReg:'Registration Closed',viewDetails:'View Details',myRegs:'My Registrations',regDeadline:'Deadline',of:'of',registered:'registered',attendanceHistory:'My Attendance History',noAttendance:'No attendance records found.',date:'Date',service:'Service',checkin:'Check-in',statusL:'Status',present:'Present',absent:'Absent',offeringsHistory:'My Tithes and Offering History',noOfferings:'No giving records.',type:'Type',amount:'Amount',totalYtd:'Total Year-to-Date',verse:'"God loves a cheerful giver." — 2 Corinthians 9:7',excellent:'Excellent',good:'Good',improve:'Needs Improvement',willAttend:'I will attend',wontAttend:'Cannot attend',undecided:'Undecided',rsvp:'RSVP',closePanel:'Close',serviceDetails:'Service Details',eventDetails:'Event Details',attending:'Attending',notAttending:'Not attending',capacity:'Capacity',responseBy:'Response by',yourRsvp:'Your RSVP'},
+  tl:{tabs:['Pangkalahatang-tanaw','Mga Kaganapan','Pagdalo','Mga Handog'],tabIcons:['🏠','📅','✅','💰'],portal:'Portal ng Miyembro',welcome:'Maligayang pagdating',settings:'Mga Setting',logout:'Mag-logout',attendanceRate:'Rate ng Pagdalo',last2mo:'Nakaraang buwan',totalOfferings:'Kabuuang Ikapu at Handog',thisYear:'Ngayong taon',memberSince:'Miyembro Mula',myProfile:'Aking Profile',editProfile:'I-edit',save:'I-save',cancel:'Kanselahin',memberId:'Member ID',memberName:'Pangalan',spiritual:'Espirituwal na Kaarawan',cellGroup:'Cell Group',address:'Tirahan',joinDate:'Petsa ng Pagsali',group:'Grupo',contact:'Numero',birthdate:'Kaarawan',status:'Katayuan',ministry:'Mga Takdang Gawain',services:'Mga Paparating na Serbisyo',confirm:'Kumpirmahin',confirmed:'Nakumpirma ✓',noMinistry:'Walang mga takdang gawain.',noServices:'Walang paparating na serbisyo.',noEvents:'Walang mga kaganapan.',registerNow:'Mag-register Na',cancelReg:'Kanselahin',closedReg:'Sarado na',viewDetails:'Tingnan',myRegs:'Aking mga Pagpaparehistro',regDeadline:'Deadline',of:'sa',registered:'nakapag-register',attendanceHistory:'Kasaysayan ng Pagdalo',noAttendance:'Walang rekord ng pagdalo.',date:'Petsa',service:'Serbisyo',checkin:'Check-in',statusL:'Katayuan',present:'Naroroon',absent:'Wala',offeringsHistory:'Kasaysayan ng Ikapu at Handog',noOfferings:'Walang rekord ng pagbibigay.',type:'Uri',amount:'Halaga',totalYtd:'Kabuuang Ikapu at Handog sa Taon',verse:'"Ang nagbibigay nang masaya ay mahal ng Diyos." — 2 Mga Taga-Corinto 9:7',excellent:'Kahusayan',good:'Mabuti',improve:'Kailangan ng Pagpabuti',willAttend:'Darating ako',wontAttend:'Hindi ako makakarating',undecided:'Hindi pa sigurado',rsvp:'RSVP',closePanel:'Isara',serviceDetails:'Detalye ng Serbisyo',eventDetails:'Detalye ng Kaganapan',attending:'Darating',notAttending:'Hindi darating',capacity:'Kapasidad',responseBy:'Sagot bago ang',yourRsvp:'Iyong RSVP'},
 };
 
-// ── Standalone utility components (defined OUTSIDE MemberPortal) ──
+// ── Mobile detection hook ─────────────────────────────────────
+function useWindowWidth() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1280);
+  useEffect(() => {
+    const fn = () => setW(window.innerWidth);
+    window.addEventListener('resize', fn, { passive: true });
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return w;
+}
+
+// ── Shared utility components ─────────────────────────────────
 function Ring({value=0,size=88,stroke=8,color='#005599',bg='#e2e8f0'}) {
   const r=(size-stroke)/2,circ=2*Math.PI*r,off=circ-(Math.min(value,100)/100)*circ;
   return (<svg width={size} height={size} style={{transform:'rotate(-90deg)',flexShrink:0}}>
@@ -65,8 +76,25 @@ function Skel({w='100%',h=14,r=6,mt=0}) {
   return <div style={{width:w,height:h,borderRadius:r,marginTop:mt,background:'linear-gradient(90deg,#e2e8f0 25%,#f8fafc 50%,#e2e8f0 75%)',backgroundSize:'400% 100%',animation:'shimmer 1.4s infinite'}}/>;
 }
 
-// ── Modal backdrop ─────────────────────────────────────────────
-function Backdrop({onClose,children}) {
+// ── Modal / Sheet backdrop ─────────────────────────────────────
+// On desktop: right-side panel. On mobile: bottom sheet.
+function Backdrop({onClose,children,isMobile}) {
+  if (isMobile) {
+    return (
+      <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:500,display:'flex',alignItems:'flex-end'}}>
+        <div onClick={e=>e.stopPropagation()} style={{
+          width:'100%', maxHeight:'92dvh', overflowY:'auto',
+          background:'#fff', borderRadius:'20px 20px 0 0',
+          boxShadow:'0 -4px 32px rgba(0,0,0,0.18)',
+          animation:'slideUpSheet 0.3s cubic-bezier(0.32,0.72,0,1)',
+          paddingBottom:'calc(16px + env(safe-area-inset-bottom,0px))',
+        }}>
+          <div style={{width:40,height:4,background:'#cbd5e1',borderRadius:99,margin:'12px auto 0'}}/>
+          {children}
+        </div>
+      </div>
+    );
+  }
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',zIndex:500,display:'flex',alignItems:'flex-start',justifyContent:'flex-end'}}>
       <div onClick={e=>e.stopPropagation()} style={{width:'min(460px,95vw)',height:'100vh',overflowY:'auto',background:'#fff',boxShadow:'-4px 0 32px rgba(0,0,0,0.18)',animation:'slideInRight 0.25s ease'}}>
@@ -77,20 +105,20 @@ function Backdrop({onClose,children}) {
 }
 
 // ── Service RSVP Modal ─────────────────────────────────────────
-function ServiceModal({svc,onClose,onRespond,responding,c,f,t}) {
+function ServiceModal({svc,onClose,onRespond,responding,c,f,t,isMobile}) {
   if(!svc) return null;
   const current = svc.my_response?.attendance_status;
   const rsvpMeta = current ? RSVP_META[current] : null;
   return (
-    <Backdrop onClose={onClose}>
-      <div style={{padding:'28px 24px'}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+    <Backdrop onClose={onClose} isMobile={isMobile}>
+      <div style={{padding:'20px 20px 8px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
           <div style={{fontSize:f?.lg||18,fontWeight:800,color:'#0f172a'}}>{t?.serviceDetails||'Service Details'}</div>
-          <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#94a3b8',padding:4,lineHeight:1}}>✕</button>
+          <button onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:32,height:32,fontSize:18,cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1}}>✕</button>
         </div>
 
-        <div style={{background:'linear-gradient(135deg,#003d70,#005599)',borderRadius:12,padding:'20px',color:'#fff',marginBottom:20}}>
-          <div style={{fontSize:f?.md||15,fontWeight:800,marginBottom:8,textTransform:'uppercase',letterSpacing:'0.3px'}}>{svc.title}</div>
+        <div style={{background:'linear-gradient(135deg,#003d70,#005599)',borderRadius:12,padding:'16px',color:'#fff',marginBottom:16}}>
+          <div style={{fontSize:f?.md||15,fontWeight:800,marginBottom:6,textTransform:'uppercase',letterSpacing:'0.3px'}}>{svc.title}</div>
           <div style={{fontSize:f?.sm||13,opacity:0.85}}>📅 {fmtDate(svc.service_date)}</div>
           <div style={{fontSize:f?.sm||13,opacity:0.85}}>🕐 {fmtSvcT(svc.service_time)}</div>
           {svc.capacity&&<div style={{fontSize:f?.sm||13,opacity:0.85}}>👥 {svc.attending_count||0} / {svc.capacity}</div>}
@@ -98,13 +126,13 @@ function ServiceModal({svc,onClose,onRespond,responding,c,f,t}) {
         </div>
 
         {rsvpMeta&&(
-          <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',borderRadius:8,background:rsvpMeta.bg,border:rsvpMeta.border,marginBottom:16}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:8,background:rsvpMeta.bg,border:rsvpMeta.border,marginBottom:14}}>
             <span style={{fontSize:f?.sm||13,fontWeight:700,color:rsvpMeta.color}}>{t?.yourRsvp||'Your RSVP'}: {rsvpMeta.label}</span>
           </div>
         )}
 
         <div style={{fontSize:f?.xs||11,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:10}}>{t?.rsvp||'RSVP'}</div>
-        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        <div style={{display:'flex',flexDirection:'column',gap:10,paddingBottom:8}}>
           {[
             {status:'ATTENDING',    label:t?.willAttend||'I will attend',    emoji:'✓'},
             {status:'NOT_ATTENDING',label:t?.wontAttend||'Cannot attend',    emoji:'✕'},
@@ -114,10 +142,10 @@ function ServiceModal({svc,onClose,onRespond,responding,c,f,t}) {
             const meta = RSVP_META[status];
             return (
               <button key={status} onClick={()=>onRespond(status)} disabled={responding}
-                style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderRadius:10,border:`2px solid ${isActive?meta.color:'#e2e8f0'}`,background:isActive?meta.bg:'transparent',cursor:responding?'not-allowed':'pointer',fontFamily:'inherit',opacity:responding?0.7:1,textAlign:'left',transition:'all 0.15s'}}>
-                <span style={{width:28,height:28,borderRadius:'50%',background:isActive?meta.color:'#f1f5f9',color:isActive?'#fff':meta.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800,flexShrink:0}}>{emoji}</span>
+                style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderRadius:10,border:`2px solid ${isActive?meta.color:'#e2e8f0'}`,background:isActive?meta.bg:'transparent',cursor:responding?'not-allowed':'pointer',fontFamily:'inherit',opacity:responding?0.7:1,textAlign:'left',transition:'all 0.15s',minHeight:52}}>
+                <span style={{width:32,height:32,borderRadius:'50%',background:isActive?meta.color:'#f1f5f9',color:isActive?'#fff':meta.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,flexShrink:0}}>{emoji}</span>
                 <span style={{fontSize:f?.base||14,fontWeight:isActive?700:500,color:isActive?meta.color:'#374151'}}>{label}</span>
-                {isActive&&<span style={{marginLeft:'auto',fontSize:f?.xs||11,fontWeight:700,color:meta.color}}>✓ selected</span>}
+                {isActive&&<span style={{marginLeft:'auto',fontSize:f?.xs||11,fontWeight:700,color:meta.color}}>✓</span>}
               </button>
             );
           })}
@@ -128,19 +156,19 @@ function ServiceModal({svc,onClose,onRespond,responding,c,f,t}) {
 }
 
 // ── Event Details Modal ────────────────────────────────────────
-function EventModal({evt,onClose,onRegister,onCancel,evtLoading,c,f,t}) {
+function EventModal({evt,onClose,onRegister,onCancel,evtLoading,c,f,t,isMobile}) {
   if(!evt) return null;
   return (
-    <Backdrop onClose={onClose}>
-      <div style={{padding:'28px 24px'}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+    <Backdrop onClose={onClose} isMobile={isMobile}>
+      <div style={{padding:'20px 20px 8px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
           <div style={{fontSize:f?.lg||18,fontWeight:800,color:'#0f172a'}}>{t?.eventDetails||'Event Details'}</div>
-          <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#94a3b8',padding:4,lineHeight:1}}>✕</button>
+          <button onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:32,height:32,fontSize:18,cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1}}>✕</button>
         </div>
 
-        <div style={{background:evt.is_registered?'linear-gradient(135deg,#14532d,#16a34a)':'linear-gradient(135deg,#003d70,#005599)',borderRadius:12,padding:'20px',color:'#fff',marginBottom:20}}>
-          <div style={{fontSize:f?.md||15,fontWeight:800,marginBottom:8,textTransform:'uppercase',letterSpacing:'0.3px'}}>{evt.title}</div>
-          {evt.is_registered&&<div style={{fontSize:f?.xs||11,fontWeight:700,letterSpacing:'0.5px',marginBottom:8,opacity:0.9}}>✓ YOU ARE REGISTERED</div>}
+        <div style={{background:evt.is_registered?'linear-gradient(135deg,#14532d,#16a34a)':'linear-gradient(135deg,#003d70,#005599)',borderRadius:12,padding:'16px',color:'#fff',marginBottom:16}}>
+          <div style={{fontSize:f?.md||15,fontWeight:800,marginBottom:6,textTransform:'uppercase',letterSpacing:'0.3px'}}>{evt.title}</div>
+          {evt.is_registered&&<div style={{fontSize:f?.xs||11,fontWeight:700,letterSpacing:'0.5px',marginBottom:6,opacity:0.9}}>✓ YOU ARE REGISTERED</div>}
           <div style={{fontSize:f?.sm||13,opacity:0.85}}>📅 {fmtDate(evt.start_date)}{evt.end_date&&evt.end_date!==evt.start_date?` – ${fmtDate(evt.end_date)}`:''}</div>
           {evt.location&&<div style={{fontSize:f?.sm||13,opacity:0.85}}>📍 {evt.location}</div>}
           <div style={{fontSize:f?.sm||13,opacity:0.85}}>👥 {evt.registration_count} {t?.registered||'registered'}{evt.capacity?` ${t?.of||'of'} ${evt.capacity}`:''}</div>
@@ -148,20 +176,20 @@ function EventModal({evt,onClose,onRegister,onCancel,evtLoading,c,f,t}) {
         </div>
 
         {evt.description&&(
-          <div style={{padding:'14px',background:'#f8fafc',borderRadius:10,marginBottom:16,fontSize:f?.base||14,color:'#374151',lineHeight:1.65}}>
+          <div style={{padding:'12px 14px',background:'#f8fafc',borderRadius:10,marginBottom:14,fontSize:f?.base||14,color:'#374151',lineHeight:1.65}}>
             {evt.description}
           </div>
         )}
 
-        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        <div style={{display:'flex',flexDirection:'column',gap:10,paddingBottom:8}}>
           {evt.is_registered?(
             <button onClick={()=>onCancel(evt.id)} disabled={evtLoading===evt.id||!evt.can_cancel}
-              style={{padding:'12px',borderRadius:10,fontSize:f?.base||14,fontWeight:700,cursor:evt.can_cancel?'pointer':'not-allowed',background:'none',border:'2px solid #dc2626',color:'#dc2626',fontFamily:'inherit',opacity:!evt.can_cancel?0.5:1}}>
+              style={{padding:'14px',borderRadius:10,fontSize:f?.base||14,fontWeight:700,cursor:evt.can_cancel?'pointer':'not-allowed',background:'none',border:'2px solid #dc2626',color:'#dc2626',fontFamily:'inherit',opacity:!evt.can_cancel?0.5:1,minHeight:52}}>
               {evtLoading===evt.id?'…':t?.cancelReg||'Cancel Registration'}
             </button>
           ):(
             <button onClick={()=>onRegister(evt.id)} disabled={evtLoading===evt.id||!evt.can_register}
-              style={{padding:'12px',borderRadius:10,fontSize:f?.base||14,fontWeight:700,cursor:evt.can_register?'pointer':'not-allowed',background:evt.can_register?'#0f172a':'#e2e8f0',color:evt.can_register?'#fff':'#94a3b8',border:'none',fontFamily:'inherit'}}>
+              style={{padding:'14px',borderRadius:10,fontSize:f?.base||14,fontWeight:700,cursor:evt.can_register?'pointer':'not-allowed',background:evt.can_register?'#0f172a':'#e2e8f0',color:evt.can_register?'#fff':'#94a3b8',border:'none',fontFamily:'inherit',minHeight:52}}>
               {evtLoading===evt.id?'…':evt.deadline_passed?t?.closedReg||'Registration Closed':t?.registerNow||'Register Now'}
             </button>
           )}
@@ -171,70 +199,73 @@ function EventModal({evt,onClose,onRegister,onCancel,evtLoading,c,f,t}) {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // TAB COMPONENTS — defined OUTSIDE MemberPortal to prevent focus loss
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 
-function OverviewTab({profile,attendance,finance,editing,editForm,setEditForm,editSaving,editError,startEdit,saveEdit,setEditing,c,f,t,avatarUrl,initials,BRAND,PHP,fmtDate}) {
+function OverviewTab({profile,attendance,finance,editing,editForm,setEditForm,editSaving,editError,startEdit,saveEdit,setEditing,c,f,t,avatarUrl,initials,BRAND,PHP,fmtDate,isMobile}) {
   const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
   const bdg  = (bg,color,border)=>({padding:'3px 10px',borderRadius:20,fontSize:f.xs,fontWeight:700,background:bg,color,border});
 
   return (
     <div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginBottom:20}}>
-        <div style={{...card,padding:'20px 22px',display:'flex',alignItems:'center',gap:14}}>
+      {/* ── Stat Cards ── */}
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:isMobile?10:14,marginBottom:isMobile?12:20}}>
+        <div style={{...card,padding:isMobile?'14px 16px':'20px 22px',display:'flex',alignItems:'center',gap:14}}>
           <div style={{position:'relative',flexShrink:0}}>
-            <Ring value={attendance?.attendanceRate||0} size={78} stroke={7} color={c.tabActive} bg={c.border}/>
+            <Ring value={attendance?.attendanceRate||0} size={isMobile?60:78} stroke={isMobile?6:7} color={c.tabActive} bg={c.border}/>
             <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',textAlign:'center'}}>
-              <div style={{fontSize:f.sm,fontWeight:800,color:c.t1,lineHeight:1}}>{attendance?.attendanceRate||0}%</div>
+              <div style={{fontSize:isMobile?10:f.sm,fontWeight:800,color:c.t1,lineHeight:1}}>{attendance?.attendanceRate||0}%</div>
             </div>
           </div>
           <div>
             <div style={{fontSize:f.xs,color:c.t3,fontWeight:600,marginBottom:4}}>{t.attendanceRate}</div>
-            <div style={{fontSize:f.stat,fontWeight:900,color:c.t1,lineHeight:1,letterSpacing:'-0.5px'}}>{attendance?.attendanceRate||0}%</div>
+            <div style={{fontSize:isMobile?f.lg:f.stat,fontWeight:900,color:c.t1,lineHeight:1,letterSpacing:'-0.5px'}}>{attendance?.attendanceRate||0}%</div>
             <div style={{fontSize:f.xs,color:c.t3,marginTop:4}}>{t.last2mo}</div>
           </div>
         </div>
 
-        <div style={{...card,padding:'20px 22px'}}>
-          <div style={{fontSize:f.xs,color:c.t3,fontWeight:600,marginBottom:6}}>{t.totalOfferings}</div>
-          <div style={{fontSize:f.stat,fontWeight:900,color:c.t1,letterSpacing:'-0.5px',lineHeight:1.1}}>{finance?PHP(finance.ytdTotal):'—'}</div>
-          <div style={{fontSize:f.xs,color:c.t3,marginTop:6}}>{t.thisYear}</div>
+        <div style={{...card,padding:isMobile?'14px 16px':'20px 22px'}}>
+          <div style={{fontSize:f.xs,color:c.t3,fontWeight:600,marginBottom:4}}>{t.totalOfferings}</div>
+          <div style={{fontSize:isMobile?f.lg:f.stat,fontWeight:900,color:c.t1,letterSpacing:'-0.5px',lineHeight:1.1}}>{finance?PHP(finance.ytdTotal):'—'}</div>
+          <div style={{fontSize:f.xs,color:c.t3,marginTop:4}}>{t.thisYear}</div>
         </div>
 
-        <div style={{...card,padding:'20px 22px'}}>
-          <div style={{fontSize:f.xs,color:c.t3,fontWeight:600,marginBottom:6}}>{t.memberSince}</div>
-          <div style={{fontSize:f.md,fontWeight:800,color:c.t1,lineHeight:1.3}}>{profile?fmtDate(profile.join_date):'—'}</div>
-          <div style={{display:'flex',alignItems:'center',gap:8,marginTop:10}}>
+        <div style={{...card,padding:isMobile?'14px 16px':'20px 22px'}}>
+          <div style={{fontSize:f.xs,color:c.t3,fontWeight:600,marginBottom:4}}>{t.memberSince}</div>
+          <div style={{fontSize:isMobile?f.base:f.md,fontWeight:800,color:c.t1,lineHeight:1.3}}>{profile?fmtDate(profile.join_date):'—'}</div>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginTop:8,flexWrap:'wrap'}}>
             {profile&&<span style={bdg(c.successL,c.success,`1px solid ${c.successB}`)}>{profile.status}</span>}
             <span style={{fontSize:f.xs,color:c.t3}}>{profile?.member_id_formatted}</span>
           </div>
         </div>
       </div>
 
-      <div style={{...card,padding:'24px 28px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18,paddingBottom:14,borderBottom:`1px solid ${c.borderL}`}}>
+      {/* ── Profile Card ── */}
+      <div style={{...card,padding:isMobile?'16px':'24px 28px'}}>
+        {/* Header row */}
+        <div style={{display:'flex',flexDirection:isMobile?'column':'row',justifyContent:'space-between',alignItems:isMobile?'flex-start':'center',marginBottom:16,paddingBottom:14,borderBottom:`1px solid ${c.borderL}`,gap:isMobile?12:0}}>
           <div style={{display:'flex',alignItems:'center',gap:14}}>
             {avatarUrl
-              ? <img src={avatarUrl} alt="profile" style={{width:52,height:52,borderRadius:'50%',objectFit:'cover',border:`2px solid ${c.border}`}}/>
-              : <div style={{width:52,height:52,borderRadius:'50%',background:BRAND,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,fontWeight:800,color:'#fff'}}>{initials}</div>}
+              ? <img src={avatarUrl} alt="profile" style={{width:isMobile?48:52,height:isMobile?48:52,borderRadius:'50%',objectFit:'cover',border:`2px solid ${c.border}`}}/>
+              : <div style={{width:isMobile?48:52,height:isMobile?48:52,borderRadius:'50%',background:BRAND,display:'flex',alignItems:'center',justifyContent:'center',fontSize:isMobile?15:17,fontWeight:800,color:'#fff'}}>{initials}</div>}
             <div>
-              <div style={{fontSize:f.lg,fontWeight:800,color:c.t1}}>{profile?`${profile.first_name} ${profile.last_name}`:'—'}</div>
+              <div style={{fontSize:isMobile?f.md:f.lg,fontWeight:800,color:c.t1}}>{profile?`${profile.first_name} ${profile.last_name}`:'—'}</div>
               <div style={{fontSize:f.sm,color:c.t3,marginTop:2}}>{profile?.cellGroup?.name||'—'} · {profile?.group?.name||'—'}</div>
             </div>
           </div>
           {!editing
-            ? <button onClick={startEdit} style={{background:c.accentL,color:c.accentT,border:`1px solid ${c.border}`,borderRadius:8,padding:'7px 16px',fontSize:f.sm,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>{t.editProfile}</button>
-            : <div style={{display:'flex',gap:8}}>
-                <button onClick={()=>setEditing(false)} style={{background:c.surfaceAlt,color:c.t2,border:`1px solid ${c.border}`,borderRadius:8,padding:'7px 14px',fontSize:f.sm,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>{t.cancel}</button>
-                <button onClick={saveEdit} disabled={editSaving} style={{background:BRAND,color:'#fff',border:'none',borderRadius:8,padding:'7px 16px',fontSize:f.sm,fontWeight:600,cursor:'pointer',fontFamily:'inherit',opacity:editSaving?0.7:1}}>{editSaving?'…':t.save}</button>
+            ? <button onClick={startEdit} style={{background:c.accentL,color:c.accentT,border:`1px solid ${c.border}`,borderRadius:8,padding:'8px 18px',fontSize:f.sm,fontWeight:600,cursor:'pointer',fontFamily:'inherit',width:isMobile?'100%':'auto',minHeight:40}}>{t.editProfile}</button>
+            : <div style={{display:'flex',gap:8,width:isMobile?'100%':'auto'}}>
+                <button onClick={()=>setEditing(false)} style={{background:c.surfaceAlt,color:c.t2,border:`1px solid ${c.border}`,borderRadius:8,padding:'8px 14px',fontSize:f.sm,fontWeight:600,cursor:'pointer',fontFamily:'inherit',flex:isMobile?1:'none',minHeight:40}}>{t.cancel}</button>
+                <button onClick={saveEdit} disabled={editSaving} style={{background:BRAND,color:'#fff',border:'none',borderRadius:8,padding:'8px 18px',fontSize:f.sm,fontWeight:600,cursor:'pointer',fontFamily:'inherit',opacity:editSaving?0.7:1,flex:isMobile?2:'none',minHeight:40}}>{editSaving?'…':t.save}</button>
               </div>}
         </div>
 
         {editError&&<div style={{background:c.dangerL,color:c.danger,border:`1px solid ${c.dangerB}`,borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:f.sm}}>{editError}</div>}
 
         {!editing?(
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 40px'}}>
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:isMobile?'0':'0 40px'}}>
             {[[t.memberId,profile?.member_id_formatted],[t.group,profile?.group?.name],[t.memberName,profile?`${profile.first_name} ${profile.last_name}`:null],[t.contact,profile?.phone],[t.spiritual,fmtDate(profile?.spiritual_birthday)],[t.birthdate,fmtDate(profile?.birthdate)],[t.cellGroup,profile?.cellGroup?.name],[t.joinDate,fmtDate(profile?.join_date)],['Flesh Age',profile?.flesh_age!=null?`${profile.flesh_age} yrs old`:'—'],['Spiritual Age',profile?.spiritual_age!=null?`${profile.spiritual_age} yrs old`:'—']].map(([label,val])=>(
               <div key={label} style={{padding:'10px 0',borderBottom:`1px solid ${c.borderL}`}}>
                 <div style={{fontSize:f.xs,color:c.t3,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:3}}>{label}</div>
@@ -247,19 +278,19 @@ function OverviewTab({profile,attendance,finance,editing,editForm,setEditForm,ed
             </div>
           </div>
         ):(
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'14px 20px'}}>
-            {[{label:'First Name',key:'first_name'},{label:'Last Name',key:'last_name'},{label:t.contact,key:'phone'},{label:'Email',key:'email',type:'email'},{label:t.birthdate,key:'birthdate',type:'date'},{label:t.spiritual,key:'spiritual_birthday',type:'date'}].map(({label,key,type='text'})=>(
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:isMobile?'12px':'14px 20px'}}>
+            {[{label:'First Name',key:'first_name'},{label:'Last Name',key:'last_name'},{label:t.contact,key:'phone',type:'tel'},{label:'Email',key:'email',type:'email'},{label:t.birthdate,key:'birthdate',type:'date'},{label:t.spiritual,key:'spiritual_birthday',type:'date'}].map(({label,key,type='text'})=>(
               <div key={key}>
                 <label style={{fontSize:f.xs,color:c.t2,fontWeight:600,display:'block',marginBottom:5}}>{label}</label>
                 <input type={type} value={editForm[key]||''} onChange={e=>setEditForm(prev=>({...prev,[key]:e.target.value}))}
-                  style={{width:'100%',padding:'9px 12px',fontSize:f.base,border:`1.5px solid ${c.border}`,borderRadius:8,outline:'none',fontFamily:'inherit',color:c.t1,background:c.surfaceAlt,boxSizing:'border-box'}}
+                  style={{width:'100%',padding:'10px 12px',fontSize:16,border:`1.5px solid ${c.border}`,borderRadius:8,outline:'none',fontFamily:'inherit',color:c.t1,background:c.surfaceAlt,boxSizing:'border-box',minHeight:44}}
                   onFocus={e=>e.target.style.borderColor='#005599'} onBlur={e=>e.target.style.borderColor=c.border}/>
               </div>
             ))}
             <div style={{gridColumn:'1/-1'}}>
               <label style={{fontSize:f.xs,color:c.t2,fontWeight:600,display:'block',marginBottom:5}}>{t.address}</label>
               <textarea value={editForm.address||''} onChange={e=>setEditForm(prev=>({...prev,address:e.target.value}))} rows={3}
-                style={{width:'100%',padding:'9px 12px',fontSize:f.base,border:`1.5px solid ${c.border}`,borderRadius:8,outline:'none',fontFamily:'inherit',color:c.t1,background:c.surfaceAlt,resize:'vertical',boxSizing:'border-box'}}
+                style={{width:'100%',padding:'10px 12px',fontSize:16,border:`1.5px solid ${c.border}`,borderRadius:8,outline:'none',fontFamily:'inherit',color:c.t1,background:c.surfaceAlt,resize:'vertical',boxSizing:'border-box'}}
                 onFocus={e=>e.target.style.borderColor='#005599'} onBlur={e=>e.target.style.borderColor=c.border}/>
             </div>
           </div>
@@ -269,15 +300,122 @@ function OverviewTab({profile,attendance,finance,editing,editForm,setEditForm,ed
   );
 }
 
-function EventsTab({events,assigns,services,evtL,confL,doRegister,doCancel,doConfirm,onServiceClick,onEventDetailsClick,c,f,t,fmtDate,fmtShort,fmtSvcT}) {
+function EventsTab({events,assigns,services,evtL,confL,doRegister,doCancel,doConfirm,onServiceClick,onEventDetailsClick,c,f,t,fmtDate,fmtShort,fmtSvcT,isMobile}) {
   const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
   const bdg  = (bg,color,border)=>({padding:'3px 10px',borderRadius:20,fontSize:f.xs,fontWeight:700,background:bg,color,border});
   const myRegs = events.filter(e=>e.is_registered);
   const pending = assigns.filter(a=>!a.confirmed);
+
+  if (isMobile) {
+    return (
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+
+        {/* Services — compact cards on mobile */}
+        {services.length>0&&(
+          <div style={card}>
+            <div style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,fontSize:f.base,fontWeight:700,color:c.t1}}>{t.services}</div>
+            {services.map((s,i)=>(
+              <div key={s.id} onClick={()=>onServiceClick(s.id)}
+                style={{padding:'12px 16px',borderBottom:i<services.length-1?`1px solid ${c.borderL}`:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,minHeight:56}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:f.sm,fontWeight:700,color:c.t1,marginBottom:2}}>{s.title}</div>
+                  <div style={{fontSize:f.xs,color:c.t3}}>📅 {fmtShort(s.service_date)}{s.service_time?` · 🕐 ${fmtSvcT(s.service_time)}`:''}</div>
+                </div>
+                <span style={{...bdg(c.accentL,c.accentT,`1px solid ${c.border}`),whiteSpace:'nowrap',flexShrink:0}}>RSVP →</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Ministry assignments */}
+        <div style={card}>
+          <div style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div style={{fontSize:f.base,fontWeight:700,color:c.t1}}>{t.ministry}</div>
+            {pending.length>0&&<span style={{background:'#ef4444',color:'#fff',borderRadius:20,fontSize:f.xs,fontWeight:800,padding:'2px 8px'}}>{pending.length}</span>}
+          </div>
+          {assigns.length===0
+            ? <div style={{padding:'20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{t.noMinistry}</div>
+            : assigns.map(a=>(
+              <div key={a.id} style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`}}>
+                <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8,marginBottom:6}}>
+                  <div>
+                    <div style={{fontSize:f.sm,fontWeight:700,color:c.t1}}>{a.ministryRole?.name||'—'}</div>
+                    <div style={{fontSize:f.xs,color:c.t2,marginTop:1}}>{a.Service?.title||'—'}</div>
+                    <div style={{fontSize:f.xs,color:c.t3}}>{fmtShort(a.Service?.service_date)} · {fmtSvcT(a.Service?.service_time)}</div>
+                  </div>
+                  {a.confirmed
+                    ? <span style={bdg(c.successL,c.success,`1px solid ${c.successB}`)}>{t.confirmed}</span>
+                    : <button onClick={()=>doConfirm(a.id)} disabled={confL===a.id}
+                        style={{padding:'7px 14px',borderRadius:7,fontSize:f.xs,fontWeight:700,cursor:'pointer',background:c.accentL,color:c.accentT,border:`1px solid ${c.border}`,fontFamily:'inherit',opacity:confL===a.id?0.6:1,minHeight:36,whiteSpace:'nowrap'}}>
+                        {confL===a.id?'…':t.confirm}
+                      </button>}
+                </div>
+              </div>
+            ))}
+        </div>
+
+        {/* Events */}
+        <div style={{...card,padding:'0',overflow:'hidden'}}>
+          <div style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,fontSize:f.base,fontWeight:700,color:c.t1}}>Events</div>
+          {events.length===0
+            ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{t.noEvents}</div>
+            : events.map((e,i)=>(
+              <div key={e.id} style={{padding:'14px 16px',borderBottom:i<events.length-1?`1px solid ${c.borderL}`:'none',borderLeft:`3px solid ${e.is_registered?c.success:c.border}`}}>
+                <div style={{fontSize:f.sm,fontWeight:800,color:c.t1,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.2px'}}>{e.title}</div>
+                <div style={{fontSize:f.xs,color:c.t2,marginBottom:2}}>📅 {fmtDate(e.start_date)}</div>
+                {e.location&&<div style={{fontSize:f.xs,color:c.t2,marginBottom:2}}>📍 {e.location}</div>}
+                {e.registration_deadline&&<div style={{fontSize:f.xs,color:c.amber,marginBottom:6}}>🕐 Deadline: {fmtDate(e.registration_deadline)}</div>}
+                <div style={{display:'flex',gap:8,marginTop:8}}>
+                  {e.is_registered?(
+                    <>
+                      <button onClick={()=>doCancel(e.id)} disabled={evtL===e.id||!e.can_cancel}
+                        style={{flex:1,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:600,cursor:e.can_cancel?'pointer':'not-allowed',background:'none',border:`1.5px solid ${c.danger}`,color:c.danger,fontFamily:'inherit',opacity:!e.can_cancel?0.5:1,minHeight:40}}>
+                        {evtL===e.id?'…':t.cancelReg}
+                      </button>
+                      <button onClick={()=>onEventDetailsClick(e)}
+                        style={{flex:1,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:600,background:c.accentL,border:`1px solid ${c.border}`,color:c.accentT,cursor:'pointer',fontFamily:'inherit',minHeight:40}}>
+                        {t.viewDetails}
+                      </button>
+                    </>
+                  ):(
+                    <>
+                      <button onClick={()=>doRegister(e.id)} disabled={evtL===e.id||!e.can_register}
+                        style={{flex:2,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:700,cursor:e.can_register?'pointer':'not-allowed',background:e.can_register?c.t1:c.surfaceAlt,color:e.can_register?'#fff':c.t3,border:'none',fontFamily:'inherit',minHeight:40}}>
+                        {evtL===e.id?'…':e.deadline_passed?t.closedReg:t.registerNow}
+                      </button>
+                      <button onClick={()=>onEventDetailsClick(e)}
+                        style={{flex:1,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:600,background:c.surfaceAlt,border:`1px solid ${c.border}`,color:c.t2,cursor:'pointer',fontFamily:'inherit',minHeight:40}}>
+                        {t.viewDetails}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+        </div>
+
+        {/* My Registrations */}
+        {myRegs.length>0&&(
+          <div style={card}>
+            <div style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,fontSize:f.base,fontWeight:700,color:c.t1}}>{t.myRegs}</div>
+            {myRegs.map(e=>(
+              <div key={e.id} style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:f.sm,fontWeight:700,color:c.t1}}>{e.title}</div>
+                  <div style={{fontSize:f.xs,color:c.t3,marginTop:2}}>{fmtShort(e.start_date)}{e.location?` · ${e.location}`:''}</div>
+                </div>
+                <span style={bdg(c.successL,c.success,`1px solid ${c.successB}`)}>✓</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Desktop layout (original 3-column) ───────────────────────
   return (
     <div style={{display:'grid',gridTemplateColumns:'270px 1fr 250px',gap:16,alignItems:'start'}}>
-
-      {/* LEFT — Ministry */}
       <div style={{display:'flex',flexDirection:'column',gap:12}}>
         <div style={{...card,overflow:'hidden'}}>
           <div style={{padding:'13px 16px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -318,7 +456,6 @@ function EventsTab({events,assigns,services,evtL,confL,doRegister,doCancel,doCon
         )}
       </div>
 
-      {/* CENTER — Events */}
       <div style={{display:'flex',flexDirection:'column',gap:12}}>
         {events.length===0
           ? <div style={{...card,padding:'40px 24px',textAlign:'center',color:c.t3,fontSize:f.base}}>{t.noEvents}</div>
@@ -366,7 +503,6 @@ function EventsTab({events,assigns,services,evtL,confL,doRegister,doCancel,doCon
           ))}
       </div>
 
-      {/* RIGHT — Services (clickable) */}
       <div style={{...card,overflow:'hidden'}}>
         <div style={{padding:'13px 16px',borderBottom:`1px solid ${c.borderL}`,fontSize:f.base,fontWeight:700,color:c.t1}}>{t.services}</div>
         <div style={{maxHeight:500,overflowY:'auto'}}>
@@ -392,107 +528,181 @@ function EventsTab({events,assigns,services,evtL,confL,doRegister,doCancel,doCon
   );
 }
 
-function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime}) {
+function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile}) {
   const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
-  const bdg  = (bg,color,border)=>({padding:'3px 10px',borderRadius:20,fontSize:f.xs,fontWeight:700,background:bg,color,border});
+  const bdg  = (bg,color,border)=>({padding:'4px 12px',borderRadius:20,fontSize:f.xs,fontWeight:700,background:bg,color,border});
   const rate = attendance?.attendanceRate||0;
   const rateColor = rate>=80?c.success:rate>=50?c.amber:c.danger;
-  return (
-    <div style={{display:'grid',gridTemplateColumns:'1fr 260px',gap:16,alignItems:'start'}}>
-      <div style={{...card,overflow:'hidden'}}>
-        <div style={{padding:'16px 20px',borderBottom:`1px solid ${c.borderL}`,fontSize:f.lg,fontWeight:700,color:c.t1}}>{t.attendanceHistory}</div>
-        <div style={{overflowX:'auto'}}>
-          <table style={{width:'100%',borderCollapse:'collapse'}}>
-            <thead>
-              <tr style={{background:c.surfaceAlt}}>
-                {[t.date,t.service,t.checkin,t.statusL].map(h=>(
-                  <th key={h} style={{padding:'11px 18px',textAlign:'left',fontSize:f.xs,fontWeight:700,color:c.t3,textTransform:'uppercase',letterSpacing:'0.5px',borderBottom:`1px solid ${c.border}`}}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(!attendance?.records||attendance.records.length===0)
-                ? <tr><td colSpan={4} style={{padding:'40px',textAlign:'center',color:c.t3}}>{t.noAttendance}</td></tr>
-                : attendance.records.map((r,i)=>(
-                  <tr key={r.id} style={{background:i%2===0?c.surface:c.surfaceAlt,borderBottom:`1px solid ${c.borderL}`}}>
-                    <td style={{padding:'12px 18px',fontSize:f.base,color:c.t2}}>{fmtDate(r.date)}</td>
-                    <td style={{padding:'12px 18px',fontSize:f.base,color:c.t1,fontWeight:500}}>{r.service_title}</td>
-                    <td style={{padding:'12px 18px',fontSize:f.base,color:c.t2}}>{r.check_in_time?fmtTime(r.check_in_time):'—'}</td>
-                    <td style={{padding:'12px 18px'}}>
-                      <span style={bdg(r.status==='Present'?c.successL:c.dangerL,r.status==='Present'?c.success:c.danger,`1px solid ${r.status==='Present'?c.successB:c.dangerB}`)}>
-                        {r.status==='Present'?t.present:t.absent}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div style={{...card,padding:'28px 22px',textAlign:'center'}}>
-        <div style={{fontSize:f.sm,color:c.t3,fontWeight:600,marginBottom:18}}>{t.attendanceRate}</div>
-        <div style={{display:'flex',justifyContent:'center',position:'relative',marginBottom:14}}>
-          <Ring value={rate} size={100} stroke={9} color={rateColor} bg={c.border}/>
-          <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)'}}>
-            <div style={{fontSize:f.lg,fontWeight:900,color:c.t1,lineHeight:1}}>{rate}%</div>
-          </div>
-        </div>
-        <div style={{fontSize:f.md,fontWeight:700,color:rateColor,marginBottom:6}}>{rate>=80?t.excellent:rate>=50?t.good:t.improve}</div>
-        <div style={{fontSize:f.xs,color:c.t3}}>{attendance?.attended||0} {t.of} {attendance?.totalServices||0} services</div>
-        <div style={{fontSize:f.xs,color:c.t3,marginTop:2}}>{t.last2mo}</div>
-      </div>
-    </div>
-  );
-}
 
-function FinanceTab({finance,c,f,t,fmtDate,PHP}) {
-  const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
   return (
-    <div style={{...card,overflow:'hidden'}}>
-      <div style={{padding:'16px 22px',borderBottom:`1px solid ${c.borderL}`,fontSize:f.lg,fontWeight:700,color:c.t1}}>{t.offeringsHistory}</div>
-      <div style={{overflowX:'auto'}}>
-        <table style={{width:'100%',borderCollapse:'collapse'}}>
-          <thead>
-            <tr style={{background:c.surfaceAlt}}>
-              {[t.date,t.type,t.amount].map(h=>(
-                <th key={h} style={{padding:'11px 20px',textAlign:'left',fontSize:f.xs,fontWeight:700,color:c.t3,textTransform:'uppercase',letterSpacing:'0.5px',borderBottom:`1px solid ${c.border}`}}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(!finance?.records||finance.records.length===0)
-              ? <tr><td colSpan={3} style={{padding:'40px',textAlign:'center',color:c.t3}}>{t.noOfferings}</td></tr>
-              : finance.records.map((r,i)=>{
-                const cs=catStyle(r.category?.name,c.dk);
-                return (
-                  <tr key={r.id} style={{background:i%2===0?c.surface:c.surfaceAlt,borderBottom:`1px solid ${c.borderL}`}}>
-                    <td style={{padding:'13px 20px',fontSize:f.base,color:c.t2}}>{fmtDate(r.transaction_date)}</td>
-                    <td style={{padding:'13px 20px'}}>
-                      <span style={{padding:'4px 12px',borderRadius:20,fontSize:f.sm,fontWeight:600,...cs}}>{r.category?.name||'Offering'}</span>
-                    </td>
-                    <td style={{padding:'13px 20px',fontSize:f.base,color:c.t1,fontWeight:600}}>{PHP(r.amount)}</td>
+    <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 260px',gap:16,alignItems:'start'}}>
+      <div>
+        {/* Rate card on mobile — shown above the list */}
+        {isMobile&&(
+          <div style={{...card,padding:'16px 20px',display:'flex',alignItems:'center',gap:16,marginBottom:12}}>
+            <div style={{position:'relative',flexShrink:0}}>
+              <Ring value={rate} size={72} stroke={7} color={rateColor} bg={c.border}/>
+              <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)'}}>
+                <div style={{fontSize:f.sm,fontWeight:900,color:c.t1,lineHeight:1,textAlign:'center'}}>{rate}%</div>
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:f.md,fontWeight:700,color:rateColor,marginBottom:4}}>{rate>=80?t.excellent:rate>=50?t.good:t.improve}</div>
+              <div style={{fontSize:f.xs,color:c.t3}}>{attendance?.attended||0} {t.of} {attendance?.totalServices||0} services</div>
+              <div style={{fontSize:f.xs,color:c.t3}}>{t.last2mo}</div>
+            </div>
+          </div>
+        )}
+
+        <div style={{...card,overflow:'hidden'}}>
+          <div style={{padding:'14px 18px',borderBottom:`1px solid ${c.borderL}`,fontSize:f.lg,fontWeight:700,color:c.t1}}>{t.attendanceHistory}</div>
+
+          {isMobile?(
+            // Card list on mobile
+            <div style={{padding:'8px 0'}}>
+              {(!attendance?.records||attendance.records.length===0)
+                ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{t.noAttendance}</div>
+                : attendance.records.map(r=>(
+                  <div key={r.id} style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:f.sm,fontWeight:700,color:c.t1,marginBottom:2}}>{r.service_title}</div>
+                      <div style={{fontSize:f.xs,color:c.t3}}>{fmtDate(r.date)}{r.check_in_time?` · ${fmtTime(r.check_in_time)}`:''}</div>
+                    </div>
+                    <span style={bdg(r.status==='Present'?c.successL:c.dangerL,r.status==='Present'?c.success:c.danger,`1px solid ${r.status==='Present'?c.successB:c.dangerB}`)}>
+                      {r.status==='Present'?t.present:t.absent}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          ):(
+            // Table on desktop
+            <div style={{overflowX:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse'}}>
+                <thead>
+                  <tr style={{background:c.surfaceAlt}}>
+                    {[t.date,t.service,t.checkin,t.statusL].map(h=>(
+                      <th key={h} style={{padding:'11px 18px',textAlign:'left',fontSize:f.xs,fontWeight:700,color:c.t3,textTransform:'uppercase',letterSpacing:'0.5px',borderBottom:`1px solid ${c.border}`}}>{h}</th>
+                    ))}
                   </tr>
-                );
-              })}
-          </tbody>
-        </table>
+                </thead>
+                <tbody>
+                  {(!attendance?.records||attendance.records.length===0)
+                    ? <tr><td colSpan={4} style={{padding:'40px',textAlign:'center',color:c.t3}}>{t.noAttendance}</td></tr>
+                    : attendance.records.map((r,i)=>(
+                      <tr key={r.id} style={{background:i%2===0?c.surface:c.surfaceAlt,borderBottom:`1px solid ${c.borderL}`}}>
+                        <td style={{padding:'12px 18px',fontSize:f.base,color:c.t2}}>{fmtDate(r.date)}</td>
+                        <td style={{padding:'12px 18px',fontSize:f.base,color:c.t1,fontWeight:500}}>{r.service_title}</td>
+                        <td style={{padding:'12px 18px',fontSize:f.base,color:c.t2}}>{r.check_in_time?fmtTime(r.check_in_time):'—'}</td>
+                        <td style={{padding:'12px 18px'}}>
+                          <span style={bdg(r.status==='Present'?c.successL:c.dangerL,r.status==='Present'?c.success:c.danger,`1px solid ${r.status==='Present'?c.successB:c.dangerB}`)}>
+                            {r.status==='Present'?t.present:t.absent}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
-      {finance&&(
-        <div style={{padding:'16px 20px',borderTop:`2px solid ${c.border}`,display:'flex',justifyContent:'space-between',alignItems:'center',background:c.surfaceAlt}}>
-          <span style={{fontSize:f.base,fontWeight:700,color:c.t2}}>{t.totalYtd}</span>
-          <span style={{fontSize:f.stat,fontWeight:900,color:c.t1}}>{PHP(finance.ytdTotal)}</span>
+
+      {/* Rate card — desktop only (right column) */}
+      {!isMobile&&(
+        <div style={{...card,padding:'28px 22px',textAlign:'center'}}>
+          <div style={{fontSize:f.sm,color:c.t3,fontWeight:600,marginBottom:18}}>{t.attendanceRate}</div>
+          <div style={{display:'flex',justifyContent:'center',position:'relative',marginBottom:14}}>
+            <Ring value={rate} size={100} stroke={9} color={rateColor} bg={c.border}/>
+            <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)'}}>
+              <div style={{fontSize:f.lg,fontWeight:900,color:c.t1,lineHeight:1}}>{rate}%</div>
+            </div>
+          </div>
+          <div style={{fontSize:f.md,fontWeight:700,color:rateColor,marginBottom:6}}>{rate>=80?t.excellent:rate>=50?t.good:t.improve}</div>
+          <div style={{fontSize:f.xs,color:c.t3}}>{attendance?.attended||0} {t.of} {attendance?.totalServices||0} services</div>
+          <div style={{fontSize:f.xs,color:c.t3,marginTop:2}}>{t.last2mo}</div>
         </div>
       )}
     </div>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════
+function FinanceTab({finance,c,f,t,fmtDate,PHP,isMobile}) {
+  const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
+
+  return (
+    <div style={{...card,overflow:'hidden'}}>
+      {/* YTD hero card */}
+      {finance&&(
+        <div style={{padding:isMobile?'16px':'20px 22px',background:'linear-gradient(135deg,#003d70,#005599)',color:'#fff',borderBottom:`1px solid ${c.border}`}}>
+          <div style={{fontSize:f.xs,opacity:0.8,fontWeight:600,marginBottom:6,textTransform:'uppercase',letterSpacing:'0.5px'}}>{t.totalYtd}</div>
+          <div style={{fontSize:isMobile?28:f.stat,fontWeight:900,letterSpacing:'-1px',lineHeight:1}}>{PHP(finance.ytdTotal)}</div>
+          <div style={{fontSize:f.xs,opacity:0.7,marginTop:6}}>{t.thisYear}</div>
+          <div style={{fontSize:f.xs,opacity:0.7,marginTop:2,fontStyle:'italic'}}>{t.verse}</div>
+        </div>
+      )}
+
+      <div style={{padding:'14px 18px',borderBottom:`1px solid ${c.borderL}`,fontSize:f.lg,fontWeight:700,color:c.t1}}>{t.offeringsHistory}</div>
+
+      {isMobile?(
+        // Card list on mobile
+        <div style={{padding:'8px 0'}}>
+          {(!finance?.records||finance.records.length===0)
+            ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{t.noOfferings}</div>
+            : finance.records.map(r=>{
+              const cs=catStyle(r.category?.name,c.dk);
+              return (
+                <div key={r.id} style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <span style={{padding:'3px 10px',borderRadius:20,fontSize:f.xs,fontWeight:600,...cs}}>{r.category?.name||'Offering'}</span>
+                    <div style={{fontSize:f.xs,color:c.t3,marginTop:4}}>{fmtDate(r.transaction_date)}</div>
+                  </div>
+                  <div style={{fontSize:f.md,fontWeight:800,color:c.t1,flexShrink:0}}>{PHP(r.amount)}</div>
+                </div>
+              );
+            })}
+        </div>
+      ):(
+        // Table on desktop
+        <div style={{overflowX:'auto'}}>
+          <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <thead>
+              <tr style={{background:c.surfaceAlt}}>
+                {[t.date,t.type,t.amount].map(h=>(
+                  <th key={h} style={{padding:'11px 20px',textAlign:'left',fontSize:f.xs,fontWeight:700,color:c.t3,textTransform:'uppercase',letterSpacing:'0.5px',borderBottom:`1px solid ${c.border}`}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(!finance?.records||finance.records.length===0)
+                ? <tr><td colSpan={3} style={{padding:'40px',textAlign:'center',color:c.t3}}>{t.noOfferings}</td></tr>
+                : finance.records.map((r,i)=>{
+                  const cs=catStyle(r.category?.name,c.dk);
+                  return (
+                    <tr key={r.id} style={{background:i%2===0?c.surface:c.surfaceAlt,borderBottom:`1px solid ${c.borderL}`}}>
+                      <td style={{padding:'13px 20px',fontSize:f.base,color:c.t2}}>{fmtDate(r.transaction_date)}</td>
+                      <td style={{padding:'13px 20px'}}>
+                        <span style={{padding:'4px 12px',borderRadius:20,fontSize:f.sm,fontWeight:600,...cs}}>{r.category?.name||'Offering'}</span>
+                      </td>
+                      <td style={{padding:'13px 20px',fontSize:f.base,color:c.t1,fontWeight:600}}>{PHP(r.amount)}</td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
 // MAIN COMPONENT
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 export default function MemberPortal() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const width    = useWindowWidth();
+  const isMobile = width <= 768;
 
   const prefs = getPrefs();
   const c = makeC(prefs);
@@ -500,41 +710,30 @@ export default function MemberPortal() {
   const fontSize   = prefs.fontSize   || 16;
   const zoom       = prefs.resolution || 1;
 
-  // Language as reactive state — updates instantly when portal settings or landing page changes it
   const [lang, setLang] = useState(() => getLangCode());
   const t = LBL[lang] || LBL.en;
 
-  // Load Google Translate once for the portal (it's outside MainLayout so needs its own load)
   useEffect(() => {
     const restoreSaved = () => {
       const code = getLangCode();
       if (code && code !== 'en') {
         const saved = LANGS.find(l => l.code === code);
-        if (saved) {
-          // Re-set cookie on every portal load so GT doesn't lose state when user presses X
-          saveLangCode(code);
-          applyGTLang(saved);
-        }
+        if (saved) { saveLangCode(code); applyGTLang(saved); }
       }
     };
     loadGTScript('google_translate_element_portal', restoreSaved);
   }, []); // eslint-disable-line
 
-  // Listen for language changes from settings page or landing page
   useEffect(() => {
     const handler = (e) => {
       const code = e.detail?.code || getLangCode();
       setLang(code);
-      // Also apply GT for non-en/tl languages
       if (code && code !== 'en') {
         const saved = LANGS.find(l => l.code === code);
         if (saved) applyGTLang(saved);
       }
     };
-    const storageHandler = () => {
-      const code = getLangCode();
-      setLang(code);
-    };
+    const storageHandler = () => { const code = getLangCode(); setLang(code); };
     window.addEventListener('plwm-lang-change', handler);
     window.addEventListener('storage', storageHandler);
     return () => {
@@ -543,7 +742,6 @@ export default function MemberPortal() {
     };
   }, []);
 
-  // Load selected Google Font dynamically
   useEffect(() => {
     const googleFonts = [...GOOGLE_FONTS];
     if (googleFonts.includes(fontFamily)) {
@@ -559,7 +757,6 @@ export default function MemberPortal() {
     }
   }, [fontFamily]);
 
-  // Stat sizes based on raw fontSize
   const f = {
     xs:   Math.max(10, Math.round(fontSize * 0.72)),
     sm:   Math.max(11, Math.round(fontSize * 0.82)),
@@ -579,21 +776,18 @@ export default function MemberPortal() {
   const [loading, setLoading]   = useState(true);
   const [toast, setToast]       = useState(null);
 
-  // Profile edit state
   const [editing,   setEditing]   = useState(false);
   const [editForm,  setEditForm]  = useState({});
   const [editSaving,setES]        = useState(false);
   const [editError, setEE]        = useState('');
 
-  // Event / service loading
   const [evtL,    setEvtL]    = useState(null);
   const [confL,   setConfL]   = useState(null);
 
-  // Modals
-  const [serviceModal, setServiceModal] = useState(null); // full service object with my_response
+  const [serviceModal, setServiceModal] = useState(null);
   const [svcLoading,   setSvcLoading]   = useState(false);
   const [svcResponding,setSvcResponding]= useState(false);
-  const [eventModal,   setEventModal]   = useState(null); // event object
+  const [eventModal,   setEventModal]   = useState(null);
 
   const showToast = (msg, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),3500); };
 
@@ -640,7 +834,6 @@ export default function MemberPortal() {
       await axiosInstance.post(`/member-portal/events/${eid}/register`);
       showToast('Registered!');
       const r=await axiosInstance.get('/member-portal/events'); setEvents(r.data.data);
-      // Refresh event modal if open
       setEventModal(prev=>prev?.id===eid?{...prev,is_registered:true,can_cancel:true,can_register:false}:prev);
     } catch(err) { showToast(err.response?.data?.message||'Failed.','error'); }
     finally { setEvtL(null); }
@@ -684,41 +877,47 @@ export default function MemberPortal() {
       const r = await axiosInstance.post(`/member-portal/services/${serviceModal.id}/respond`,{attendance_status:status});
       setServiceModal(r.data.data);
       showToast(status==='ATTENDING'?'RSVP saved — see you at the service!':status==='NOT_ATTENDING'?'Response saved.':'Response updated.');
-      // Refresh attendance to show pre-reg
       const aR = await axiosInstance.get('/member-portal/attendance'); setAtt(aR.data.data);
     } catch(err) { showToast(err.response?.data?.message||'Failed.','error'); }
     finally { setSvcResponding(false); }
   },[serviceModal]);
 
   const onEventDetailsClick = useCallback((evt)=>{ setEventModal(evt); },[]);
-
   const handleLogout = async () => { await logout(); navigate('/login'); };
 
-  // ── Header (inline — no inputs, safe inside main component) ──
+  // ── Header ────────────────────────────────────────────────────
   const Header = () => (
-    <div style={{background:BRAND,padding:'12px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:200}}>
-      <div style={{display:'flex',alignItems:'center',gap:14}}>
-        <div style={{width:38,height:38,borderRadius:10,background:'rgba(255,255,255,0.18)',display:'flex',alignItems:'center',justifyContent:'center',border:'1.5px solid rgba(255,255,255,0.28)',fontSize:16,color:'#fff'}}>✝</div>
+    <div style={{background:BRAND,padding:isMobile?'10px 16px':'12px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:200}}>
+      <div style={{display:'flex',alignItems:'center',gap:isMobile?10:14}}>
+        <div style={{width:isMobile?32:38,height:isMobile?32:38,borderRadius:10,background:'rgba(255,255,255,0.18)',display:'flex',alignItems:'center',justifyContent:'center',border:'1.5px solid rgba(255,255,255,0.28)',fontSize:isMobile?13:16,color:'#fff',flexShrink:0}}>✝</div>
         <div>
-          <div style={{color:'#fff',fontWeight:800,fontSize:f.md,lineHeight:1.1}}>{t.portal}</div>
-          <div style={{color:'rgba(255,255,255,0.75)',fontSize:f.xs,marginTop:1}}>{t.welcome}, {greeting}</div>
+          <div style={{color:'#fff',fontWeight:800,fontSize:isMobile?f.base:f.md,lineHeight:1.1}}>{t.portal}</div>
+          {!isMobile&&<div style={{color:'rgba(255,255,255,0.75)',fontSize:f.xs,marginTop:1}}>{t.welcome}, {greeting}</div>}
         </div>
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:10}}>
-        <div style={{display:'flex',alignItems:'center',gap:9,background:'rgba(255,255,255,0.12)',borderRadius:24,padding:'4px 14px 4px 4px',border:'1px solid rgba(255,255,255,0.2)',cursor:'pointer'}} onClick={()=>{setTab(0);startEdit();}}>
+      <div style={{display:'flex',alignItems:'center',gap:isMobile?8:10}}>
+        {/* Avatar + name */}
+        <div style={{display:'flex',alignItems:'center',gap:isMobile?6:9,background:'rgba(255,255,255,0.12)',borderRadius:24,padding:isMobile?'3px 10px 3px 3px':'4px 14px 4px 4px',border:'1px solid rgba(255,255,255,0.2)',cursor:'pointer'}} onClick={()=>{setTab(0);startEdit();}}>
           {avatarUrl
-            ? <img src={avatarUrl} alt="avatar" style={{width:28,height:28,borderRadius:'50%',objectFit:'cover'}}/>
-            : <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(255,255,255,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'#fff'}}>{initials}</div>}
+            ? <img src={avatarUrl} alt="avatar" style={{width:isMobile?26:28,height:isMobile?26:28,borderRadius:'50%',objectFit:'cover'}}/>
+            : <div style={{width:isMobile?26:28,height:isMobile?26:28,borderRadius:'50%',background:'rgba(255,255,255,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:isMobile?9:10,fontWeight:800,color:'#fff'}}>{initials}</div>}
           <span style={{color:'rgba(255,255,255,0.9)',fontSize:f.sm,fontWeight:600}}>{profile?.first_name||'—'}</span>
         </div>
-        <button onClick={()=>navigate('/portal/settings')} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',color:'#fff',borderRadius:8,padding:'6px 14px',fontSize:f.sm,cursor:'pointer',fontFamily:'inherit',fontWeight:500}}>{t.settings}</button>
-        <button onClick={handleLogout} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',color:'#fff',borderRadius:8,padding:'6px 14px',fontSize:f.sm,cursor:'pointer',fontFamily:'inherit',fontWeight:500}}>{t.logout}</button>
+        {/* Settings — icon only on mobile */}
+        <button onClick={()=>navigate('/portal/settings')} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',color:'#fff',borderRadius:8,padding:isMobile?'6px 10px':'6px 14px',fontSize:isMobile?16:f.sm,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:36,minWidth:36,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          {isMobile?'⚙️':t.settings}
+        </button>
+        {/* Logout — icon only on mobile */}
+        <button onClick={handleLogout} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',color:'#fff',borderRadius:8,padding:isMobile?'6px 10px':'6px 14px',fontSize:isMobile?16:f.sm,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:36,minWidth:36,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          {isMobile?'↩':t.logout}
+        </button>
       </div>
     </div>
   );
 
-  const TabBar = () => (
-    <div style={{borderBottom:`1px solid ${c.border}`,background:c.surface,display:'flex',padding:'0 24px',overflowX:'auto',position:'sticky',top:62,zIndex:100}}>
+  // ── Tab Bar — top on desktop, bottom on mobile ────────────────
+  const TopTabBar = () => (
+    <div style={{borderBottom:`1px solid ${c.border}`,background:c.surface,display:'flex',padding:'0 24px',overflowX:'auto',position:'sticky',top:isMobile?58:62,zIndex:100}}>
       {t.tabs.map((tb,i)=>(
         <button key={i} onClick={()=>setTab(i)} style={{padding:'13px 18px',fontSize:f.base,fontWeight:tab===i?700:500,color:tab===i?c.tabActive:c.t2,background:'none',border:'none',borderBottom:tab===i?`2.5px solid ${c.tabActive}`:'2.5px solid transparent',cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',transition:'color 0.15s'}}>
           {tb}
@@ -727,9 +926,31 @@ export default function MemberPortal() {
     </div>
   );
 
+  const MobileBottomTabBar = () => (
+    <nav style={{
+      position:'fixed',bottom:0,left:0,right:0,
+      height:`calc(60px + env(safe-area-inset-bottom,0px))`,
+      background:c.surface,borderTop:`1px solid ${c.border}`,
+      display:'flex',zIndex:200,boxShadow:'0 -2px 12px rgba(0,0,0,0.08)',
+      paddingBottom:'env(safe-area-inset-bottom,0px)',
+    }}>
+      {t.tabs.map((tb,i)=>(
+        <button key={i} onClick={()=>setTab(i)} style={{
+          flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+          gap:3,border:'none',background:'none',cursor:'pointer',padding:'6px 4px',
+          color:tab===i?c.tabActive:c.t3,fontFamily:'inherit',position:'relative',
+        }}>
+          {tab===i&&<span style={{position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',width:32,height:3,background:c.tabActive,borderRadius:'0 0 3px 3px'}}/>}
+          <span style={{fontSize:18,lineHeight:1}}>{t.tabIcons[i]}</span>
+          <span style={{fontSize:10,fontWeight:tab===i?700:600,letterSpacing:'0.2px'}}>{tb}</span>
+        </button>
+      ))}
+    </nav>
+  );
+
   const LoadSkeleton = () => (
     <div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginBottom:20}}>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:14,marginBottom:20}}>
         {[1,2,3].map(i=><div key={i} style={{background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,padding:'20px'}}><Skel w="50%" h={11}/><Skel w="70%" h={28} mt={10}/></div>)}
       </div>
       <div style={{background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,padding:'24px'}}>
@@ -740,12 +961,12 @@ export default function MemberPortal() {
 
   return (
     <div style={{minHeight:'100vh',background:c.bg,fontFamily:`'${fontFamily}',system-ui,sans-serif`,fontSize:`${fontSize}px`,zoom}}>
-      {/* Hidden GT widget — GT script loaded in useEffect above */}
       <div id="google_translate_element_portal" style={{position:'fixed',bottom:-200,left:0,opacity:0,pointerEvents:'none',zIndex:-1}}/>
       <style>{`
         @keyframes shimmer{0%{background-position:400% 0}100%{background-position:-400% 0}}
         @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideInRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes slideUpSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
         *{box-sizing:border-box}
         ::-webkit-scrollbar{width:5px;height:5px}
         ::-webkit-scrollbar-track{background:transparent}
@@ -753,18 +974,34 @@ export default function MemberPortal() {
       `}</style>
 
       <Header/>
-      <TabBar/>
+      {/* Desktop: top tab bar. Mobile: none here (bottom bar below) */}
+      {!isMobile&&<TopTabBar/>}
 
-      <div style={{maxWidth:1240,margin:'0 auto',padding:'24px 20px'}}>
+      <div style={{
+        maxWidth:isMobile?'100%':1240,
+        margin:'0 auto',
+        padding:isMobile?'14px 12px':'24px 20px',
+        paddingBottom:isMobile?`calc(80px + env(safe-area-inset-bottom,0px))`:'24px',
+      }}>
+        {/* Mobile: show tab title */}
+        {isMobile&&(
+          <div style={{fontSize:f.lg,fontWeight:800,color:c.t1,marginBottom:14,paddingBottom:10,borderBottom:`1px solid ${c.border}`}}>
+            {t.tabIcons[tab]} {t.tabs[tab]}
+          </div>
+        )}
+
         {loading ? <LoadSkeleton/> : (
           <>
-            {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={PHP} fmtDate={fmtDate}/>}
-            {tab===1&&<EventsTab events={events} assigns={assigns} services={services} evtL={evtL} confL={confL} doRegister={doRegister} doCancel={doCancel} doConfirm={doConfirm} onServiceClick={onServiceClick} onEventDetailsClick={onEventDetailsClick} c={c} f={f} t={t} fmtDate={fmtDate} fmtShort={fmtShort} fmtSvcT={fmtSvcT}/>}
-            {tab===2&&<AttendanceTab attendance={attendance} c={c} f={f} t={t} fmtDate={fmtDate} fmtTime={fmtTime}/>}
-            {tab===3&&<FinanceTab finance={finance} c={c} f={f} t={t} fmtDate={fmtDate} PHP={PHP}/>}
+            {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={PHP} fmtDate={fmtDate} isMobile={isMobile}/>}
+            {tab===1&&<EventsTab events={events} assigns={assigns} services={services} evtL={evtL} confL={confL} doRegister={doRegister} doCancel={doCancel} doConfirm={doConfirm} onServiceClick={onServiceClick} onEventDetailsClick={onEventDetailsClick} c={c} f={f} t={t} fmtDate={fmtDate} fmtShort={fmtShort} fmtSvcT={fmtSvcT} isMobile={isMobile}/>}
+            {tab===2&&<AttendanceTab attendance={attendance} c={c} f={f} t={t} fmtDate={fmtDate} fmtTime={fmtTime} isMobile={isMobile}/>}
+            {tab===3&&<FinanceTab finance={finance} c={c} f={f} t={t} fmtDate={fmtDate} PHP={PHP} isMobile={isMobile}/>}
           </>
         )}
       </div>
+
+      {/* Mobile bottom tab bar */}
+      {isMobile&&<MobileBottomTabBar/>}
 
       {/* Service RSVP Modal */}
       {svcLoading&&(
@@ -773,17 +1010,17 @@ export default function MemberPortal() {
         </div>
       )}
       {serviceModal&&!svcLoading&&(
-        <ServiceModal svc={serviceModal} onClose={()=>setServiceModal(null)} onRespond={onServiceRespond} responding={svcResponding} c={c} f={f} t={t}/>
+        <ServiceModal svc={serviceModal} onClose={()=>setServiceModal(null)} onRespond={onServiceRespond} responding={svcResponding} c={c} f={f} t={t} isMobile={isMobile}/>
       )}
 
       {/* Event Details Modal */}
       {eventModal&&(
-        <EventModal evt={eventModal} onClose={()=>setEventModal(null)} onRegister={doRegister} onCancel={doCancel} evtLoading={evtL} c={c} f={f} t={t}/>
+        <EventModal evt={eventModal} onClose={()=>setEventModal(null)} onRegister={doRegister} onCancel={doCancel} evtLoading={evtL} c={c} f={f} t={t} isMobile={isMobile}/>
       )}
 
-      {/* Toast */}
+      {/* Toast — above bottom tab bar on mobile */}
       {toast&&(
-        <div style={{position:'fixed',bottom:28,right:28,background:toast.type==='success'?c.success:c.danger,color:'#fff',padding:'12px 20px',borderRadius:12,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',zIndex:9999,display:'flex',alignItems:'center',gap:10,fontSize:f.base,fontWeight:500,animation:'slideUp 0.3s ease',maxWidth:360}}>
+        <div style={{position:'fixed',bottom:isMobile?`calc(72px + env(safe-area-inset-bottom,0px))`:28,right:isMobile?12:28,left:isMobile?12:'auto',background:toast.type==='success'?c.success:c.danger,color:'#fff',padding:'12px 18px',borderRadius:12,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',zIndex:9999,display:'flex',alignItems:'center',gap:10,fontSize:f.base,fontWeight:500,animation:'slideUp 0.3s ease'}}>
           <span style={{fontSize:15}}>{toast.type==='success'?'✓':'✕'}</span>{toast.msg}
         </div>
       )}
