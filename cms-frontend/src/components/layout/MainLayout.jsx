@@ -58,7 +58,8 @@ function BottomTabBar({ onMoreOpen }) {
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
-      height: 60,
+      height: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+      paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       background: '#fff',
       borderTop: '1px solid #e8edf2',
       display: 'flex',
@@ -316,7 +317,7 @@ export default function MainLayout({ children }) {
         marginLeft: mainPadLeft,
         padding: isMobile ? '12px 12px 0' : (isTablet ? '20px' : '28px'),
         paddingTop: isMobile ? '72px' : '80px',
-        paddingBottom: isMobile ? '68px' : (isTablet ? '20px' : '28px'),
+        paddingBottom: isMobile ? 'calc(68px + env(safe-area-inset-bottom, 0px))' : (isTablet ? '20px' : '28px'),
       }}>
         {children}
       </main>

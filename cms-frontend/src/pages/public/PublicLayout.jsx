@@ -85,7 +85,7 @@ export function PlaylistEmbed({ playlistId, title, start = 0 }) {
 
 export function Section({ children, bg = C.white, id }) {
   return (
-    <section id={id} style={{ background:bg, padding:'80px 24px' }}>
+    <section id={id} style={{ background:bg, padding:'clamp(40px,8vw,80px) 24px' }}>
       <div style={{ maxWidth:MAX_W, margin:'0 auto' }}>{children}</div>
     </section>
   );
@@ -93,7 +93,7 @@ export function Section({ children, bg = C.white, id }) {
 
 export function SectionHeader({ eyebrow, title, sub }) {
   return (
-    <div style={{ marginBottom:48 }}>
+    <div style={{ marginBottom:'clamp(24px,5vw,48px)' }}>
       {eyebrow && (
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12, fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:C.blue }}>
           <span style={{ width:20, height:2, background:C.blue, borderRadius:2, display:'inline-block' }} />
