@@ -334,11 +334,6 @@ export default function HomePage() {
             })}
           </div>
 
-          <Reveal delay={0.2}>
-            <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: C.muted, padding: 14, background: '#fff', borderRadius: 10, border: `1px solid ${C.border}` }}>
-              📌 <strong style={{ color: C.blue }}>Book 2–3 months in advance</strong> to guarantee your slot at retreats.
-            </div>
-          </Reveal>
         </div>
       </section>
 
