@@ -179,8 +179,8 @@ export default function PublicLayout({ children }) {
     setCurrentLang(lang.label);
     setLangOpen(false);
     saveLangCode(lang.code);
-    window.dispatchEvent(new CustomEvent('plwm-lang-change', { detail: { code: lang.code } }));
-    applyGTLang(lang);
+    // Reload so the googtrans cookie takes effect cleanly — no GT widget glitches
+    window.location.reload();
   };
 
   useEffect(() => {
@@ -219,8 +219,7 @@ export default function PublicLayout({ children }) {
               <img src={process.env.PUBLIC_URL + '/logo.jpg'} alt="PLWM-MCC"
                 style={{ width:40, height:40, borderRadius:8, objectFit:'contain', background:'rgba(255,255,255,0.1)', padding:2, flexShrink:0 }} />
               <div className="logo-text-hide">
-                <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:15, fontWeight:700, color:'#fff', lineHeight:1.2, whiteSpace:'nowrap' }}>Manila Central Church</div>
-                <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', letterSpacing:'0.5px', textTransform:'uppercase' }}>PLWM — Manila Central Church</div>
+                <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:15, fontWeight:700, color:'#fff', lineHeight:1.2, whiteSpace:'nowrap' }}>PLWM — Manila Central Church</div>
               </div>
             </Link>
 
@@ -312,7 +311,7 @@ export default function PublicLayout({ children }) {
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'18px 20px', borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <img src={process.env.PUBLIC_URL + '/logo.jpg'} alt="PLWM-MCC" style={{ width:36, height:36, borderRadius:8, objectFit:'contain', background:'rgba(255,255,255,0.1)', padding:2 }} />
-              <span style={{ fontFamily:"'Lora',Georgia,serif", fontSize:14, fontWeight:700, color:'#fff' }}>Manila Central Church</span>
+              <span style={{ fontFamily:"'Lora',Georgia,serif", fontSize:14, fontWeight:700, color:'#fff' }}>PLWM — Manila Central Church</span>
             </div>
             <button onClick={() => setMobileOpen(false)}
               style={{ background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', borderRadius:8, width:36, height:36, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>

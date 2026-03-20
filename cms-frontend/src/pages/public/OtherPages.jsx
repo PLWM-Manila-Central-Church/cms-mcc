@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import PublicLayout, { PlaylistEmbed } from './PublicLayout';
+import PublicLayout, { PlaylistEmbed, VideoEmbed } from './PublicLayout';
 
 const C = { navy:'#0B2447', navyMid:'#14305E', blue:'#1565C0', gold:'#C9A84C', white:'#fff', off:'#F4F7FB', border:'#E2E8F0', text:'#0F1B33', sub:'#475569', muted:'#64748B', light:'#94A3B8' };
 
@@ -84,6 +84,10 @@ export function SundaySermonPage() {
 
 // ── CHRISTIAN LIFE SEMINAR ────────────────────────────────────
 export function ChristianLifePage() {
+  const SERMONS = [
+    { id: 'Y08A1zp1QH8', title: 'Christian Life Seminar — Sermon 1' },
+    { id: 'tkGdumFkYPk', title: 'Christian Life Seminar — Sermon 2' },
+  ];
   return (
     <PublicLayout>
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'Sermon',path:'/sermon'},{label:'Christian Life Seminar'}]} title="Christian Life Seminar" sub="Teachings on living a godly, Spirit-filled Christian life" />
@@ -92,8 +96,15 @@ export function ChristianLifePage() {
           <div style={{ maxWidth:600, marginBottom:32 }}>
             <p style={{ fontSize:15, color:C.sub, lineHeight:1.75 }}>The Christian Life Seminar is a teaching series that helps believers understand what it means to live as a child of God — walking in the Spirit, growing in faith, and bearing fruit for His Kingdom.</p>
           </div>
-          <PlaylistEmbed playlistId="PLT0Pgr_m_NoI2Y9-ACC5Je43gHaGHEyKK" title="Christian Life Seminar — Manila Central Church" start={227} />
-          <div style={{ marginTop:24, textAlign:'center' }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:28 }}>
+            {SERMONS.map((s, i) => (
+              <div key={s.id}>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', color:C.blue, marginBottom:10 }}>Sermon {i + 1}</div>
+                <VideoEmbed videoId={s.id} title={s.title} />
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop:28, textAlign:'center' }}>
             <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer">
               <button style={{ background:'#FF0000', color:'#fff', border:'none', padding:'11px 24px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'inline-flex', alignItems:'center', gap:8 }}>
                 ▶ View Full Channel on YouTube
@@ -306,7 +317,7 @@ export function IntroductionPage() {
                   Manila Central Church is the mother church of the Philippine Life Word Mission (PLWM) — a Gospel-centered, Bible-based mission organization with churches and mission branches across all major islands of the Philippines.
                 </p>
                 <div style={{ borderTop:'1px solid rgba(255,255,255,0.12)', paddingTop:16, display:'flex', flexDirection:'column', gap:10 }}>
-                  {[['📍','Address','Parañaque City, Philippines (full address to be updated)'],['📅','Founded','Manila Central Church — PLWM Philippines'],['✝️','Mission','Prove God · Testify the Bible · Preach the Gospel']].map(([icon,label,val])=>(
+                  {[['📍','Address','Lot 2 Block 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City'],['📅','Founded','Manila Central Church — PLWM Philippines'],['✝️','Mission','Prove God · Testify the Bible · Preach the Gospel']].map(([icon,label,val])=>(
                     <div key={label} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
                       <div style={{ width:28, height:28, background:'rgba(255,255,255,0.07)', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}>{icon}</div>
                       <div>
@@ -336,42 +347,174 @@ export function IntroductionPage() {
 // ── WHAT WE BELIEVE ───────────────────────────────────────────
 export function WhatWeBelievePage() {
   const BELIEFS = [
-    { title:'The Holy Bible', items:['The Old and New Testaments of the Bible are the complete word of God, and they are accurate and without error.','The 66 books of the Bible were written through God\'s revelation and the inspiration of the Holy Spirit.','Complete knowledge of God is given only through the Bible.','Salvation can only be obtained through the Bible.'] },
-    { title:'God', items:['God is spirit, self-existent, all-knowing, all-powerful, omnipresent, and one in essence.','God is supremely holy, righteous, perfectly loving, and merciful.','God is one in essence but exists in three persons: the Father, the Son, and the Holy Spirit.','God is the Creator, Sustainer, Provider, and Judge.'] },
-    { title:'Jesus Christ', items:['Jesus Christ is one of the persons of the Trinity and is God.','Jesus Christ, as the Son of God, came as a man and is the only mediator between God and humanity.','Jesus Christ bore the sins of the world and, through His death on the cross, achieved eternal atonement.','Jesus Christ rose from the dead three days after His crucifixion and ascended to heaven forty days later, where He lives as our mediator.'] },
-    { title:'The Holy Spirit', items:['The Holy Spirit is one of the persons of the Trinity and is God.','The Holy Spirit convicts people of sin and gives new birth through the Word of God.','The Holy Spirit dwells in the hearts of believers and helps them grow in faith.','The Holy Spirit unites believers, building up the Church, which is the body of Christ.'] },
-    { title:'Humans', items:['Humans were created in the image of God as spiritual beings for the purpose of glorifying God.','God gave humans free will, but Adam sinned by disobeying God\'s command.','All people will face death, and after that, there will be God\'s judgment.'] },
-    { title:'The Salvation', items:['Salvation is by God\'s grace, not based on human actions, and can only be obtained through faith.','Repentance, which leads to the forgiveness of sins, must precede salvation.','One is justified by faith.','A person receives salvation by believing in Jesus Christ and through the forgiveness of sins.','Salvation is certain, eternal, and complete.','After salvation, one must live a sanctified life, becoming more like Christ.','When Christ returns, Christians will be glorified.'] },
-    { title:'Church', items:['The Church is a spiritual, personal community of born-again Christians united by the Holy Spirit.','The Church is the body of Christ, and Christians are members of that body, each with their own role.','God provides His Word through the Church and helps believers grow in their faith.','The Church administers the sacraments as commanded by Jesus.','The Church should be devoted to the Word, prayer, fellowship, and evangelism.'] },
-    { title:'The Millennial Kingdom and the Eternal Kingdom', items:['Christ, who returns to the earth, will reign over the world for a thousand years.','Born-again Christians will enjoy eternal life and blessedness with Christ in heaven.'] },
+    {
+      title: 'The Holy Bible',
+      image: '/bible.webp',
+      items: [
+        "The Old and New Testaments of the Bible are the complete word of God, and they are accurate and without error.",
+        "The 66 books of the Bible were written through God's revelation and the inspiration of the Holy Spirit.",
+        "Complete knowledge of God is given only through the Bible.",
+        "Salvation can only be obtained through the Bible.",
+      ],
+    },
+    {
+      title: 'God',
+      image: '/god.webp',
+      items: [
+        "God is spirit, self-existent, all-knowing, all-powerful, omnipresent, and one in essence.",
+        "God is supremely holy, righteous, perfectly loving, and merciful.",
+        "God is one in essence but exists in three persons: the Father, the Son, and the Holy Spirit.",
+        "God is the Creator, Sustainer, Provider, and Judge.",
+      ],
+    },
+    {
+      title: 'Jesus Christ',
+      image: '/jesus.webp',
+      items: [
+        "Jesus Christ is one of the persons of the Trinity and is God.",
+        "Jesus Christ, as the Son of God, came as a man and is the only mediator between God and humanity.",
+        "Jesus Christ bore the sins of the world and, through His death on the cross, achieved eternal atonement.",
+        "Jesus Christ rose from the dead three days after His crucifixion and ascended to heaven forty days later, where He lives as our mediator.",
+      ],
+    },
+    {
+      title: 'The Holy Spirit',
+      image: '/hs.webp',
+      items: [
+        "The Holy Spirit is one of the persons of the Trinity and is God.",
+        "The Holy Spirit convicts people of sin and gives new birth through the Word of God.",
+        "The Holy Spirit dwells in the hearts of believers and helps them grow in faith.",
+        "The Holy Spirit unites believers, building up the Church, which is the body of Christ.",
+      ],
+    },
+    {
+      title: 'Humans',
+      image: '/humans.webp',
+      items: [
+        "Humans were created in the image of God as spiritual beings for the purpose of glorifying God.",
+        "God gave humans free will, but Adam sinned by disobeying God's command.",
+        "All people will face death, and after that, there will be God's judgment.",
+      ],
+    },
+    {
+      title: 'Salvation',
+      image: '/salvation.webp',
+      items: [
+        "Salvation is by God's grace, not based on human actions, and can only be obtained through faith.",
+        "Repentance, which leads to the forgiveness of sins, must precede salvation.",
+        "One is justified by faith.",
+        "A person receives salvation by believing in Jesus Christ and through the forgiveness of sins.",
+        "Salvation is certain, eternal, and complete.",
+        "After salvation, one must live a sanctified life, becoming more like Christ.",
+        "When Christ returns, Christians will be glorified.",
+      ],
+    },
+    {
+      title: 'Church',
+      image: '/church.webp',
+      items: [
+        "The Church is a spiritual, personal community of born-again Christians united by the Holy Spirit.",
+        "The Church is the body of Christ, and Christians are members of that body, each with their own role.",
+        "God provides His Word through the Church and helps believers grow in their faith.",
+        "The Church administers the sacraments as commanded by Jesus.",
+        "The Church should be devoted to the Word, prayer, fellowship, and evangelism.",
+      ],
+    },
+    {
+      title: 'The Millennial Kingdom & Eternal Kingdom',
+      image: null,
+      items: [
+        "Christ, who returns to the earth, will reign over the world for a thousand years.",
+        "Born-again Christians will enjoy eternal life and blessedness with Christ in heaven.",
+      ],
+    },
   ];
+
   return (
     <PublicLayout>
-      <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'Introduction',path:'/introduction'},{label:'What We Believe'}]} title="What We Believe" sub="The doctrinal foundation of Manila Central Church — Philippine Life Word Mission" />
-      <section style={{ background:C.white, padding:'72px 24px' }}>
-        <div style={{ maxWidth:860, margin:'0 auto' }}>
-          <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
-            {BELIEFS.map((b,i)=>(
-              <div key={i} style={{ background:C.off, border:`1.5px solid ${C.border}`, borderRadius:12, padding:'22px 24px', transition:'all 0.2s' }}
-                onMouseEnter={e=>{ e.currentTarget.style.background='#fff'; e.currentTarget.style.borderColor='rgba(21,101,192,0.3)'; }}
-                onMouseLeave={e=>{ e.currentTarget.style.background=C.off; e.currentTarget.style.borderColor=C.border; }}>
-                <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.1rem', fontWeight:700, color:C.text, marginBottom:12, display:'flex', alignItems:'center', gap:12 }}>
-                  <span style={{ width:26, height:26, background:C.navy, color:'#fff', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, flexShrink:0 }}>{i+1}</span>
-                  {b.title}
-                </h3>
-                <div style={{ display:'flex', flexDirection:'column', gap:7, paddingLeft:38 }}>
-                  {b.items.map((item,j)=>(
-                    <div key={j} style={{ display:'flex', alignItems:'flex-start', gap:10, fontSize:14, color:C.sub, lineHeight:1.65 }}>
-                      <span style={{ width:5, height:5, background:C.blue, borderRadius:'50%', marginTop:8, flexShrink:0 }} />
-                      <span>{j+1}. {item}</span>
+      <PageHero
+        breadcrumbs={[{label:'Home',path:'/'},{label:'Introduction',path:'/introduction'},{label:'What We Believe'}]}
+        title="What We Believe"
+        sub="The doctrinal foundation of Manila Central Church — Philippine Life Word Mission"
+      />
+      <section style={{ background: C.off, padding: '72px 24px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+
+          {/* Intro paragraph */}
+          <div style={{ textAlign:'center', maxWidth:640, margin:'0 auto 56px' }}>
+            <p style={{ fontSize:15, color:C.sub, lineHeight:1.8 }}>
+              These are the core beliefs that form the doctrinal foundation of Manila Central Church and the Philippine Life Word Mission. Rooted in the Word of God and built on the Gospel of Jesus Christ.
+            </p>
+          </div>
+
+          {/* Belief cards grid */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:24 }} className="beliefs-grid">
+            {BELIEFS.map((b, i) => (
+              <div key={i} style={{
+                background: '#fff',
+                borderRadius: 14,
+                overflow: 'hidden',
+                border: `1.5px solid ${C.border}`,
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 2px 12px rgba(11,36,71,0.06)',
+                transition: 'transform 0.22s, box-shadow 0.22s',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 8px 28px rgba(11,36,71,0.13)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 2px 12px rgba(11,36,71,0.06)'; }}
+              >
+                {/* Image / banner header */}
+                {b.image ? (
+                  <div style={{ height: 180, overflow:'hidden', flexShrink:0 }}>
+                    <img
+                      src={process.env.PUBLIC_URL + b.image}
+                      alt={b.title}
+                      style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ height: 180, background: 'linear-gradient(135deg, #0B2447, #1A3D72)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, flexShrink:0 }}>
+                    <div style={{ fontSize: 40 }}>✝️</div>
+                    <div style={{ fontSize:12, color:'rgba(255,255,255,0.45)', letterSpacing:'2px', textTransform:'uppercase' }}>Image coming soon</div>
+                  </div>
+                )}
+
+                {/* Card body */}
+                <div style={{ padding: '20px 20px 24px', flex:1, display:'flex', flexDirection:'column' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
+                    <div style={{ width:28, height:28, borderRadius:7, background:'#0B2447', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, flexShrink:0 }}>
+                      {i + 1}
                     </div>
-                  ))}
+                    <h3 style={{ fontFamily:"'Lora',Georgia,serif", fontSize:'0.97rem', fontWeight:700, color:'#0F1B33', lineHeight:1.3, margin:0 }}>
+                      {b.title}
+                    </h3>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:8, flex:1 }}>
+                    {b.items.map((item, j) => (
+                      <div key={j} style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:13, color:'#475569', lineHeight:1.65 }}>
+                        <span style={{ width:5, height:5, borderRadius:'50%', background:'#1565C0', marginTop:7, flexShrink:0 }} />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Scripture footer */}
+          <div style={{ marginTop:56, background:'#0B2447', borderRadius:14, padding:'28px 32px', textAlign:'center' }}>
+            <p style={{ fontFamily:"'Lora',serif", fontSize:'1.15rem', color:'#fff', lineHeight:1.65, marginBottom:10, fontStyle:'italic' }}>
+              "All Scripture is God-breathed and is useful for teaching, rebuking, correcting and training in righteousness."
+            </p>
+            <span style={{ fontSize:13, color:'#C9A84C', fontWeight:700 }}>— 2 Timothy 3:16</span>
+          </div>
         </div>
       </section>
+      <style>{`
+        @media (max-width: 960px) { .beliefs-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+        @media (max-width: 560px) { .beliefs-grid { grid-template-columns: 1fr !important; } }
+      `}</style>
     </PublicLayout>
   );
 }
@@ -385,11 +528,13 @@ export function CIPage() {
         <div style={{ maxWidth:860, margin:'0 auto' }}>
           <div style={{ display:'grid', gridTemplateColumns:'280px 1fr', gap:48, alignItems:'start', marginBottom:56 }}>
             <div>
-              {/* Symbol placeholder */}
-              <div style={{ background:C.navy, borderRadius:16, aspectRatio:'1', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, padding:32 }}>
-                <div style={{ fontFamily:"'Lora',serif", fontSize:72, fontWeight:900, color:C.gold, lineHeight:1 }}>M</div>
-                <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', letterSpacing:'2px', textTransform:'uppercase' }}>Manila Central Church</div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', letterSpacing:'1px' }}>PLWM Philippines</div>
+              {/* Church Identity Banner */}
+              <div style={{ borderRadius:16, overflow:'hidden', aspectRatio:'1', background:C.navy }}>
+                <img
+                  src={process.env.PUBLIC_URL + '/banner.webp'}
+                  alt="Manila Central Church — PLWM"
+                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                />
               </div>
             </div>
             <div>
