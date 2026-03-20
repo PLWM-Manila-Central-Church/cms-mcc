@@ -202,9 +202,12 @@ export default function AttendanceOverviewPage() {
         ) : (
           <div style={s.serviceGrid}>
             {services.map(svc => {
-              const meta     = STATUS_META[svc.status] || STATUS_META.draft;
-              const attended = svc.ServiceAttendanceSummary?.total_attended ?? 0;
-              const pct      = svc.capacity ? Math.round((attended / svc.capacity) * 100) : 0;
+              const meta       = STATUS_META[svc.status] || STATUS_META.draft;
+              const attended   = svc.ServiceAttendanceSummary?.total_attended ?? 0;
+              const preReg     = svc.pre_registered_count ?? 0;
+              const display    = attended > 0 ? attended : preReg;
+              const isPreReg   = attended === 0 && preReg > 0;
+              const pct        = svc.capacity ? Math.round((display / svc.capacity) * 100) : 0;
 
               return (
                 <div
@@ -230,8 +233,9 @@ export default function AttendanceOverviewPage() {
                       background: pct >= 90 ? '#dc2626' : pct >= 70 ? '#d97706' : '#16a34a' }} />
                   </div>
                   <div style={s.serviceCardStats}>
-                    <span style={{ fontWeight: '700', color: '#0f172a' }}>{attended}</span>
+                    <span style={{ fontWeight: '700', color: isPreReg ? '#d97706' : '#0f172a' }}>{display}</span>
                     <span style={{ color: '#94a3b8' }}> / {svc.capacity} &nbsp;({pct}%)</span>
+                    {isPreReg && <span style={{ fontSize: 11, color: '#d97706', fontWeight: 600, marginLeft: 6 }}>pre-reg</span>}
                   </div>
                 </div>
               );

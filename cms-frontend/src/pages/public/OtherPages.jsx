@@ -438,87 +438,112 @@ export function WhatWeBelievePage() {
         sub="The doctrinal foundation of Manila Central Church — Philippine Life Word Mission"
       />
       <section style={{ background: C.off, padding: '72px 24px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1060, margin: '0 auto' }}>
 
-          {/* Intro paragraph */}
-          <div style={{ textAlign:'center', maxWidth:640, margin:'0 auto 56px' }}>
-            <p style={{ fontSize:15, color:C.sub, lineHeight:1.8 }}>
-              These are the core beliefs that form the doctrinal foundation of Manila Central Church and the Philippine Life Word Mission. Rooted in the Word of God and built on the Gospel of Jesus Christ.
-            </p>
-          </div>
-
-          {/* Belief cards grid */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:24 }} className="beliefs-grid">
-            {BELIEFS.map((b, i) => (
-              <div key={i} style={{
-                background: '#fff',
-                borderRadius: 14,
-                overflow: 'hidden',
-                border: `1.5px solid ${C.border}`,
-                display: 'flex',
-                flexDirection: 'column',
-                boxShadow: '0 2px 12px rgba(11,36,71,0.06)',
-                transition: 'transform 0.22s, box-shadow 0.22s',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 8px 28px rgba(11,36,71,0.13)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 2px 12px rgba(11,36,71,0.06)'; }}
-              >
-                {/* Image / banner header */}
-                {b.image ? (
-                  <div style={{ height: 180, overflow:'hidden', flexShrink:0 }}>
-                    <img
-                      src={process.env.PUBLIC_URL + b.image}
-                      alt={b.title}
-                      style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
-                    />
-                  </div>
-                ) : (
-                  <div style={{ height: 180, background: 'linear-gradient(135deg, #0B2447, #1A3D72)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, flexShrink:0 }}>
-                    <div style={{ fontSize: 40 }}>✝️</div>
-                    <div style={{ fontSize:12, color:'rgba(255,255,255,0.45)', letterSpacing:'2px', textTransform:'uppercase' }}>Image coming soon</div>
-                  </div>
-                )}
-
-                {/* Card body */}
-                <div style={{ padding: '20px 20px 24px', flex:1, display:'flex', flexDirection:'column' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
-                    <div style={{ width:28, height:28, borderRadius:7, background:'#0B2447', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, flexShrink:0 }}>
-                      {i + 1}
-                    </div>
-                    <h3 style={{ fontFamily:"'Lora',Georgia,serif", fontSize:'0.97rem', fontWeight:700, color:'#0F1B33', lineHeight:1.3, margin:0 }}>
-                      {b.title}
-                    </h3>
-                  </div>
-                  <div style={{ display:'flex', flexDirection:'column', gap:8, flex:1 }}>
-                    {b.items.map((item, j) => (
-                      <div key={j} style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:13, color:'#475569', lineHeight:1.65 }}>
-                        <span style={{ width:5, height:5, borderRadius:'50%', background:'#1565C0', marginTop:7, flexShrink:0 }} />
-                        <span>{item}</span>
+          {/* Alternating rows — image one side, text the other */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {BELIEFS.map((b, i) => {
+              const imageLeft = i % 2 === 0;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 0,
+                    borderBottom: i < BELIEFS.length - 1 ? `1px solid ${C.border}` : 'none',
+                    background: i % 2 === 0 ? '#fff' : C.off,
+                  }}
+                  className="belief-row"
+                >
+                  {/* Image panel */}
+                  <div style={{ order: imageLeft ? 0 : 1, minHeight: 280, overflow: 'hidden', position: 'relative' }}>
+                    {b.image ? (
+                      <img
+                        src={process.env.PUBLIC_URL + b.image}
+                        alt={b.title}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', minHeight: 280 }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '100%', height: '100%', minHeight: 280,
+                        background: 'linear-gradient(135deg, #0B2447, #1A3D72)',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center', gap: 10,
+                      }}>
+                        <div style={{ fontSize: 48 }}>✝️</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', letterSpacing: '2px', textTransform: 'uppercase' }}>Image coming soon</div>
                       </div>
-                    ))}
+                    )}
+                  </div>
+
+                  {/* Text panel */}
+                  <div style={{
+                    order: imageLeft ? 1 : 0,
+                    padding: 'clamp(28px,4vw,48px)',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                  }}>
+                    {/* Number + title */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: 8,
+                        background: C.navy, color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 13, fontWeight: 700, flexShrink: 0,
+                      }}>
+                        {i + 1}
+                      </div>
+                      <h3 style={{
+                        fontFamily: "'Lora',Georgia,serif",
+                        fontSize: 'clamp(1rem,2vw,1.25rem)',
+                        fontWeight: 700, color: C.blue, margin: 0, lineHeight: 1.3,
+                      }}>
+                        {b.title}
+                      </h3>
+                    </div>
+
+                    {/* Points */}
+                    <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {b.items.map((item, j) => (
+                        <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: C.sub, lineHeight: 1.7 }}>
+                          <span style={{
+                            width: 20, height: 20, borderRadius: '50%',
+                            background: 'rgba(21,101,192,0.1)', color: C.blue,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 10, fontWeight: 700, flexShrink: 0, marginTop: 2,
+                          }}>
+                            {j + 1}
+                          </span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ol>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Scripture footer */}
-          <div style={{ marginTop:56, background:'#0B2447', borderRadius:14, padding:'28px 32px', textAlign:'center' }}>
-            <p style={{ fontFamily:"'Lora',serif", fontSize:'1.15rem', color:'#fff', lineHeight:1.65, marginBottom:10, fontStyle:'italic' }}>
+          <div style={{ marginTop: 56, background: C.navy, borderRadius: 14, padding: '28px 32px', textAlign: 'center' }}>
+            <p style={{ fontFamily: "'Lora',serif", fontSize: '1.15rem', color: '#fff', lineHeight: 1.65, marginBottom: 10, fontStyle: 'italic' }}>
               "All Scripture is God-breathed and is useful for teaching, rebuking, correcting and training in righteousness."
             </p>
-            <span style={{ fontSize:13, color:'#C9A84C', fontWeight:700 }}>— 2 Timothy 3:16</span>
+            <span style={{ fontSize: 13, color: C.gold, fontWeight: 700 }}>— 2 Timothy 3:16</span>
           </div>
         </div>
       </section>
       <style>{`
-        @media (max-width: 960px) { .beliefs-grid { grid-template-columns: repeat(2, 1fr) !important; } }
-        @media (max-width: 560px) { .beliefs-grid { grid-template-columns: 1fr !important; } }
+        .belief-row { transition: background 0.2s; }
+        @media (max-width: 720px) {
+          .belief-row { grid-template-columns: 1fr !important; }
+          .belief-row > div { order: unset !important; }
+          .belief-row > div:first-child { min-height: 200px !important; }
+        }
       `}</style>
     </PublicLayout>
   );
 }
-
 // ── C.I (Church Identity) ─────────────────────────────────────
 export function CIPage() {
   return (

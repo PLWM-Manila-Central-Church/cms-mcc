@@ -324,8 +324,19 @@ export default function ServicesPage() {
                   <td style={styles.td}>{formatTime(s.service_time)}</td>
                   <td style={styles.td}>{s.capacity}</td>
                   <td style={styles.td}>
-                    <span style={{ fontWeight: '700', color: '#0066b3' }}>{attended}</span>
-                    <span style={{ color: '#94a3b8' }}> / {s.capacity}</span>
+                    {(() => {
+                      const checked = s.ServiceAttendanceSummary?.total_attended ?? 0;
+                      const preReg  = s.pre_registered_count ?? 0;
+                      const display = checked > 0 ? checked : preReg;
+                      const isPreReg = checked === 0 && preReg > 0;
+                      return (
+                        <>
+                          <span style={{ fontWeight: '700', color: isPreReg ? '#d97706' : '#0066b3' }}>{display}</span>
+                          <span style={{ color: '#94a3b8' }}> / {s.capacity}</span>
+                          {isPreReg && <div style={{ fontSize: 10, color: '#d97706', fontWeight: 600, marginTop: 2 }}>pre-reg</div>}
+                        </>
+                      );
+                    })()}
                   </td>
                   <td style={styles.td}>
                     <span style={{ ...styles.badge, background: meta.bg, color: meta.color }}>

@@ -1,7 +1,7 @@
 "use strict";
 
 const auditLog = require("../helpers/auditLog.helper");
-const { Service, ServiceAttendanceSummary } = require("../models");
+const { Service, ServiceAttendanceSummary, ServiceResponse } = require("../models");
 
 // ── Get All Services (paginated) ─────────────────────────────
 exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
@@ -11,11 +11,6 @@ exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
 
   const { count, rows } = await Service.findAndCountAll({
     where,
-    // FIX BUG 6 (part A): include the attendance summary so ServicesPage and
-    // AttendanceOverviewPage can render the progress bars.
-    // The association uses alias "summary" (see models/index.js), so we must
-    // use that alias here. We then remap to "ServiceAttendanceSummary" below
-    // to match what the frontend already expects.
     include: [
       {
         model: ServiceAttendanceSummary,
@@ -29,11 +24,29 @@ exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
     distinct: true,
   });
 
-  // FIX BUG 6 (part B): remap alias "summary" → "ServiceAttendanceSummary"
-  // so the frontend key access `svc.ServiceAttendanceSummary?.total_attended` works.
+  // Fetch ATTENDING pre-registration counts for all services in this page
+  const serviceIds = rows.map((r) => r.id);
+  const preRegCounts = {};
+  if (serviceIds.length > 0) {
+    const { Op } = require("sequelize");
+    const preRegs = await ServiceResponse.findAll({
+      where: {
+        service_id: { [Op.in]: serviceIds },
+        attendance_status: "ATTENDING",
+      },
+      attributes: ["service_id"],
+    });
+    preRegs.forEach((pr) => {
+      preRegCounts[pr.service_id] = (preRegCounts[pr.service_id] || 0) + 1;
+    });
+  }
+
+  // Remap alias "summary" → "ServiceAttendanceSummary" and attach pre_registered_count
   const services = rows.map((row) => {
     const plain = row.toJSON();
     plain.ServiceAttendanceSummary = plain.summary || null;
+    // pre_registered_count = ATTENDING responses; used when actual check-ins = 0
+    plain.pre_registered_count = preRegCounts[plain.id] || 0;
     return plain;
   });
 

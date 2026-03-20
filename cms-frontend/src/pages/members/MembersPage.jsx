@@ -178,6 +178,7 @@ export default function MembersPage() {
   const [cgFilter, setCgFilter]       = useState('');
   const [groupFilter, setGroupFilter] = useState('');
   const [cellGroups, setCellGroups]   = useState([]);
+  const [groups, setGroups]           = useState([]);
   const [searchInput, setSearchInput] = useState('');
   const [sorts, setSorts]             = useState([]);
   const [selected, setSelected]       = useState(new Set());
@@ -206,6 +207,13 @@ export default function MembersPage() {
   useEffect(() => {
     axiosInstance.get('/cellgroups')
       .then(res => setCellGroups(res.data.data || []))
+      .catch(() => {});
+  }, []);
+
+  // Load groups for filter dropdown
+  useEffect(() => {
+    axiosInstance.get('/members/dropdowns/groups')
+      .then(res => setGroups(res.data.data || []))
       .catch(() => {});
   }, []);
 
@@ -408,16 +416,32 @@ export default function MembersPage() {
           ))}
         </select>
 
-        {/* Status filter buttons */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {['', 'New', 'Active', 'Semi-Active', 'Inactive'].map(s => (
-            <button key={s} onClick={() => { setPage(1); setStatus(s); }}
-              style={{ border: 'none', borderRadius: 20, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: statusFilter === s ? '#005599' : '#f1f5f9', color: statusFilter === s ? '#fff' : '#475569', minHeight: 38 }}>
-              {s || 'All'}
-            </button>
+        {/* Group filter */}
+        <select
+          value={groupFilter}
+          onChange={e => { setPage(1); setGroupFilter(e.target.value); }}
+          style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: groupFilter ? '#005599' : '#64748b', fontWeight: groupFilter ? 600 : 400, minHeight: 38 }}
+        >
+          <option value="">All Groups</option>
+          {groups.map(g => (
+            <option key={g.id} value={g.id}>{g.name}</option>
           ))}
-        </div>
-        {(search || statusFilter || cgFilter) && (
+        </select>
+
+        {/* Status filter dropdown */}
+        <select
+          value={statusFilter}
+          onChange={e => { setPage(1); setStatus(e.target.value); }}
+          style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: statusFilter ? '#005599' : '#64748b', fontWeight: statusFilter ? 600 : 400, minHeight: 38 }}
+        >
+          <option value="">All Status</option>
+          <option value="New">New</option>
+          <option value="Active">Active</option>
+          <option value="Semi-Active">Semi-Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+
+        {(search || statusFilter || cgFilter || groupFilter) && (
           <button onClick={clearFilters} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 9, padding: '7px 14px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', minHeight: 38 }}>✕ Clear</button>
         )}
       </div>
