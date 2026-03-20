@@ -309,7 +309,6 @@ export default function ServicesPage() {
             ) : services.map((s, i) => {
               const meta         = STATUS_META[s.status] || STATUS_META.draft;
               const nextStatuses = (canCreate && !isMember) ? STATUS_FLOW[s.status] : [];
-              const attended     = s.ServiceAttendanceSummary?.total_attended ?? 0;
               const myResponse   = myResponses[s.id];
               const canPreReg    = isMember && s.status === 'published' && !!user?.memberId;
 
