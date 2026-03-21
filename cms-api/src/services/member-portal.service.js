@@ -54,15 +54,17 @@ exports.getMyProfile = async (memberId) => {
   });
   if (!member) throw { status: 404, message: "Member profile not found" };
 
-  // Fetch linked user to get join date (user account creation = join date)
+  // Fetch linked user to get join date (user account creation = join date).
+  // Do NOT restrict attributes — with underscored:true Sequelize exposes timestamps
+  // as .createdAt (camelCase) on the raw instance, NOT .created_at.
+  // Falling back to plain.created_at (from member.toJSON() which serialises to snake_case).
   const userRecord = await User.findOne({
     where: { member_id: memberId },
-    attributes: ["id", "created_at"],
   });
 
   const plain = member.toJSON();
   plain.member_id_formatted = fmtMemberId(member.id);
-  plain.join_date            = userRecord?.created_at || member.created_at;
+  plain.join_date            = userRecord?.createdAt || plain.created_at;
   plain.flesh_age            = calcAge(member.birthdate);
   plain.spiritual_age        = calcAge(member.spiritual_birthday);
   return plain;
@@ -107,19 +109,30 @@ exports.getMyAttendance = async (memberId) => {
     order: [["checked_in_at", "DESC"]],
   });
 
-  // Attendance rate: attended ÷ completed services in last 30 days
+  // Attendance rate: attended ÷ completed services in last 30 days,
+  // but only counting services that existed AFTER this user's account was created.
+  // This prevents new accounts from being penalised for services they could never attend.
   const since = new Date();
   since.setDate(since.getDate() - 30);
 
+  // Resolve the user's account creation date so we know the earliest service to count.
+  const linkedUser = await User.findOne({ where: { member_id: memberId } });
+  const accountCreatedAt = linkedUser?.createdAt || null;
+
+  // The effective start date is whichever is LATER: 30 days ago OR account creation date.
+  const effectiveSince = (accountCreatedAt && new Date(accountCreatedAt) > since)
+    ? new Date(accountCreatedAt)
+    : since;
+
   const totalServices = await Service.count({
     where: {
-      service_date: { [Op.gte]: since },
+      service_date: { [Op.gte]: effectiveSince },
       status: "completed",
     },
   });
 
   const attended = records.filter(
-    (r) => r.Service && new Date(r.Service.service_date) >= since
+    (r) => r.Service && new Date(r.Service.service_date) >= effectiveSince
   ).length;
 
   const attendanceRate = totalServices > 0
