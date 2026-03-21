@@ -797,19 +797,25 @@ export default function MemberPortal() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try {
-      const [pR,aR,fR,eR,mR,sR] = await Promise.all([
-        axiosInstance.get('/member-portal/profile'),
-        axiosInstance.get('/member-portal/attendance'),
-        axiosInstance.get('/member-portal/finance'),
-        axiosInstance.get('/member-portal/events'),
-        axiosInstance.get('/member-portal/ministry-assignments'),
-        axiosInstance.get('/member-portal/services'),
-      ]);
-      setProfile(pR.data.data); setAtt(aR.data.data); setFin(fR.data.data);
-      setEvents(eR.data.data); setAssigns(mR.data.data); setSvcs(sR.data.data);
-    } catch { showToast('Failed to load portal data. Please refresh.','error'); }
-    finally { setLoading(false); }
+    // Use allSettled so a single failed endpoint (e.g. no member profile linked)
+    // does NOT crash the whole portal — each request resolves independently.
+    const [pR,aR,fR,eR,mR,sR] = await Promise.allSettled([
+      axiosInstance.get('/member-portal/profile'),
+      axiosInstance.get('/member-portal/attendance'),
+      axiosInstance.get('/member-portal/finance'),
+      axiosInstance.get('/member-portal/events'),
+      axiosInstance.get('/member-portal/ministry-assignments'),
+      axiosInstance.get('/member-portal/services'),
+    ]);
+    if (pR.status === 'fulfilled') setProfile(pR.value.data.data);
+    if (aR.status === 'fulfilled') setAtt(aR.value.data.data);
+    if (fR.status === 'fulfilled') setFin(fR.value.data.data);
+    if (eR.status === 'fulfilled') setEvents(eR.value.data.data);
+    if (mR.status === 'fulfilled') setAssigns(mR.value.data.data);
+    if (sR.status === 'fulfilled') setSvcs(sR.value.data.data);
+    // Only show the error toast if profile specifically failed (most critical)
+    if (pR.status === 'rejected') showToast('Member profile not linked to this account. Contact your administrator.','error');
+    setLoading(false);
   },[]); // eslint-disable-line
 
   useEffect(()=>{load();},[load]);

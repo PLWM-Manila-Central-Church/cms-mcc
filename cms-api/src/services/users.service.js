@@ -37,7 +37,12 @@ exports.getUserById = async (id) => {
 
 // ── Create User ──────────────────────────────────────────────
 exports.createUser = async (data, createdBy) => {
-  const { email, password, role_id, member_id, invited_member_id, first_name, last_name } = data;
+  const {
+    email, password, role_id, member_id, invited_member_id,
+    // Member fields — all collected from the form
+    first_name, last_name, phone, gender, birthdate,
+    spiritual_birthday, address, cell_group_id, group_id,
+  } = data;
 
   const existing = await User.findOne({ where: { email } });
   if (existing) throw { status: 409, message: "Email already in use" };
@@ -47,15 +52,22 @@ exports.createUser = async (data, createdBy) => {
 
   const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-  // Auto-create a minimal Member record if first/last name provided and no member linked
+  // Auto-create a full Member record if names provided and no existing member_id given
   let resolvedMemberId = member_id || null;
   if (!resolvedMemberId && first_name && last_name) {
-    const { Member } = require("../models");
     const member = await Member.create({
-      first_name: first_name.trim(),
-      last_name:  last_name.trim(),
-      email:      email,
-      status:     "Active",
+      first_name:         first_name.trim(),
+      last_name:          last_name.trim(),
+      email:              email              || null,
+      phone:              phone              || null,
+      gender:             gender             || null,
+      birthdate:          birthdate          || null,
+      spiritual_birthday: spiritual_birthday || null,
+      address:            address            || null,
+      cell_group_id:      cell_group_id      ? parseInt(cell_group_id) : null,
+      group_id:           group_id           ? parseInt(group_id)      : null,
+      status:             "Active",
+      is_deleted:         0,
     });
     resolvedMemberId = member.id;
   }
@@ -64,9 +76,9 @@ exports.createUser = async (data, createdBy) => {
     email,
     password_hash,
     role_id,
-    member_id: resolvedMemberId,
+    member_id:         resolvedMemberId,
     invited_member_id: invited_member_id || null,
-    is_active: 1,
+    is_active:         1,
     force_password_change: 1,
   });
 
@@ -80,7 +92,11 @@ exports.updateUser = async (id, data, updatedBy) => {
   const user = await User.findByPk(id);
   if (!user) throw { status: 404, message: "User not found" };
 
-  const { email, role_id, member_id, invited_member_id, is_active, first_name, last_name } = data;
+  const {
+    email, role_id, member_id, invited_member_id, is_active,
+    first_name, last_name, phone, gender, birthdate,
+    spiritual_birthday, address, cell_group_id, group_id,
+  } = data;
 
   if (email && email !== user.email) {
     const existing = await User.findOne({ where: { email } });
@@ -93,21 +109,27 @@ exports.updateUser = async (id, data, updatedBy) => {
   }
 
   await user.update({
-    ...(email && { email }),
-    ...(role_id && { role_id }),
-    ...(member_id !== undefined && { member_id }),
+    ...(email                         && { email }),
+    ...(role_id                       && { role_id }),
+    ...(member_id        !== undefined && { member_id }),
     ...(invited_member_id !== undefined && { invited_member_id }),
-    ...(is_active !== undefined && { is_active }),
+    ...(is_active        !== undefined && { is_active }),
   });
 
-  // Sync name on the linked member record if provided
-  if ((first_name || last_name) && user.member_id) {
-    const { Member } = require("../models");
+  // Sync all editable fields on the linked member record
+  if (user.member_id) {
     const member = await Member.findByPk(user.member_id);
     if (member) {
       await member.update({
-        ...(first_name && { first_name: first_name.trim() }),
-        ...(last_name  && { last_name:  last_name.trim() }),
+        ...(first_name          && { first_name:         first_name.trim() }),
+        ...(last_name           && { last_name:          last_name.trim() }),
+        ...(phone              !== undefined && { phone:              phone              || null }),
+        ...(gender             !== undefined && { gender:             gender             || null }),
+        ...(birthdate          !== undefined && { birthdate:          birthdate          || null }),
+        ...(spiritual_birthday !== undefined && { spiritual_birthday: spiritual_birthday || null }),
+        ...(address            !== undefined && { address:            address            || null }),
+        ...(cell_group_id      !== undefined && { cell_group_id:      cell_group_id ? parseInt(cell_group_id) : null }),
+        ...(group_id           !== undefined && { group_id:           group_id      ? parseInt(group_id)      : null }),
       });
     }
   }
@@ -149,6 +171,9 @@ exports.hardDeleteUser = async (id, requestingUserId) => {
 
   const sequelize = require("../config/db");
 
+  // Capture member_id before deletion so we can cascade
+  const linkedMemberId = user.member_id;
+
   await sequelize.transaction(async (t) => {
     // Nullify audit logs (preserve history but remove user reference)
     await sequelize.query(
@@ -164,8 +189,16 @@ exports.hardDeleteUser = async (id, requestingUserId) => {
 
     // Hard delete the user
     await user.destroy({ transaction: t });
+
+    // Cascade: soft-delete the linked member (if any)
+    if (linkedMemberId) {
+      await sequelize.query(
+        "UPDATE members SET is_deleted = 1, deleted_at = NOW(), deleted_by = :deletedBy WHERE id = :memberId AND is_deleted = 0",
+        { replacements: { deletedBy: requestingUserId, memberId: linkedMemberId }, transaction: t }
+      );
+    }
   });
 
   auditLog.log({ userId: requestingUserId, action: "DELETE_USER", targetTable: "users", targetId: id });
-  return { message: "User permanently deleted." };
+  return { message: "User and linked member profile permanently deleted." };
 };
