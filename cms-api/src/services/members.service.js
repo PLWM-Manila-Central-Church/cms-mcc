@@ -1,6 +1,6 @@
 "use strict";
 
-const { Member, CellGroup, Group, EmergencyContact } = require("../models");
+const { Member, CellGroup, Group, EmergencyContact, User } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
 
 const memberIncludes = [
@@ -35,8 +35,6 @@ exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_grou
       { last_name:  { [Op.like]: like } },
       { email:      { [Op.like]: like } },
       { phone:      { [Op.like]: like } },
-      // FIX BUG 10: barcode was missing — AttendancePage and MembersPage
-      // both advertise "search by barcode" but the backend never filtered on it.
       { barcode:    { [Op.like]: like } },
     ];
   }
@@ -101,18 +99,18 @@ exports.createMember = async (data, createdBy) => {
   const member = await Member.create({
     first_name,
     last_name,
-    email:             email             || null,
-    phone:             phone             || null,
-    birthdate:         birthdate         || null,
+    email:              email              || null,
+    phone:              phone              || null,
+    birthdate:          birthdate          || null,
     spiritual_birthday: spiritual_birthday || null,
-    address:           address           || null,
-    gender:            gender            || null,
-    status:            status            || "Active",
-    cell_group_id:     cell_group_id     || null,
-    group_id:          group_id          || null,
-    referred_by:       referred_by       || null,
-    profile_photo_url: profile_photo_url || null,
-    barcode:           barcode           || null,
+    address:            address            || null,
+    gender:             gender             || null,
+    status:             status             || "Active",
+    cell_group_id:      cell_group_id      || null,
+    group_id:           group_id           || null,
+    referred_by:        referred_by        || null,
+    profile_photo_url:  profile_photo_url  || null,
+    barcode:            barcode            || null,
     is_deleted: 0,
   });
 
@@ -178,12 +176,27 @@ exports.deleteMember = async (id, deletedBy) => {
   const member = await Member.findOne({ where: { id } });
   if (!member) throw { status: 404, message: "Member not found" };
 
-  await member.update({
-    is_deleted: 1,
-    deleted_at: new Date(),
-    deleted_by: deletedBy,
+  // Cascade: find any linked user and deactivate + unlink them
+  const linkedUser = await User.findOne({ where: { member_id: id } });
+
+  const sequelize = require("../config/db");
+
+  await sequelize.transaction(async (t) => {
+    // Soft-delete the member
+    await member.update(
+      { is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy },
+      { transaction: t }
+    );
+
+    // Deactivate and unlink the associated user account (if one exists)
+    if (linkedUser) {
+      await linkedUser.update(
+        { is_active: 0, member_id: null },
+        { transaction: t }
+      );
+    }
   });
 
   auditLog.log({ userId: deletedBy, action: "DELETE_MEMBER", targetTable: "members", targetId: id });
-  return { message: "Member deleted successfully." };
+  return { message: "Member deleted and linked user account deactivated." };
 };

@@ -154,11 +154,12 @@ export default function MemberProfilePage() {
                   ? `${member.referredByMember.first_name} ${member.referredByMember.last_name}`
                   : null
               } />
-              <DetailRow label="Member Since" value={
-                new Date(member.created_at).toLocaleDateString('en-PH', {
-                  year: 'numeric', month: 'long', day: 'numeric'
-                })
-              } />
+              <DetailRow label="Member Since" value={(() => {
+                const d = new Date(member.created_at);
+                return !isNaN(d.getTime())
+                  ? d.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+                  : '—';
+              })()} />
             </div>
           </div>
         </div>
