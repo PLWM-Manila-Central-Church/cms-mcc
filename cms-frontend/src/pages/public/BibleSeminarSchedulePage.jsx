@@ -43,16 +43,16 @@ export default function BibleSeminarSchedulePage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {SCHEDULE.map((ev, i) => (
-                <div key={i} style={{ display: 'flex', gap: 20, alignItems: 'flex-start', background: C.off, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '20px 22px', borderLeft: `4px solid ${ev.color}` }}>
-                  <div style={{ minWidth: 140, flexShrink: 0 }}>
+                <div key={i} className="pub-schedule-row" style={{ background: C.off, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '20px 22px', borderLeft: `4px solid ${ev.color}` }}>
+                  <div className="pub-schedule-date">
                     <div style={{ fontSize: 13, fontWeight: 700, color: ev.color }}>{ev.date}</div>
+                    <span style={{ background: ev.color, color: '#fff', fontSize: 10.5, fontWeight: 700, padding: '3px 10px', borderRadius: 20, display: 'inline-block', marginTop: 6, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{ev.type}</span>
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontFamily:"'Lora',serif", fontSize:'1rem', fontWeight:700, color:C.text, marginBottom:5 }}>{ev.title}</div>
                     <div style={{ fontSize: 12.5, color: C.muted, marginBottom: ev.note ? 4 : 0, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {ev.location}</div>
                     {ev.note && <div style={{ fontSize: 12, color: C.sub, fontStyle: 'italic' }}>{ev.note}</div>}
                   </div>
-                  <span style={{ background: ev.color, color: '#fff', fontSize: 10.5, fontWeight: 700, padding: '3px 10px', borderRadius: 20, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{ev.type}</span>
                 </div>
               ))}
             </div>
@@ -84,24 +84,6 @@ export default function BibleSeminarSchedulePage() {
 
         </div>
       </section>
-      <style>{`
-        @media (max-width: 900px) {
-          [style*="grid-template-columns: '1fr 1fr'"],
-          [style*="gridTemplateColumns:'1fr 1fr'"],
-          [style*="gridTemplateColumns: '1fr 1fr'"],
-          [style*="gridTemplateColumns:'1fr 380px'"],
-          [style*="gridTemplateColumns: '1fr 380px'"],
-          [style*="gridTemplateColumns:'280px 1fr'"],
-          [style*="gridTemplateColumns: '280px 1fr'"] { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 600px) {
-          section { padding-left: 12px !important; padding-right: 12px !important; }
-          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr 1fr !important; }
-        }
-        @media (max-width: 380px) {
-          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </PublicLayout>
   );
 }

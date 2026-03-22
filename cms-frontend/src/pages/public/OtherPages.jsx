@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PlaylistEmbed, VideoEmbed } from './PublicLayout';
 
@@ -125,7 +125,7 @@ export function WorldMissionPage() {
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'World Mission'}]} title="World Mission" sub="Spreading the Gospel across every island of the Philippines and beyond" />
       <section style={{ background: C.white, padding: '72px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:48, alignItems:'start', marginBottom:56 }}>
+          <div className="pub-2col" style={{ marginBottom: 56 }}>
             <div>
               <div style={{ background:C.navy, borderRadius:12, padding:'20px 22px', marginBottom:24, position:'relative', overflow:'hidden' }}>
                 <div style={{ position:'absolute', right:12, top:-10, fontFamily:"'Lora',serif", fontSize:80, color:'rgba(255,255,255,0.05)', lineHeight:1 }}>"</div>
@@ -173,6 +173,10 @@ export function WorldMissionPage() {
 
 // ── MISSION STATUS ────────────────────────────────────────────
 export function MissionStatusPage() {
+  const [activeTab, setActiveTab] = useState('churches');
+  const [churchesExpanded, setChurchesExpanded] = useState(false);
+  const [branchesExpanded, setBranchesExpanded] = useState(false);
+
   // ── PLWM Churches (108 total from official map) ──────────
   const CHURCHES = [
     'Manila Central Church','Naga Church','Quezon City Church','Cavite Church','Ortigas Church',
@@ -215,56 +219,73 @@ export function MissionStatusPage() {
     'Calamba (Calauan)','Iniwaran (Burias)','San Vicente (Abongan)','Medellin (Cebu)','Gen. M. Natividad Nueva Ecija (Tarlac)',
   ];
 
-  const ChipList = ({ items, dotColor }) => (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(210px,1fr))', gap:7, marginBottom:28 }}>
-      {items.map((ch,i)=>(
-        <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', background:C.off, borderRadius:8, border:`1px solid ${C.border}` }}>
-          <div style={{ width:6, height:6, borderRadius:'50%', background:dotColor, flexShrink:0 }} />
-          <span style={{ fontSize:12.5, color:C.text, fontWeight:500 }}>{ch}</span>
-        </div>
-      ))}
-    </div>
-  );
+  const PREVIEW_COUNT = 30;
+  const isChurches   = activeTab === 'churches';
+  const items        = isChurches ? CHURCHES : MISSION_BRANCHES;
+  const dotColor     = isChurches ? '#E53E3E' : C.gold;
+  const expanded     = isChurches ? churchesExpanded : branchesExpanded;
+  const setExpanded  = isChurches ? setChurchesExpanded : setBranchesExpanded;
+  const visibleItems = expanded ? items : items.slice(0, PREVIEW_COUNT);
 
   return (
     <PublicLayout>
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'World Mission',path:'/world-mission'},{label:'Status'}]} title="Status of World Mission" sub="PLWM Churches and Mission Branches across the Philippines — 2026" />
-      <section style={{ background:C.white, padding:'72px 24px' }}>
+      <section style={{ background:C.white, padding:'56px 24px 72px' }}>
         <div style={{ maxWidth:1100, margin:'0 auto' }}>
 
-          {/* Stats */}
-          <div style={{ display:'flex', gap:16, marginBottom:56, flexWrap:'wrap' }}>
+          {/* Stats — 2×2 on mobile, 4-col on desktop */}
+          <div className="pub-stat-grid" style={{ marginBottom:48 }}>
             {[
-              ['108','PLWM Churches','Mother churches across the Philippines'],
-              ['60','Mission Branches','Active branch missions nationwide'],
-              ['3','Island Groups','Luzon, Visayas, and Mindanao'],
-              ['17','Metro Cellgroups','Active cellgroups in Manila'],
+              ['108','PLWM Churches','Mother churches'],
+              ['60','Mission Branches','Nationwide'],
+              ['3','Island Groups','Luzon · Visayas · Mindanao'],
+              ['17','Metro Cellgroups','Active in Manila'],
             ].map(([num,label,sub])=>(
-              <div key={label} style={{ flex:1, minWidth:200, background:C.off, border:`1.5px solid ${C.border}`, borderRadius:14, padding:'22px 20px', textAlign:'center' }}>
-                <div style={{ fontFamily:"'Lora',serif", fontSize:'2.2rem', fontWeight:900, color:C.blue, lineHeight:1 }}>{num}</div>
-                <div style={{ fontSize:13, fontWeight:700, color:C.text, margin:'6px 0 3px' }}>{label}</div>
-                <div style={{ fontSize:11.5, color:C.muted }}>{sub}</div>
+              <div key={label} style={{ background:C.off, border:`1.5px solid ${C.border}`, borderRadius:12, padding:'18px 16px', textAlign:'center' }}>
+                <div style={{ fontFamily:"'Lora',serif", fontSize:'2rem', fontWeight:900, color:C.blue, lineHeight:1 }}>{num}</div>
+                <div style={{ fontSize:13, fontWeight:700, color:C.text, margin:'5px 0 2px' }}>{label}</div>
+                <div style={{ fontSize:11, color:C.muted }}>{sub}</div>
               </div>
             ))}
           </div>
 
-          {/* PLWM Churches */}
-          <div style={{ marginBottom:48 }}>
-            <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:6, display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ width:30, height:3, background:C.blue, borderRadius:2, display:'inline-block' }} />PLWM Churches
-            </h3>
-            <p style={{ fontSize:13, color:C.muted, marginBottom:20 }}>Mother churches across the Philippines — {CHURCHES.length} total</p>
-            <ChipList items={CHURCHES} dotColor="#E53E3E" />
+          {/* Tab switcher */}
+          <div style={{ borderBottom:`2px solid ${C.border}`, marginBottom:24, display:'flex', gap:0 }}>
+            <button
+              className={`ms-tab ms-tab-churches${activeTab==='churches' ? ' ms-active' : ''}`}
+              onClick={() => setActiveTab('churches')}
+            >
+              🏛 Churches <span style={{ fontSize:12, marginLeft:4, opacity:0.65 }}>({CHURCHES.length})</span>
+            </button>
+            <button
+              className={`ms-tab ms-tab-branches${activeTab==='branches' ? ' ms-active' : ''}`}
+              onClick={() => setActiveTab('branches')}
+            >
+              🌿 Mission Branches <span style={{ fontSize:12, marginLeft:4, opacity:0.65 }}>({MISSION_BRANCHES.length})</span>
+            </button>
           </div>
 
-          {/* Mission Branches */}
-          <div style={{ marginBottom:48 }}>
-            <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:6, display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ width:30, height:3, background:C.gold, borderRadius:2, display:'inline-block' }} />Mission Branches
-            </h3>
-            <p style={{ fontSize:13, color:C.muted, marginBottom:20 }}>Active mission branches nationwide — {MISSION_BRANCHES.length} total</p>
-            <ChipList items={MISSION_BRANCHES} dotColor="#C9A84C" />
+          {/* Chip list */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px,1fr))', gap:7, marginBottom:16 }}>
+            {visibleItems.map((ch,i)=>(
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', background:C.off, borderRadius:8, border:`1px solid ${C.border}` }}>
+                <div style={{ width:6, height:6, borderRadius:'50%', background:dotColor, flexShrink:0 }} />
+                <span style={{ fontSize:12.5, color:C.text, fontWeight:500 }}>{ch}</span>
+              </div>
+            ))}
           </div>
+
+          {/* Expand / collapse */}
+          {items.length > PREVIEW_COUNT && (
+            <div style={{ textAlign:'center', marginBottom:40 }}>
+              <button
+                onClick={() => setExpanded(e => !e)}
+                style={{ background:C.off, border:`1.5px solid ${C.border}`, color:C.sub, fontSize:13, fontWeight:600, padding:'9px 22px', borderRadius:8, cursor:'pointer', fontFamily:'inherit' }}
+              >
+                {expanded ? '▲ Show less' : `▼ Show all ${items.length}`}
+              </button>
+            </div>
+          )}
 
           {/* CTA */}
           <div style={{ background:C.navy, borderRadius:14, padding:'28px 32px', textAlign:'center' }}>
@@ -288,7 +309,7 @@ export function IntroductionPage() {
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'Introduction'}]} title="Welcome to Manila Central Church" sub="The mother church of Philippine Life Word Mission (PLWM)" />
       <section style={{ background:C.white, padding:'72px 24px' }}>
         <div style={{ maxWidth:1060, margin:'0 auto' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:48, alignItems:'start', marginBottom:56 }}>
+          <div className="pub-2col" style={{ marginBottom:56 }}>
             <div>
               <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14, fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:C.blue }}>
                 <span style={{ width:20, height:2, background:C.blue, borderRadius:2, display:'inline-block' }} />Our Purpose
@@ -738,7 +759,7 @@ export function CIPage() {
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'Introduction',path:'/introduction'},{label:'C.I'}]} title="C.I — Church Identity" sub="The identity and symbol of Manila Central Church — Philippine Life Word Mission" />
       <section style={{ background:C.white, padding:'72px 24px' }}>
         <div style={{ maxWidth:860, margin:'0 auto' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'280px 1fr', gap:48, alignItems:'start', marginBottom:56 }}>
+          <div className="pub-ci-col" style={{ marginBottom:56 }}>
             <div>
               {/* Church Identity Banner */}
               <div style={{ borderRadius:16, overflow:'hidden', aspectRatio:'1', background:C.navy }}>
@@ -774,30 +795,12 @@ export function CIPage() {
           {/* Verse */}
           <div style={{ background:C.navy, borderRadius:14, padding:'28px 32px', textAlign:'center' }}>
             <p style={{ fontFamily:"'Lora',serif", fontSize:'1.3rem', color:'#fff', lineHeight:1.65, marginBottom:10, fontStyle:'italic' }}>
-              "I shall not die, but live, And declare the works of the LORD."
+              "Declare his glory among the nations, his marvelous works among all the peoples."
             </p>
-            <span style={{ fontSize:13, color:C.gold, fontWeight:700 }}>— Psalm 118:17</span>
+            <span style={{ fontSize:13, color:C.gold, fontWeight:700 }}>— Psalm 96:3</span>
           </div>
         </div>
       </section>
-      <style>{`
-        @media (max-width: 900px) {
-          [style*="grid-template-columns: '1fr 1fr'"],
-          [style*="gridTemplateColumns:'1fr 1fr'"],
-          [style*="gridTemplateColumns: '1fr 1fr'"],
-          [style*="gridTemplateColumns:'1fr 380px'"],
-          [style*="gridTemplateColumns: '1fr 380px'"],
-          [style*="gridTemplateColumns:'280px 1fr'"],
-          [style*="gridTemplateColumns: '280px 1fr'"] { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 600px) {
-          section { padding-left: 12px !important; padding-right: 12px !important; }
-          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr 1fr !important; }
-        }
-        @media (max-width: 380px) {
-          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </PublicLayout>
   );
 }
