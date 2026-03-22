@@ -408,7 +408,7 @@ export default function PublicLayout({ children }) {
                 <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none' }}
                   onMouseEnter={e => e.currentTarget.style.color='#FF0000'}
                   onMouseLeave={e => e.currentTarget.style.color=C.muted}>▶ YouTube Channel</a>
-                <a href="https://www.facebook.com/group/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none' }}
+                <a href="https://www.facebook.com/groups/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none' }}
                   onMouseEnter={e => e.currentTarget.style.color='#1877F2'}
                   onMouseLeave={e => e.currentTarget.style.color=C.muted}>📘 Facebook Group</a>
               </div>
@@ -512,6 +512,41 @@ export default function PublicLayout({ children }) {
           .page-hero h1 { font-size:1.3rem; }
           .page-hero { padding:60px 8px 32px; }
         }
+
+        /* ── Responsive public grids ─────────────────────────────────────────
+           Class-based breakpoints — inline style attribute selectors don't work
+           in React because camelCase props serialize to kebab-case without quotes.
+        ─────────────────────────────────────────────────────────────────────── */
+        .pub-2col    { display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:start; }
+        .pub-vid-col { display:grid; grid-template-columns:1fr 380px; gap:28px; align-items:center; }
+        .pub-ci-col  { display:grid; grid-template-columns:280px 1fr; gap:48px; align-items:start; }
+        .pub-stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+
+        @media(max-width:768px) {
+          .pub-2col    { grid-template-columns:1fr !important; gap:24px !important; }
+          .pub-vid-col { grid-template-columns:1fr !important; gap:20px !important; }
+          .pub-ci-col  { grid-template-columns:1fr !important; gap:24px !important; }
+          .pub-stat-grid { grid-template-columns:1fr 1fr !important; gap:12px !important; }
+        }
+
+        /* ── Schedule event rows ── */
+        .pub-schedule-row { display:flex; gap:20px; align-items:flex-start; }
+        .pub-schedule-row .pub-schedule-date { min-width:140px; flex-shrink:0; }
+        @media(max-width:600px) {
+          .pub-schedule-row { flex-direction:column; gap:6px; }
+          .pub-schedule-row .pub-schedule-date { min-width:unset; }
+        }
+
+        /* ── Mission Status tab bar ── */
+        .ms-tab {
+          padding:12px 20px; font-size:14px; font-weight:600;
+          background:none; border:none; border-bottom:3px solid transparent;
+          cursor:pointer; font-family:inherit; margin-bottom:-2px;
+          color:#64748B; transition:color 0.18s,border-color 0.18s;
+        }
+        .ms-tab-churches.ms-active { color:#1565C0; border-bottom-color:#1565C0; }
+        .ms-tab-branches.ms-active { color:#C9A84C; border-bottom-color:#C9A84C; }
+        @media(max-width:480px) { .ms-tab { padding:10px 14px; font-size:13px; } }
       `}</style>
     </div>
   );

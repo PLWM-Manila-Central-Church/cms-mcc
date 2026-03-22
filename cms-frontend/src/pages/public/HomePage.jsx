@@ -229,7 +229,7 @@ export default function HomePage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', gap: 28, alignItems: 'start' }}>
             <div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="pub-2col" style={{ gap: 14 }}>
                 {[
                   { icon: '🇵🇭', lang: 'Filipino Service', langColor: '#c62828', time: 'Sunday 9:30–11:10 AM', title: 'Filipino Sunday Sermon Service', pastor: 'Sr. Pastor Park Heung Soon', loc: 'Main Hall (3rd Floor)' },
                   { icon: '🇰🇷', lang: 'Korean Service',   langColor: C.blue,    time: 'Sunday 2:00–4:00 PM', title: 'Korean Sunday Sermon Service', pastor: 'Sr. Pastor Park Heung Soon', loc: 'Medium Hall (2nd Floor)' },
@@ -263,13 +263,12 @@ export default function HomePage() {
                   <span style={{ flex: 1, height: 1, background: C.border, display: 'inline-block' }} />
                 </div>
                 {[
-                  { title: 'Rosario Batangas Bible Seminar', date: 'March 16–20, 2026 · 6PM–8PM' },
                   { title: '2026 Summer Retreat — Batch 1', date: 'Apr 2–4 · Taal Galilee Retreat Center' },
                   { title: '2026 Summer Retreat — Batch 2', date: 'Apr 9–11 · Taal Galilee Retreat Center' },
                   { title: "Women's Group Fellowship", date: 'March 20 · 7PM–9PM · Medium Hall' },
                   { title: 'Men\'s Group Fellowship', date: 'March 21 · 7PM–9PM · Small Hall' },
                 ].map((a, i) => (
-                  <div key={i} style={{ padding: '10px 0', borderBottom: i < 4 ? `1px solid ${C.border}` : 'none', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <div key={i} style={{ padding: '10px 0', borderBottom: i < 3 ? `1px solid ${C.border}` : 'none', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <div style={{ width: 7, height: 7, background: C.blue, borderRadius: '50%', marginTop: 6, flexShrink: 0 }} />
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 2 }}>{a.title}</div>
@@ -292,7 +291,6 @@ export default function HomePage() {
                 <span style={{ width: 20, height: 2, background: C.blue, borderRadius: 2, display: 'inline-block' }} />Events & Retreats
               </div>
               <h2 style={{ fontFamily: "'Lora',serif", fontSize: 'clamp(1.6rem,3vw,2.3rem)', fontWeight: 700, color: C.text, marginBottom: 8 }}>Upcoming Retreats / Events</h2>
-              <p style={{ fontSize: 15, color: C.muted, marginBottom: 16 }}>Events posted by our Registration Team and Admins.</p>
             </div>
           </Reveal>
 
@@ -327,7 +325,7 @@ export default function HomePage() {
                   <div style={{ padding: 16 }}>
                     <div style={{ fontFamily: "'Lora',serif", fontSize: '0.92rem', fontWeight: 600, color: C.text, lineHeight: 1.4, marginBottom: 6 }}>{ev.title}</div>
                     {ev.location && <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {ev.location}</div>}
-                    <a href="/introduction" style={{ display: 'block', background: C.blue, color: '#fff', border: 'none', borderRadius: 7, padding: '8px 0', width: '100%', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', textDecoration: 'none' }}>Register</a>
+                    <a href="/bible-seminar/schedule" style={{ display: 'block', background: C.blue, color: '#fff', border: 'none', borderRadius: 7, padding: '8px 0', width: '100%', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', textDecoration: 'none' }}>Learn More</a>
                   </div>
                 </div>
               );
