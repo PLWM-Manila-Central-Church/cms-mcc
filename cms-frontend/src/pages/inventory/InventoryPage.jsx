@@ -266,7 +266,7 @@ export default function InventoryPage() {
 
           {/* Items table */}
           <div style={s.tableWrap}>
-            <table style={s.table}>
+            <div style={s.tableScroll}><table style={s.table}>
               <thead>
                 <tr style={s.thead}>
                   <th style={s.th}>Item</th>
@@ -319,7 +319,7 @@ export default function InventoryPage() {
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           {itemPages > 1 && (
@@ -386,7 +386,7 @@ export default function InventoryPage() {
 
           {/* Requests table */}
           <div style={s.tableWrap}>
-            <table style={s.table}>
+            <div style={s.tableScroll}><table style={s.table}>
               <thead>
                 <tr style={s.thead}>
                   <th style={s.th}>Item</th>
@@ -442,7 +442,7 @@ export default function InventoryPage() {
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           {canManage && reqPages > 1 && (
@@ -496,6 +496,7 @@ const s = {
   filterChip:   { border: 'none', borderRadius: '20px', padding: '6px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   errorBox:     { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
   tableWrap:    { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  tableScroll:  { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:        { width: '100%', borderCollapse: 'collapse' },
   thead:        { background: '#f8fafc' },
   th:           { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },

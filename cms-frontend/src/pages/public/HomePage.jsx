@@ -32,7 +32,9 @@ function Reveal({ children, delay = 0 }) {
 function HeroVideo() {
   const containerRef = useRef(null);
   const playerRef    = useRef(null);
-  const START_SEC    = 227; // where to start and loop back to
+  const intervalRef  = useRef(null);
+  const START_SEC    = 227; // 3:47 — loop start
+  const END_SEC      = 249; // 4:09 — loop end
 
   useEffect(() => {
     // Load the YT IFrame API script once
@@ -62,9 +64,18 @@ function HeroVideo() {
           onReady: (e) => {
             e.target.mute();
             e.target.playVideo();
+            // Poll every 500ms — seek back to START_SEC when we reach END_SEC
+            intervalRef.current = setInterval(() => {
+              try {
+                const t = e.target.getCurrentTime();
+                if (t >= END_SEC) {
+                  e.target.seekTo(START_SEC, true);
+                }
+              } catch (_) {}
+            }, 500);
           },
           onStateChange: (e) => {
-            // When video ends (state 0), seek back to start and keep playing
+            // Fallback: if video somehow ends, restart from START_SEC
             if (e.data === window.YT.PlayerState.ENDED) {
               e.target.seekTo(START_SEC, true);
               e.target.playVideo();
@@ -86,6 +97,7 @@ function HeroVideo() {
     }
 
     return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch (_) {}
         playerRef.current = null;

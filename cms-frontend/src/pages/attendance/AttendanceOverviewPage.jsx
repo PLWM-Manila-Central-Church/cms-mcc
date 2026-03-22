@@ -111,7 +111,7 @@ export default function AttendanceOverviewPage() {
         <h2 style={s.sectionTitle}>🔍 Member Attendance History</h2>
         <p style={s.sectionSub}>Search a member to see which services they attended</p>
 
-        <div style={{ position: 'relative', maxWidth: '500px' }}>
+        <div style={{ position: 'relative', maxWidth: '500px', width: '100%' }}>
           <input
             value={memberSearch}
             onChange={e => handleMemberSearch(e.target.value)}
@@ -243,12 +243,7 @@ export default function AttendanceOverviewPage() {
           </div>
         )}
       </div>
-      <style>{`
-        @media (max-width: 768px) {
-          [style*="grid-template-columns: '1fr 1fr'"],
-          [style*="gridTemplateColumns: '1fr 1fr'"] { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+
     </div>
   );
 }
@@ -275,7 +270,7 @@ const s = {
   historySub:         { fontSize: '13px', color: '#64748b', marginTop: '2px' },
   emptyHistory:       { padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   historyList:        { display: 'flex', flexDirection: 'column', gap: '10px' },
-  historyItem:        { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: '#f8fafc', borderRadius: '10px', flexWrap: 'wrap', gap: '8px' },
+  historyItem:        { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '14px 16px', background: '#f8fafc', borderRadius: '10px', flexWrap: 'wrap', gap: '8px' },
   historyItemLeft:    {},
   historyItemRight:   { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' },
   historyServiceTitle:{ fontSize: '14px', fontWeight: '600', color: '#0f172a' },

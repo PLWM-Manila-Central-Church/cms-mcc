@@ -205,7 +205,7 @@ export default function EventDetailPage() {
             <div style={s.emptyReg}>No registrations yet.</div>
           ) : (
             <div style={s.tableWrap}>
-              <table style={s.table}>
+              <div style={s.tableScroll}><table style={s.table}>
                 <thead>
                   <tr style={s.thead}>
                     <th style={s.th}>#</th>
@@ -264,7 +264,7 @@ export default function EventDetailPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </div>
           )}
         </div>
@@ -277,7 +277,7 @@ const s = {
   page:         { fontFamily: "'Segoe UI', sans-serif" },
   loading:      { padding: '48px', textAlign: 'center', color: '#94a3b8' },
   backBtn:      { background: 'none', border: 'none', color: '#0066b3', fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: '0 0 20px 0', display: 'block' },
-  headerCard:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '28px 32px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  headerCard:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: 'clamp(16px,4vw,32px)', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   headerTop:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
   badge:        { padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', marginRight: '8px' },
   categoryTag:  { fontSize: '13px', color: '#94a3b8', fontWeight: '500' },
@@ -299,6 +299,7 @@ const s = {
   regTitle:     { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 16px 0' },
   emptyReg:     { padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   tableWrap:    { borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' },
+  tableScroll:  { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:        { width: '100%', borderCollapse: 'collapse' },
   thead:        { background: '#f8fafc' },
   th:           { padding: '10px 14px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },

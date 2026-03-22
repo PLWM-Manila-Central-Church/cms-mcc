@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const STATUS_COLORS = {
   New:         { bg: '#eff6ff', color: '#3b82f6' },
@@ -14,6 +15,7 @@ export default function MemberProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
+  const isMobile = useIsMobile();
 
   const [member, setMember]     = useState(null);
   const [loading, setLoading]   = useState(true);
@@ -126,7 +128,7 @@ export default function MemberProfilePage() {
         </div>
       </div>
 
-      <div style={styles.twoCol}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
         {/* Left Column */}
         <div style={styles.colLeft}>
 
@@ -252,13 +254,7 @@ function DetailRow({ label, value }) {
     <div style={styles.detailRow}>
       <span style={styles.detailLabel}>{label}</span>
       <span style={styles.detailValue}>{value || '—'}</span>
-      <style>{`
-        @media (max-width: 768px) {
-          [style*="gridTemplateColumns: '1fr 1fr'"],
-          [style*="grid-template-columns: '1fr 1fr'"],
-          [style*="twoCol"] { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+
     </div>
   );
 }
@@ -272,7 +268,7 @@ const styles = {
   },
   topBar: {
     display: 'flex', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: '24px'
+    alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px'
   },
   backBtn: {
     background: 'none', border: 'none', color: '#005599',
@@ -291,8 +287,8 @@ const styles = {
   },
   profileCard: {
     background: 'linear-gradient(135deg, #003d70 0%, #005599 60%, #13B5EA 100%)',
-    borderRadius: '16px', padding: '32px', display: 'flex',
-    alignItems: 'center', gap: '24px', marginBottom: '24px'
+    borderRadius: '16px', padding: 'clamp(16px,4vw,32px)', display: 'flex',
+    alignItems: 'center', gap: 'clamp(12px,3vw,24px)', marginBottom: '24px', flexWrap: 'wrap'
   },
   avatarLg: {
     width: '72px', height: '72px', borderRadius: '50%',
@@ -309,7 +305,7 @@ const styles = {
     fontSize: '12px', fontWeight: '700'
   },
   barcode: { color: 'rgba(255,255,255,0.75)', fontSize: '13px', fontFamily: 'monospace' },
-  twoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' },
+  twoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }, // overridden inline
   colLeft:  { display: 'flex', flexDirection: 'column', gap: '20px' },
   colRight: {},
   card: {

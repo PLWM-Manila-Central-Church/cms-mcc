@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const EMPTY_FORM = { name: '', area: '' };
 
 export default function CellGroupsPage() {
   const { hasPermission } = useAuth();
+  const isMobile = useIsMobile();
   const canCreate = hasPermission('cellgroups', 'create');
   const canUpdate = hasPermission('cellgroups', 'update');
   const canDelete = hasPermission('cellgroups', 'delete');
@@ -115,7 +117,7 @@ export default function CellGroupsPage() {
   );
 
   return (
-    <div style={S.page}>
+    <div style={{ ...S.page, padding: isMobile ? '16px 12px' : '32px' }}>
 
       {/* ── Header ── */}
       <div style={S.pageHeader}>
@@ -144,7 +146,7 @@ export default function CellGroupsPage() {
 
       {/* ── Search ── */}
       <div style={S.toolbar}>
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
           <span style={S.searchIcon}>🔍</span>
           <input
             type="text"
@@ -178,7 +180,7 @@ export default function CellGroupsPage() {
             </p>
           </div>
         ) : (
-          <table style={S.table}>
+          <div style={S.tableScroll}><table style={S.table}>
             <thead>
               <tr>
                 <th style={S.th}>#</th>
@@ -230,7 +232,7 @@ export default function CellGroupsPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
@@ -333,20 +335,12 @@ export default function CellGroupsPage() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
         table tr:hover td { background: #f0f6ff !important; }
-        /* ── Responsive tables ── */
         table { width: 100%; border-collapse: collapse; }
-        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         @media (max-width: 768px) {
           table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
         }
         @media (max-width: 480px) {
           table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
-        }
-`}</style>
-      <style>{`
-        @media (max-width: 768px) {
-          [style*="justifyContent: 'space-between'"] { flex-wrap: wrap !important; gap: 10px !important; }
-          [style*="padding: '10px 36px"] { width: 100% !important; box-sizing: border-box !important; }
         }
       `}</style>
     </div>
@@ -356,7 +350,7 @@ export default function CellGroupsPage() {
 const S = {
   page:        { padding: '32px', fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" },
 
-  pageHeader:  { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' },
+  pageHeader:  { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
   pageTitle:   { fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px' },
   pageSubtitle:{ fontSize: '14px', color: '#64748b', margin: 0 },
 
@@ -367,13 +361,14 @@ const S = {
   statNum:     { fontSize: '28px', fontWeight: '800', color: '#005599', lineHeight: 1 },
   statLabel:   { fontSize: '12px', color: '#64748b', fontWeight: '600', letterSpacing: '0.4px', textTransform: 'uppercase' },
 
-  toolbar:     { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' },
+  toolbar:     { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' },
   searchIcon:  { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', opacity: 0.5, pointerEvents: 'none' },
-  search:      { padding: '10px 36px 10px 36px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', outline: 'none', width: '280px', color: '#0f172a', background: '#fafbfc' },
+  search:      { padding: '10px 36px 10px 36px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', outline: 'none', width: '100%', minWidth: 0, color: '#0f172a', background: '#fafbfc' },
   clearSearch: { position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '12px', cursor: 'pointer', color: '#94a3b8', padding: '2px 4px' },
   resultCount: { fontSize: '13px', color: '#94a3b8', whiteSpace: 'nowrap' },
 
   tableWrap:   { background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' },
+  tableScroll: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:       { width: '100%', borderCollapse: 'collapse' },
   th:          { padding: '14px 20px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', letterSpacing: '0.6px', textTransform: 'uppercase', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
   tr:          { borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' },
@@ -423,5 +418,5 @@ const S = {
   delText:     { fontSize: '15px', color: '#0f172a', margin: '0 0 8px', lineHeight: '1.5' },
   delHint:     { fontSize: '13px', color: '#94a3b8', margin: '0 0 16px' },
 
-  toast:       { position: 'fixed', bottom: '28px', right: '28px', color: '#fff', borderRadius: '10px', padding: '13px 20px', fontSize: '14px', fontWeight: '600', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.2)', animation: 'slideIn 0.25s ease both', display: 'flex', alignItems: 'center', gap: '8px' },
+  toast:       { position: 'fixed', bottom: 'calc(68px + env(safe-area-inset-bottom, 0px) + 8px)', right: '16px', color: '#fff', borderRadius: '10px', padding: '13px 20px', fontSize: '14px', fontWeight: '600', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.2)', animation: 'slideIn 0.25s ease both', display: 'flex', alignItems: 'center', gap: '8px' },
 };
