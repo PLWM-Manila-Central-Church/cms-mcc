@@ -1,29 +1,26 @@
 "use strict";
 
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+const jwt    = require("jsonwebtoken");
 const crypto = require("crypto");
 const {
   User, Role, Member, PasswordResetToken,
   RefreshToken, UserSession, RolePermission, Permission,
 } = require("../models");
-const mailer = require("../utils/mailer");
+const mailer   = require("../utils/mailer");
 const auditLog = require("../helpers/auditLog.helper");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
 
 // ── Helpers ──────────────────────────────────────────────────
+
+// Fix #11 — slim JWT payload to userId only.
+// verifyToken.js re-fetches the full user from DB on every request,
+// so embedding extra fields in the token is redundant and increases
+// exposure if a token is ever intercepted.
 const generateAccessToken = (user) => {
   return jwt.sign(
-    {
-      userId:      user.id,
-      roleId:      user.role_id,
-      roleName:    user.role.role_name,
-      email:       user.email,
-      memberId:    user.member_id || null,
-      cellGroupId: user.member?.cell_group_id || null,
-      groupId:     user.member?.group_id || null,
-    },
+    { userId: user.id },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || "8h" },
   );
@@ -35,9 +32,13 @@ const generateRefreshToken = (userId) => {
   });
 };
 
+// Fix #4 — hash refresh tokens before storing so a DB dump
+// does not expose active sessions. Same pattern as password reset tokens.
+const hashToken = (raw) => crypto.createHash("sha256").update(raw).digest("hex");
+
 const getUserPermissions = async (roleId) => {
   const rp = await RolePermission.findAll({
-    where: { role_id: roleId },
+    where:   { role_id: roleId },
     include: [{ model: Permission, attributes: ["module", "action"] }],
   });
   return rp.map(r => `${r.Permission.module}:${r.Permission.action}`);
@@ -48,7 +49,7 @@ exports.login = async (email, password, ip, device) => {
   const user = await User.findOne({
     where: { email },
     include: [
-      { model: Role, as: "role" },
+      { model: Role,   as: "role" },
       { model: Member, as: "member", attributes: ["cell_group_id", "group_id"], required: false },
     ],
   });
@@ -56,17 +57,32 @@ exports.login = async (email, password, ip, device) => {
   if (!user || !user.is_active)
     throw { status: 401, message: "Invalid credentials" };
 
+  // Fix #7 — account lockout check
+  if (user.locked_until && new Date() < new Date(user.locked_until))
+    throw { status: 429, message: "Account temporarily locked. Try again later." };
+
   const match = await bcrypt.compare(password, user.password_hash);
-  if (!match) throw { status: 401, message: "Invalid credentials" };
+
+  if (!match) {
+    // Fix #7 — increment failed attempts and lock after 5
+    const attempts = (user.failed_login_attempts || 0) + 1;
+    const update   = { failed_login_attempts: attempts };
+    if (attempts >= 5) update.locked_until = new Date(Date.now() + 15 * 60 * 1000);
+    await user.update(update);
+    throw { status: 401, message: "Invalid credentials" };
+  }
+
+  // Fix #7 — reset lockout counters on successful login
+  await user.update({ failed_login_attempts: 0, locked_until: null, last_login_at: new Date() });
 
   const accessToken  = generateAccessToken(user);
-  const refreshToken = generateRefreshToken(user.id);
+  const rawRefresh   = generateRefreshToken(user.id);  // Fix #4
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7);
 
-  await RefreshToken.create({ user_id: user.id, token: refreshToken, expires_at: expiresAt, revoked: 0 });
-  await user.update({ last_login_at: new Date() });
+  // Fix #4 — store hashed refresh token, return raw token to client
+  await RefreshToken.create({ user_id: user.id, token: hashToken(rawRefresh), expires_at: expiresAt, revoked: 0 });
   await UserSession.create({ user_id: user.id, ip_address: ip || null, device: device || null, login_at: new Date() });
   auditLog.log({ userId: user.id, action: "LOGIN", ipAddress: ip });
 
@@ -74,7 +90,7 @@ exports.login = async (email, password, ip, device) => {
 
   return {
     accessToken,
-    refreshToken,
+    refreshToken: rawRefresh,
     forcePasswordChange: user.force_password_change === 1,
     user: {
       id:       user.id,
@@ -97,14 +113,15 @@ exports.refreshToken = async (token) => {
     throw { status: 401, message: "Invalid or expired refresh token" };
   }
 
-  const stored = await RefreshToken.findOne({ where: { token, revoked: 0 } });
+  // Fix #4 — look up the hashed version of the token
+  const stored = await RefreshToken.findOne({ where: { token: hashToken(token), revoked: 0 } });
 
   if (!stored || new Date() > stored.expires_at)
     throw { status: 401, message: "Refresh token expired or revoked" };
 
   const user = await User.findByPk(decoded.userId, {
     include: [
-      { model: Role, as: "role" },
+      { model: Role,   as: "role" },
       { model: Member, as: "member", attributes: ["cell_group_id", "group_id"], required: false },
     ],
   });
@@ -114,17 +131,18 @@ exports.refreshToken = async (token) => {
 
   await stored.update({ revoked: 1 });
 
-  const newAccessToken  = generateAccessToken(user);
-  const newRefreshToken = generateRefreshToken(user.id);
+  const newAccessToken = generateAccessToken(user);
+  const newRawRefresh  = generateRefreshToken(user.id);  // Fix #4
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7);
 
-  await RefreshToken.create({ user_id: user.id, token: newRefreshToken, expires_at: expiresAt, revoked: 0 });
+  // Fix #4 — store hashed version
+  await RefreshToken.create({ user_id: user.id, token: hashToken(newRawRefresh), expires_at: expiresAt, revoked: 0 });
 
   return {
     accessToken:  newAccessToken,
-    refreshToken: newRefreshToken,
+    refreshToken: newRawRefresh,
   };
 };
 
@@ -142,11 +160,9 @@ exports.forgotPassword = async (email) => {
   await PasswordResetToken.update({ used: 1 }, { where: { user_id: user.id, used: 0 } });
   await PasswordResetToken.create({ user_id: user.id, token: tokenHash, expires_at: expiresAt, used: 0 });
 
-  // Build reset URL and send email
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-  const resetUrl = `${frontendUrl}/reset-password?token=${rawToken}`;
+  const resetUrl    = `${frontendUrl}/reset-password?token=${rawToken}`;
 
-  // Non-blocking — email failure does not break the response
   mailer.sendPasswordReset({ to: user.email, resetUrl }).catch((err) => {
     console.error("[Auth] Failed to send password reset email:", err.message);
   });
@@ -190,7 +206,8 @@ exports.changePassword = async (userId, currentPassword, newPassword) => {
 // ── Logout ───────────────────────────────────────────────────
 exports.logout = async (userId, token) => {
   if (token) {
-    await RefreshToken.update({ revoked: 1 }, { where: { user_id: userId, token } });
+    // Fix #4 — look up by hashed token
+    await RefreshToken.update({ revoked: 1 }, { where: { user_id: userId, token: hashToken(token) } });
   }
   auditLog.log({ userId, action: "LOGOUT" });
   return { message: "Logged out successfully." };

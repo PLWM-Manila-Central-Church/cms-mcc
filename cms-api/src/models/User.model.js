@@ -22,7 +22,10 @@ const User = sequelize.define(
       allowNull: false,
       defaultValue: 1,
     },
-    last_login_at: { type: DataTypes.DATE, allowNull: true },
+    last_login_at:          { type: DataTypes.DATE,    allowNull: true },
+    // Fix #7 — account lockout fields
+    failed_login_attempts:  { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    locked_until:           { type: DataTypes.DATE,    allowNull: true,  defaultValue: null },
   },
   { tableName: "users", timestamps: true, underscored: true },
 );
