@@ -233,7 +233,7 @@ export default function AttendancePage() {
       </div>
 
       <div style={styles.tableWrap}>
-        <table style={styles.table}>
+        <div style={styles.tableScroll}><table style={styles.table}>
           <thead>
             <tr style={styles.thead}>
               <th style={styles.th}>#</th>
@@ -295,7 +295,7 @@ export default function AttendancePage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
       <style>{`
         /* ── Responsive tables ── */
@@ -353,6 +353,7 @@ const styles = {
   listTitle:     { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0 },
   listCount:     { fontSize: '14px', color: '#64748b', fontWeight: '600' },
   tableWrap:     { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  tableScroll:   { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:         { width: '100%', borderCollapse: 'collapse' },
   thead:         { background: '#f8fafc' },
   th:            { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },

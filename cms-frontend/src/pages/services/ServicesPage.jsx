@@ -289,7 +289,7 @@ export default function ServicesPage() {
 
       {/* Table */}
       <div style={styles.tableWrap}>
-        <table style={styles.table}>
+        <div style={styles.tableScroll}><table style={styles.table}>
           <thead>
             <tr style={styles.thead}>
               <th style={styles.th}>Service</th>
@@ -388,7 +388,7 @@ export default function ServicesPage() {
               );
             })}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {/* Pagination */}
@@ -479,21 +479,11 @@ export default function ServicesPage() {
         </div>
       )}
       <style>{`
-        /* ── Responsive tables ── */
         table { width: 100%; border-collapse: collapse; }
-        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         @media (max-width: 768px) {
-          table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
+          table td, table th { font-size: 11px !important; padding: 7px 8px !important; white-space: nowrap; }
         }
-        @media (max-width: 480px) {
-          table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
-        }
-
-      
-        @media (max-width: 900px) {
-          [style*="gridTemplateColumns: '1fr 1fr'"],
-          [style*="gridTemplateColumns: 'repeat"] { grid-template-columns: 1fr !important; }
-        }`}</style>
+      `}</style>
     </div>
   );
 }
@@ -507,7 +497,7 @@ const STATUS_ACTION_STYLE = {
 
 const styles = {
   page:        { fontFamily: "'Inter', sans-serif" },
-  pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
+  pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
   title:       { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   subtitle:    { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
   addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
@@ -528,6 +518,7 @@ const styles = {
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
   successBox:  { background: '#dcfce7', border: '1px solid #86efac', color: '#16a34a', borderRadius: '8px', padding: '16px', fontSize: '14px', textAlign: 'center', margin: '16px 0' },
   tableWrap:   { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  tableScroll: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:       { width: '100%', borderCollapse: 'collapse' },
   thead:       { background: '#f8fafc' },
   th:          { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },

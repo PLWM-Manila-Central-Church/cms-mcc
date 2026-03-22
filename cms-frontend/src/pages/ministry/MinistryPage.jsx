@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
+import useIsMobile from '../../hooks/useIsMobile';
 
 /* ─────────────────────────────────────────────────────────────
    Helpers
@@ -15,6 +16,7 @@ function fmtDate(d) {
 ───────────────────────────────────────────────────────────── */
 export default function MinistryPage() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const isMember = user?.roleName === 'Member';
   const [tab, setTab] = useState(isMember ? 'substitutes' : 'assignments');
 
@@ -26,7 +28,7 @@ export default function MinistryPage() {
       ];
 
   return (
-    <div style={S.page}>
+    <div style={{ ...S.page, padding: isMobile ? '16px 12px' : '28px 32px' }}>
       <div style={S.header}>
         <div>
           <h1 style={S.title}>Ministry</h1>
@@ -54,23 +56,9 @@ export default function MinistryPage() {
       {tab === 'substitutes' && <SubstituteRequestsTab />}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }
-        /* ── Responsive tables ── */
-        table { width: 100%; border-collapse: collapse; }
-        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        @media (max-width: 768px) {
-          table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
-        }
-        @media (max-width: 480px) {
-          table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
-        }
-`}</style>
-      <style>{`
-        /* Ministry page responsive */
         table { width: 100%; border-collapse: collapse; }
         @media (max-width: 768px) {
           table td, table th { font-size: 11px !important; padding: 7px 8px !important; white-space: nowrap; }
-          [style*="justifyContent: 'space-between'"] { flex-wrap: wrap !important; gap: 8px !important; }
-          [style*="display: 'flex', gap: '12px'"][style*="marginBottom"] { flex-wrap: wrap !important; }
         }
         @media (max-width: 480px) {
           table td, table th { font-size: 10.5px !important; padding: 6px !important; }
@@ -232,7 +220,7 @@ function AssignmentsTab() {
             <span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Assignment" to get started.'}</span>
           </div>
         ) : (
-          <table style={S.table}>
+          <div style={S.tableScroll}><table style={S.table}>
             <thead>
               <tr style={S.thead}>
                 <th style={S.th}>#</th>
@@ -283,7 +271,7 @@ function AssignmentsTab() {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
@@ -527,7 +515,7 @@ function RolesTab() {
             <span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Role" to create the first ministry role.'}</span>
           </div>
         ) : (
-          <table style={S.table}>
+          <div style={S.tableScroll}><table style={S.table}>
             <thead>
               <tr style={S.thead}>
                 <th style={S.th}>#</th>
@@ -554,7 +542,7 @@ function RolesTab() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
@@ -815,7 +803,7 @@ function SubstituteRequestsTab() {
         </div>
       ) : (
         <div style={S.tableCard}>
-          <table style={S.table}>
+          <div style={S.tableScroll}><table style={S.table}>
             <thead>
               <tr style={S.thead}>
                 <th style={S.th}>Service</th>
@@ -852,7 +840,7 @@ function SubstituteRequestsTab() {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </>
@@ -872,8 +860,8 @@ const S = {
   tab:        { background:'transparent', border:'none', borderRadius:'8px', padding:'8px 20px', fontSize:'13px', fontWeight:'600', color:'#64748b', cursor:'pointer', transition:'all 0.15s' },
   tabActive:  { background:'#fff', color:'#005599', boxShadow:'0 1px 4px rgba(0,0,0,0.1)' },
 
-  toolbar:    { display:'flex', alignItems:'center', gap:'12px', marginBottom:'20px' },
-  searchWrap: { position:'relative', flex:1, maxWidth:'380px' },
+  toolbar:    { display:'flex', alignItems:'center', gap:'12px', marginBottom:'20px', flexWrap:'wrap' },
+  searchWrap: { position:'relative', flex:1, minWidth: 0 },
   searchIcon: { position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', fontSize:'14px', opacity:0.45, pointerEvents:'none' },
   searchInput:{ width:'100%', padding:'10px 36px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'14px', outline:'none', boxSizing:'border-box', background:'#fff', color:'#0f172a' },
   clearBtn:   { position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:'12px', color:'#94a3b8', padding:'2px 4px' },
@@ -884,6 +872,7 @@ const S = {
   retryBtn:   { background:'none', border:'1px solid #dc2626', borderRadius:'6px', color:'#dc2626', fontSize:'12px', fontWeight:'600', cursor:'pointer', padding:'4px 10px' },
 
   tableCard:  { background:'#fff', borderRadius:'16px', border:'1px solid #e8f0fe', overflow:'hidden', boxShadow:'0 2px 12px rgba(0,85,153,0.06)' },
+  tableScroll:{ overflowX:'auto', WebkitOverflowScrolling:'touch' },
   table:      { width:'100%', borderCollapse:'collapse' },
   thead:      { background:'linear-gradient(90deg,#f8faff,#f0f6ff)' },
   th:         { padding:'13px 16px', fontSize:'11px', fontWeight:'700', color:'#64748b', textAlign:'left', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #e8f0fe' },

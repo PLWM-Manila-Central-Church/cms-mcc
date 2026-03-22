@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const ROLE_COLORS = {
   'System Admin':      { bg: '#fef2f2', color: '#dc2626' },
@@ -16,6 +17,7 @@ const ROLE_COLORS = {
 export default function UsersPage() {
   const navigate = useNavigate();
   const { hasPermission, user: currentUser } = useAuth();
+  const isMobile = useIsMobile();
 
   const [users, setUsers]             = useState([]);
   const [filtered, setFiltered]       = useState([]);
@@ -152,8 +154,48 @@ export default function UsersPage() {
         </div>
       )}
 
+      {isMobile ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {loading ? (
+            <div style={styles.centerCell}>Loading...</div>
+          ) : filtered.length === 0 ? (
+            <div style={styles.centerCell}>{search ? 'No users match your search.' : 'No users found.'}</div>
+          ) : filtered.map((u, i) => {
+            const rc = ROLE_COLORS[u.role?.role_name] || ROLE_COLORS['Member'];
+            return (
+              <div key={u.id} style={{ background: selected.has(u.id) ? '#fef2f2' : '#fff', borderBottom: '1px solid #f1f5f9', padding: '14px 12px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelect(u.id)} style={{ marginTop: 4, cursor: 'pointer', flexShrink: 0 }} />
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, flexShrink: 0 }}>{u.email[0].toUpperCase()}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>ID #{u.id}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: rc.bg, color: rc.color }}>{u.role?.role_name || '—'}</span>
+                    <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: u.is_active ? '#dcfce7' : '#f3f4f6', color: u.is_active ? '#16a34a' : '#6b7280' }}>{u.is_active ? 'Active' : 'Inactive'}</span>
+                  </div>
+                  {u.member && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>👤 {u.member.first_name} {u.member.last_name}</div>}
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                    {hasPermission('users', 'update') && (
+                      <button onClick={() => navigate(`/users/${u.id}/edit`)} style={{ background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+                    )}
+                    {hasPermission('users', 'update') && (
+                      <button onClick={() => handleToggleActive(u)} disabled={actionLoading === u.id}
+                        style={{ border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: u.is_active ? '#fef2f2' : '#f0fdf4', color: u.is_active ? '#dc2626' : '#16a34a', opacity: actionLoading === u.id ? 0.6 : 1 }}>
+                        {actionLoading === u.id ? '...' : u.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
+                    )}
+                    {hasPermission('users', 'delete') && u.id !== currentUser?.id && (
+                      <button onClick={() => { setDeleteTarget(u); setDeleteError(''); }} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Delete</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
       <div style={styles.tableWrap}>
-        <table style={styles.table}>
+        <div style={styles.tableScroll}><table style={styles.table}>
           <thead>
             <tr style={styles.thead}>
               <th style={{ ...styles.th, width:36 }}>
@@ -267,8 +309,9 @@ export default function UsersPage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
+      )}
 
       {/* Delete Confirm Modal */}
       {deleteTarget && (
@@ -313,6 +356,7 @@ const styles = {
   addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', fontSize: '14px' },
   tableWrap:   { background: '#fff', borderRadius: '12px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'hidden' },
+  tableScroll: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:       { width: '100%', borderCollapse: 'collapse' },
   thead:       { background: '#f8fafc' },
   th:          { padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e2e8f0' },
