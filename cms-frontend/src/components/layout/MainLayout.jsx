@@ -49,7 +49,6 @@ function BottomTabBar({ onMoreOpen }) {
     !t.permissions || hasPermission(t.permissions.module, t.permissions.action)
   );
 
-  // Always show max 5 tabs; last one is always "More"
   const tabs = visibleTabs.slice(0, 4);
   tabs.push({ label: 'More', path: '__more__', icon: '☰' });
 
@@ -226,11 +225,10 @@ export default function MainLayout({ children }) {
   const isMobile  = width <= BP_MOBILE;
   const isTablet  = width > BP_MOBILE && width <= BP_TABLET;
 
-  const [collapsed,   setCollapsed]   = useState(isTablet);
-  const [drawerOpen,  setDrawerOpen]  = useState(false);
-  const [moreOpen,    setMoreOpen]    = useState(false);
+  const [collapsed, setCollapsed] = useState(isTablet);
+  const [moreOpen,  setMoreOpen]  = useState(false);
 
-  // ── Google Translate: load once, restore saved language, suppress banner ──
+  // ── Google Translate: load once, restore saved language ──
   useEffect(() => {
     const restoreSaved = () => {
       const code = getLangCode();
@@ -242,7 +240,7 @@ export default function MainLayout({ children }) {
     loadGTScript('google_translate_element_cms', restoreSaved);
   }, []); // eslint-disable-line
 
-  // Listen for language changes from portal settings or landing page
+  // Listen for language changes from portal/landing
   useEffect(() => {
     const handler = (e) => {
       const code = e.detail?.code;
@@ -263,15 +261,10 @@ export default function MainLayout({ children }) {
   }, []);
 
   useEffect(() => {
-    if (isMobile)               { setCollapsed(true); setDrawerOpen(false); }
+    if (isMobile)               { setCollapsed(true); }
     if (isTablet)               { setCollapsed(true); }
     if (!isMobile && !isTablet) { setCollapsed(false); }
   }, [isMobile, isTablet]);
-
-  useEffect(() => {
-    document.body.style.overflow = (isMobile && drawerOpen) ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [isMobile, drawerOpen]);
 
   const sidebarWidth = isMobile ? '0px' : (collapsed ? '68px' : '244px');
   const mainPadLeft  = isMobile ? '0px' : sidebarWidth;
@@ -279,12 +272,9 @@ export default function MainLayout({ children }) {
   return (
     <div style={S.root}>
       {/* Hidden Google Translate widget for CMS */}
-      <div id="google_translate_element_cms" style={{ position:'fixed', bottom:-200, left:0, opacity:0, pointerEvents:'none', zIndex:-1 }} />
-      {/* Desktop/tablet: sidebar + backdrop */}
-      {isMobile && drawerOpen && (
-        <div onClick={() => setDrawerOpen(false)} style={S.backdrop} aria-hidden="true" />
-      )}
+      <div id="google_translate_element_cms" style={{ position: 'fixed', bottom: -200, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1 }} />
 
+      {/* Desktop/tablet sidebar */}
       {!isMobile && (
         <div style={{
           ...S.sidebarWrapper,
@@ -303,12 +293,10 @@ export default function MainLayout({ children }) {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header — no hamburger prop needed anymore */}
       <Header
         sidebarWidth={mainPadLeft}
         isMobile={isMobile}
-        onHamburger={() => setDrawerOpen(o => !o)}
-        drawerOpen={drawerOpen}
       />
 
       {/* Main content */}
@@ -343,12 +331,6 @@ const S = {
     height: '100vh',
     flexShrink: 0,
     overflowX: 'hidden',
-  },
-  backdrop: {
-    position: 'fixed', inset: 0,
-    background: 'rgba(11,36,71,0.5)',
-    backdropFilter: 'blur(2px)',
-    zIndex: 299,
   },
   main: {
     flex: 1,

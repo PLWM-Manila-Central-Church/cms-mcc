@@ -75,7 +75,7 @@ export default function InventoryPage() {
       const params = new URLSearchParams({ page: itemPage, limit });
       if (filterCat)  params.append('category_id', filterCat);
       if (itemSearch) params.append('search', itemSearch);
-      const res = await axiosInstance.get(`/inventory?${params}`);
+      const res = await axiosInstance.get(`/inventory/items?${params}`);
       const d   = res.data.data;
       setItems(d.items); setTotalItems(d.total);
       setItemPages(d.total_pages);
@@ -128,8 +128,8 @@ export default function InventoryPage() {
     try {
       const payload = { ...itemForm, quantity: parseInt(itemForm.quantity) };
       if (!payload.low_stock_threshold) delete payload.low_stock_threshold;
-      if (editItem) await axiosInstance.put(`/inventory/${editItem.id}`, payload);
-      else          await axiosInstance.post('/inventory', payload);
+      if (editItem) await axiosInstance.put(`/inventory/items/${editItem.id}`, payload);
+      else          await axiosInstance.post('/inventory/items', payload);
       setShowItemForm(false); resetItemForm(); fetchItems();
     } catch (err) { setItemFormErr(err.response?.data?.message || 'Failed to save item.'); }
     finally { setSavingItem(false); }
@@ -138,7 +138,7 @@ export default function InventoryPage() {
   const handleDeleteItem = async (item) => {
     if (!window.confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
     try {
-      await axiosInstance.delete(`/inventory/${item.id}`);
+      await axiosInstance.delete(`/inventory/items/${item.id}`);
       fetchItems();
     } catch (err) { setItemError(err.response?.data?.message || 'Failed to delete item.'); }
   };
