@@ -14,6 +14,11 @@ const fmtTime = (d) => d ? new Date(d).toLocaleTimeString('en-PH',{hour:'2-digit
 const fmtSvcT = (t) => { if(!t) return '—'; const [h,m]=t.split(':'); const d=new Date(); d.setHours(+h,+m); return d.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'}); };
 
 const getPrefs = () => { try { return JSON.parse(localStorage.getItem('plwm_prefs')||'{}'); } catch { return {}; } };
+const savePrefs = (p) => {
+  localStorage.setItem('plwm_prefs', JSON.stringify(p));
+  // Notify App.js to re-apply font/zoom to all CMS pages
+  window.dispatchEvent(new CustomEvent('plwm-prefs-change'));
+};
 
 const makeC = (prefs) => {
   const dk = prefs.theme==='dark';

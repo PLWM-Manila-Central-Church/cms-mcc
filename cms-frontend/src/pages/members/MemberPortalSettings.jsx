@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
-import { LANGS, saveLangCode, applyGTLang } from '../../utils/langUtils';
+import { LANGS, saveLangCode } from '../../utils/langUtils';
 
 const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
 const API_IMG = (process.env.REACT_APP_API_URL || '').replace(/\/api$/, '');
@@ -28,7 +28,11 @@ const RESOLUTIONS = [
 ];
 
 const getPrefs   = () => { try { return JSON.parse(localStorage.getItem('plwm_prefs')||'{}'); } catch { return {}; } };
-const savePrefs  = (p) => localStorage.setItem('plwm_prefs', JSON.stringify(p));
+const savePrefs  = (p) => {
+  localStorage.setItem('plwm_prefs', JSON.stringify(p));
+  // Notify App.js to re-apply font/zoom globally across all CMS pages
+  window.dispatchEvent(new CustomEvent('plwm-prefs-change'));
+};
 
 const makeC = (dk) => ({
   bg:dk?'#0e1420':'#f0f4f8', surface:dk?'#1a2332':'#fff',
@@ -73,6 +77,7 @@ export default function MemberPortalSettings() {
   const [currentPhoto, setCurrentPhoto]     = useState(null);
   const [photoUploading,setPhotoUploading]  = useState(false);
   const [photoMsg, setPhotoMsg]             = useState('');
+  const [profile,  setProfile]              = useState(null);
 
   const [fontSizeInput, setFontSizeInput]   = useState(String(prefs.fontSize||16));
 
@@ -82,7 +87,11 @@ export default function MemberPortalSettings() {
 
   useEffect(()=>{
     axiosInstance.get('/member-portal/profile')
-      .then(res=>{ const u=res.data.data?.profile_photo_url; if(u) setCurrentPhoto(`${API_IMG}/uploads${u}`); })
+      .then(res=>{
+        const p = res.data.data;
+        setProfile(p);
+        if(p?.profile_photo_url) setCurrentPhoto(`${API_IMG}/uploads${p.profile_photo_url}`);
+      })
       .catch(()=>{});
   },[]);
 
@@ -106,11 +115,8 @@ export default function MemberPortalSettings() {
     savePrefs(updated);
     if (key === 'language') {
       saveLangCode(val);
-      const lang = LANGS.find(l => l.code === val);
-      if (lang) {
-        applyGTLang(lang);
-        window.dispatchEvent(new CustomEvent('plwm-lang-change', { detail: { code: val } }));
-      }
+      // Reload so googtrans cookie takes effect cleanly — same as PublicLayout behaviour
+      setTimeout(() => window.location.reload(), 80);
     }
   };
 
@@ -152,6 +158,9 @@ export default function MemberPortalSettings() {
   };
 
   const photoUrl   = photoPreview || currentPhoto;
+  const initials   = profile
+    ? `${profile.first_name?.[0]||''}${profile.last_name?.[0]||''}`.toUpperCase() || '?'
+    : '?';
   const fontFamily = prefs.fontFamily||'DM Sans';
   const fontSize   = prefs.fontSize||16;
 
@@ -187,7 +196,7 @@ export default function MemberPortalSettings() {
             <div style={{position:'relative',flexShrink:0}}>
               {photoUrl
                 ? <img src={photoUrl} alt="preview" style={{width:72,height:72,borderRadius:'50%',objectFit:'cover',border:`2px solid ${c.border}`}}/>
-                : <div style={{width:72,height:72,borderRadius:'50%',background:BRAND,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:800,color:'#fff'}}>?</div>}
+                : <div style={{width:72,height:72,borderRadius:'50%',background:BRAND,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:800,color:'#fff'}}>{initials}</div>}
               {photoUploading&&<div style={{position:'absolute',inset:0,borderRadius:'50%',background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center'}}><div style={{width:20,height:20,border:'3px solid rgba(255,255,255,0.3)',borderTop:'3px solid #fff',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/></div>}
             </div>
             <div style={{flex:1}}>
@@ -270,7 +279,7 @@ export default function MemberPortalSettings() {
               ))}
             </div>
             <div style={{marginTop:12,padding:'10px 14px',background:c.accentL,borderRadius:8,border:`1px solid ${c.border}`,fontSize:12,color:c.accentT}}>
-              Changes apply immediately when you return to the portal.
+              Selecting a language reloads the page to apply translation fully.
             </div>
           </div>
         </div>
