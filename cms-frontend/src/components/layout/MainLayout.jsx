@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useAuth } from '../../context/AuthContext';
@@ -32,25 +32,64 @@ function useWindowWidth() {
   return width;
 }
 
-/* ── Mobile bottom tab bar ─────────────────────────────────── */
-const BOTTOM_TABS = [
-  { label: 'Home',    path: '/dashboard',  icon: 'dashboard' },
-  { label: 'Members', path: '/members',    icon: 'members',  permissions: { module: 'members',  action: 'read' } },
-  { label: 'Events',  path: '/events',     icon: 'events',   permissions: { module: 'events',   action: 'read' } },
-  { label: 'Finance', path: '/finance',    icon: 'finance',  permissions: { module: 'finance',  action: 'read' } },
-  { label: 'More',    path: '__more__',    icon: 'more' },
+// ── Role-specific bottom tab definitions ──────────────────────────────────
+// Each role gets 4 labelled tabs + the "More" tab is always appended 5th.
+// Tabs without a `permissions` key are always shown.
+const ROLE_TAB_SETS = {
+  'System Admin': [
+    { label: 'Home',    path: '/dashboard', icon: 'dashboard' },
+    { label: 'Members', path: '/members',   icon: 'members' },
+    { label: 'Events',  path: '/events',    icon: 'events' },
+    { label: 'Finance', path: '/finance',   icon: 'finance' },
+  ],
+  'Pastor': [
+    { label: 'Home',    path: '/dashboard', icon: 'dashboard' },
+    { label: 'Members', path: '/members',   icon: 'members' },
+    { label: 'Events',  path: '/events',    icon: 'events' },
+    { label: 'Finance', path: '/finance',   icon: 'finance' },
+  ],
+  'Registration Team': [
+    { label: 'Home',     path: '/dashboard',  icon: 'dashboard' },
+    { label: 'Members',  path: '/members',    icon: 'members' },
+    { label: 'Events',   path: '/events',     icon: 'events' },
+    { label: 'Ministry', path: '/ministry',   icon: 'ministry' },
+  ],
+  'Finance Team': [
+    { label: 'Home',     path: '/dashboard',  icon: 'dashboard' },
+    { label: 'Members',  path: '/members',    icon: 'members' },
+    { label: 'Finance',  path: '/finance',    icon: 'finance' },
+    { label: 'Ministry', path: '/ministry',   icon: 'ministry' },
+  ],
+  'Cell Group Leader': [
+    { label: 'Home',       path: '/dashboard',  icon: 'dashboard' },
+    { label: 'Members',    path: '/members',    icon: 'members' },
+    { label: 'Events',     path: '/events',     icon: 'events' },
+    { label: 'Cell Groups',path: '/cell-groups',icon: 'cellgroups' },
+  ],
+  'Group Leader': [
+    { label: 'Home',     path: '/dashboard',  icon: 'dashboard' },
+    { label: 'Members',  path: '/members',    icon: 'members' },
+    { label: 'Events',   path: '/events',     icon: 'events' },
+    { label: 'Ministry', path: '/ministry',   icon: 'ministry' },
+  ],
+};
+
+// Fallback for unknown roles
+const DEFAULT_TABS = [
+  { label: 'Home',    path: '/dashboard', icon: 'dashboard' },
+  { label: 'Members', path: '/members',   icon: 'members' },
+  { label: 'Events',  path: '/events',    icon: 'events' },
+  { label: 'Finance', path: '/finance',   icon: 'finance' },
 ];
 
+/* ── Mobile bottom tab bar ─────────────────────────────────── */
 function BottomTabBar({ onMoreOpen }) {
-  const { hasPermission } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
 
-  const visibleTabs = BOTTOM_TABS.filter(t =>
-    !t.permissions || hasPermission(t.permissions.module, t.permissions.action)
-  );
-
-  const tabs = visibleTabs.slice(0, 4);
-  tabs.push({ label: 'More', path: '__more__', icon: '☰' });
+  const roleTabs = ROLE_TAB_SETS[user?.roleName] || DEFAULT_TABS;
+  // Always append More as 5th tab
+  const tabs = [...roleTabs, { label: 'More', path: '__more__', icon: 'more' }];
 
   const isActive = (path) => path !== '__more__' && location.pathname.startsWith(path);
 
@@ -117,6 +156,7 @@ function BottomTabBar({ onMoreOpen }) {
 function MobileMoreDrawer({ open, onClose }) {
   const { hasPermission, user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -166,12 +206,25 @@ function MobileMoreDrawer({ open, onClose }) {
           }}>
             {user?.email?.[0]?.toUpperCase() || '?'}
           </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user?.email?.split('@')[0] || 'User'}
             </div>
             <div style={{ fontSize: 12, color: '#94a3b8' }}>{user?.roleName}</div>
           </div>
+          {/* ⚙️ My Settings button in drawer header */}
+          <button
+            onClick={() => { onClose(); navigate('/my-settings'); }}
+            style={{
+              background: '#f1f5f9', border: '1px solid #e2e8f0',
+              borderRadius: 10, padding: '8px 12px',
+              fontSize: 13, fontWeight: 600, color: '#374151',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              flexShrink: 0,
+            }}
+          >
+            ⚙️ Settings
+          </button>
         </div>
 
         {/* Nav items grid */}
@@ -221,9 +274,9 @@ function MobileMoreDrawer({ open, onClose }) {
 }
 
 export default function MainLayout({ children }) {
-  const width     = useWindowWidth();
-  const isMobile  = width <= BP_MOBILE;
-  const isTablet  = width > BP_MOBILE && width <= BP_TABLET;
+  const width    = useWindowWidth();
+  const isMobile = width <= BP_MOBILE;
+  const isTablet = width > BP_MOBILE && width <= BP_TABLET;
 
   const [collapsed, setCollapsed] = useState(isTablet);
   const [moreOpen,  setMoreOpen]  = useState(false);
@@ -240,7 +293,6 @@ export default function MainLayout({ children }) {
     loadGTScript('google_translate_element_cms', restoreSaved);
   }, []); // eslint-disable-line
 
-  // Listen for language changes from portal/landing
   useEffect(() => {
     const handler = (e) => {
       const code = e.detail?.code;
@@ -293,7 +345,7 @@ export default function MainLayout({ children }) {
         </div>
       )}
 
-      {/* Header — no hamburger prop needed anymore */}
+      {/* Header */}
       <Header
         sidebarWidth={mainPadLeft}
         isMobile={isMobile}

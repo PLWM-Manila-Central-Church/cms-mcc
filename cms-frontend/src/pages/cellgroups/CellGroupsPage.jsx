@@ -164,14 +164,16 @@ export default function CellGroupsPage() {
         </span>
       </div>
 
-      {/* ── Table ── */}
-      <div style={S.tableWrap}>
-        {loading ? (
+      {/* ── Table (desktop) / Cards (mobile) ── */}
+      {loading ? (
+        <div style={{ ...S.tableWrap, padding: '48px 0' }}>
           <div style={S.empty}>
             <div style={S.spinner} />
             <p>Loading…</p>
           </div>
-        ) : filtered.length === 0 ? (
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={S.tableWrap}>
           <div style={S.empty}>
             <div style={S.emptyIcon}>🏘️</div>
             <p style={S.emptyTitle}>{search ? 'No results found' : 'No cell groups yet'}</p>
@@ -179,7 +181,56 @@ export default function CellGroupsPage() {
               {search ? 'Try a different search term.' : canCreate ? 'Click "+ New Cell Group" to add the first one.' : 'No cell groups have been created.'}
             </p>
           </div>
-        ) : (
+        </div>
+      ) : isMobile ? (
+        /* ── Mobile card list ── */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {filtered.map((g) => (
+            <div key={g.id} style={{
+              background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14,
+              padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+            }}>
+              {/* Top row: avatar + name + member count badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                <div style={{ ...S.groupAvatar, width: 44, height: 44, fontSize: 17, flexShrink: 0 }}>
+                  {g.name?.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {g.name}
+                  </div>
+                  {g.area
+                    ? <span style={{ ...S.areaBadge, marginTop: 3, display: 'inline-block' }}>{g.area}</span>
+                    : <span style={{ fontSize: 12, color: '#cbd5e1' }}>No area</span>
+                  }
+                </div>
+                {/* Member count — prominent on mobile */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#eff6ff', borderRadius: 10, padding: '6px 12px', flexShrink: 0 }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: '#1d4ed8', lineHeight: 1 }}>{g.memberCount ?? 0}</span>
+                  <span style={{ fontSize: 10, color: '#3b82f6', fontWeight: 600, marginTop: 2 }}>Members</span>
+                </div>
+              </div>
+              {/* Action buttons */}
+              {(canUpdate || canDelete) && (
+                <div style={{ display: 'flex', gap: 8, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
+                  {canUpdate && (
+                    <button onClick={() => openEdit(g)} style={{ ...S.editBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      ✏️ Edit
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button onClick={() => { setDelTarget(g); setDelError(''); }} style={{ ...S.deleteBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      🗑 Delete
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* ── Desktop table ── */
+        <div style={S.tableWrap}>
           <div style={S.tableScroll}><table style={S.table}>
             <thead>
               <tr>
@@ -196,17 +247,12 @@ export default function CellGroupsPage() {
                   <td style={S.td}><span style={S.rowNum}>{i + 1}</span></td>
                   <td style={S.td}>
                     <div style={S.groupNameRow}>
-                      <div style={S.groupAvatar}>
-                        {g.name?.charAt(0).toUpperCase()}
-                      </div>
+                      <div style={S.groupAvatar}>{g.name?.charAt(0).toUpperCase()}</div>
                       <span style={S.groupName}>{g.name}</span>
                     </div>
                   </td>
                   <td style={S.td}>
-                    {g.area
-                      ? <span style={S.areaBadge}>{g.area}</span>
-                      : <span style={S.noArea}>—</span>
-                    }
+                    {g.area ? <span style={S.areaBadge}>{g.area}</span> : <span style={S.noArea}>—</span>}
                   </td>
                   <td style={S.td}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#eff6ff', color: '#1d4ed8', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
@@ -216,16 +262,8 @@ export default function CellGroupsPage() {
                   {(canUpdate || canDelete) && (
                     <td style={{ ...S.td, textAlign: 'right' }}>
                       <div style={S.actionsRow}>
-                        {canUpdate && (
-                          <button onClick={() => openEdit(g)} style={S.editBtn}>
-                            ✏️ Edit
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button onClick={() => { setDelTarget(g); setDelError(''); }} style={S.deleteBtn}>
-                            🗑 Delete
-                          </button>
-                        )}
+                        {canUpdate && <button onClick={() => openEdit(g)} style={S.editBtn}>✏️ Edit</button>}
+                        {canDelete && <button onClick={() => { setDelTarget(g); setDelError(''); }} style={S.deleteBtn}>🗑 Delete</button>}
                       </div>
                     </td>
                   )}
@@ -233,8 +271,8 @@ export default function CellGroupsPage() {
               ))}
             </tbody>
           </table></div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Add / Edit Modal ── */}
       {modal && (

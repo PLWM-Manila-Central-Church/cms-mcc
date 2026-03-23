@@ -30,6 +30,7 @@ import InventoryPage     from '../pages/inventory/InventoryPage';
 import ArchivesPage      from '../pages/archives/ArchivesPage';
 import AuditLogPage      from '../pages/audit/AuditLogPage';
 import SettingsPage      from '../pages/settings/SettingsPage';
+import MySettingsPage    from '../pages/settings/MySettingsPage';
 import DashboardPage     from '../pages/dashboard/DashboardPage';
 
 // Public site (no auth)
@@ -101,6 +102,7 @@ const AppRoutes = () => {
       {/* ── CMS (protected) ── */}
       <Route path="/dashboard"  element={<ProtectedRoute><MainLayout><DashboardPage /></MainLayout></ProtectedRoute>} />
       <Route path="/settings"   element={<ProtectedRoute module="settings" action="read"><MainLayout><SettingsPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/my-settings" element={<ProtectedRoute><MainLayout><MySettingsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/audit-logs" element={<ProtectedRoute module="audit" action="read"><MainLayout><AuditLogPage /></MainLayout></ProtectedRoute>} />
       <Route path="/archives"   element={<ProtectedRoute><MainLayout><ArchivesPage /></MainLayout></ProtectedRoute>} />
       <Route path="/inventory"  element={<ProtectedRoute><MainLayout><InventoryPage /></MainLayout></ProtectedRoute>} />
