@@ -1,7 +1,9 @@
 "use strict";
 
-const auditLog = require("../helpers/auditLog.helper");
-const { Service, ServiceAttendanceSummary, ServiceResponse } = require("../models");
+const { Op }       = require("sequelize");
+const auditLog     = require("../helpers/auditLog.helper");
+const notifService = require("./notifications.service");
+const { Service, ServiceAttendanceSummary, ServiceResponse, User } = require("../models");
 
 // ── Get All Services (paginated) ─────────────────────────────
 exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
@@ -157,6 +159,28 @@ exports.updateStatus = async (id, status, updatedBy) => {
     };
 
   await service.update({ status });
+
+  // ── Publish notification — broadcast to all portal members ──
+  if (status === "published") {
+    try {
+      const portalUsers = await User.findAll({
+        where: { is_active: 1, member_id: { [Op.ne]: null } },
+        attributes: ["id"],
+      });
+      const userIds = portalUsers.map((u) => u.id);
+      if (userIds.length > 0) {
+        await notifService.bulkCreateNotifications(userIds, {
+          type:           "service_published",
+          message:        `Sunday service "${service.title}" is now open for pre-registration.`,
+          reference_id:   service.id,
+          reference_type: "service",
+        });
+      }
+    } catch (err) {
+      console.error("[Services] Publish notifications failed:", err.message);
+    }
+  }
+
   auditLog.log({ userId: updatedBy, action: "UPDATE_SERVICE_STATUS", targetTable: "services", targetId: id, newValues: { status } });
   return service;
 };
