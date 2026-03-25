@@ -25,4 +25,11 @@ router.post("/assignments",                    auth, authorize("ministry", "crea
 router.put("/assignments/:id",                 auth, authorize("ministry", "update"), validate(updateAssignmentSchema), ctrl.updateAssignment);
 router.delete("/assignments/:id",              auth, authorize("ministry", "delete"), ctrl.deleteAssignment);
 
+// ── Ministry Roster (Ministry Leader only) ───────────────────
+// /members/search MUST be before /members/:memberId to avoid Express matching it as a param
+router.get("/members/search",       auth, authorize("ministry", "read"),   ctrl.searchMembersForRoster);
+router.get("/members",              auth, authorize("ministry", "read"),   ctrl.getMyMinistryMembers);
+router.post("/members",             auth, authorize("ministry", "create"), ctrl.addMemberToMinistry);
+router.delete("/members/:memberId", auth, authorize("ministry", "delete"), ctrl.removeMemberFromMinistry);
+
 module.exports = router;

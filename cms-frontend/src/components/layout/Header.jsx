@@ -129,6 +129,37 @@ export default function Header({ sidebarWidth, isMobile = false }) {
     setLoading(false);
   };
 
+  // Task 4.6 — deep-link navigation on notification click
+  const handleNotifClick = (n) => {
+    if (!n.is_read) markOne(n.id);
+    if (!n.reference_id || !n.reference_type) return;
+    switch (n.reference_type) {
+      case 'service':
+        if (user?.roleName === 'Member') {
+          navigate('/portal?tab=events');
+        } else {
+          navigate('/services');
+        }
+        break;
+      case 'event':
+        if (user?.roleName === 'Member') {
+          navigate('/portal?tab=events');
+        } else {
+          navigate(`/events/${n.reference_id}`);
+        }
+        break;
+      case 'ministry_invite':
+        if (user?.roleName === 'Member') {
+          navigate('/portal?tab=events');
+        } else {
+          navigate(`/events/${n.reference_id}`);
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleLogout = async () => { await logout(); navigate('/login'); };
 
   const roleColors = {
@@ -246,7 +277,7 @@ export default function Header({ sidebarWidth, isMobile = false }) {
                     return (
                       <div key={n.id}
                         style={{ ...S.notifRow, background: n.is_read ? '#fff' : '#f0f6ff', borderLeft: `3px solid ${n.is_read ? 'transparent' : t.dot}` }}
-                        onClick={() => !n.is_read && markOne(n.id)}
+                        onClick={() => handleNotifClick(n)}
                       >
                         <div style={{ ...S.notifIconWrap, background: t.bg }}>
                           <span style={S.notifIcon}>{t.icon}</span>
