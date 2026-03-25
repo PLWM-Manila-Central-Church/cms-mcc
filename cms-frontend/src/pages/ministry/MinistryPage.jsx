@@ -74,7 +74,6 @@ export default function MinistryPage() {
 ───────────────────────────────────────────────────────────── */
 function RosterTab({ ministryRoleId }) {
   const [members,    setMembers]    = useState([]);
-  const [allMembers, setAllMembers] = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
   const [search,     setSearch]     = useState('');
