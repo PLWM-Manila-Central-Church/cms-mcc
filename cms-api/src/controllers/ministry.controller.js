@@ -90,6 +90,8 @@ exports.searchMembersForRoster = async (req, res, next) => {
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
+
+exports.getMyMinistryMembers = async (req, res, next) => {
   try {
     if (!req.user.ministryRoleId)
       return res.status(403).json({ message: "You are not a Ministry Leader" });
