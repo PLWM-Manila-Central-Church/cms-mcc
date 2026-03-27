@@ -7,6 +7,8 @@ const {
   MinistryAssignment,
   MinistryMembership,
   Member,
+  CellGroup,
+  Group,
   Service,
   User,
 } = require("../models");
@@ -34,18 +36,30 @@ const assignmentIncludes = [
 exports.getAllRoles = async () => {
   const roles = await MinistryRole.findAll({ order: [["name", "ASC"]] });
 
-  // Attach member_count from ministry_memberships for each role
-  const counts = await MinistryMembership.findAll({
+  // Count from ministry_memberships (roster-added members)
+  const rosterCounts = await MinistryMembership.findAll({
     attributes: [
       "ministry_role_id",
-      [MinistryMembership.sequelize.fn("COUNT", MinistryMembership.sequelize.col("id")), "member_count"],
+      [MinistryMembership.sequelize.fn("COUNT", MinistryMembership.sequelize.col("id")), "cnt"],
     ],
     group: ["ministry_role_id"],
     raw: true,
   });
 
+  // Count from users who have been tagged with a ministry_role_id (leader assignment)
+  const userCounts = await User.findAll({
+    attributes: [
+      "ministry_role_id",
+      [User.sequelize.fn("COUNT", User.sequelize.col("id")), "cnt"],
+    ],
+    where: { ministry_role_id: roles.map(r => r.id) },
+    group: ["ministry_role_id"],
+    raw: true,
+  });
+
   const countMap = {};
-  counts.forEach(c => { countMap[c.ministry_role_id] = parseInt(c.member_count, 10); });
+  rosterCounts.forEach(c => { countMap[c.ministry_role_id] = (countMap[c.ministry_role_id] || 0) + parseInt(c.cnt, 10); });
+  userCounts.forEach(c => { countMap[c.ministry_role_id] = (countMap[c.ministry_role_id] || 0) + parseInt(c.cnt, 10); });
 
   return roles.map(r => ({
     ...r.toJSON(),
@@ -270,9 +284,16 @@ exports.getMyMinistryMembers = async (ministryRoleId) => {
       {
         model: Member,
         as: "member",
-        attributes: ["id", "first_name", "last_name", "email", "phone",
-                     "profile_photo_url", "status", "cell_group_id", "group_id"],
+        attributes: [
+          "id", "first_name", "last_name", "email", "phone",
+          "birthdate", "spiritual_birthday",
+          "profile_photo_url", "status", "cell_group_id", "group_id",
+        ],
         required: true,
+        include: [
+          { model: CellGroup, as: "cellGroup", attributes: ["id", "name"], required: false },
+          { model: Group,     as: "group",     attributes: ["id", "name"], required: false },
+        ],
       },
     ],
     order: [["created_at", "DESC"]],
