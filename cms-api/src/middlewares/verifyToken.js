@@ -13,7 +13,7 @@ module.exports = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findByPk(decoded.userId, {
-      attributes: ["id", "email", "role_id", "member_id", "is_active", "force_password_change"],
+      attributes: ["id", "email", "role_id", "member_id", "is_active", "force_password_change", "leads_cell_group_id", "leads_group_id", "ministry_role_id"],
       include: [
         { model: Role, as: "role", attributes: ["id", "role_name", "is_system"] },
         { model: Member, as: "member", attributes: ["id", "cell_group_id", "group_id"], required: false },
@@ -33,6 +33,9 @@ module.exports = async (req, res, next) => {
       cellGroupId:        user.member?.cell_group_id || null,
       groupId:            user.member?.group_id || null,
       forcePasswordChange: user.force_password_change,
+      leadsCellGroupId:   user.leads_cell_group_id || null,
+      leadsGroupId:       user.leads_group_id      || null,
+      ministryRoleId:     user.ministry_role_id    || null,
     };
 
     next();
