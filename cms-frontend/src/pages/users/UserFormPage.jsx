@@ -23,6 +23,8 @@ const EMPTY_FORM = {
   birthdate: '', spiritual_birthday: '',
   address: '',
   cell_group_id: '', group_id: '',
+  // Leader fields
+  leads_cell_group_id: '', leads_group_id: '', ministry_role_id: '',
 };
 
 export default function UserFormPage() {
@@ -30,16 +32,17 @@ export default function UserFormPage() {
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
-  const [form,       setForm]       = useState(EMPTY_FORM);
-  const [roles,      setRoles]      = useState([]);
-  const [cellGroups, setCellGroups] = useState([]);
-  const [groups,     setGroups]     = useState([]);
-  const [loading,    setLoading]    = useState(false);
-  const [saving,     setSaving]     = useState(false);
-  const [error,      setError]      = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [form,          setForm]          = useState(EMPTY_FORM);
+  const [roles,         setRoles]         = useState([]);
+  const [cellGroups,    setCellGroups]    = useState([]);
+  const [groups,        setGroups]        = useState([]);
+  const [ministryRoles, setMinistryRoles] = useState([]);
+  const [loading,       setLoading]       = useState(false);
+  const [saving,        setSaving]        = useState(false);
+  const [error,         setError]         = useState('');
+  const [showPassword,  setShowPassword]  = useState(false);
 
-  // Fetch roles, cell groups and groups for dropdowns
+  // Fetch roles, cell groups, groups, and ministry roles for dropdowns
   useEffect(() => {
     axiosInstance.get('/roles/list')
       .then(res => setRoles(res.data.data || []))
@@ -52,6 +55,10 @@ export default function UserFormPage() {
     axiosInstance.get('/members/dropdowns/groups')
       .then(res => setGroups(res.data.data || []))
       .catch(() => {});
+
+    axiosInstance.get('/ministry/roles')
+      .then(res => setMinistryRoles(res.data.data || []))
+      .catch(() => {});
   }, []);
 
   // Load existing user data when editing
@@ -62,18 +69,22 @@ export default function UserFormPage() {
       .then(res => {
         const u = res.data.data;
         setForm({
-          email:              u.email               || '',
-          password:           '',
-          role_id:            u.role_id             || '',
-          first_name:         u.member?.first_name  || '',
-          last_name:          u.member?.last_name   || '',
-          phone:              u.member?.phone       || '',
-          gender:             u.member?.gender      || '',
-          birthdate:          u.member?.birthdate   || '',
-          spiritual_birthday: u.member?.spiritual_birthday || '',
-          address:            u.member?.address     || '',
-          cell_group_id:      u.member?.cell_group_id || '',
-          group_id:           u.member?.group_id   || '',
+          email:               u.email               || '',
+          password:            '',
+          role_id:             u.role_id             || '',
+          first_name:          u.member?.first_name  || '',
+          last_name:           u.member?.last_name   || '',
+          phone:               u.member?.phone       || '',
+          gender:              u.member?.gender      || '',
+          birthdate:           u.member?.birthdate   || '',
+          spiritual_birthday:  u.member?.spiritual_birthday || '',
+          address:             u.member?.address     || '',
+          cell_group_id:       u.member?.cell_group_id || '',
+          group_id:            u.member?.group_id   || '',
+          // Leader fields (on the user record itself)
+          leads_cell_group_id: u.leads_cell_group_id || '',
+          leads_group_id:      u.leads_group_id      || '',
+          ministry_role_id:    u.ministry_role_id    || '',
         });
       })
       .catch(() => setError('Failed to load user.'))
@@ -81,7 +92,19 @@ export default function UserFormPage() {
   }, [id, isEdit]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    // When role changes, clear leader-specific fields to avoid stale values
+    if (name === 'role_id') {
+      setForm(f => ({
+        ...f,
+        role_id:             value,
+        leads_cell_group_id: '',
+        leads_group_id:      '',
+        ministry_role_id:    '',
+      }));
+    } else {
+      setForm(f => ({ ...f, [name]: value }));
+    }
     setError('');
   };
 
@@ -95,17 +118,21 @@ export default function UserFormPage() {
     setError('');
 
     const payload = {
-      email:              form.email,
-      role_id:            parseInt(form.role_id),
-      first_name:         form.first_name.trim(),
-      last_name:          form.last_name.trim(),
-      phone:              form.phone              || null,
-      gender:             form.gender             || null,
-      birthdate:          form.birthdate          || null,
-      spiritual_birthday: form.spiritual_birthday || null,
-      address:            form.address            || null,
-      cell_group_id:      form.cell_group_id      ? parseInt(form.cell_group_id) : null,
-      group_id:           form.group_id           ? parseInt(form.group_id)      : null,
+      email:               form.email,
+      role_id:             parseInt(form.role_id),
+      first_name:          form.first_name.trim(),
+      last_name:           form.last_name.trim(),
+      phone:               form.phone              || null,
+      gender:              form.gender             || null,
+      birthdate:           form.birthdate          || null,
+      spiritual_birthday:  form.spiritual_birthday || null,
+      address:             form.address            || null,
+      cell_group_id:       form.cell_group_id       ? parseInt(form.cell_group_id)       : null,
+      group_id:            form.group_id            ? parseInt(form.group_id)            : null,
+      // Leader fields — only sent when relevant; null clears a previous assignment
+      leads_cell_group_id: form.leads_cell_group_id ? parseInt(form.leads_cell_group_id) : null,
+      leads_group_id:      form.leads_group_id      ? parseInt(form.leads_group_id)      : null,
+      ministry_role_id:    form.ministry_role_id    ? parseInt(form.ministry_role_id)    : null,
     };
     if (!isEdit) payload.password = form.password;
 
@@ -131,6 +158,13 @@ export default function UserFormPage() {
   const selectStyle = { ...inputStyle, background: '#fff', cursor: 'pointer' };
   const onFocus = e => e.target.style.borderColor = '#0066b3';
   const onBlur  = e => e.target.style.borderColor = '#e2e8f0';
+
+  // Derived — which leader dropdowns to show based on selected role
+  const selectedRoleId    = parseInt(form.role_id) || 0;
+  const isCGLeader        = selectedRoleId === 5;
+  const isGroupLeader     = selectedRoleId === 6;
+  const isMinistryLeader  = selectedRoleId === 3; // Only Reg Team can hold a Ministry sub-role; Admin sees all members without scoping
+  const showLeaderSection = isCGLeader || isGroupLeader || isMinistryLeader;
 
   if (loading) return <div style={S.loading}>Loading...</div>;
 
@@ -288,6 +322,69 @@ export default function UserFormPage() {
             />
           </div>
         </div>
+
+        {/* ── Leader Assignment (conditional) ── */}
+        {showLeaderSection && (
+          <div style={S.card}>
+            <h2 style={S.cardTitle}>Leader Assignment</h2>
+            <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 20px 0' }}>
+              Assign which cell group, group, or ministry this user leads.
+            </p>
+
+            {isCGLeader && (
+              <div style={S.field}>
+                <label style={S.label}>Leads Cell Group</label>
+                <select
+                  name="leads_cell_group_id" value={form.leads_cell_group_id}
+                  onChange={handleChange} style={selectStyle}
+                  onFocus={onFocus} onBlur={onBlur}
+                >
+                  <option value="">— None —</option>
+                  {cellGroups.map(cg => (
+                    <option key={cg.id} value={cg.id}>
+                      {cg.name}{cg.area ? ` (${cg.area})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <p style={S.hint}>The cell group this user is responsible for leading.</p>
+              </div>
+            )}
+
+            {isGroupLeader && (
+              <div style={S.field}>
+                <label style={S.label}>Leads Group</label>
+                <select
+                  name="leads_group_id" value={form.leads_group_id}
+                  onChange={handleChange} style={selectStyle}
+                  onFocus={onFocus} onBlur={onBlur}
+                >
+                  <option value="">— None —</option>
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+                <p style={S.hint}>The group this user is responsible for leading.</p>
+              </div>
+            )}
+
+            {isMinistryLeader && (
+              <div style={{ ...S.field, marginTop: isCGLeader || isGroupLeader ? 16 : 0 }}>
+                <label style={S.label}>Ministry Sub-Role</label>
+                <select
+                  name="ministry_role_id" value={form.ministry_role_id}
+                  onChange={handleChange} style={selectStyle}
+                  onFocus={onFocus} onBlur={onBlur}
+                >
+                  <option value="">— None —</option>
+                  {ministryRoles.map(mr => (
+                    <option key={mr.id} value={mr.id}>{mr.name}</option>
+                  ))}
+                </select>
+                <p style={S.hint}>Assigns this user as a Ministry Leader for that ministry team.</p>
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={S.actions}>
           <button type="button" onClick={() => navigate('/users')} style={S.cancelBtn}>Cancel</button>

@@ -1,6 +1,8 @@
 "use strict";
 
-const { Member, CellGroup, Group, EmergencyContact, User } = require("../models");
+const { Op }                                                    = require("sequelize");
+const { Member, CellGroup, Group, EmergencyContact, User,
+        MinistryMembership }                                     = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
 
 const memberIncludes = [
@@ -19,16 +21,47 @@ const memberIncludes = [
 ];
 
 // ── Get All Members (paginated) ──────────────────────────────
-exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_group_id, group_id } = {}) => {
+exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_group_id, group_id } = {}, user = {}) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where  = { is_deleted: 0 };
 
+  const {
+    roleId          = null,
+    leadsCellGroupId = null,
+    leadsGroupId     = null,
+    ministryRoleId   = null,
+  } = user;
+
+  // Role-based scoping — restrict what the caller can see
+  // Role IDs: 5 = Cell Group Leader, 6 = Group Leader
+  // Ministry Leader = Registration Team (3) with ministryRoleId set
+  if (roleId === 5 && leadsCellGroupId) {
+    // Cell Group Leader: only their cell group
+    where.cell_group_id = leadsCellGroupId;
+  } else if (roleId === 6 && leadsGroupId) {
+    // Group Leader: only their group
+    where.group_id = leadsGroupId;
+  } else if (roleId === 3 && ministryRoleId) {
+    // Ministry Leader: only members enrolled in their ministry
+    const memberships = await MinistryMembership.findAll({
+      where:      { ministry_role_id: ministryRoleId },
+      attributes: ["member_id"],
+    });
+    const memberIds = memberships.map((m) => m.member_id);
+    // If the ministry has no members yet, return empty result immediately
+    if (memberIds.length === 0) {
+      return { members: [], total: 0, total_pages: 0 };
+    }
+    where.id = { [Op.in]: memberIds };
+  }
+  // All other roles (System Admin=1, Pastor=2, Finance=4, Member=7) see all members
+
+  // Query filters (applied on top of scope)
   if (status)        where.status        = status;
-  if (cell_group_id) where.cell_group_id = parseInt(cell_group_id);
-  if (group_id)      where.group_id      = parseInt(group_id);
+  if (cell_group_id && !where.cell_group_id) where.cell_group_id = parseInt(cell_group_id);
+  if (group_id      && !where.group_id)      where.group_id      = parseInt(group_id);
 
   if (search) {
-    const { Op } = require("sequelize");
     const like = `%${search}%`;
     where[Op.or] = [
       { first_name: { [Op.like]: like } },
@@ -69,7 +102,7 @@ exports.getMemberById = async (id) => {
 };
 
 // ── Create Member ────────────────────────────────────────────
-exports.createMember = async (data, createdBy) => {
+exports.createMember = async (data, createdBy, user = {}) => {
   const {
     first_name, last_name, email, phone, birthdate, spiritual_birthday,
     address, gender, status, cell_group_id, group_id, referred_by,
@@ -115,6 +148,21 @@ exports.createMember = async (data, createdBy) => {
   });
 
   const created = await exports.getMemberById(member.id);
+
+  // Auto-enroll: if the creator is a Ministry Leader, add the new member
+  // to their ministry roster automatically.
+  const { roleId, ministryRoleId } = user;
+  if (roleId === 3 && ministryRoleId) {
+    try {
+      await MinistryMembership.findOrCreate({
+        where: { ministry_role_id: ministryRoleId, member_id: member.id },
+        defaults: { ministry_role_id: ministryRoleId, member_id: member.id, added_by: createdBy },
+      });
+    } catch (err) {
+      console.error("[Members] Ministry auto-enroll failed:", err.message);
+    }
+  }
+
   auditLog.log({ userId: createdBy, action: "CREATE_MEMBER", targetTable: "members", targetId: created.id });
   return created;
 };

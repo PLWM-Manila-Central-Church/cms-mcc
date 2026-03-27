@@ -93,10 +93,11 @@ exports.login = async (email, password, ip, device) => {
     refreshToken: rawRefresh,
     forcePasswordChange: user.force_password_change === 1,
     user: {
-      id:       user.id,
-      email:    user.email,
-      roleName: user.role.role_name,
-      memberId: user.member_id || null,
+      id:             user.id,
+      email:          user.email,
+      roleName:       user.role.role_name,
+      memberId:       user.member_id       || null,
+      ministryRoleId: user.ministry_role_id || null,
     },
     permissions,
   };

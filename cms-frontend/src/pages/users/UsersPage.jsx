@@ -171,6 +171,11 @@ export default function UsersPage() {
                   <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>ID #{u.id}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: rc.bg, color: rc.color }}>{u.role?.role_name || '—'}</span>
+                    {u.leadsMinistry && (
+                      <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#fdf4ff', color: '#9333ea' }}>
+                        ⚡ {u.leadsMinistry.name}
+                      </span>
+                    )}
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: u.is_active ? '#dcfce7' : '#f3f4f6', color: u.is_active ? '#16a34a' : '#6b7280' }}>{u.is_active ? 'Active' : 'Inactive'}</span>
                   </div>
                   {u.member && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>👤 {u.member.first_name} {u.member.last_name}</div>}
@@ -206,6 +211,7 @@ export default function UsersPage() {
               </th>
               <th style={styles.th}>User</th>
               <th style={styles.th}>Role</th>
+              <th style={styles.th}>Ministry</th>
               <th style={styles.th}>Linked Member</th>
               <th style={styles.th}>Last Login</th>
               <th style={styles.th}>Status</th>
@@ -214,9 +220,9 @@ export default function UsersPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} style={styles.centerCell}>Loading...</td></tr>
+              <tr><td colSpan={8} style={styles.centerCell}>Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} style={styles.centerCell}>{search ? 'No users match your search.' : 'No users found.'}</td></tr>
+              <tr><td colSpan={8} style={styles.centerCell}>{search ? 'No users match your search.' : 'No users found.'}</td></tr>
             ) : filtered.map((u, i) => (
               <tr
                 key={u.id}
@@ -245,6 +251,12 @@ export default function UsersPage() {
                   }}>
                     {u.role?.role_name || '—'}
                   </span>
+                </td>
+                <td style={styles.td}>
+                  {u.leadsMinistry
+                    ? <span style={{ ...styles.badge, background: '#fdf4ff', color: '#9333ea' }}>⚡ {u.leadsMinistry.name}</span>
+                    : <span style={styles.noMember}>—</span>
+                  }
                 </td>
                 <td style={styles.td}>
                   {u.member

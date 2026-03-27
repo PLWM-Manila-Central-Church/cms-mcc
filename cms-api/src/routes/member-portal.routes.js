@@ -49,4 +49,6 @@ router.post  ("/change-password",                            auth, ctrl.changeMy
 router.get   ("/ministry-assignments",                       auth, ctrl.getMyAssignments);
 router.post  ("/ministry-assignments/:assignmentId/confirm", auth, ctrl.confirmMinistryAssignment);
 
+router.get   ("/ministry-invites",                           auth, ctrl.getMyMinistryInvites);
+
 module.exports = router;

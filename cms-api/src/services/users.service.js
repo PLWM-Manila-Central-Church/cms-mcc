@@ -1,7 +1,7 @@
 "use strict";
 
 const bcrypt = require("bcrypt");
-const { User, Role, Member } = require("../models");
+const { User, Role, Member, MinistryRole } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
@@ -12,6 +12,12 @@ const userIncludes = [
     model: Member,
     as: "member",
     attributes: ["id", "first_name", "last_name", "cell_group_id", "group_id"],
+    required: false,
+  },
+  {
+    model: MinistryRole,
+    as: "leadsMinistry",
+    attributes: ["id", "name"],
     required: false,
   },
 ];
@@ -42,6 +48,8 @@ exports.createUser = async (data, createdBy) => {
     // Member fields — all collected from the form
     first_name, last_name, phone, gender, birthdate,
     spiritual_birthday, address, cell_group_id, group_id,
+    // Leader fields — only relevant for Registration Team / Admin users
+    leads_cell_group_id, leads_group_id, ministry_role_id,
   } = data;
 
   const existing = await User.findOne({ where: { email } });
@@ -76,9 +84,12 @@ exports.createUser = async (data, createdBy) => {
     email,
     password_hash,
     role_id,
-    member_id:         resolvedMemberId,
-    invited_member_id: invited_member_id || null,
-    is_active:         1,
+    member_id:            resolvedMemberId,
+    invited_member_id:    invited_member_id    || null,
+    leads_cell_group_id:  leads_cell_group_id  ? parseInt(leads_cell_group_id)  : null,
+    leads_group_id:       leads_group_id       ? parseInt(leads_group_id)       : null,
+    ministry_role_id:     ministry_role_id     ? parseInt(ministry_role_id)     : null,
+    is_active:            1,
     force_password_change: 1,
   });
 
@@ -96,6 +107,8 @@ exports.updateUser = async (id, data, updatedBy) => {
     email, role_id, member_id, invited_member_id, is_active,
     first_name, last_name, phone, gender, birthdate,
     spiritual_birthday, address, cell_group_id, group_id,
+    // Leader fields
+    leads_cell_group_id, leads_group_id, ministry_role_id,
   } = data;
 
   if (email && email !== user.email) {
@@ -109,11 +122,21 @@ exports.updateUser = async (id, data, updatedBy) => {
   }
 
   await user.update({
-    ...(email                         && { email }),
-    ...(role_id                       && { role_id }),
-    ...(member_id        !== undefined && { member_id }),
+    ...(email                          && { email }),
+    ...(role_id                        && { role_id }),
+    ...(member_id         !== undefined && { member_id }),
     ...(invited_member_id !== undefined && { invited_member_id }),
-    ...(is_active        !== undefined && { is_active }),
+    ...(is_active         !== undefined && { is_active }),
+    ...(leads_cell_group_id !== undefined && { leads_cell_group_id: leads_cell_group_id ? parseInt(leads_cell_group_id) : null }),
+    ...(leads_group_id      !== undefined && { leads_group_id:      leads_group_id      ? parseInt(leads_group_id)      : null }),
+    ...(ministry_role_id    !== undefined && { ministry_role_id:    ministry_role_id    ? parseInt(ministry_role_id)    : null }),
+    // If role_id is being changed away from a leader role (3=Reg Team, 5=CG Leader, 6=Group Leader),
+    // automatically clear all leader fields so stale scoping does not persist for the new role.
+    ...(role_id && ![3, 5, 6].includes(parseInt(role_id)) && {
+      leads_cell_group_id: null,
+      leads_group_id:      null,
+      ministry_role_id:    null,
+    }),
   });
 
   // Sync all editable fields on the linked member record
@@ -186,6 +209,8 @@ exports.hardDeleteUser = async (id, requestingUserId) => {
     await sequelize.query("DELETE FROM password_reset_tokens WHERE user_id = :userId", { replacements: { userId: id }, transaction: t });
     await sequelize.query("DELETE FROM user_sessions WHERE user_id = :userId",         { replacements: { userId: id }, transaction: t });
     await sequelize.query("DELETE FROM notifications WHERE user_id = :userId",         { replacements: { userId: id }, transaction: t });
+    await sequelize.query("DELETE FROM ministry_memberships WHERE added_by = :userId",          { replacements: { userId: id }, transaction: t });
+    await sequelize.query("DELETE FROM ministry_event_invites WHERE invited_by = :userId",      { replacements: { userId: id }, transaction: t });
 
     // Hard delete the user
     await user.destroy({ transaction: t });
