@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
@@ -14,24 +15,18 @@ export default function MinistryPage() {
   const isMember = user?.roleName === 'Member';
 
   // Ministry Leader = Registration Team user with a ministry sub-role assigned.
-  // They see ONLY the "My Members" roster tab — no Assignments, Roles, or Substitutes.
+  // They see ONLY the roster — no tabs, no Assignments, Roles, or Substitutes.
   const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
 
-  // Tab list differs by role:
-  // Ministry Leader → only "My Members"
-  // Member          → only "Substitute Requests"
-  // Everyone else   → Assignments + Roles + Substitute Requests
-  const tabs = isMinistryLeader
-    ? [{ key: 'roster', label: '👥 My Members' }]
-    : isMember
-      ? [{ key: 'substitutes', label: '🔄 Substitute Requests' }]
-      : [
-          { key: 'assignments', label: '📋 Assignments' },
-          { key: 'roles',       label: '🎭 Roles' },
-          { key: 'substitutes', label: '🔄 Substitute Requests' },
-        ];
+  const tabs = isMember
+    ? [{ key: 'substitutes', label: '🔄 Substitute Requests' }]
+    : [
+        { key: 'assignments', label: '📋 Assignments' },
+        { key: 'roles',       label: '🎭 Roles' },
+        { key: 'substitutes', label: '🔄 Substitute Requests' },
+      ];
 
-  const defaultTab = isMinistryLeader ? 'roster' : isMember ? 'substitutes' : 'assignments';
+  const defaultTab = isMember ? 'substitutes' : 'assignments';
   const [tab, setTab] = useState(defaultTab);
 
   return (
@@ -49,23 +44,25 @@ export default function MinistryPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={S.tabs}>
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            style={{ ...S.tab, ...(tab === t.key ? S.tabActive : {}) }}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs — hidden for ministry leaders (they only see the roster) */}
+      {!isMinistryLeader && (
+        <div style={S.tabs}>
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              style={{ ...S.tab, ...(tab === t.key ? S.tabActive : {}) }}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {tab === 'assignments' && <AssignmentsTab />}
-      {tab === 'roles'       && <RolesTab />}
-      {tab === 'roster'      && <RosterTab ministryRoleId={user?.ministryRoleId} />}
-      {tab === 'substitutes' && <SubstituteRequestsTab />}
+      {isMinistryLeader && <RosterTab ministryRoleId={user?.ministryRoleId} />}
+      {!isMinistryLeader && tab === 'assignments' && <AssignmentsTab />}
+      {!isMinistryLeader && tab === 'roles'       && <RolesTab />}
+      {!isMinistryLeader && tab === 'substitutes' && <SubstituteRequestsTab />}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }
         table { width: 100%; border-collapse: collapse; }
@@ -84,6 +81,7 @@ export default function MinistryPage() {
    Roster Tab (Ministry Leader only)
 ───────────────────────────────────────────────────────────── */
 function RosterTab({ ministryRoleId }) {
+  const navigate = useNavigate();
   const [members,    setMembers]    = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
@@ -149,6 +147,17 @@ function RosterTab({ ministryRoleId }) {
     }
   };
 
+  // Calculate age from birthdate
+  const calcAge = (birthdate) => {
+    if (!birthdate) return '—';
+    const today = new Date();
+    const bd    = new Date(birthdate);
+    let age = today.getFullYear() - bd.getFullYear();
+    const m = today.getMonth() - bd.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
+    return age;
+  };
+
   const filtered = members.filter(m => {
     const name = `${m.member?.first_name || ''} ${m.member?.last_name || ''}`.toLowerCase();
     return name.includes(search.toLowerCase());
@@ -157,27 +166,33 @@ function RosterTab({ ministryRoleId }) {
   return (
     <>
       {/* Add member search */}
-      <div style={{ ...S.tableCard, padding: '20px', marginBottom: '20px' }}>
-        <div style={{ fontSize: '14px', fontWeight: '700', color: '#005599', marginBottom: '12px' }}>Add Member to Roster</div>
+      <div style={{ ...S.tableCard, padding: '20px 24px', marginBottom: '20px' }}>
+        <div style={{ fontSize: '13px', fontWeight: '700', color: '#005599', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Add Member to Roster</div>
         <div style={{ position: 'relative' }}>
           <input
             value={addSearch}
             onChange={e => handleAddSearch(e.target.value)}
-            placeholder="Search by name to add a member…"
-            style={{ ...S.searchInput, paddingLeft: '14px', width: '100%', boxSizing: 'border-box' }}
+            onBlur={() => setTimeout(() => setAddResults([]), 200)}
+            placeholder="Type a name to search…"
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              padding: '10px 14px', fontSize: '14px',
+              border: '1.5px solid #e2e8f0', borderRadius: '8px',
+              outline: 'none', color: '#0f172a', background: '#fafbfc',
+            }}
           />
           {addResults.length > 0 && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 20 }}>
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 20, marginTop: 4 }}>
               {addResults.map(m => (
                 <div
                   key={m.id}
-                  onClick={() => !adding && handleAdd(m)}
+                  onMouseDown={() => !adding && handleAdd(m)}
                   style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#f0f6ff'}
                   onMouseLeave={e => e.currentTarget.style.background = '#fff'}
                 >
                   <span>{m.last_name}, {m.first_name}</span>
-                  <span style={{ fontSize: '11px', color: '#0066b3', fontWeight: '600' }}>+ Add</span>
+                  <span style={{ fontSize: '11px', color: '#0066b3', fontWeight: '700' }}>+ Add</span>
                 </div>
               ))}
             </div>
@@ -211,34 +226,44 @@ function RosterTab({ ministryRoleId }) {
             <thead>
               <tr style={S.thead}>
                 <th style={S.th}>#</th>
-                <th style={S.th}>Member</th>
-                <th style={S.th}>Email</th>
-                <th style={S.th}>Phone</th>
-                <th style={S.th}>Status</th>
+                <th style={S.th}>Name</th>
+                <th style={S.th}>Age</th>
+                <th style={S.th}>Group</th>
+                <th style={S.th}>Cell Group</th>
+                <th style={S.th}>Spiritual Birthday</th>
+                <th style={S.th}>Mobile No.</th>
                 <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((row, i) => {
-                const m = row.member || {};
+                const m    = row.member || {};
                 const name = `${m.first_name || ''} ${m.last_name || ''}`.trim() || '—';
+                const age  = calcAge(m.birthdate);
+                const sbd  = m.spiritual_birthday
+                  ? new Date(m.spiritual_birthday).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
+                  : '—';
                 return (
                   <tr key={row.id} style={S.row}>
-                    <td style={{ ...S.td, color: '#94a3b8', fontWeight: 500 }}>{i + 1}</td>
+                    <td style={{ ...S.td, color: '#94a3b8', fontWeight: 500, width: 40 }}>{i + 1}</td>
                     <td style={S.td}>
                       <div style={S.nameCell}>
                         <div style={S.avatar}>{name[0]?.toUpperCase() || '?'}</div>
                         <span style={S.nameTxt}>{name}</span>
                       </div>
                     </td>
-                    <td style={{ ...S.td, color: '#64748b' }}>{m.email || '—'}</td>
+                    <td style={{ ...S.td, color: '#64748b' }}>{age}</td>
+                    <td style={{ ...S.td, color: '#64748b' }}>{m.group?.name || '—'}</td>
+                    <td style={{ ...S.td, color: '#64748b' }}>{m.cellGroup?.name || '—'}</td>
+                    <td style={{ ...S.td, color: '#64748b' }}>{sbd}</td>
                     <td style={{ ...S.td, color: '#64748b' }}>{m.phone || '—'}</td>
-                    <td style={S.td}>
-                      <span style={{ ...S.pill, ...(m.status === 'Active' ? S.pillGreen : S.pillGray) }}>
-                        {m.status || '—'}
-                      </span>
-                    </td>
                     <td style={{ ...S.td, textAlign: 'right' }}>
+                      <button
+                        style={S.editBtn}
+                        onClick={() => navigate(`/members/${m.id}`)}
+                      >
+                        View
+                      </button>
                       <button
                         style={{ ...S.deleteBtn, opacity: removing === m.id ? 0.6 : 1 }}
                         onClick={() => handleRemove(m.id)}

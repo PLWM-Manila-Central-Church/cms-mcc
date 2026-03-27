@@ -173,7 +173,7 @@ export default function UsersPage() {
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: rc.bg, color: rc.color }}>{u.role?.role_name || '—'}</span>
                     {u.leadsMinistry && (
                       <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#fdf4ff', color: '#9333ea' }}>
-                        ⚡ {u.leadsMinistry.name}
+                        {u.leadsMinistry.name}
                       </span>
                     )}
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: u.is_active ? '#dcfce7' : '#f3f4f6', color: u.is_active ? '#16a34a' : '#6b7280' }}>{u.is_active ? 'Active' : 'Inactive'}</span>
@@ -254,7 +254,7 @@ export default function UsersPage() {
                 </td>
                 <td style={styles.td}>
                   {u.leadsMinistry
-                    ? <span style={{ ...styles.badge, background: '#fdf4ff', color: '#9333ea' }}>⚡ {u.leadsMinistry.name}</span>
+                    ? <span style={{ ...styles.badge, background: '#fdf4ff', color: '#9333ea' }}>{u.leadsMinistry.name}</span>
                     : <span style={styles.noMember}>—</span>
                   }
                 </td>
