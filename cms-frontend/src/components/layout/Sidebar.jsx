@@ -16,11 +16,19 @@ function NavIcon({ name, size = 18 }) {
 }
 
 export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
 
-  const visibleItems = NAV_ITEMS.filter(item =>
-    !item.permissions || hasPermission(item.permissions.module, item.permissions.action)
-  );
+  // Ministry Leader = Registration Team user with a ministry sub-role.
+  // They manage members exclusively through the Ministry page (roster tab),
+  // so the Members nav item is hidden for them.
+  const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
+
+  const visibleItems = NAV_ITEMS.filter(item => {
+    // Hide Members link for Ministry Leaders
+    if (isMinistryLeader && item.path === '/members') return false;
+    // Standard permission check for all other items
+    return !item.permissions || hasPermission(item.permissions.module, item.permissions.action);
+  });
 
   const showText = isMobile || !collapsed;
 

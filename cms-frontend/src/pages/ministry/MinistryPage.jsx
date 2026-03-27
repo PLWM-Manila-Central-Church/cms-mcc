@@ -13,19 +13,26 @@ export default function MinistryPage() {
   const isMobile = useIsMobile();
   const isMember = user?.roleName === 'Member';
 
-  // Task 4.3 — detect Ministry Leader
+  // Ministry Leader = Registration Team user with a ministry sub-role assigned.
+  // They see ONLY the "My Members" roster tab — no Assignments, Roles, or Substitutes.
   const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
 
-  const [tab, setTab] = useState(isMember ? 'substitutes' : 'assignments');
+  // Tab list differs by role:
+  // Ministry Leader → only "My Members"
+  // Member          → only "Substitute Requests"
+  // Everyone else   → Assignments + Roles + Substitute Requests
+  const tabs = isMinistryLeader
+    ? [{ key: 'roster', label: '👥 My Members' }]
+    : isMember
+      ? [{ key: 'substitutes', label: '🔄 Substitute Requests' }]
+      : [
+          { key: 'assignments', label: '📋 Assignments' },
+          { key: 'roles',       label: '🎭 Roles' },
+          { key: 'substitutes', label: '🔄 Substitute Requests' },
+        ];
 
-  const tabs = isMember
-    ? [{ key: 'substitutes', label: '🔄 Substitute Requests' }]
-    : [
-        { key: 'assignments', label: '📋 Assignments' },
-        { key: 'roles',       label: '🎭 Roles' },
-        ...(isMinistryLeader ? [{ key: 'roster', label: '👥 My Members' }] : []),
-        { key: 'substitutes', label: '🔄 Substitute Requests' },
-      ];
+  const defaultTab = isMinistryLeader ? 'roster' : isMember ? 'substitutes' : 'assignments';
+  const [tab, setTab] = useState(defaultTab);
 
   return (
     <div style={{ ...S.page, padding: isMobile ? '16px 12px' : '28px 32px' }}>
@@ -33,7 +40,11 @@ export default function MinistryPage() {
         <div>
           <h1 style={S.title}>Ministry</h1>
           <p style={S.subtitle}>
-            {isMember ? 'Submit substitute requests for your ministry assignments' : 'Manage ministry roles and service assignments'}
+            {isMinistryLeader
+              ? 'Manage your ministry roster and event invites'
+              : isMember
+                ? 'Submit substitute requests for your ministry assignments'
+                : 'Manage ministry roles and service assignments'}
           </p>
         </div>
       </div>
@@ -70,7 +81,7 @@ export default function MinistryPage() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Roster Tab (Ministry Leader only) — Task 4.3
+   Roster Tab (Ministry Leader only)
 ───────────────────────────────────────────────────────────── */
 function RosterTab({ ministryRoleId }) {
   const [members,    setMembers]    = useState([]);
@@ -104,8 +115,6 @@ function RosterTab({ ministryRoleId }) {
     if (!val.trim()) { setAddResults([]); return; }
     searchTimeout.current = setTimeout(async () => {
       try {
-        // Use /ministry/members/search — unscoped, so Ministry Leaders can find
-        // members not yet in their roster, not just their already-scoped member list
         const res = await axiosInstance.get(`/ministry/members/search?q=${encodeURIComponent(val)}`);
         const found = res.data.data || [];
         const existingIds = new Set(members.map(m => m.member?.id || m.member_id));
@@ -410,7 +419,7 @@ function AssignmentsTab() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Roles Tab
+   Roles Tab — shows member_count badge per role
 ───────────────────────────────────────────────────────────── */
 function RolesTab() {
   const { hasPermission } = useAuth();
@@ -466,17 +475,62 @@ function RolesTab() {
   return (
     <>
       <div style={S.toolbar}>
-        <div style={S.searchWrap}><span style={S.searchIcon}>🔍</span><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search roles…" style={S.searchInput} />{search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}</div>
+        <div style={S.searchWrap}>
+          <span style={S.searchIcon}>🔍</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search roles…" style={S.searchInput} />
+          {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
+        </div>
         <div style={S.countBadge}>{filtered.length} role{filtered.length !== 1 ? 's' : ''}</div>
         {canAdd && <button style={S.addBtn} onClick={openAdd}>+ New Role</button>}
       </div>
       {error && <div style={S.errBanner}><span>⚠ {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
       <div style={S.tableCard}>
-        {loading ? <div style={S.centerMsg}><div style={S.spinner} /></div>
-        : filtered.length === 0 ? <div style={S.centerMsg}><span style={S.emptyIcon}>🎭</span><span style={S.emptyTitle}>{search ? 'No matches found' : 'No roles yet'}</span><span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Role" to create the first ministry role.'}</span></div>
-        : <div style={S.tableScroll}><table style={S.table}><thead><tr style={S.thead}><th style={S.th}>#</th><th style={S.th}>Role Name</th><th style={{ ...S.th, textAlign:'right' }}>Actions</th></tr></thead><tbody>{filtered.map((r, i) => (<tr key={r.id} style={S.row}><td style={{ ...S.td, color:'#94a3b8', fontWeight:500, width:'48px' }}>{i + 1}</td><td style={S.td}><div style={S.nameCell}><div style={{ ...S.avatar, background:'linear-gradient(135deg,#7c3aed,#a78bfa)' }}>{r.name?.[0]?.toUpperCase() || '?'}</div><span style={S.nameTxt}>{r.name}</span></div></td><td style={{ ...S.td, textAlign:'right' }}>{canEdit && <button style={S.editBtn} onClick={() => openEdit(r)}>Edit</button>}{canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(r); setDelErr(''); }}>Delete</button>}</td></tr>))}</tbody></table></div>}
+        {loading
+          ? <div style={S.centerMsg}><div style={S.spinner} /></div>
+          : filtered.length === 0
+            ? <div style={S.centerMsg}><span style={S.emptyIcon}>🎭</span><span style={S.emptyTitle}>{search ? 'No matches found' : 'No roles yet'}</span><span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Role" to create the first ministry role.'}</span></div>
+            : <div style={S.tableScroll}><table style={S.table}>
+                <thead>
+                  <tr style={S.thead}>
+                    <th style={S.th}>#</th>
+                    <th style={S.th}>Role Name</th>
+                    <th style={S.th}>Members</th>
+                    <th style={{ ...S.th, textAlign:'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r, i) => (
+                    <tr key={r.id} style={S.row}>
+                      <td style={{ ...S.td, color:'#94a3b8', fontWeight:500, width:'48px' }}>{i + 1}</td>
+                      <td style={S.td}>
+                        <div style={S.nameCell}>
+                          <div style={{ ...S.avatar, background:'linear-gradient(135deg,#7c3aed,#a78bfa)' }}>{r.name?.[0]?.toUpperCase() || '?'}</div>
+                          <span style={S.nameTxt}>{r.name}</span>
+                        </div>
+                      </td>
+                      <td style={S.td}>
+                        {/* Member count badge */}
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '4px',
+                          background: r.member_count > 0 ? '#eff6ff' : '#f8fafc',
+                          color: r.member_count > 0 ? '#1d4ed8' : '#94a3b8',
+                          fontSize: '12px', fontWeight: '700',
+                          padding: '3px 10px', borderRadius: '20px',
+                        }}>
+                          👥 {r.member_count || 0}
+                        </span>
+                      </td>
+                      <td style={{ ...S.td, textAlign:'right' }}>
+                        {canEdit   && <button style={S.editBtn}   onClick={() => openEdit(r)}>Edit</button>}
+                        {canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(r); setDelErr(''); }}>Delete</button>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+        }
       </div>
-      {modal && (<div style={S.backdrop} onClick={closeModal}><div style={{ ...S.modalBox, maxWidth:'440px' }} onClick={e => e.stopPropagation()}><div style={S.modalAccent} /><div style={S.modalBody}><h3 style={S.modalTitle}>{modal === 'add' ? '+ New Ministry Role' : 'Edit Role'}</h3><p style={S.modalSub}>{modal === 'add' ? 'e.g. Worship Leader, Usher, Sound Engineer…' : `Editing: ${editing?.name}`}</p>{formErr && <div style={S.formErr}>⚠ {formErr}</div>}<div style={S.fieldGroup}><label style={S.label}>Role Name <span style={{ color:'#ef4444' }}>*</span></label><input value={name} onChange={e => { setName(e.target.value); setFormErr(''); }} placeholder="e.g. Worship Leader" autoFocus style={S.input} /></div><div style={S.modalActions}><button style={S.cancelBtn} onClick={closeModal} disabled={saving}>Cancel</button><button style={{ ...S.saveBtn, opacity: saving ? 0.8 : 1 }} onClick={handleSave} disabled={saving}>{saving ? <span style={S.loadRow}><span style={S.miniSpinner} />{modal === 'add' ? 'Creating…' : 'Saving…'}</span> : modal === 'add' ? 'Create Role' : 'Save Changes'}</button></div></div></div></div>)}
+      {modal && (<div style={S.backdrop} onClick={closeModal}><div style={{ ...S.modalBox, maxWidth:'440px' }} onClick={e => e.stopPropagation()}><div style={S.modalAccent} /><div style={S.modalBody}><h3 style={S.modalTitle}>{modal === 'add' ? '+ New Ministry Role' : 'Edit Role'}</h3><p style={S.modalSub}>{modal === 'add' ? 'Add a new ministry team (e.g. Choir, Media Team, Ushers…)' : `Editing: ${editing?.name}`}</p>{formErr && <div style={S.formErr}>⚠ {formErr}</div>}<div style={S.fieldGroup}><label style={S.label}>Role Name <span style={{ color:'#ef4444' }}>*</span></label><input value={name} onChange={e => { setName(e.target.value); setFormErr(''); }} placeholder="e.g. Worship Leader" autoFocus style={S.input} /></div><div style={S.modalActions}><button style={S.cancelBtn} onClick={closeModal} disabled={saving}>Cancel</button><button style={{ ...S.saveBtn, opacity: saving ? 0.8 : 1 }} onClick={handleSave} disabled={saving}>{saving ? <span style={S.loadRow}><span style={S.miniSpinner} />{modal === 'add' ? 'Creating…' : 'Saving…'}</span> : modal === 'add' ? 'Create Role' : 'Save Changes'}</button></div></div></div></div>)}
       {delTarget && (<div style={S.backdrop} onClick={() => setDelTarget(null)}><div style={{ ...S.modalBox, maxWidth:'420px' }} onClick={e => e.stopPropagation()}><div style={{ ...S.modalAccent, background:'#ef4444' }} /><div style={S.modalBody}><div style={S.delIcon}>🗑️</div><h3 style={S.modalTitle}>Delete Role?</h3><p style={S.modalSub}>Delete <strong>"{delTarget.name}"</strong>? This cannot be undone. Roles with active assignments or roster members cannot be deleted.</p>{delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}>⚠ {delErr}</div>}<div style={S.modalActions}><button style={S.cancelBtn} onClick={() => setDelTarget(null)} disabled={deleting}>Cancel</button><button style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }} onClick={handleDelete} disabled={deleting}>{deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Deleting…</span> : 'Yes, Delete'}</button></div></div></div></div>)}
     </>
   );
