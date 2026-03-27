@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { LANGS, getLangCode, saveLangCode, loadGTScript, applyGTLang } from '../../utils/langUtils';
@@ -300,15 +300,66 @@ function OverviewTab({profile,attendance,finance,editing,editForm,setEditForm,ed
   );
 }
 
-function EventsTab({events,assigns,services,evtL,confL,doRegister,doCancel,doConfirm,onServiceClick,onEventDetailsClick,c,f,t,fmtDate,fmtShort,fmtSvcT,isMobile}) {
+function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,doRegister,doCancel,doConfirm,onServiceClick,onEventDetailsClick,onInviteRespond,c,f,t,fmtDate,fmtShort,fmtSvcT,isMobile}) {
   const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
   const bdg  = (bg,color,border)=>({padding:'3px 10px',borderRadius:20,fontSize:f.xs,fontWeight:700,background:bg,color,border});
   const myRegs = events.filter(e=>e.is_registered);
   const pending = assigns.filter(a=>!a.confirmed);
 
+  // ── Ministry invite cards ─────────────────────────────────
+  const pendingInvites = invites.filter(inv => inv.response_status === 'pending');
+  const InviteCards = () => pendingInvites.length === 0 ? null : (
+    <div style={{...card,overflow:'hidden',marginBottom:12}}>
+      <div style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',gap:8}}>
+        <span style={{fontSize:f.base,fontWeight:700,color:c.t1}}>⚡ Ministry Event Invites</span>
+        <span style={{background:'#7c3aed',color:'#fff',borderRadius:20,fontSize:f.xs,fontWeight:800,padding:'2px 8px'}}>{pendingInvites.length}</span>
+      </div>
+      {pendingInvites.map(inv => (
+        <div key={inv.id} style={{padding:'14px 16px',borderBottom:`1px solid ${c.borderL}`}}>
+          <div style={{fontSize:f.sm,fontWeight:800,color:c.t1,marginBottom:2,textTransform:'uppercase',letterSpacing:'0.2px'}}>
+            {inv.Event?.title || '—'}
+          </div>
+          <div style={{fontSize:f.xs,color:c.t2,marginBottom:2}}>
+            📅 {fmtDate(inv.Event?.start_date)}
+            {inv.Event?.location ? ` · 📍 ${inv.Event.location}` : ''}
+          </div>
+          {inv.ministryRole && (
+            <div style={{fontSize:f.xs,color:'#7c3aed',fontWeight:600,marginBottom:6}}>
+              ⚡ {inv.ministryRole.name} ministry
+            </div>
+          )}
+          {inv.response_deadline && (
+            <div style={{fontSize:f.xs,color:c.amber,marginBottom:8}}>
+              🕐 Respond by: {fmtDate(inv.response_deadline)}
+            </div>
+          )}
+          <div style={{display:'flex',gap:8}}>
+            <button
+              onClick={() => onInviteRespond(inv.id, 'attending')}
+              disabled={inviteResponding === inv.id}
+              style={{flex:1,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:700,cursor:'pointer',background:'#dcfce7',border:'1.5px solid #bbf7d0',color:'#16a34a',fontFamily:'inherit',opacity:inviteResponding===inv.id?0.6:1,minHeight:36}}
+            >
+              {inviteResponding === inv.id ? '…' : '✅ Attending'}
+            </button>
+            <button
+              onClick={() => onInviteRespond(inv.id, 'not_attending')}
+              disabled={inviteResponding === inv.id}
+              style={{flex:1,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:700,cursor:'pointer',background:'#fef2f2',border:'1.5px solid #fecaca',color:'#dc2626',fontFamily:'inherit',opacity:inviteResponding===inv.id?0.6:1,minHeight:36}}
+            >
+              {inviteResponding === inv.id ? '…' : '❌ Not Attending'}
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   if (isMobile) {
     return (
       <div style={{display:'flex',flexDirection:'column',gap:12}}>
+
+        {/* Ministry event invites */}
+        <InviteCards/>
 
         {/* Services — compact cards on mobile */}
         {services.length>0&&(
@@ -457,6 +508,9 @@ function EventsTab({events,assigns,services,evtL,confL,doRegister,doCancel,doCon
       </div>
 
       <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        {/* Ministry event invites */}
+        <InviteCards/>
+
         {events.length===0
           ? <div style={{...card,padding:'40px 24px',textAlign:'center',color:c.t3,fontSize:f.base}}>{t.noEvents}</div>
           : events.map(e=>(
@@ -701,6 +755,7 @@ function FinanceTab({finance,c,f,t,fmtDate,PHP,isMobile}) {
 export default function MemberPortal() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const width    = useWindowWidth();
   const isMobile = width <= 768;
 
@@ -766,13 +821,15 @@ export default function MemberPortal() {
     stat: Math.round(fontSize * 1.9),
   };
 
-  const [tab, setTab]           = useState(0);
+  const [tab, setTab]           = useState(() => { const p = new URLSearchParams(location.search); if (p.get('tab') === 'events') return 1; if (p.get('tab') === 'services') return 1; return 0; });
   const [profile, setProfile]   = useState(null);
   const [attendance, setAtt]    = useState(null);
   const [finance, setFin]       = useState(null);
   const [events, setEvents]     = useState([]);
   const [assigns, setAssigns]   = useState([]);
   const [services, setSvcs]     = useState([]);
+  const [invites, setInvites]   = useState([]);
+  const [inviteResponding, setInviteResponding] = useState(null);
   const [loading, setLoading]   = useState(true);
   const [toast, setToast]       = useState(null);
 
@@ -799,13 +856,14 @@ export default function MemberPortal() {
     setLoading(true);
     // Use allSettled so a single failed endpoint (e.g. no member profile linked)
     // does NOT crash the whole portal — each request resolves independently.
-    const [pR,aR,fR,eR,mR,sR] = await Promise.allSettled([
+    const [pR,aR,fR,eR,mR,sR,iR] = await Promise.allSettled([
       axiosInstance.get('/member-portal/profile'),
       axiosInstance.get('/member-portal/attendance'),
       axiosInstance.get('/member-portal/finance'),
       axiosInstance.get('/member-portal/events'),
       axiosInstance.get('/member-portal/ministry-assignments'),
       axiosInstance.get('/member-portal/services'),
+      axiosInstance.get('/member-portal/ministry-invites'),
     ]);
     if (pR.status === 'fulfilled') setProfile(pR.value.data.data);
     if (aR.status === 'fulfilled') setAtt(aR.value.data.data);
@@ -813,12 +871,20 @@ export default function MemberPortal() {
     if (eR.status === 'fulfilled') setEvents(eR.value.data.data);
     if (mR.status === 'fulfilled') setAssigns(mR.value.data.data);
     if (sR.status === 'fulfilled') setSvcs(sR.value.data.data);
+    if (iR.status === 'fulfilled') setInvites(iR.value.data.data);
     // Only show the error toast if profile specifically failed (most critical)
     if (pR.status === 'rejected') showToast('Member profile not linked to this account. Contact your administrator.','error');
     setLoading(false);
   },[]); // eslint-disable-line
 
   useEffect(()=>{load();},[load]);
+
+  // Deep-link: ?tab=events or ?tab=services navigates to the Events tab.
+  // Used by event_published, service_published, and ministry_invite notifications.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === 'events' || params.get('tab') === 'services') setTab(1);
+  }, [location.search]);
 
   const startEdit = useCallback(()=>{
     setEditForm({ first_name:profile?.first_name||'', last_name:profile?.last_name||'', phone:profile?.phone||'', email:profile?.email||'', birthdate:profile?.birthdate||'', spiritual_birthday:profile?.spiritual_birthday||'', address:profile?.address||'' });
@@ -865,6 +931,17 @@ export default function MemberPortal() {
       const r=await axiosInstance.get('/member-portal/ministry-assignments'); setAssigns(r.data.data);
     } catch(err) { showToast(err.response?.data?.message||'Failed.','error'); }
     finally { setConfL(null); }
+  },[]);
+
+  const onInviteRespond = useCallback(async (inviteId, response_status) => {
+    setInviteResponding(inviteId);
+    try {
+      await axiosInstance.patch(`/events/invites/${inviteId}/respond`, { response_status });
+      showToast(response_status === 'attending' ? 'Marked as Attending!' : 'Response saved.');
+      const r = await axiosInstance.get('/member-portal/ministry-invites');
+      setInvites(r.data.data);
+    } catch(err) { showToast(err.response?.data?.message||'Failed.','error'); }
+    finally { setInviteResponding(null); }
   },[]);
 
   const onServiceClick = useCallback(async (svcId)=>{
@@ -999,7 +1076,7 @@ export default function MemberPortal() {
         {loading ? <LoadSkeleton/> : (
           <>
             {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={PHP} fmtDate={fmtDate} isMobile={isMobile}/>}
-            {tab===1&&<EventsTab events={events} assigns={assigns} services={services} evtL={evtL} confL={confL} doRegister={doRegister} doCancel={doCancel} doConfirm={doConfirm} onServiceClick={onServiceClick} onEventDetailsClick={onEventDetailsClick} c={c} f={f} t={t} fmtDate={fmtDate} fmtShort={fmtShort} fmtSvcT={fmtSvcT} isMobile={isMobile}/>}
+            {tab===1&&<EventsTab events={events} assigns={assigns} services={services} invites={invites} evtL={evtL} confL={confL} inviteResponding={inviteResponding} doRegister={doRegister} doCancel={doCancel} doConfirm={doConfirm} onServiceClick={onServiceClick} onEventDetailsClick={onEventDetailsClick} onInviteRespond={onInviteRespond} c={c} f={f} t={t} fmtDate={fmtDate} fmtShort={fmtShort} fmtSvcT={fmtSvcT} isMobile={isMobile}/>}
             {tab===2&&<AttendanceTab attendance={attendance} c={c} f={f} t={t} fmtDate={fmtDate} fmtTime={fmtTime} isMobile={isMobile}/>}
             {tab===3&&<FinanceTab finance={finance} c={c} f={f} t={t} fmtDate={fmtDate} PHP={PHP} isMobile={isMobile}/>}
           </>

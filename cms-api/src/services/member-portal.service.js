@@ -10,7 +10,7 @@ const {
   Attendance, Service, ServiceResponse, ServiceAttendanceSummary,
   FinancialRecord, FinancialCategory,
   Event, EventRegistration, EventCategory,
-  MinistryAssignment, MinistryRole, Notification,
+  MinistryAssignment, MinistryRole, MinistryEventInvite, Notification,
   User,
 } = require("../models");
 
@@ -431,6 +431,27 @@ exports.getMyAssignments = async (memberId) => {
     include: [
       { model: Service,      attributes: ["id", "title", "service_date", "service_time"], required: false },
       { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"],             required: false },
+    ],
+    order: [["created_at", "DESC"]],
+  });
+};
+
+// ── Get My Ministry Event Invites ────────────────────────────
+exports.getMyMinistryInvites = async (memberId) => {
+  return await MinistryEventInvite.findAll({
+    where: { member_id: memberId },
+    include: [
+      {
+        model: Event,
+        attributes: ["id", "title", "start_date", "start_time", "end_date", "location", "status"],
+        required: false,
+      },
+      {
+        model: MinistryRole,
+        as: "ministryRole",
+        attributes: ["id", "name"],
+        required: false,
+      },
     ],
     order: [["created_at", "DESC"]],
   });

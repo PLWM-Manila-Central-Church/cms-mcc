@@ -140,3 +140,12 @@ exports.confirmMinistryAssignment = async (req, res, next) => {
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
+
+exports.getMyMinistryInvites = async (req, res, next) => {
+  try {
+    if (!req.user.memberId)
+      return res.status(400).json({ message: "No member profile linked to this account" });
+    const data = await portalService.getMyMinistryInvites(req.user.memberId);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
