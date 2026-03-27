@@ -30,9 +30,27 @@ const assignmentIncludes = [
   },
 ];
 
-// ── Get All Ministry Roles ───────────────────────────────────
+// ── Get All Ministry Roles (with member_count) ───────────────
 exports.getAllRoles = async () => {
-  return await MinistryRole.findAll({ order: [["name", "ASC"]] });
+  const roles = await MinistryRole.findAll({ order: [["name", "ASC"]] });
+
+  // Attach member_count from ministry_memberships for each role
+  const counts = await MinistryMembership.findAll({
+    attributes: [
+      "ministry_role_id",
+      [MinistryMembership.sequelize.fn("COUNT", MinistryMembership.sequelize.col("id")), "member_count"],
+    ],
+    group: ["ministry_role_id"],
+    raw: true,
+  });
+
+  const countMap = {};
+  counts.forEach(c => { countMap[c.ministry_role_id] = parseInt(c.member_count, 10); });
+
+  return roles.map(r => ({
+    ...r.toJSON(),
+    member_count: countMap[r.id] || 0,
+  }));
 };
 
 // ── Get Ministry Role By ID ──────────────────────────────────
@@ -244,6 +262,7 @@ exports.searchMembersForRoster = async (search = "") => {
     limit: 10,
   });
 };
+
 exports.getMyMinistryMembers = async (ministryRoleId) => {
   return await MinistryMembership.findAll({
     where: { ministry_role_id: ministryRoleId },

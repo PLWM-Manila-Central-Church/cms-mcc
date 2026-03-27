@@ -12,9 +12,9 @@ import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 // CMS (protected)
 import MembersPage       from '../pages/members/MembersPage';
 import MemberFormPage    from '../pages/members/MemberFormPage';
-import MemberProfilePage from '../pages/members/MemberProfilePage';
 import MemberPortal      from '../pages/members/MemberPortal';
 import MemberPortalSettings from '../pages/members/MemberPortalSettings';
+import MemberProfilePage from '../pages/members/MemberProfilePage';
 import CellGroupsPage    from '../pages/cellgroups/CellGroupsPage';
 import MinistryPage      from '../pages/ministry/MinistryPage';
 import UsersPage         from '../pages/users/UsersPage';
@@ -59,10 +59,19 @@ const PortalRoute = ({ children }) => {
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (user.roleName !== 'Member') return <Navigate to="/dashboard" replace />;
-  // If first login, must change password first
   if (user.forcePasswordChange && location.pathname !== '/force-change-password') {
     return <Navigate to="/force-change-password" replace />;
   }
+  return children;
+};
+
+// Ministry Leaders manage their members exclusively through the Ministry page
+// (roster tab). Trying to access /members redirects them to /ministry.
+const MembersRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
+  if (isMinistryLeader) return <Navigate to="/ministry" replace />;
   return children;
 };
 
@@ -116,10 +125,19 @@ const AppRoutes = () => {
       <Route path="/users"      element={<ProtectedRoute module="users" action="read"><MainLayout><UsersPage /></MainLayout></ProtectedRoute>} />
       <Route path="/users/new"  element={<ProtectedRoute module="users" action="create"><MainLayout><UserFormPage /></MainLayout></ProtectedRoute>} />
       <Route path="/users/:id/edit" element={<ProtectedRoute module="users" action="update"><MainLayout><UserFormPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/members"        element={<ProtectedRoute><MainLayout><MembersPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/members/new"    element={<ProtectedRoute><MainLayout><MemberFormPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/members/:id"    element={<ProtectedRoute><MainLayout><MemberProfilePage /></MainLayout></ProtectedRoute>} />
-      <Route path="/members/:id/edit" element={<ProtectedRoute><MainLayout><MemberFormPage /></MainLayout></ProtectedRoute>} />
+
+      {/* Members routes — Ministry Leaders are redirected to /ministry */}
+      <Route path="/members" element={
+        <ProtectedRoute>
+          <MainLayout>
+            <MembersRoute><MembersPage /></MembersRoute>
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/members/new"    element={<ProtectedRoute><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
+      <Route path="/members/:id"    element={<ProtectedRoute><MainLayout><MembersRoute><MemberProfilePage /></MembersRoute></MainLayout></ProtectedRoute>} />
+      <Route path="/members/:id/edit" element={<ProtectedRoute><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
+
       <Route path="/cell-groups" element={<ProtectedRoute module="cellgroups" action="read"><MainLayout><CellGroupsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/ministry"    element={<ProtectedRoute><MainLayout><MinistryPage /></MainLayout></ProtectedRoute>} />
 
