@@ -1,7 +1,7 @@
 "use strict";
 
 const bcrypt = require("bcrypt");
-const { User, Role, Member, MinistryRole } = require("../models");
+const { User, Role, Member, MinistryRole, MinistryMembership } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
@@ -13,6 +13,13 @@ const userIncludes = [
     as: "member",
     attributes: ["id", "first_name", "last_name", "cell_group_id", "group_id"],
     required: false,
+    include: [
+      {
+        model: MinistryMembership,
+        attributes: ["id", "ministry_role_id"],
+        required: false,
+      },
+    ],
   },
   {
     model: MinistryRole,
@@ -48,6 +55,7 @@ exports.createUser = async (data, createdBy) => {
     // Member fields — all collected from the form
     first_name, last_name, phone, gender, birthdate,
     spiritual_birthday, address, cell_group_id, group_id,
+    member_ministry_id,
     // Leader fields — only relevant for Registration Team / Admin users
     leads_cell_group_id, leads_group_id, ministry_role_id,
   } = data;
@@ -93,6 +101,14 @@ exports.createUser = async (data, createdBy) => {
     force_password_change: 1,
   });
 
+  // Assign ministry membership if selected
+  if (member_ministry_id && resolvedMemberId) {
+    await MinistryMembership.create({
+      ministry_role_id: parseInt(member_ministry_id),
+      member_id:        resolvedMemberId,
+      added_by:         createdBy,
+    });
+  }
   const created = await exports.getUserById(user.id);
   auditLog.log({ userId: createdBy, action: "CREATE_USER", targetTable: "users", targetId: created.id });
   return created;
@@ -107,6 +123,7 @@ exports.updateUser = async (id, data, updatedBy) => {
     email, role_id, member_id, invited_member_id, is_active,
     first_name, last_name, phone, gender, birthdate,
     spiritual_birthday, address, cell_group_id, group_id,
+    member_ministry_id,
     // Leader fields
     leads_cell_group_id, leads_group_id, ministry_role_id,
   } = data;
@@ -154,6 +171,22 @@ exports.updateUser = async (id, data, updatedBy) => {
         ...(cell_group_id      !== undefined && { cell_group_id:      cell_group_id ? parseInt(cell_group_id) : null }),
         ...(group_id           !== undefined && { group_id:           group_id      ? parseInt(group_id)      : null }),
       });
+
+      // Upsert ministry membership on the linked member
+      if (member_ministry_id !== undefined && member_ministry_id) {
+        // Find any existing membership for this specific ministry role on this member
+        const existingMembership = await MinistryMembership.findOne({
+          where: { member_id: user.member_id, ministry_role_id: parseInt(member_ministry_id) },
+        });
+        // Only create if not already a member of this ministry
+        if (!existingMembership) {
+          await MinistryMembership.create({
+            ministry_role_id: parseInt(member_ministry_id),
+            member_id:        user.member_id,
+            added_by:         updatedBy,
+          });
+        }
+      }
     }
   }
 
