@@ -23,6 +23,7 @@ const EMPTY_FORM = {
   birthdate: '', spiritual_birthday: '',
   address: '',
   cell_group_id: '', group_id: '',
+  member_ministry_id: '',
   // Leader fields
   leads_cell_group_id: '', leads_group_id: '', ministry_role_id: '',
 };
@@ -81,6 +82,7 @@ export default function UserFormPage() {
           address:             u.member?.address     || '',
           cell_group_id:       u.member?.cell_group_id || '',
           group_id:            u.member?.group_id   || '',
+          member_ministry_id:  u.member?.MinistryMemberships?.[0]?.ministry_role_id || '',
           // Leader fields (on the user record itself)
           leads_cell_group_id: u.leads_cell_group_id || '',
           leads_group_id:      u.leads_group_id      || '',
@@ -129,6 +131,7 @@ export default function UserFormPage() {
       address:             form.address            || null,
       cell_group_id:       form.cell_group_id       ? parseInt(form.cell_group_id)       : null,
       group_id:            form.group_id            ? parseInt(form.group_id)            : null,
+      member_ministry_id:  form.member_ministry_id  ? parseInt(form.member_ministry_id)  : null,
       // Leader fields — only sent when relevant; null clears a previous assignment
       leads_cell_group_id: form.leads_cell_group_id ? parseInt(form.leads_cell_group_id) : null,
       leads_group_id:      form.leads_group_id      ? parseInt(form.leads_group_id)      : null,
@@ -309,6 +312,16 @@ export default function UserFormPage() {
                 {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             </div>
+          </div>
+
+          <div style={{ ...S.field, marginTop: 16 }}>
+            <label style={S.label}>Ministry</label>
+            <select name="member_ministry_id" value={form.member_ministry_id} onChange={handleChange} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
+              <option value="">— None —</option>
+              {ministryRoles.map(mr => (
+                <option key={mr.id} value={mr.id}>{mr.name}</option>
+              ))}
+            </select>
           </div>
 
           <div style={{ ...S.field, marginTop: 16 }}>
