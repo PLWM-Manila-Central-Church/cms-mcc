@@ -97,6 +97,7 @@ export default function DashboardPage() {
   const [error, setError]   = useState('');
 
   const role    = user?.roleName || '';
+  const isMinistryLeader = role === R.REG && !!user?.ministryRoleId;
   const accent  = (ROLE_ACCENT[role]||ROLE_ACCENT[R.MEMBER]).primary;
   const acLight = (ROLE_ACCENT[role]||ROLE_ACCENT[R.MEMBER]).light;
 
@@ -104,7 +105,7 @@ export default function DashboardPage() {
   const canInventory = hasPermission('inventory','read');
   const canMembers   = hasPermission('members','read');
   const canEvents    = hasPermission('events','read');
-  const canServices  = hasPermission('services','read');
+  const canServices  = hasPermission('services','read') && !isMinistryLeader;
   const isMember     = role === R.MEMBER;
 
   useEffect(() => {
@@ -132,7 +133,7 @@ export default function DashboardPage() {
   const { members, finance, services, events, inventory, recentActivity } = stats;
 
   const statCards = [];
-  if (canMembers) {
+  if (canMembers && !isMinistryLeader) {
     statCards.push({ icon:'👥', label:'Total Members', value:members.total, sub:`+${members.newThisMonth} this month`, accent, path:'/members' });
     if (role!==R.FINANCE && role!==R.MEMBER)
       statCards.push({ icon:'✅', label:'Active Members', value:members.active, sub:`of ${members.total} total`, accent:'#059669', path:'/members' });
@@ -287,7 +288,7 @@ export default function DashboardPage() {
         </>
       )}
 
-      {role===R.REG && (
+      {role===R.REG && !isMinistryLeader && (
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
           <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
             {events.upcoming.length===0 ? <EmptyState icon="📭" text="No upcoming events" /> : events.upcoming.map(ev => <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date)} right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />)}
@@ -298,6 +299,19 @@ export default function DashboardPage() {
             <ListRow left="New this month" right={members.newThisMonth} rightColor="#005599" />
             <ListRow left="Total services" right={services.total} rightColor="#be185d" onClick={() => navigate('/services')} />
             <ListRow left="Total events" right={events.total} rightColor="#7c3aed" onClick={() => navigate('/events')} />
+          </SectionCard>
+        </div>
+      )}
+
+      {role===R.REG && isMinistryLeader && (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+          <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
+            {events.upcoming.length===0 ? <EmptyState icon="📭" text="No upcoming events" /> : events.upcoming.map(ev => <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date)} right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />)}
+          </SectionCard>
+          <SectionCard title="Ministry Overview" icon="✨" actionLabel="View ministry" onAction={() => navigate('/ministry')}>
+            <ListRow left="Total events" right={events.total} rightColor="#7c3aed" onClick={() => navigate('/events')} />
+            <ListRow left="Inventory items" right={inventory.totalItems} rightColor="#0891b2" onClick={() => navigate('/inventory')} />
+            <ListRow left="Pending requests" right={inventory.pendingRequests} rightColor={inventory.pendingRequests>0?'#d97706':'#94a3b8'} onClick={() => navigate('/inventory')} />
           </SectionCard>
         </div>
       )}
