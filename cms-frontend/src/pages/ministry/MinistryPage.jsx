@@ -208,7 +208,7 @@ function RosterTab({ ministryRoleId }) {
   return (
     <>
       {/* ── Add Member to Ministry ───────────────────────────── */}
-      <div style={{ ...S.tableCard, padding: '20px 24px', marginBottom: '20px' }}>
+      <div style={{ ...S.tableCard, padding: '20px 24px', marginBottom: '20px', overflow: 'visible' }}>
         <div style={{ fontSize: '13px', fontWeight: '700', color: '#005599', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
           Add Member to Ministry
         </div>

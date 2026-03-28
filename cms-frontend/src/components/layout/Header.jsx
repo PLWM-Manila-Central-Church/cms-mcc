@@ -162,16 +162,20 @@ export default function Header({ sidebarWidth, isMobile = false }) {
 
   const handleLogout = async () => { await logout(); navigate('/login'); };
 
+  const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
+
   const roleColors = {
     'System Admin':      { bg: '#fef2f2', color: '#dc2626', dot: '#dc2626' },
     'Pastor':            { bg: '#f5f3ff', color: '#7c3aed', dot: '#7c3aed' },
     'Registration Team': { bg: '#eff6ff', color: '#005599', dot: '#13B5EA' },
+    'Ministry Leader':   { bg: '#e0f2fe', color: '#0369a1', dot: '#0284c7' },
     'Finance Team':      { bg: '#f0fdf4', color: '#059669', dot: '#059669' },
     'Cell Group Leader': { bg: '#fffbeb', color: '#d97706', dot: '#d97706' },
     'Group Leader':      { bg: '#ecfeff', color: '#0891b2', dot: '#0891b2' },
     'Member':            { bg: '#f8fafc', color: '#64748b', dot: '#94a3b8' },
   };
-  const rc = roleColors[user?.roleName] || roleColors['Member'];
+  const displayRole = isMinistryLeader ? 'Ministry Leader' : (user?.roleName || 'Member');
+  const rc = roleColors[displayRole] || roleColors['Member'];
 
   const panelWidth = isMobile ? 'calc(100vw - 24px)' : '360px';
 
@@ -192,7 +196,7 @@ export default function Header({ sidebarWidth, isMobile = false }) {
         {!isMobile && (
           <div style={{ ...S.roleTag, background: rc.bg }}>
             <span style={{ ...S.roleDot, background: rc.dot }} />
-            <span style={{ ...S.roleText, color: rc.color }}>{user?.roleName}</span>
+            <span style={{ ...S.roleText, color: rc.color }}>{displayRole}</span>
           </div>
         )}
 

@@ -13,12 +13,13 @@ export default function MemberFormPage() {
     first_name: '', last_name: '', email: '', phone: '',
     birthdate: '', spiritual_birthday: '', address: '',
     gender: '', status: 'Active',
-    cell_group_id: '', group_id: '', referred_by: '',
+    cell_group_id: '', group_id: '', referred_by: '', ministry_role_id: '',
   });
 
-  const [cellGroups, setCellGroups] = useState([]);
-  const [groups, setGroups]         = useState([]);
-  const [members, setMembers]       = useState([]);
+  const [cellGroups,    setCellGroups]    = useState([]);
+  const [groups,        setGroups]        = useState([]);
+  const [members,       setMembers]       = useState([]);
+  const [ministryRoles, setMinistryRoles] = useState([]);
   const [loading, setLoading]       = useState(false);
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState('');
@@ -26,14 +27,16 @@ export default function MemberFormPage() {
   useEffect(() => {
     const loadDropdowns = async () => {
       try {
-        const [cgRes, grRes, memRes] = await Promise.all([
+        const [cgRes, grRes, memRes, mrRes] = await Promise.all([
           axiosInstance.get('/members/dropdowns/cell-groups'),
           axiosInstance.get('/members/dropdowns/groups'),
           axiosInstance.get('/members?limit=500&page=1'),
+          axiosInstance.get('/ministry/roles'),
         ]);
         setCellGroups(cgRes.data.data || []);
         setGroups(grRes.data.data || []);
         setMembers(memRes.data.data.members || []);
+        setMinistryRoles(mrRes.data.data || []);
       } catch {}
     };
     loadDropdowns();
@@ -59,6 +62,7 @@ export default function MemberFormPage() {
           cell_group_id:      m.cell_group_id      || '',
           group_id:           m.group_id           || '',
           referred_by:        m.referred_by        || '',
+          ministry_role_id:   '',
         });
       } catch {
         setError('Failed to load member.');
@@ -193,6 +197,18 @@ export default function MemberFormPage() {
                   ))}
               </select>
             </div>
+
+            {!isEdit && (
+              <div style={styles.fieldWrap}>
+                <label style={styles.label}>Ministry</label>
+                <select name="ministry_role_id" value={form.ministry_role_id} onChange={handleChange} style={styles.select}>
+                  <option value="">— None —</option>
+                  {ministryRoles.map(mr => (
+                    <option key={mr.id} value={mr.id}>{mr.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 

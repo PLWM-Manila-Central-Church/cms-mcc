@@ -106,7 +106,7 @@ exports.createMember = async (data, createdBy, user = {}) => {
   const {
     first_name, last_name, email, phone, birthdate, spiritual_birthday,
     address, gender, status, cell_group_id, group_id, referred_by,
-    profile_photo_url, barcode,
+    profile_photo_url, barcode, ministry_role_id,
   } = data;
 
   if (email) {
@@ -149,14 +149,19 @@ exports.createMember = async (data, createdBy, user = {}) => {
 
   const created = await exports.getMemberById(member.id);
 
-  // Auto-enroll: if the creator is a Ministry Leader, add the new member
-  // to their ministry roster automatically.
+  // Auto-enroll into ministry:
+  // 1. If an explicit ministry_role_id was passed in the form, use that.
+  // 2. Otherwise, if the creator is a Ministry Leader, use their ministry.
   const { roleId, ministryRoleId } = user;
-  if (roleId === 3 && ministryRoleId) {
+  const enrollRoleId = ministry_role_id
+    ? parseInt(ministry_role_id)
+    : (roleId === 3 && ministryRoleId ? ministryRoleId : null);
+
+  if (enrollRoleId) {
     try {
       await MinistryMembership.findOrCreate({
-        where: { ministry_role_id: ministryRoleId, member_id: member.id },
-        defaults: { ministry_role_id: ministryRoleId, member_id: member.id, added_by: createdBy },
+        where: { ministry_role_id: enrollRoleId, member_id: member.id },
+        defaults: { ministry_role_id: enrollRoleId, member_id: member.id, added_by: createdBy },
       });
     } catch (err) {
       console.error("[Members] Ministry auto-enroll failed:", err.message);
