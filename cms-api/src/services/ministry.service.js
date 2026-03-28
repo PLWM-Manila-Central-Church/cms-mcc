@@ -271,7 +271,11 @@ exports.searchMembersForRoster = async (search = "") => {
   }
   return await Member.findAll({
     where,
-    attributes: ["id", "first_name", "last_name", "email", "status"],
+    attributes: ["id", "first_name", "last_name", "email", "phone", "status"],
+    include: [
+      { model: CellGroup, as: "cellGroup", attributes: ["id", "name"], required: false },
+      { model: Group,     as: "group",     attributes: ["id", "name"], required: false },
+    ],
     order: [["last_name", "ASC"], ["first_name", "ASC"]],
     limit: 10,
   });

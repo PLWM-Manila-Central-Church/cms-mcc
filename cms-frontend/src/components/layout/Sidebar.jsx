@@ -23,10 +23,13 @@ export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
   // so the Members nav item is hidden for them.
   const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
 
+  // Ministry Leaders only see these 5 nav items
+  const MINISTRY_LEADER_PATHS = new Set(['/dashboard', '/ministry', '/events', '/archives', '/inventory']);
+
   const visibleItems = NAV_ITEMS.filter(item => {
-    // Hide Members link for Ministry Leaders
-    if (isMinistryLeader && item.path === '/members') return false;
-    // Standard permission check for all other items
+    // Ministry Leaders: restrict to their allowed pages only
+    if (isMinistryLeader) return MINISTRY_LEADER_PATHS.has(item.path);
+    // Standard permission check for all other users
     return !item.permissions || hasPermission(item.permissions.module, item.permissions.action);
   });
 

@@ -82,16 +82,21 @@ export default function MinistryPage() {
 ───────────────────────────────────────────────────────────── */
 function RosterTab({ ministryRoleId }) {
   const navigate = useNavigate();
-  const [members,    setMembers]    = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState('');
-  const [search,     setSearch]     = useState('');
-  const [addSearch,  setAddSearch]  = useState('');
-  const [addResults, setAddResults] = useState([]);
-  const [adding,     setAdding]     = useState(false);
-  const [removing,   setRemoving]   = useState(null);
-  const [actionErr,  setActionErr]  = useState('');
+  const [members,      setMembers]      = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState('');
+  const [search,       setSearch]       = useState('');
+  const [addSearch,    setAddSearch]    = useState('');
+  const [addResults,   setAddResults]   = useState([]);
+  const [addDropOpen,  setAddDropOpen]  = useState(false);
+  const [adding,       setAdding]       = useState(false);
+  const [bulkRemoving, setBulkRemoving] = useState(false);
+  const [actionErr,    setActionErr]    = useState('');
+  const [selected,     setSelected]     = useState(new Set());   // member IDs (number)
+  const [confirmBulk,  setConfirmBulk]  = useState(false);
+  const addInputRef   = useRef(null);
   const searchTimeout = useRef(null);
+  const dropRef       = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -99,7 +104,7 @@ function RosterTab({ ministryRoleId }) {
       const res = await axiosInstance.get('/ministry/members');
       setMembers(res.data.data || []);
     } catch (e) {
-      setError(e.response?.data?.message || 'Failed to load roster.');
+      setError(e.response?.data?.message || 'Failed to load ministry members.');
     } finally {
       setLoading(false);
     }
@@ -107,22 +112,36 @@ function RosterTab({ ministryRoleId }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setAddDropOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const handleAddSearch = (val) => {
     setAddSearch(val);
+    setActionErr('');
     clearTimeout(searchTimeout.current);
-    if (!val.trim()) { setAddResults([]); return; }
+    if (!val.trim()) { setAddResults([]); setAddDropOpen(false); return; }
     searchTimeout.current = setTimeout(async () => {
       try {
-        const res = await axiosInstance.get(`/ministry/members/search?q=${encodeURIComponent(val)}`);
+        const res = await axiosInstance.get(`/ministry/members/search?q=${encodeURIComponent(val.trim())}`);
         const found = res.data.data || [];
         const existingIds = new Set(members.map(m => m.member?.id || m.member_id));
-        setAddResults(found.filter(m => !existingIds.has(m.id)));
-      } catch {}
+        const filtered = found.filter(m => !existingIds.has(m.id));
+        setAddResults(filtered);
+        setAddDropOpen(filtered.length > 0);
+      } catch { setAddResults([]); setAddDropOpen(false); }
     }, 300);
   };
 
   const handleAdd = async (member) => {
-    setAdding(true); setActionErr('');
+    setAdding(true); setActionErr(''); setAddDropOpen(false);
     try {
       await axiosInstance.post('/ministry/members', { member_id: member.id });
       setAddSearch(''); setAddResults([]);
@@ -134,149 +153,265 @@ function RosterTab({ ministryRoleId }) {
     }
   };
 
-  const handleRemove = async (memberId) => {
-    if (!window.confirm('Remove this member from the roster?')) return;
-    setRemoving(memberId); setActionErr('');
-    try {
-      await axiosInstance.delete(`/ministry/members/${memberId}`);
-      load();
-    } catch (e) {
-      setActionErr(e.response?.data?.message || 'Failed to remove member.');
-    } finally {
-      setRemoving(null);
-    }
-  };
-
-  // Calculate age from birthdate
-  const calcAge = (birthdate) => {
-    if (!birthdate) return '—';
-    const today = new Date();
-    const bd    = new Date(birthdate);
-    let age = today.getFullYear() - bd.getFullYear();
-    const m = today.getMonth() - bd.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
-    return age;
-  };
-
+  // ── Derived filtered list (must be before multi-select helpers) ──
   const filtered = members.filter(m => {
     const name = `${m.member?.first_name || ''} ${m.member?.last_name || ''}`.toLowerCase();
     return name.includes(search.toLowerCase());
   });
 
+  // ── Multi-select helpers ──────────────────────────────────────
+  const allFilteredIds = () => {
+    return filtered.map(row => row.member?.id || row.member_id).filter(Boolean);
+  };
+  const allSelected = filtered.length > 0 && filtered.every(row => {
+    const id = row.member?.id || row.member_id;
+    return selected.has(id);
+  });
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(allFilteredIds()));
+    }
+  };
+  const toggleSelect = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkRemove = async () => {
+    setBulkRemoving(true); setActionErr('');
+    const ids = [...selected];
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        await axiosInstance.delete(`/ministry/members/${id}`);
+      } catch { failed++; }
+    }
+    setSelected(new Set());
+    setConfirmBulk(false);
+    setBulkRemoving(false);
+    if (failed > 0) setActionErr(`${failed} member(s) could not be removed.`);
+    load();
+  };
+
+  // Keep selection consistent when filter changes
+  useEffect(() => {
+    const visibleIds = new Set(filtered.map(row => row.member?.id || row.member_id).filter(Boolean));
+    setSelected(prev => new Set([...prev].filter(id => visibleIds.has(id))));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
   return (
     <>
-      {/* Add member search */}
+      {/* ── Add Member to Ministry ───────────────────────────── */}
       <div style={{ ...S.tableCard, padding: '20px 24px', marginBottom: '20px' }}>
-        <div style={{ fontSize: '13px', fontWeight: '700', color: '#005599', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Add Member to Roster</div>
-        <div style={{ position: 'relative' }}>
-          <input
-            value={addSearch}
-            onChange={e => handleAddSearch(e.target.value)}
-            onBlur={() => setTimeout(() => setAddResults([]), 200)}
-            placeholder="Type a name to search…"
-            style={{
-              width: '100%', boxSizing: 'border-box',
-              padding: '10px 14px', fontSize: '14px',
-              border: '1.5px solid #e2e8f0', borderRadius: '8px',
-              outline: 'none', color: '#0f172a', background: '#fafbfc',
-            }}
-          />
-          {addResults.length > 0 && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 20, marginTop: 4 }}>
+        <div style={{ fontSize: '13px', fontWeight: '700', color: '#005599', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+          Add Member to Ministry
+        </div>
+        <div ref={dropRef} style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', opacity: 0.4, pointerEvents: 'none' }}>🔍</span>
+            <input
+              ref={addInputRef}
+              value={addSearch}
+              onChange={e => handleAddSearch(e.target.value)}
+              onFocus={() => addResults.length > 0 && setAddDropOpen(true)}
+              placeholder="Type a member name to search…"
+              autoComplete="off"
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '10px 36px 10px 36px', fontSize: '14px',
+                border: '1.5px solid #e2e8f0', borderRadius: '10px',
+                outline: 'none', color: '#0f172a', background: '#fafbfc',
+                transition: 'border-color 0.15s',
+              }}
+              onFocusCapture={e => { e.target.style.borderColor = '#005599'; }}
+              onBlurCapture={e => { e.target.style.borderColor = '#e2e8f0'; }}
+            />
+            {addSearch && (
+              <button
+                onMouseDown={e => { e.preventDefault(); setAddSearch(''); setAddResults([]); setAddDropOpen(false); addInputRef.current?.focus(); }}
+                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#94a3b8', padding: '2px 4px' }}
+              >✕</button>
+            )}
+          </div>
+          {addDropOpen && addResults.length > 0 && (
+            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 50, overflow: 'hidden' }}>
+              <div style={{ padding: '8px 14px 6px', fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9' }}>
+                {addResults.length} result{addResults.length !== 1 ? 's' : ''}
+              </div>
               {addResults.map(m => (
                 <div
                   key={m.id}
-                  onMouseDown={() => !adding && handleAdd(m)}
-                  style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f0f6ff'}
-                  onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                  onMouseDown={e => { e.preventDefault(); if (!adding) handleAdd(m); }}
+                  style={{ padding: '11px 14px', cursor: adding ? 'not-allowed' : 'pointer', fontSize: '14px', borderBottom: '1px solid #f8faff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: adding ? 0.6 : 1 }}
+                  onMouseEnter={e => { if (!adding) e.currentTarget.style.background = '#f0f6ff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
                 >
-                  <span>{m.last_name}, {m.first_name}</span>
-                  <span style={{ fontSize: '11px', color: '#0066b3', fontWeight: '700' }}>+ Add</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '7px', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {(m.first_name?.[0] || '?').toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: '600', color: '#0f172a' }}>{m.last_name}, {m.first_name}</div>
+                      {m.cellGroup?.name && <div style={{ fontSize: '12px', color: '#64748b' }}>{m.cellGroup.name}</div>}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#fff', fontWeight: '700', background: 'linear-gradient(135deg,#003d70,#005599)', padding: '3px 10px', borderRadius: '20px' }}>+ Add</span>
                 </div>
               ))}
             </div>
           )}
+          {addSearch && !addDropOpen && addResults.length === 0 && !adding && (
+            <div style={{ marginTop: '6px', fontSize: '13px', color: '#94a3b8', padding: '0 2px' }}>No members found matching "{addSearch}"</div>
+          )}
         </div>
-        {actionErr && <div style={{ marginTop: 8, color: '#dc2626', fontSize: '13px' }}>⚠ {actionErr}</div>}
+        {actionErr && <div style={{ marginTop: 8, color: '#dc2626', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>⚠ {actionErr}</div>}
       </div>
 
-      <div style={S.toolbar}>
-        <div style={S.searchWrap}>
-          <span style={S.searchIcon}>🔍</span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search roster…" style={S.searchInput} />
-          {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
+      {/* ── Toolbar ──────────────────────────────────────────── */}
+      <div style={{ ...S.toolbar, justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+          <div style={S.searchWrap}>
+            <span style={S.searchIcon}>🔍</span>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search ministry members…" style={S.searchInput} />
+            {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
+          </div>
+          <div style={S.countBadge}>{filtered.length} member{filtered.length !== 1 ? 's' : ''}</div>
         </div>
-        <div style={S.countBadge}>{filtered.length} member{filtered.length !== 1 ? 's' : ''}</div>
+
+        {selected.size > 0 && (
+          <button
+            onClick={() => setConfirmBulk(true)}
+            style={{ background: 'linear-gradient(135deg,#dc2626,#ef4444)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+          >
+            🗑 Remove {selected.size} selected
+          </button>
+        )}
       </div>
 
       {error && <div style={S.errBanner}><span>⚠ {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
 
+      {/* ── Bulk Remove Confirm Modal ─────────────────────────── */}
+      {confirmBulk && (
+        <div style={S.backdrop}>
+          <div style={S.modalBox}>
+            <div style={S.modalAccent} />
+            <div style={S.modalBody}>
+              <div style={S.delIcon}>🗑️</div>
+              <div style={S.modalTitle}>Remove {selected.size} Member{selected.size !== 1 ? 's' : ''}?</div>
+              <div style={S.modalSub}>
+                This will remove the selected {selected.size === 1 ? 'member' : `${selected.size} members`} from the ministry. This action cannot be undone.
+              </div>
+              <div style={S.modalActions}>
+                <button onClick={() => setConfirmBulk(false)} style={S.cancelBtn} disabled={bulkRemoving}>Cancel</button>
+                <button
+                  onClick={handleBulkRemove}
+                  style={{ ...S.saveBtn, background: 'linear-gradient(135deg,#dc2626,#ef4444)', opacity: bulkRemoving ? 0.7 : 1 }}
+                  disabled={bulkRemoving}
+                >
+                  {bulkRemoving ? <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={S.miniSpinner} />Removing…</span> : 'Yes, Remove'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Members Table ─────────────────────────────────────── */}
       <div style={S.tableCard}>
         {loading ? (
           <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color: '#64748b', marginTop: '12px' }}>Loading…</span></div>
         ) : filtered.length === 0 ? (
           <div style={S.centerMsg}>
             <span style={S.emptyIcon}>👥</span>
-            <span style={S.emptyTitle}>{search ? 'No matches found' : 'No members in roster yet'}</span>
+            <span style={S.emptyTitle}>{search ? 'No matches found' : 'No members in ministry yet'}</span>
             <span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Use the search above to add members.'}</span>
           </div>
         ) : (
-          <div style={S.tableScroll}><table style={S.table}>
-            <thead>
-              <tr style={S.thead}>
-                <th style={S.th}>#</th>
-                <th style={S.th}>Name</th>
-                <th style={S.th}>Age</th>
-                <th style={S.th}>Group</th>
-                <th style={S.th}>Cell Group</th>
-                <th style={S.th}>Spiritual Birthday</th>
-                <th style={S.th}>Mobile No.</th>
-                <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((row, i) => {
-                const m    = row.member || {};
-                const name = `${m.first_name || ''} ${m.last_name || ''}`.trim() || '—';
-                const age  = calcAge(m.birthdate);
-                const sbd  = m.spiritual_birthday
-                  ? new Date(m.spiritual_birthday).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
-                  : '—';
-                return (
-                  <tr key={row.id} style={S.row}>
-                    <td style={{ ...S.td, color: '#94a3b8', fontWeight: 500, width: 40 }}>{i + 1}</td>
-                    <td style={S.td}>
-                      <div style={S.nameCell}>
-                        <div style={S.avatar}>{name[0]?.toUpperCase() || '?'}</div>
-                        <span style={S.nameTxt}>{name}</span>
-                      </div>
-                    </td>
-                    <td style={{ ...S.td, color: '#64748b' }}>{age}</td>
-                    <td style={{ ...S.td, color: '#64748b' }}>{m.group?.name || '—'}</td>
-                    <td style={{ ...S.td, color: '#64748b' }}>{m.cellGroup?.name || '—'}</td>
-                    <td style={{ ...S.td, color: '#64748b' }}>{sbd}</td>
-                    <td style={{ ...S.td, color: '#64748b' }}>{m.phone || '—'}</td>
-                    <td style={{ ...S.td, textAlign: 'right' }}>
-                      <button
-                        style={S.editBtn}
-                        onClick={() => navigate(`/members/${m.id}`)}
-                      >
-                        View
-                      </button>
-                      <button
-                        style={{ ...S.deleteBtn, opacity: removing === m.id ? 0.6 : 1 }}
-                        onClick={() => handleRemove(m.id)}
-                        disabled={removing === m.id}
-                      >
-                        {removing === m.id ? '…' : 'Remove'}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table></div>
+          <div style={S.tableScroll}>
+            <table style={S.table}>
+              <thead>
+                <tr style={S.thead}>
+                  <th style={{ ...S.th, width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleSelectAll}
+                      title={allSelected ? 'Deselect all' : 'Select all'}
+                      style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#005599' }}
+                    />
+                  </th>
+                  <th style={{ ...S.th, width: '36px' }}>#</th>
+                  <th style={S.th}>Name</th>
+                  <th style={S.th}>Cell Group</th>
+                  <th style={S.th}>Group</th>
+                  <th style={S.th}>Spiritual Birthday</th>
+                  <th style={S.th}>Number</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((row, i) => {
+                  const m    = row.member || {};
+                  const id   = m.id || row.member_id;
+                  const name = `${m.first_name || ''} ${m.last_name || ''}`.trim() || '—';
+                  const sbd  = m.spiritual_birthday
+                    ? new Date(m.spiritual_birthday).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
+                    : '—';
+                  const isChecked = selected.has(id);
+                  return (
+                    <tr
+                      key={row.id}
+                      style={{ ...S.row, background: isChecked ? '#f0f6ff' : '#fff' }}
+                    >
+                      <td style={{ ...S.td, textAlign: 'center', width: '40px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelect(id)}
+                          style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#005599' }}
+                        />
+                      </td>
+                      <td style={{ ...S.td, color: '#94a3b8', fontWeight: 500, width: 36 }}>{i + 1}</td>
+                      <td style={S.td}>
+                        <div style={S.nameCell}>
+                          <div style={{ ...S.avatar, background: isChecked ? 'linear-gradient(135deg,#003d70,#13B5EA)' : 'linear-gradient(135deg,#005599,#13B5EA)' }}>
+                            {name[0]?.toUpperCase() || '?'}
+                          </div>
+                          <span style={S.nameTxt}>{name}</span>
+                        </div>
+                      </td>
+                      <td style={{ ...S.td, color: '#64748b' }}>{m.cellGroup?.name || '—'}</td>
+                      <td style={{ ...S.td, color: '#64748b' }}>{m.group?.name || '—'}</td>
+                      <td style={{ ...S.td, color: '#64748b' }}>{sbd}</td>
+                      <td style={{ ...S.td, color: '#64748b' }}>{m.phone || '—'}</td>
+                      <td style={{ ...S.td, textAlign: 'right' }}>
+                        <button
+                          style={{ ...S.editBtn, marginRight: '6px' }}
+                          onClick={() => navigate(`/members/${id}`)}
+                          title="View member profile"
+                        >
+                          View
+                        </button>
+                        <button
+                          style={{ ...S.deleteBtn }}
+                          onClick={() => { setSelected(new Set([id])); setConfirmBulk(true); }}
+                          title="Remove from ministry"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </>
