@@ -19,7 +19,15 @@ const ROLE_ACCENT = {
 const fmtMoney = (n) => { const v=Number(n||0); if(v>=1e9) return `₱${(v/1e9).toFixed(1).replace(/\.0$/,'')}B`; if(v>=1e6) return `₱${(v/1e6).toFixed(1).replace(/\.0$/,'')}M`; if(v>=1e3) return `₱${(v/1e3).toFixed(1).replace(/\.0$/,'')}K`; return `₱${v.toLocaleString('en-PH')}`; };
 const fmtMoneyFull = (n) => `₱${Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2})}`;
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}) : '—';
-const greeting = () => { const h=new Date().getHours(); if(h<12) return 'Good morning'; if(h<18) return 'Good afternoon'; return 'Good evening'; };
+
+// CHANGE 4: Time-aware greeting function
+const greeting = () => {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'Good morning';
+  if (h >= 12 && h < 17) return 'Good afternoon';
+  if (h >= 17 && h < 21) return 'Good evening';
+  return 'Good night';
+};
 
 function StatCard({ icon, label, value, sub, accent, onClick }) {
   const [hov, setHov] = useState(false);
@@ -156,13 +164,15 @@ export default function DashboardPage() {
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
           <span style={{ fontSize:24 }}>{roleIcon}</span>
           <div>
-            <div style={{ fontSize:17, fontWeight:800, color:accent }}>{greeting()}, {displayName}!</div>
+            {/* CHANGE 5: Removed emoji after username */}
+            <div style={{ fontSize:17, fontWeight:800, color:accent }}>{greeting()}, {displayName}</div>
             <div style={{ fontSize:12, color:'#64748b', marginTop:2 }}>{dateStr}</div>
           </div>
         </div>
         <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:`${accent}15`, borderRadius:20, padding:'4px 12px', marginTop:6 }}>
           <span style={{ width:7, height:7, borderRadius:'50%', background:accent, display:'inline-block' }} />
-          <span style={{ fontSize:12, color:accent, fontWeight:700 }}>{role}</span>
+          {/* CHANGE 6: Replace "REGISTRATION TEAM" with "Ministry Leader" for ministry leaders */}
+          <span style={{ fontSize:12, color:accent, fontWeight:700 }}>{isMinistryLeader ? 'Ministry Leader' : role}</span>
         </div>
       </div>
 
@@ -220,34 +230,38 @@ export default function DashboardPage() {
     </div>
   );
 
-  // ── Desktop layout (unchanged) ────────────────────────────
+  // ── Desktop layout ────────────────────────────────────────
   return (
-    <div style={{ maxWidth:1120, fontFamily:"'Inter',system-ui,sans-serif" }}>
+    <div style={{ maxWidth:1280, fontFamily:"'Inter',system-ui,sans-serif" }}>
       {/* Hero header */}
       <div style={{ background:`linear-gradient(135deg,${accent}18,#f8fafc)`, borderBottom:`2px solid ${accent}22`, padding:'24px 28px', marginBottom:24, display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12 }}>
         <div>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
             <span style={{ fontSize:26 }}>{roleIcon}</span>
-            <h1 style={{ fontSize:22, fontWeight:800, color:accent, margin:0, letterSpacing:'-0.3px' }}>{greeting()}, {displayName} 👋</h1>
+            {/* CHANGE 5: Removed emoji after username */}
+            <h1 style={{ fontSize:22, fontWeight:800, color:accent, margin:0, letterSpacing:'-0.3px' }}>{greeting()}, {displayName}</h1>
           </div>
           <p style={{ fontSize:13, color:'#64748b', margin:'4px 0 0' }}>Here's what's happening at PLWM-MCC today.</p>
         </div>
         <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6 }}>
           <span style={{ fontSize:12, fontWeight:600, padding:'5px 12px', borderRadius:20, background:`${accent}15`, color:accent, border:`1px solid ${accent}30` }}>{dateStr}</span>
-          <span style={{ fontSize:11, color:'#94a3b8', fontWeight:600, letterSpacing:'0.5px', textTransform:'uppercase' }}>{role}</span>
+          {/* CHANGE 6: Replace "REGISTRATION TEAM" with "Ministry Leader" for ministry leaders */}
+          <span style={{ fontSize:11, color:'#94a3b8', fontWeight:600, letterSpacing:'0.5px', textTransform:'uppercase' }}>{isMinistryLeader ? 'Ministry Leader' : role}</span>
         </div>
       </div>
 
+      {/* CHANGE 7: Wider stat cards grid */}
       {statCards.length > 0 && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(175px,1fr))', gap:14, marginBottom:24 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:14, marginBottom:24 }}>
           {statCards.map(card => <StatCard key={card.label} {...card} onClick={() => navigate(card.path)} />)}
         </div>
       )}
 
+      {/* CHANGE 7: Full-width role-specific sections with better layout */}
       {/* Role-specific sections */}
       {(role===R.ADMIN||role===R.PASTOR) && (
         <>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(400px, 1fr))', gap:16, marginBottom:16 }}>
             <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
               {events.upcoming.length===0 ? <EmptyState icon="📭" text="No upcoming events" /> : events.upcoming.map(ev => <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date)+(ev.location?` · ${ev.location}`:'')} right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />)}
             </SectionCard>
@@ -255,7 +269,7 @@ export default function DashboardPage() {
               {finance.recentRecords.length===0 ? <EmptyState icon="📭" text="No transactions yet" /> : finance.recentRecords.map(r => <ListRow key={r.id} left={r.Member?`${r.Member.first_name} ${r.Member.last_name}`:'—'} sub={`${r.category?.name||'—'} · ${fmtDate(r.transaction_date)}`} right={fmtMoneyFull(r.amount)} rightColor="#059669" />)}
             </SectionCard>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns: role===R.ADMIN ? '1fr 1fr' : '1fr', gap:16 }}>
+          <div style={{ display:'grid', gridTemplateColumns: role===R.ADMIN ? 'repeat(auto-fit, minmax(400px, 1fr))' : '1fr', gap:16 }}>
             <SectionCard title="Recent Activity" icon="📋" actionLabel="View all" onAction={() => navigate('/audit-logs')}>
               {recentActivity.length===0 ? <EmptyState icon="📭" text="No activity yet" /> : recentActivity.map(log => (
                 <div key={log.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 18px', borderBottom:'1px solid #f8fafc', gap:10 }}>
@@ -289,7 +303,7 @@ export default function DashboardPage() {
       )}
 
       {role===R.REG && !isMinistryLeader && (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(400px, 1fr))', gap:16 }}>
           <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
             {events.upcoming.length===0 ? <EmptyState icon="📭" text="No upcoming events" /> : events.upcoming.map(ev => <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date)} right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />)}
           </SectionCard>
@@ -304,7 +318,7 @@ export default function DashboardPage() {
       )}
 
       {role===R.REG && isMinistryLeader && (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(400px, 1fr))', gap:16 }}>
           <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
             {events.upcoming.length===0 ? <EmptyState icon="📭" text="No upcoming events" /> : events.upcoming.map(ev => <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date)} right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />)}
           </SectionCard>
@@ -317,7 +331,7 @@ export default function DashboardPage() {
       )}
 
       {role===R.FINANCE && (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(400px, 1fr))', gap:16 }}>
           <SectionCard title="Recent Transactions" icon="💰" actionLabel="View all" onAction={() => navigate('/finance')}>
             {finance.recentRecords.length===0 ? <EmptyState icon="📭" text="No transactions yet" /> : finance.recentRecords.map(r => <ListRow key={r.id} left={r.Member?`${r.Member.first_name} ${r.Member.last_name}`:'—'} sub={`${r.category?.name||'—'} · ${fmtDate(r.transaction_date)}`} right={fmtMoneyFull(r.amount)} rightColor="#059669" />)}
           </SectionCard>
@@ -334,7 +348,7 @@ export default function DashboardPage() {
       )}
 
       {(role===R.CG||role===R.GRP) && (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(400px, 1fr))', gap:16 }}>
           <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
             {events.upcoming.length===0 ? <EmptyState icon="📭" text="No upcoming events" /> : events.upcoming.map(ev => <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date)} right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />)}
           </SectionCard>
@@ -348,7 +362,7 @@ export default function DashboardPage() {
       )}
 
       {role===R.MEMBER && (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(400px, 1fr))', gap:16 }}>
           <SectionCard title="Upcoming Events" icon="📅" actionLabel="View all" onAction={() => navigate('/events')}>
             {events.upcoming.length===0 ? <EmptyState icon="📭" text="No upcoming events" /> : events.upcoming.map(ev => <ListRow key={ev.id} left={ev.title} sub={fmtDate(ev.start_date)+(ev.location?` · ${ev.location}`:'')} right={ev.status} rightColor="#7c3aed" onClick={() => navigate(`/events/${ev.id}`)} />)}
           </SectionCard>

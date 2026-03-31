@@ -18,6 +18,23 @@ export default function MinistryPage() {
   // They see ONLY the roster — no tabs, no Assignments, Roles, or Substitutes.
   const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
 
+  // CHANGE 1: Fetch ministry name dynamically
+  const [ministryName, setMinistryName] = useState('Ministry');
+
+  useEffect(() => {
+    if (isMinistryLeader && user?.ministryRoleId) {
+      axiosInstance.get(`/ministry/roles/${user.ministryRoleId}`)
+        .then(res => {
+          if (res.data?.data?.name) {
+            setMinistryName(res.data.data.name);
+          }
+        })
+        .catch(() => {
+          // Silent fail - keep default "Ministry" if fetch fails
+        });
+    }
+  }, [isMinistryLeader, user?.ministryRoleId]);
+
   const tabs = isMember
     ? [{ key: 'substitutes', label: '🔄 Substitute Requests' }]
     : [
@@ -33,7 +50,8 @@ export default function MinistryPage() {
     <div style={{ ...S.page, padding: isMobile ? '16px 12px' : '28px 32px' }}>
       <div style={S.header}>
         <div>
-          <h1 style={S.title}>Ministry</h1>
+          {/* CHANGE 1: Dynamic ministry name for ministry leaders */}
+          <h1 style={S.title}>{isMinistryLeader ? `${ministryName} Ministry` : 'Ministry'}</h1>
           <p style={S.subtitle}>
             {isMinistryLeader
               ? 'Manage your ministry roster and event invites'
@@ -94,6 +112,9 @@ function RosterTab({ ministryRoleId }) {
   const [actionErr,    setActionErr]    = useState('');
   const [selected,     setSelected]     = useState(new Set());   // member IDs (number)
   const [confirmBulk,  setConfirmBulk]  = useState(false);
+  // CHANGE 3: Add filter states
+  const [filterCellGroup, setFilterCellGroup] = useState('');
+  const [filterGroup,     setFilterGroup]     = useState('');
   const addInputRef   = useRef(null);
   const searchTimeout = useRef(null);
   const dropRef       = useRef(null);
@@ -156,8 +177,18 @@ function RosterTab({ ministryRoleId }) {
   // ── Derived filtered list (must be before multi-select helpers) ──
   const filtered = members.filter(m => {
     const name = `${m.member?.first_name || ''} ${m.member?.last_name || ''}`.toLowerCase();
-    return name.includes(search.toLowerCase());
+    const matchesSearch = name.includes(search.toLowerCase());
+    
+    // CHANGE 3: Apply Cell Group and Group filters
+    const matchesCellGroup = !filterCellGroup || m.member?.cellGroup?.name === filterCellGroup;
+    const matchesGroup = !filterGroup || m.member?.group?.name === filterGroup;
+    
+    return matchesSearch && matchesCellGroup && matchesGroup;
   });
+
+  // CHANGE 3: Extract unique Cell Groups and Groups for filter dropdowns
+  const uniqueCellGroups = [...new Set(members.map(m => m.member?.cellGroup?.name).filter(Boolean))].sort();
+  const uniqueGroups = [...new Set(members.map(m => m.member?.group?.name).filter(Boolean))].sort();
 
   // ── Multi-select helpers ──────────────────────────────────────
   const allFilteredIds = () => {
@@ -275,12 +306,36 @@ function RosterTab({ ministryRoleId }) {
 
       {/* ── Toolbar ──────────────────────────────────────────── */}
       <div style={{ ...S.toolbar, justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
           <div style={S.searchWrap}>
             <span style={S.searchIcon}>🔍</span>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search ministry members…" style={S.searchInput} />
             {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
           </div>
+          
+          {/* CHANGE 3: Filter dropdowns for Cell Group and Group */}
+          {uniqueCellGroups.length > 0 && (
+            <select 
+              value={filterCellGroup} 
+              onChange={e => setFilterCellGroup(e.target.value)}
+              style={{ padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', outline: 'none', color: '#0f172a', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <option value="">All Cell Groups</option>
+              {uniqueCellGroups.map(cg => <option key={cg} value={cg}>{cg}</option>)}
+            </select>
+          )}
+          
+          {uniqueGroups.length > 0 && (
+            <select 
+              value={filterGroup} 
+              onChange={e => setFilterGroup(e.target.value)}
+              style={{ padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', outline: 'none', color: '#0f172a', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <option value="">All Groups</option>
+              {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          )}
+          
           <div style={S.countBadge}>{filtered.length} member{filtered.length !== 1 ? 's' : ''}</div>
         </div>
 
