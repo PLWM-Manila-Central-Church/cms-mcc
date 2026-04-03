@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
   return (
     <div style={S.page}>
       {/* ── Left panel ── */}
-      <div style={S.left}>
+      <div style={S.left} className="reset-left">
         <div style={{ ...S.bgPhoto, backgroundImage: `url(${BG_URL})` }} />
         <div style={S.overlay} />
         <div style={S.leftContent}>
@@ -87,7 +87,7 @@ export default function ResetPasswordPage() {
       </div>
 
       {/* ── Right panel ── */}
-      <div style={S.right}>
+      <div style={S.right} className="reset-right">
         <div style={S.card}>
           <div style={S.cardAccent} />
           <div style={S.cardBody}>
@@ -258,6 +258,10 @@ export default function ResetPasswordPage() {
       <style>{`
         @keyframes spin   { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        @media (max-width: 768px) {
+          .reset-left { display: none !important; }
+          .reset-right { flex: 1 !important; padding: 24px 16px !important; }
+        }
       `}</style>
     </div>
   );
@@ -300,7 +304,7 @@ const S = {
   field:       { display:'flex', flexDirection:'column', gap:'7px' },
   label:       { fontSize:'12px', fontWeight:'700', color:'#374151', letterSpacing:'0.4px', textTransform:'uppercase' },
   fieldIcon:   { position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', fontSize:'14px', opacity:0.5, pointerEvents:'none' },
-  input:       { padding:'12px 16px 12px 40px', fontSize:'14px', border:'1.5px solid #e2e8f0', borderRadius:'10px', outline:'none', transition:'border-color 0.2s,box-shadow 0.2s', width:'100%', boxSizing:'border-box', color:'#0f172a', background:'#fafbfc' },
+  input:       { padding:'12px 16px 12px 40px', fontSize:'16px', border:'1.5px solid #e2e8f0', borderRadius:'10px', outline:'none', transition:'border-color 0.2s,box-shadow 0.2s', width:'100%', boxSizing:'border-box', color:'#0f172a', background:'#fafbfc' },
   eyeBtn:      { position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:'15px', padding:'4px', opacity:0.6 },
   matchIcon:   { position:'absolute', right:'14px', top:'50%', transform:'translateY(-50%)', fontSize:'16px', fontWeight:'700', color:'inherit', pointerEvents:'none' },
 

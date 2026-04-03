@@ -1,9 +1,21 @@
 import { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useAuth } from '../../context/AuthContext';
-import { NAV_ITEMS } from '../../utils/constants';
+import { NAV_ITEMS, NAV_ICONS } from '../../utils/constants';
+import { LANGS, getLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
+
+function NavIcon({ name, size = 20 }) {
+  const MORE_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
+  const svg = NAV_ICONS[name] || MORE_SVG;
+  return (
+    <span
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      dangerouslySetInnerHTML={{ __html: svg.replace(/width="18"/g, `width="${size}"`).replace(/height="18"/g, `height="${size}"`) }}
+    />
+  );
+}
 
 const BP_TABLET = 1024;
 const BP_MOBILE = 768;
@@ -20,33 +32,72 @@ function useWindowWidth() {
   return width;
 }
 
-/* ── Mobile bottom tab bar ─────────────────────────────────── */
-const BOTTOM_TABS = [
-  { label: 'Home',    path: '/dashboard',  icon: '🏠' },
-  { label: 'Members', path: '/members',    icon: '👥', permissions: { module: 'members',  action: 'read' } },
-  { label: 'Events',  path: '/events',     icon: '📅', permissions: { module: 'events',   action: 'read' } },
-  { label: 'Finance', path: '/finance',    icon: '💰', permissions: { module: 'finance',  action: 'read' } },
-  { label: 'More',    path: '__more__',    icon: '☰' },
+// ── Role-specific bottom tab definitions ──────────────────────────────────
+// Each role gets 4 labelled tabs + the "More" tab is always appended 5th.
+// Tabs without a `permissions` key are always shown.
+const ROLE_TAB_SETS = {
+  'System Admin': [
+    { label: 'Home',    path: '/dashboard', icon: 'dashboard' },
+    { label: 'Members', path: '/members',   icon: 'members' },
+    { label: 'Events',  path: '/events',    icon: 'events' },
+    { label: 'Finance', path: '/finance',   icon: 'finance' },
+  ],
+  'Pastor': [
+    { label: 'Home',    path: '/dashboard', icon: 'dashboard' },
+    { label: 'Members', path: '/members',   icon: 'members' },
+    { label: 'Events',  path: '/events',    icon: 'events' },
+    { label: 'Finance', path: '/finance',   icon: 'finance' },
+  ],
+  'Registration Team': [
+    { label: 'Home',     path: '/dashboard',  icon: 'dashboard' },
+    { label: 'Members',  path: '/members',    icon: 'members' },
+    { label: 'Events',   path: '/events',     icon: 'events' },
+    { label: 'Ministry', path: '/ministry',   icon: 'ministry' },
+  ],
+  'Finance Team': [
+    { label: 'Home',     path: '/dashboard',  icon: 'dashboard' },
+    { label: 'Members',  path: '/members',    icon: 'members' },
+    { label: 'Finance',  path: '/finance',    icon: 'finance' },
+    { label: 'Ministry', path: '/ministry',   icon: 'ministry' },
+  ],
+  'Cell Group Leader': [
+    { label: 'Home',       path: '/dashboard',  icon: 'dashboard' },
+    { label: 'Members',    path: '/members',    icon: 'members' },
+    { label: 'Events',     path: '/events',     icon: 'events' },
+    { label: 'Cell Groups',path: '/cell-groups',icon: 'cellgroups' },
+  ],
+  'Group Leader': [
+    { label: 'Home',     path: '/dashboard',  icon: 'dashboard' },
+    { label: 'Members',  path: '/members',    icon: 'members' },
+    { label: 'Events',   path: '/events',     icon: 'events' },
+    { label: 'Ministry', path: '/ministry',   icon: 'ministry' },
+  ],
+};
+
+// Fallback for unknown roles
+const DEFAULT_TABS = [
+  { label: 'Home',    path: '/dashboard', icon: 'dashboard' },
+  { label: 'Members', path: '/members',   icon: 'members' },
+  { label: 'Events',  path: '/events',    icon: 'events' },
+  { label: 'Finance', path: '/finance',   icon: 'finance' },
 ];
 
+/* ── Mobile bottom tab bar ─────────────────────────────────── */
 function BottomTabBar({ onMoreOpen }) {
-  const { hasPermission } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
 
-  const visibleTabs = BOTTOM_TABS.filter(t =>
-    !t.permissions || hasPermission(t.permissions.module, t.permissions.action)
-  );
-
-  // Always show max 5 tabs; last one is always "More"
-  const tabs = visibleTabs.slice(0, 4);
-  tabs.push({ label: 'More', path: '__more__', icon: '☰' });
+  const roleTabs = ROLE_TAB_SETS[user?.roleName] || DEFAULT_TABS;
+  // Always append More as 5th tab
+  const tabs = [...roleTabs, { label: 'More', path: '__more__', icon: 'more' }];
 
   const isActive = (path) => path !== '__more__' && location.pathname.startsWith(path);
 
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
-      height: 60,
+      height: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+      paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       background: '#fff',
       borderTop: '1px solid #e8edf2',
       display: 'flex',
@@ -67,7 +118,7 @@ function BottomTabBar({ onMoreOpen }) {
               color: '#94a3b8', fontFamily: 'inherit',
             }}
           >
-            <span style={{ fontSize: 20 }}>☰</span>
+            <NavIcon name="more" size={20} />
             <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.2px' }}>More</span>
           </button>
         ) : (
@@ -90,7 +141,7 @@ function BottomTabBar({ onMoreOpen }) {
                 borderRadius: '0 0 3px 3px',
               }} />
             )}
-            <span style={{ fontSize: 20 }}>{tab.icon}</span>
+            <NavIcon name={tab.icon} size={20} />
             <span style={{ fontSize: 10, fontWeight: active ? 700 : 600, letterSpacing: '0.2px' }}>
               {tab.label}
             </span>
@@ -105,6 +156,7 @@ function BottomTabBar({ onMoreOpen }) {
 function MobileMoreDrawer({ open, onClose }) {
   const { hasPermission, user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -154,12 +206,25 @@ function MobileMoreDrawer({ open, onClose }) {
           }}>
             {user?.email?.[0]?.toUpperCase() || '?'}
           </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user?.email?.split('@')[0] || 'User'}
             </div>
             <div style={{ fontSize: 12, color: '#94a3b8' }}>{user?.roleName}</div>
           </div>
+          {/* ⚙️ My Settings button in drawer header */}
+          <button
+            onClick={() => { onClose(); navigate('/my-settings'); }}
+            style={{
+              background: '#f1f5f9', border: '1px solid #e2e8f0',
+              borderRadius: 10, padding: '8px 12px',
+              fontSize: 13, fontWeight: 600, color: '#374151',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              flexShrink: 0,
+            }}
+          >
+            ⚙️ Settings
+          </button>
         </div>
 
         {/* Nav items grid */}
@@ -182,7 +247,7 @@ function MobileMoreDrawer({ open, onClose }) {
                   fontSize: 13,
                 }}
               >
-                <span style={{ fontSize: 18 }}>{item.icon}</span>
+                <NavIcon name={item.icon} size={18} />
                 <span>{item.label}</span>
               </NavLink>
             );
@@ -209,35 +274,59 @@ function MobileMoreDrawer({ open, onClose }) {
 }
 
 export default function MainLayout({ children }) {
-  const width     = useWindowWidth();
-  const isMobile  = width <= BP_MOBILE;
-  const isTablet  = width > BP_MOBILE && width <= BP_TABLET;
+  const width    = useWindowWidth();
+  const isMobile = width <= BP_MOBILE;
+  const isTablet = width > BP_MOBILE && width <= BP_TABLET;
 
-  const [collapsed,   setCollapsed]   = useState(isTablet);
-  const [drawerOpen,  setDrawerOpen]  = useState(false);
-  const [moreOpen,    setMoreOpen]    = useState(false);
+  const [collapsed, setCollapsed] = useState(isTablet);
+  const [moreOpen,  setMoreOpen]  = useState(false);
+
+  // ── Google Translate: load once, restore saved language ──
+  useEffect(() => {
+    const restoreSaved = () => {
+      const code = getLangCode();
+      if (code && code !== 'en') {
+        const saved = LANGS.find(l => l.code === code);
+        if (saved) applyGTLang(saved);
+      }
+    };
+    loadGTScript('google_translate_element_cms', restoreSaved);
+  }, []); // eslint-disable-line
 
   useEffect(() => {
-    if (isMobile)               { setCollapsed(true); setDrawerOpen(false); }
+    const handler = (e) => {
+      const code = e.detail?.code;
+      const lang = LANGS.find(l => l.code === code);
+      if (lang) applyGTLang(lang);
+    };
+    const storageHandler = () => {
+      const code = getLangCode();
+      const lang = LANGS.find(l => l.code === code);
+      if (lang) applyGTLang(lang);
+    };
+    window.addEventListener('plwm-lang-change', handler);
+    window.addEventListener('storage', storageHandler);
+    return () => {
+      window.removeEventListener('plwm-lang-change', handler);
+      window.removeEventListener('storage', storageHandler);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isMobile)               { setCollapsed(true); }
     if (isTablet)               { setCollapsed(true); }
     if (!isMobile && !isTablet) { setCollapsed(false); }
   }, [isMobile, isTablet]);
-
-  useEffect(() => {
-    document.body.style.overflow = (isMobile && drawerOpen) ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [isMobile, drawerOpen]);
 
   const sidebarWidth = isMobile ? '0px' : (collapsed ? '68px' : '244px');
   const mainPadLeft  = isMobile ? '0px' : sidebarWidth;
 
   return (
     <div style={S.root}>
-      {/* Desktop/tablet: sidebar + backdrop */}
-      {isMobile && drawerOpen && (
-        <div onClick={() => setDrawerOpen(false)} style={S.backdrop} aria-hidden="true" />
-      )}
+      {/* Hidden Google Translate widget for CMS */}
+      <div id="google_translate_element_cms" style={{ position: 'fixed', bottom: -200, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1 }} />
 
+      {/* Desktop/tablet sidebar */}
       {!isMobile && (
         <div style={{
           ...S.sidebarWrapper,
@@ -260,8 +349,6 @@ export default function MainLayout({ children }) {
       <Header
         sidebarWidth={mainPadLeft}
         isMobile={isMobile}
-        onHamburger={() => setDrawerOpen(o => !o)}
-        drawerOpen={drawerOpen}
       />
 
       {/* Main content */}
@@ -270,7 +357,7 @@ export default function MainLayout({ children }) {
         marginLeft: mainPadLeft,
         padding: isMobile ? '12px 12px 0' : (isTablet ? '20px' : '28px'),
         paddingTop: isMobile ? '72px' : '80px',
-        paddingBottom: isMobile ? '68px' : (isTablet ? '20px' : '28px'),
+        paddingBottom: isMobile ? 'calc(68px + env(safe-area-inset-bottom, 0px))' : (isTablet ? '20px' : '28px'),
       }}>
         {children}
       </main>
@@ -296,12 +383,6 @@ const S = {
     height: '100vh',
     flexShrink: 0,
     overflowX: 'hidden',
-  },
-  backdrop: {
-    position: 'fixed', inset: 0,
-    background: 'rgba(11,36,71,0.5)',
-    backdropFilter: 'blur(2px)',
-    zIndex: 299,
   },
   main: {
     flex: 1,

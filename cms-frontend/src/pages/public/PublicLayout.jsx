@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { LANGS, getLangCode, saveLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
 
 const C = {
   navy:'#0B2447', navyMid:'#14305E', navySoft:'#1A3D72',
@@ -32,19 +33,7 @@ const NAV = [
   ]},
 ];
 
-// ── Language definitions ──────────────────────────────────────
-// 'searchText': what to look for inside Google Translate's option labels.
-// Bicol fix: GT doesn't have 'bcl'; we search for 'Bikol' by option text.
-const LANGS = [
-  { code:'en',  label:'English',            flag:'🇺🇸', native:'English',  searchText:'English'    },
-  { code:'ko',  label:'Korean',             flag:'🇰🇷', native:'한국어',    searchText:'Korean'     },
-  { code:'tl',  label:'Filipino (Tagalog)', flag:'🇵🇭', native:'Filipino', searchText:'Filipino'   },
-  { code:'ceb', label:'Cebuano',            flag:'🇵🇭', native:'Bisaya',   searchText:'Cebuano'    },
-  { code:'ilo', label:'Ilocano',            flag:'🇵🇭', native:'Ilokano',  searchText:'Ilocano'    },
-  { code:'hil', label:'Hiligaynon',         flag:'🇵🇭', native:'Ilonggo',  searchText:'Hiligaynon' },
-  { code:'war', label:'Waray',              flag:'🇵🇭', native:'Winaray',  searchText:'Waray'      },
-  { code:'bcl', label:'Bikol',              flag:'🇵🇭', native:'Bikolano', searchText:'Bikol'      },
-];
+
 
 // ── Shared exported components ────────────────────────────────
 
@@ -96,7 +85,7 @@ export function PlaylistEmbed({ playlistId, title, start = 0 }) {
 
 export function Section({ children, bg = C.white, id }) {
   return (
-    <section id={id} style={{ background:bg, padding:'80px 24px' }}>
+    <section id={id} style={{ background:bg, padding:'clamp(40px,8vw,80px) 24px' }}>
       <div style={{ maxWidth:MAX_W, margin:'0 auto' }}>{children}</div>
     </section>
   );
@@ -104,7 +93,7 @@ export function Section({ children, bg = C.white, id }) {
 
 export function SectionHeader({ eyebrow, title, sub }) {
   return (
-    <div style={{ marginBottom:48 }}>
+    <div style={{ marginBottom:'clamp(24px,5vw,48px)' }}>
       {eyebrow && (
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12, fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:C.blue }}>
           <span style={{ width:20, height:2, background:C.blue, borderRadius:2, display:'inline-block' }} />
@@ -124,7 +113,11 @@ export default function PublicLayout({ children }) {
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [mobileSub,   setMobileSub]   = useState(null);
   const [langOpen,    setLangOpen]    = useState(false);
-  const [currentLang, setCurrentLang] = useState('English');
+  const [currentLang, setCurrentLang] = useState(() => {
+    // Restore language label from shared key instantly — no flash
+    const saved = LANGS.find(l => l.code === getLangCode());
+    return saved ? saved.label : 'English';
+  });
   const [scrolled,    setScrolled]    = useState(false);
 
   const location = useLocation();
@@ -140,6 +133,8 @@ export default function PublicLayout({ children }) {
 
   useEffect(() => {
     setMobileOpen(false); setOpenNav(null); setMobileSub(null); setLangOpen(false);
+    // Scroll to top on every navigation — prevents staying at bottom when clicking quick links
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, [location]);
 
   useEffect(() => {
@@ -155,60 +150,37 @@ export default function PublicLayout({ children }) {
     return () => document.removeEventListener('mousedown', fn);
   }, [openNav]);
 
-  // Load Google Translate widget (hidden)
+  // Load Google Translate + restore saved language + suppress banner
   useEffect(() => {
-    if (document.getElementById('gt-script')) return;
-    window.googleTranslateElementInit = () => {
-      // eslint-disable-next-line no-new
-      new window.google.translate.TranslateElement({ pageLanguage:'en', autoDisplay:false }, 'google_translate_element');
+    const restoreSaved = () => {
+      const code = getLangCode();
+      if (code && code !== 'en') {
+        const saved = LANGS.find(l => l.code === code);
+        if (saved) applyGTLang(saved);
+      }
     };
-    const s = document.createElement('script');
-    s.id = 'gt-script';
-    s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-    s.async = true;
-    document.head.appendChild(s);
+    loadGTScript('google_translate_element', restoreSaved);
+  }, []); // eslint-disable-line
+
+  // Listen for language changes fired by the member portal
+  // Listen for language changes fired by the member portal
+  useEffect(() => {
+    const handler = (e) => {
+      const code = e.detail?.code;
+      const lang = LANGS.find(l => l.code === code);
+      if (lang) { setCurrentLang(lang.label); applyGTLang(lang); }
+    };
+    window.addEventListener('plwm-lang-change', handler);
+    return () => window.removeEventListener('plwm-lang-change', handler);
   }, []);
 
-  // ── Bicol fix: match by option TEXT content, not by code value ──
-  // Google Translate doesn't always have all language codes (e.g. 'bcl').
-  // We iterate <option> elements and find one whose text includes searchText.
+  // ── Language switch — saves to shared key so portal picks it up instantly ──
   const switchLang = (lang) => {
     setCurrentLang(lang.label);
     setLangOpen(false);
-
-    const apply = () => {
-      try {
-        const sel = document.querySelector('.goog-te-combo');
-        if (!sel) return false;
-
-        // First try direct code match (works for most langs)
-        if (sel.querySelector(`option[value="${lang.code}"]`)) {
-          sel.value = lang.code;
-          sel.dispatchEvent(new Event('change'));
-          return true;
-        }
-
-        // Fallback: search option text (fixes Bikol / bcl)
-        const opts = Array.from(sel.options);
-        const match = opts.find(o =>
-          o.text.toLowerCase().includes(lang.searchText.toLowerCase())
-        );
-        if (match) {
-          sel.value = match.value;
-          sel.dispatchEvent(new Event('change'));
-          return true;
-        }
-      } catch (_) {}
-      return false;
-    };
-
-    if (!apply()) {
-      let t = 0;
-      const iv = setInterval(() => {
-        t++;
-        if (apply() || t > 30) clearInterval(iv);
-      }, 200);
-    }
+    saveLangCode(lang.code);
+    // Reload so the googtrans cookie takes effect cleanly — no GT widget glitches
+    window.location.reload();
   };
 
   useEffect(() => {
@@ -247,8 +219,7 @@ export default function PublicLayout({ children }) {
               <img src={process.env.PUBLIC_URL + '/logo.jpg'} alt="PLWM-MCC"
                 style={{ width:40, height:40, borderRadius:8, objectFit:'contain', background:'rgba(255,255,255,0.1)', padding:2, flexShrink:0 }} />
               <div className="logo-text-hide">
-                <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:13, fontWeight:700, color:'#fff', lineHeight:1.2, whiteSpace:'nowrap' }}>Manila Central Church</div>
-                <div style={{ fontSize:9.5, color:'rgba(255,255,255,0.48)', letterSpacing:'0.5px', textTransform:'uppercase' }}>PLWM — Parañaque City</div>
+                <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:15, fontWeight:700, color:'#fff', lineHeight:1.2, whiteSpace:'nowrap' }}>PLWM — Manila Central Church</div>
               </div>
             </Link>
 
@@ -340,7 +311,7 @@ export default function PublicLayout({ children }) {
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'18px 20px', borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <img src={process.env.PUBLIC_URL + '/logo.jpg'} alt="PLWM-MCC" style={{ width:36, height:36, borderRadius:8, objectFit:'contain', background:'rgba(255,255,255,0.1)', padding:2 }} />
-              <span style={{ fontFamily:"'Lora',Georgia,serif", fontSize:14, fontWeight:700, color:'#fff' }}>Manila Central Church</span>
+              <span style={{ fontFamily:"'Lora',Georgia,serif", fontSize:14, fontWeight:700, color:'#fff' }}>PLWM — Manila Central Church</span>
             </div>
             <button onClick={() => setMobileOpen(false)}
               style={{ background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', borderRadius:8, width:36, height:36, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -403,7 +374,7 @@ export default function PublicLayout({ children }) {
               <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:'1.25rem', fontWeight:700, color:C.text, marginBottom:8 }}>Manila Central Church</div>
               <div style={{ fontSize:14, color:C.muted, lineHeight:1.75, marginBottom:20, maxWidth:280 }}>Mother Church of Philippine Life Word Mission (PLWM). Serving Manila and the Philippines through the Word of God.</div>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                {[['📍','Address','Lot 2 Block 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City'],['📞','Tel','(02) 7745-6212'],['📱','Senior Pastor','0915-807-6300'],['🌐','Website','www.jbch.org.ph']].map(([icon,label,value]) => (
+                {[['📍','Address','Lot 2 Block 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City'],['📞','Tel','(02) 7745-6212'],['📱','Senior Pastor','0915-807-6300']].map(([icon,label,value]) => (
                   <div key={label} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
                     <div style={{ width:28, height:28, background:'rgba(21,101,192,0.1)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}>{icon}</div>
                     <div>
@@ -412,6 +383,18 @@ export default function PublicLayout({ children }) {
                     </div>
                   </div>
                 ))}
+                <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                  <div style={{ width:28, height:28, background:'rgba(21,101,192,0.1)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}>🌐</div>
+                  <div>
+                    <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.5px' }}>Website</div>
+                    <a href="https://www.jbch.org/en/" target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize:13, color:C.blue, textDecoration:'none' }}
+                      onMouseEnter={e => e.currentTarget.style.textDecoration='underline'}
+                      onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>
+                      https://www.jbch.org/en/
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
             <div>
@@ -425,7 +408,7 @@ export default function PublicLayout({ children }) {
                 <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none' }}
                   onMouseEnter={e => e.currentTarget.style.color='#FF0000'}
                   onMouseLeave={e => e.currentTarget.style.color=C.muted}>▶ YouTube Channel</a>
-                <a href="https://www.facebook.com/group/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none' }}
+                <a href="https://www.facebook.com/groups/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none' }}
                   onMouseEnter={e => e.currentTarget.style.color='#1877F2'}
                   onMouseLeave={e => e.currentTarget.style.color=C.muted}>📘 Facebook Group</a>
               </div>
@@ -433,7 +416,7 @@ export default function PublicLayout({ children }) {
             <div>
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:C.text, marginBottom:16 }}>Service Times</div>
               <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
-                {['☀️ Sunday 9:30–11:10 AM — Filipino Service (Main Hall)','☀️ Sunday 2:00–4:00 PM — Korean Service (Medium Hall)','📖 Wednesday 7:00–9:00 PM — Midweek Sermon (Main Hall)','🏘️ Saturday 2:00–4:00 PM — High School Fellowship','🏘️ Saturday 7:00–9:00 PM — Young Adult Fellowship','🔵 Tue & Thu 7:00 PM — Cell Group Meetings'].map(s => (
+                {['☀️ Sunday 9:30–11:10 AM — Filipino Service (Main Hall)','☀️ Sunday 2:00–4:00 PM — Korean Service (Medium Hall)','📖 Wednesday 7:00–9:00 PM — Midweek Sermon (Main Hall)','🏘️ Saturday 2:00–4:00 PM — High School Fellowship','🏘️ Saturday 7:00–9:00 PM — Young Adult Fellowship'].map(s => (
                   <span key={s} style={{ fontSize:13, color:C.muted, lineHeight:1.5 }}>{s}</span>
                 ))}
               </div>
@@ -441,9 +424,7 @@ export default function PublicLayout({ children }) {
           </div>
           <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:20, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
             <p style={{ fontSize:12, color:C.light, margin:0 }}>© 2026 Manila Central Church · Philippine Life Word Mission (PLWM) · All rights reserved.</p>
-            <Link to="/login" style={{ display:'inline-flex', alignItems:'center', gap:7, background:C.navy, color:'#fff', fontSize:12, fontWeight:600, padding:'7px 14px', borderRadius:8, textDecoration:'none' }}>
-              🔐 Church Management System
-            </Link>
+
           </div>
         </div>
       </footer>
@@ -457,10 +438,13 @@ export default function PublicLayout({ children }) {
         a { text-decoration:none; color:inherit; }
         img { max-width:100%; }
 
-        /* Google Translate suppression */
+        /* Google Translate suppression — keep page layout clean */
         .goog-te-banner-frame, .skiptranslate { display:none !important; }
-        .goog-te-gadget { display:none !important; }
-        body { top:0 !important; }
+        .goog-te-gadget                        { display:none !important; }
+        #goog-gt-tt, .goog-tooltip             { display:none !important; }
+        .goog-text-highlight                   { background:none !important; box-shadow:none !important; }
+        body.translated-ltr, body.translated-rtl { top:0 !important; }
+        html                                   { margin-top:0 !important; }
         .VIpgJd-ZVi9od-aZ2wEe-wOHMyf, .VIpgJd-ZVi9od-aZ2wEe { display:none !important; }
 
         /* Nav breakpoints */
@@ -528,6 +512,41 @@ export default function PublicLayout({ children }) {
           .page-hero h1 { font-size:1.3rem; }
           .page-hero { padding:60px 8px 32px; }
         }
+
+        /* ── Responsive public grids ─────────────────────────────────────────
+           Class-based breakpoints — inline style attribute selectors don't work
+           in React because camelCase props serialize to kebab-case without quotes.
+        ─────────────────────────────────────────────────────────────────────── */
+        .pub-2col    { display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:start; }
+        .pub-vid-col { display:grid; grid-template-columns:1fr 380px; gap:28px; align-items:center; }
+        .pub-ci-col  { display:grid; grid-template-columns:280px 1fr; gap:48px; align-items:start; }
+        .pub-stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+
+        @media(max-width:768px) {
+          .pub-2col    { grid-template-columns:1fr !important; gap:24px !important; }
+          .pub-vid-col { grid-template-columns:1fr !important; gap:20px !important; }
+          .pub-ci-col  { grid-template-columns:1fr !important; gap:24px !important; }
+          .pub-stat-grid { grid-template-columns:1fr 1fr !important; gap:12px !important; }
+        }
+
+        /* ── Schedule event rows ── */
+        .pub-schedule-row { display:flex; gap:20px; align-items:flex-start; }
+        .pub-schedule-row .pub-schedule-date { min-width:140px; flex-shrink:0; }
+        @media(max-width:600px) {
+          .pub-schedule-row { flex-direction:column; gap:6px; }
+          .pub-schedule-row .pub-schedule-date { min-width:unset; }
+        }
+
+        /* ── Mission Status tab bar ── */
+        .ms-tab {
+          padding:12px 20px; font-size:14px; font-weight:600;
+          background:none; border:none; border-bottom:3px solid transparent;
+          cursor:pointer; font-family:inherit; margin-bottom:-2px;
+          color:#64748B; transition:color 0.18s,border-color 0.18s;
+        }
+        .ms-tab-churches.ms-active { color:#1565C0; border-bottom-color:#1565C0; }
+        .ms-tab-branches.ms-active { color:#C9A84C; border-bottom-color:#C9A84C; }
+        @media(max-width:480px) { .ms-tab { padding:10px 14px; font-size:13px; } }
       `}</style>
     </div>
   );

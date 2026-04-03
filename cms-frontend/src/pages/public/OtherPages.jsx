@@ -1,5 +1,6 @@
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import PublicLayout, { PlaylistEmbed } from './PublicLayout';
+import PublicLayout, { PlaylistEmbed, VideoEmbed } from './PublicLayout';
 
 const C = { navy:'#0B2447', navyMid:'#14305E', blue:'#1565C0', gold:'#C9A84C', white:'#fff', off:'#F4F7FB', border:'#E2E8F0', text:'#0F1B33', sub:'#475569', muted:'#64748B', light:'#94A3B8' };
 
@@ -84,6 +85,10 @@ export function SundaySermonPage() {
 
 // ── CHRISTIAN LIFE SEMINAR ────────────────────────────────────
 export function ChristianLifePage() {
+  const SERMONS = [
+    { id: 'Y08A1zp1QH8', title: 'Christian Life Seminar — Sermon 1' },
+    { id: 'tkGdumFkYPk', title: 'Christian Life Seminar — Sermon 2' },
+  ];
   return (
     <PublicLayout>
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'Sermon',path:'/sermon'},{label:'Christian Life Seminar'}]} title="Christian Life Seminar" sub="Teachings on living a godly, Spirit-filled Christian life" />
@@ -92,8 +97,15 @@ export function ChristianLifePage() {
           <div style={{ maxWidth:600, marginBottom:32 }}>
             <p style={{ fontSize:15, color:C.sub, lineHeight:1.75 }}>The Christian Life Seminar is a teaching series that helps believers understand what it means to live as a child of God — walking in the Spirit, growing in faith, and bearing fruit for His Kingdom.</p>
           </div>
-          <PlaylistEmbed playlistId="PLT0Pgr_m_NoI2Y9-ACC5Je43gHaGHEyKK" title="Christian Life Seminar — Manila Central Church" start={227} />
-          <div style={{ marginTop:24, textAlign:'center' }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:28 }}>
+            {SERMONS.map((s, i) => (
+              <div key={s.id}>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', color:C.blue, marginBottom:10 }}>Sermon {i + 1}</div>
+                <VideoEmbed videoId={s.id} title={s.title} />
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop:28, textAlign:'center' }}>
             <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer">
               <button style={{ background:'#FF0000', color:'#fff', border:'none', padding:'11px 24px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'inline-flex', alignItems:'center', gap:8 }}>
                 ▶ View Full Channel on YouTube
@@ -113,7 +125,7 @@ export function WorldMissionPage() {
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'World Mission'}]} title="World Mission" sub="Spreading the Gospel across every island of the Philippines and beyond" />
       <section style={{ background: C.white, padding: '72px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:48, alignItems:'start', marginBottom:56 }}>
+          <div className="pub-2col" style={{ marginBottom: 56 }}>
             <div>
               <div style={{ background:C.navy, borderRadius:12, padding:'20px 22px', marginBottom:24, position:'relative', overflow:'hidden' }}>
                 <div style={{ position:'absolute', right:12, top:-10, fontFamily:"'Lora',serif", fontSize:80, color:'rgba(255,255,255,0.05)', lineHeight:1 }}>"</div>
@@ -161,6 +173,10 @@ export function WorldMissionPage() {
 
 // ── MISSION STATUS ────────────────────────────────────────────
 export function MissionStatusPage() {
+  const [activeTab, setActiveTab] = useState('churches');
+  const [churchesExpanded, setChurchesExpanded] = useState(false);
+  const [branchesExpanded, setBranchesExpanded] = useState(false);
+
   // ── PLWM Churches (108 total from official map) ──────────
   const CHURCHES = [
     'Manila Central Church','Naga Church','Quezon City Church','Cavite Church','Ortigas Church',
@@ -203,56 +219,73 @@ export function MissionStatusPage() {
     'Calamba (Calauan)','Iniwaran (Burias)','San Vicente (Abongan)','Medellin (Cebu)','Gen. M. Natividad Nueva Ecija (Tarlac)',
   ];
 
-  const ChipList = ({ items, dotColor }) => (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(210px,1fr))', gap:7, marginBottom:28 }}>
-      {items.map((ch,i)=>(
-        <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', background:C.off, borderRadius:8, border:`1px solid ${C.border}` }}>
-          <div style={{ width:6, height:6, borderRadius:'50%', background:dotColor, flexShrink:0 }} />
-          <span style={{ fontSize:12.5, color:C.text, fontWeight:500 }}>{ch}</span>
-        </div>
-      ))}
-    </div>
-  );
+  const PREVIEW_COUNT = 30;
+  const isChurches   = activeTab === 'churches';
+  const items        = isChurches ? CHURCHES : MISSION_BRANCHES;
+  const dotColor     = isChurches ? '#E53E3E' : C.gold;
+  const expanded     = isChurches ? churchesExpanded : branchesExpanded;
+  const setExpanded  = isChurches ? setChurchesExpanded : setBranchesExpanded;
+  const visibleItems = expanded ? items : items.slice(0, PREVIEW_COUNT);
 
   return (
     <PublicLayout>
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'World Mission',path:'/world-mission'},{label:'Status'}]} title="Status of World Mission" sub="PLWM Churches and Mission Branches across the Philippines — 2026" />
-      <section style={{ background:C.white, padding:'72px 24px' }}>
+      <section style={{ background:C.white, padding:'56px 24px 72px' }}>
         <div style={{ maxWidth:1100, margin:'0 auto' }}>
 
-          {/* Stats */}
-          <div style={{ display:'flex', gap:16, marginBottom:56, flexWrap:'wrap' }}>
+          {/* Stats — 2×2 on mobile, 4-col on desktop */}
+          <div className="pub-stat-grid" style={{ marginBottom:48 }}>
             {[
-              ['108','PLWM Churches','Mother churches across the Philippines'],
-              ['60','Mission Branches','Active branch missions nationwide'],
-              ['3','Island Groups','Luzon, Visayas, and Mindanao'],
-              ['17','Metro Cellgroups','Active cellgroups in Manila'],
+              ['108','PLWM Churches','Mother churches'],
+              ['60','Mission Branches','Nationwide'],
+              ['3','Island Groups','Luzon · Visayas · Mindanao'],
+              ['17','Metro Cellgroups','Active in Manila'],
             ].map(([num,label,sub])=>(
-              <div key={label} style={{ flex:1, minWidth:200, background:C.off, border:`1.5px solid ${C.border}`, borderRadius:14, padding:'22px 20px', textAlign:'center' }}>
-                <div style={{ fontFamily:"'Lora',serif", fontSize:'2.2rem', fontWeight:900, color:C.blue, lineHeight:1 }}>{num}</div>
-                <div style={{ fontSize:13, fontWeight:700, color:C.text, margin:'6px 0 3px' }}>{label}</div>
-                <div style={{ fontSize:11.5, color:C.muted }}>{sub}</div>
+              <div key={label} style={{ background:C.off, border:`1.5px solid ${C.border}`, borderRadius:12, padding:'18px 16px', textAlign:'center' }}>
+                <div style={{ fontFamily:"'Lora',serif", fontSize:'2rem', fontWeight:900, color:C.blue, lineHeight:1 }}>{num}</div>
+                <div style={{ fontSize:13, fontWeight:700, color:C.text, margin:'5px 0 2px' }}>{label}</div>
+                <div style={{ fontSize:11, color:C.muted }}>{sub}</div>
               </div>
             ))}
           </div>
 
-          {/* PLWM Churches */}
-          <div style={{ marginBottom:48 }}>
-            <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:6, display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ width:30, height:3, background:C.blue, borderRadius:2, display:'inline-block' }} />PLWM Churches
-            </h3>
-            <p style={{ fontSize:13, color:C.muted, marginBottom:20 }}>Mother churches across the Philippines — {CHURCHES.length} total</p>
-            <ChipList items={CHURCHES} dotColor="#E53E3E" />
+          {/* Tab switcher */}
+          <div style={{ borderBottom:`2px solid ${C.border}`, marginBottom:24, display:'flex', gap:0 }}>
+            <button
+              className={`ms-tab ms-tab-churches${activeTab==='churches' ? ' ms-active' : ''}`}
+              onClick={() => setActiveTab('churches')}
+            >
+              🏛 Churches <span style={{ fontSize:12, marginLeft:4, opacity:0.65 }}>({CHURCHES.length})</span>
+            </button>
+            <button
+              className={`ms-tab ms-tab-branches${activeTab==='branches' ? ' ms-active' : ''}`}
+              onClick={() => setActiveTab('branches')}
+            >
+              🌿 Mission Branches <span style={{ fontSize:12, marginLeft:4, opacity:0.65 }}>({MISSION_BRANCHES.length})</span>
+            </button>
           </div>
 
-          {/* Mission Branches */}
-          <div style={{ marginBottom:48 }}>
-            <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.35rem', fontWeight:700, color:C.text, marginBottom:6, display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ width:30, height:3, background:C.gold, borderRadius:2, display:'inline-block' }} />Mission Branches
-            </h3>
-            <p style={{ fontSize:13, color:C.muted, marginBottom:20 }}>Active mission branches nationwide — {MISSION_BRANCHES.length} total</p>
-            <ChipList items={MISSION_BRANCHES} dotColor="#C9A84C" />
+          {/* Chip list */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px,1fr))', gap:7, marginBottom:16 }}>
+            {visibleItems.map((ch,i)=>(
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', background:C.off, borderRadius:8, border:`1px solid ${C.border}` }}>
+                <div style={{ width:6, height:6, borderRadius:'50%', background:dotColor, flexShrink:0 }} />
+                <span style={{ fontSize:12.5, color:C.text, fontWeight:500 }}>{ch}</span>
+              </div>
+            ))}
           </div>
+
+          {/* Expand / collapse */}
+          {items.length > PREVIEW_COUNT && (
+            <div style={{ textAlign:'center', marginBottom:40 }}>
+              <button
+                onClick={() => setExpanded(e => !e)}
+                style={{ background:C.off, border:`1.5px solid ${C.border}`, color:C.sub, fontSize:13, fontWeight:600, padding:'9px 22px', borderRadius:8, cursor:'pointer', fontFamily:'inherit' }}
+              >
+                {expanded ? '▲ Show less' : `▼ Show all ${items.length}`}
+              </button>
+            </div>
+          )}
 
           {/* CTA */}
           <div style={{ background:C.navy, borderRadius:14, padding:'28px 32px', textAlign:'center' }}>
@@ -276,7 +309,7 @@ export function IntroductionPage() {
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'Introduction'}]} title="Welcome to Manila Central Church" sub="The mother church of Philippine Life Word Mission (PLWM)" />
       <section style={{ background:C.white, padding:'72px 24px' }}>
         <div style={{ maxWidth:1060, margin:'0 auto' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:48, alignItems:'start', marginBottom:56 }}>
+          <div className="pub-2col" style={{ marginBottom:56 }}>
             <div>
               <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14, fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:C.blue }}>
                 <span style={{ width:20, height:2, background:C.blue, borderRadius:2, display:'inline-block' }} />Our Purpose
@@ -306,7 +339,7 @@ export function IntroductionPage() {
                   Manila Central Church is the mother church of the Philippine Life Word Mission (PLWM) — a Gospel-centered, Bible-based mission organization with churches and mission branches across all major islands of the Philippines.
                 </p>
                 <div style={{ borderTop:'1px solid rgba(255,255,255,0.12)', paddingTop:16, display:'flex', flexDirection:'column', gap:10 }}>
-                  {[['📍','Address','Parañaque City, Philippines (full address to be updated)'],['📅','Founded','Manila Central Church — PLWM Philippines'],['✝️','Mission','Prove God · Testify the Bible · Preach the Gospel']].map(([icon,label,val])=>(
+                  {[['📍','Address','Lot 2 Block 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City'],['📅','Founded','Manila Central Church — PLWM Philippines'],['✝️','Mission','Prove God · Testify the Bible · Preach the Gospel']].map(([icon,label,val])=>(
                     <div key={label} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
                       <div style={{ width:28, height:28, background:'rgba(255,255,255,0.07)', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}>{icon}</div>
                       <div>
@@ -336,46 +369,389 @@ export function IntroductionPage() {
 // ── WHAT WE BELIEVE ───────────────────────────────────────────
 export function WhatWeBelievePage() {
   const BELIEFS = [
-    { title:'The Holy Bible', items:['The Old and New Testaments of the Bible are the complete word of God, and they are accurate and without error.','The 66 books of the Bible were written through God\'s revelation and the inspiration of the Holy Spirit.','Complete knowledge of God is given only through the Bible.','Salvation can only be obtained through the Bible.'] },
-    { title:'God', items:['God is spirit, self-existent, all-knowing, all-powerful, omnipresent, and one in essence.','God is supremely holy, righteous, perfectly loving, and merciful.','God is one in essence but exists in three persons: the Father, the Son, and the Holy Spirit.','God is the Creator, Sustainer, Provider, and Judge.'] },
-    { title:'Jesus Christ', items:['Jesus Christ is one of the persons of the Trinity and is God.','Jesus Christ, as the Son of God, came as a man and is the only mediator between God and humanity.','Jesus Christ bore the sins of the world and, through His death on the cross, achieved eternal atonement.','Jesus Christ rose from the dead three days after His crucifixion and ascended to heaven forty days later, where He lives as our mediator.'] },
-    { title:'The Holy Spirit', items:['The Holy Spirit is one of the persons of the Trinity and is God.','The Holy Spirit convicts people of sin and gives new birth through the Word of God.','The Holy Spirit dwells in the hearts of believers and helps them grow in faith.','The Holy Spirit unites believers, building up the Church, which is the body of Christ.'] },
-    { title:'Humans', items:['Humans were created in the image of God as spiritual beings for the purpose of glorifying God.','God gave humans free will, but Adam sinned by disobeying God\'s command.','All people will face death, and after that, there will be God\'s judgment.'] },
-    { title:'The Salvation', items:['Salvation is by God\'s grace, not based on human actions, and can only be obtained through faith.','Repentance, which leads to the forgiveness of sins, must precede salvation.','One is justified by faith.','A person receives salvation by believing in Jesus Christ and through the forgiveness of sins.','Salvation is certain, eternal, and complete.','After salvation, one must live a sanctified life, becoming more like Christ.','When Christ returns, Christians will be glorified.'] },
-    { title:'Church', items:['The Church is a spiritual, personal community of born-again Christians united by the Holy Spirit.','The Church is the body of Christ, and Christians are members of that body, each with their own role.','God provides His Word through the Church and helps believers grow in their faith.','The Church administers the sacraments as commanded by Jesus.','The Church should be devoted to the Word, prayer, fellowship, and evangelism.'] },
-    { title:'The Millennial Kingdom and the Eternal Kingdom', items:['Christ, who returns to the earth, will reign over the world for a thousand years.','Born-again Christians will enjoy eternal life and blessedness with Christ in heaven.'] },
+    {
+      title: 'The Holy Bible',
+      image: '/bible.webp',
+      items: [
+        "The Old and New Testaments of the Bible are the complete word of God, and they are accurate and without error.",
+        "The 66 books of the Bible were written through God's revelation and the inspiration of the Holy Spirit.",
+        "Complete knowledge of God is given only through the Bible.",
+        "Salvation can only be obtained through the Bible.",
+      ],
+    },
+    {
+      title: 'God',
+      image: '/god.webp',
+      items: [
+        "God is spirit, self-existent, all-knowing, all-powerful, omnipresent, and one in essence.",
+        "God is supremely holy, righteous, perfectly loving, and merciful.",
+        "God is one in essence but exists in three persons: the Father, the Son, and the Holy Spirit.",
+        "God is the Creator, Sustainer, Provider, and Judge.",
+      ],
+    },
+    {
+      title: 'Jesus Christ',
+      image: '/jesus.webp',
+      items: [
+        "Jesus Christ is one of the persons of the Trinity and is God.",
+        "Jesus Christ, as the Son of God, came as a man and is the only mediator between God and humanity.",
+        "Jesus Christ bore the sins of the world and, through His death on the cross, achieved eternal atonement.",
+        "Jesus Christ rose from the dead three days after His crucifixion and ascended to heaven forty days later, where He lives as our mediator.",
+      ],
+    },
+    {
+      title: 'The Holy Spirit',
+      image: '/hs.webp',
+      items: [
+        "The Holy Spirit is one of the persons of the Trinity and is God.",
+        "The Holy Spirit convicts people of sin and gives new birth through the Word of God.",
+        "The Holy Spirit dwells in the hearts of believers and helps them grow in faith.",
+        "The Holy Spirit unites believers, building up the Church, which is the body of Christ.",
+      ],
+    },
+    {
+      title: 'Humans',
+      image: '/humans.webp',
+      items: [
+        "Humans were created in the image of God as spiritual beings for the purpose of glorifying God.",
+        "God gave humans free will, but Adam sinned by disobeying God's command.",
+        "All people will face death, and after that, there will be God's judgment.",
+      ],
+    },
+    {
+      title: 'Salvation',
+      image: '/salvation.webp',
+      items: [
+        "Salvation is by God's grace, not based on human actions, and can only be obtained through faith.",
+        "Repentance, which leads to the forgiveness of sins, must precede salvation.",
+        "One is justified by faith.",
+        "A person receives salvation by believing in Jesus Christ and through the forgiveness of sins.",
+        "Salvation is certain, eternal, and complete.",
+        "After salvation, one must live a sanctified life, becoming more like Christ.",
+        "When Christ returns, Christians will be glorified.",
+      ],
+    },
+    {
+      title: 'Church',
+      image: '/church.webp',
+      items: [
+        "The Church is a spiritual, personal community of born-again Christians united by the Holy Spirit.",
+        "The Church is the body of Christ, and Christians are members of that body, each with their own role.",
+        "God provides His Word through the Church and helps believers grow in their faith.",
+        "The Church administers the sacraments as commanded by Jesus.",
+        "The Church should be devoted to the Word, prayer, fellowship, and evangelism.",
+      ],
+    },
+    {
+      title: 'The Millennial Kingdom & Eternal Kingdom',
+      image: null,
+      items: [
+        "Christ, who returns to the earth, will reign over the world for a thousand years.",
+        "Born-again Christians will enjoy eternal life and blessedness with Christ in heaven.",
+      ],
+    },
   ];
+
+  // Scroll-reveal: observe each belief section
+  const rowRefs = useRef([]);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach(e => {
+        if (e.isIntersecting) e.target.classList.add('wwb-visible');
+      }),
+      { threshold: 0.15 }
+    );
+    rowRefs.current.forEach(el => { if (el) observer.observe(el); });
+    return () => observer.disconnect();
+  }, []);
+
+  // TOC dot active tracking
+  const tocRef = useRef([]);
+  useEffect(() => {
+    const sectionObserver = new IntersectionObserver(
+      (entries) => entries.forEach(e => {
+        const idx = rowRefs.current.indexOf(e.target);
+        if (idx !== -1 && tocRef.current[idx]) {
+          tocRef.current.forEach(d => d && d.classList.remove('wwb-dot-active'));
+          if (e.isIntersecting) tocRef.current[idx].classList.add('wwb-dot-active');
+        }
+      }),
+      { threshold: 0.4 }
+    );
+    rowRefs.current.forEach(el => { if (el) sectionObserver.observe(el); });
+    return () => sectionObserver.disconnect();
+  }, []);
+
+  const scrollTo = (i) => {
+    rowRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   return (
     <PublicLayout>
-      <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'Introduction',path:'/introduction'},{label:'What We Believe'}]} title="What We Believe" sub="The doctrinal foundation of Manila Central Church — Philippine Life Word Mission" />
-      <section style={{ background:C.white, padding:'72px 24px' }}>
-        <div style={{ maxWidth:860, margin:'0 auto' }}>
-          <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
-            {BELIEFS.map((b,i)=>(
-              <div key={i} style={{ background:C.off, border:`1.5px solid ${C.border}`, borderRadius:12, padding:'22px 24px', transition:'all 0.2s' }}
-                onMouseEnter={e=>{ e.currentTarget.style.background='#fff'; e.currentTarget.style.borderColor='rgba(21,101,192,0.3)'; }}
-                onMouseLeave={e=>{ e.currentTarget.style.background=C.off; e.currentTarget.style.borderColor=C.border; }}>
-                <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.1rem', fontWeight:700, color:C.text, marginBottom:12, display:'flex', alignItems:'center', gap:12 }}>
-                  <span style={{ width:26, height:26, background:C.navy, color:'#fff', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, flexShrink:0 }}>{i+1}</span>
-                  {b.title}
-                </h3>
-                <div style={{ display:'flex', flexDirection:'column', gap:7, paddingLeft:38 }}>
-                  {b.items.map((item,j)=>(
-                    <div key={j} style={{ display:'flex', alignItems:'flex-start', gap:10, fontSize:14, color:C.sub, lineHeight:1.65 }}>
-                      <span style={{ width:5, height:5, background:C.blue, borderRadius:'50%', marginTop:8, flexShrink:0 }} />
-                      <span>{j+1}. {item}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Inject Playfair Display + Crimson Pro */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Crimson+Pro:wght@300;400;600&display=swap');
+
+        /* Scroll-reveal */
+        .wwb-row {
+          opacity: 0;
+          transform: translateY(28px);
+          transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .wwb-row.wwb-visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Image zoom on hover */
+        .wwb-img-wrap { overflow: hidden; }
+        .wwb-img-wrap img { transition: transform 0.6s ease; display: block; width: 100%; height: 100%; object-fit: cover; }
+        .wwb-row:hover .wwb-img-wrap img { transform: scale(1.04); }
+
+        /* TOC dots */
+        .wwb-toc {
+          position: fixed; right: 20px; top: 50%;
+          transform: translateY(-50%);
+          display: flex; flex-direction: column; gap: 10px;
+          z-index: 500;
+        }
+        .wwb-dot {
+          width: 9px; height: 9px; border-radius: 50%;
+          background: rgba(11,36,71,0.18);
+          border: 1.5px solid rgba(11,36,71,0.3);
+          cursor: pointer;
+          transition: all 0.25s;
+          position: relative;
+        }
+        .wwb-dot:hover, .wwb-dot.wwb-dot-active {
+          background: #C9A84C;
+          border-color: #C9A84C;
+          transform: scale(1.5);
+        }
+        .wwb-dot[data-label]:hover::before {
+          content: attr(data-label);
+          position: absolute; right: 18px; top: 50%;
+          transform: translateY(-50%);
+          background: #0B2447; color: #fff;
+          font-family: 'Inter', sans-serif;
+          font-size: 11px; font-weight: 500;
+          padding: 4px 10px; border-radius: 6px;
+          white-space: nowrap; pointer-events: none;
+        }
+
+        /* Scripture quote mark */
+        .wwb-scripture { position: relative; overflow: hidden; }
+        .wwb-scripture::before {
+          content: '"';
+          position: absolute; left: 50%; top: -60px;
+          transform: translateX(-50%);
+          font-family: 'Playfair Display', serif;
+          font-size: 20rem; line-height: 1;
+          color: rgba(255,255,255,0.03);
+          pointer-events: none; user-select: none;
+        }
+
+        @media (max-width: 800px) {
+          .wwb-row { grid-template-columns: 1fr !important; }
+          .wwb-row .wwb-img-panel { order: 0 !important; min-height: 220px !important; }
+          .wwb-row .wwb-text-panel { order: 1 !important; }
+          .wwb-watermark { display: none !important; }
+          .wwb-toc { display: none !important; }
+        }
+      `}</style>
+
+      {/* Page hero */}
+      <div className="page-hero">
+        <div className="breadcrumb">
+          <Link to="/">Home</Link> /&nbsp;
+          <Link to="/introduction">Introduction</Link> /&nbsp;
+          <span>What We Believe</span>
         </div>
-      </section>
+        <h1 style={{ fontFamily: "'Playfair Display', 'Lora', Georgia, serif" }}>What We Believe</h1>
+        <p>The doctrinal foundation of Manila Central Church — Philippine Life Word Mission</p>
+      </div>
+
+      {/* Intro strip */}
+      <div style={{ background: '#F8F5F0', borderBottom: '1px solid #E8E2D8', padding: '28px 48px', textAlign: 'center' }}>
+        <p style={{ fontFamily: "'Crimson Pro', 'Georgia', serif", fontSize: '1.15rem', color: C.sub, lineHeight: 1.85, maxWidth: 660, margin: '0 auto', fontStyle: 'italic' }}>
+          These are the core beliefs that form the doctrinal foundation of our church, rooted in the Word of God and built on the Gospel of Jesus Christ.
+        </p>
+      </div>
+
+      {/* Belief rows */}
+      <div>
+        {BELIEFS.map((b, i) => {
+          const imageLeft = i % 2 === 0;
+          const padNum = String(i + 1).padStart(2, '0');
+          return (
+            <div
+              key={i}
+              ref={el => rowRefs.current[i] = el}
+              className="wwb-row"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                minHeight: 460,
+                borderBottom: i < BELIEFS.length - 1 ? '1px solid #E8E2D8' : 'none',
+                background: i % 2 === 0 ? '#FFFFFF' : '#F8F5F0',
+              }}
+            >
+              {/* Image panel */}
+              <div
+                className="wwb-img-panel wwb-img-wrap"
+                style={{ order: imageLeft ? 0 : 1, minHeight: 380, position: 'relative' }}
+              >
+                {b.image ? (
+                  <img
+                    src={process.env.PUBLIC_URL + b.image}
+                    alt={b.title}
+                    style={{ minHeight: 380 }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '100%', height: '100%', minHeight: 380,
+                    background: 'linear-gradient(135deg, #0B2447, #1A3D72)',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: 14,
+                  }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2">
+                      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                    </svg>
+                    <span style={{ fontFamily: "'Crimson Pro', serif", fontSize: 13, color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', textTransform: 'uppercase' }}>
+                      Image coming soon
+                    </span>
+                  </div>
+                )}
+                {/* Subtle diagonal overlay */}
+                <div style={{
+                  position: 'absolute', inset: 0, pointerEvents: 'none',
+                  background: imageLeft
+                    ? 'linear-gradient(to right, rgba(11,36,71,0.10), transparent)'
+                    : 'linear-gradient(to left, rgba(11,36,71,0.10), transparent)',
+                }} />
+              </div>
+
+              {/* Text panel */}
+              <div
+                className="wwb-text-panel"
+                style={{
+                  order: imageLeft ? 1 : 0,
+                  padding: 'clamp(36px, 5vw, 68px)',
+                  display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                  position: 'relative', overflow: 'hidden',
+                }}
+              >
+                {/* Watermark number */}
+                <div
+                  className="wwb-watermark"
+                  style={{
+                    position: 'absolute',
+                    [imageLeft ? 'right' : 'left']: -8,
+                    top: '50%', transform: 'translateY(-55%)',
+                    fontFamily: "'Playfair Display', serif",
+                    fontSize: 'clamp(7rem, 13vw, 10rem)',
+                    fontWeight: 700, lineHeight: 1,
+                    color: C.navy, opacity: 0.045,
+                    userSelect: 'none', pointerEvents: 'none',
+                    letterSpacing: -4,
+                  }}
+                >
+                  {padNum}
+                </div>
+
+                {/* Number badge */}
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  background: C.navy, color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 12, fontWeight: 700,
+                  marginBottom: 16, flexShrink: 0,
+                  position: 'relative', zIndex: 1,
+                }}>
+                  {i + 1}
+                </div>
+
+                {/* Gold accent + title */}
+                <div style={{ marginBottom: 22, position: 'relative', zIndex: 1 }}>
+                  <div style={{ width: 36, height: 3, background: C.gold, borderRadius: 2, marginBottom: 10 }} />
+                  <h2 style={{
+                    fontFamily: "'Playfair Display', 'Lora', Georgia, serif",
+                    fontSize: 'clamp(1.3rem, 2.5vw, 1.75rem)',
+                    fontWeight: 700, color: C.navy,
+                    lineHeight: 1.2, margin: 0,
+                  }}>
+                    {b.title}
+                  </h2>
+                </div>
+
+                {/* Belief points */}
+                <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 13, position: 'relative', zIndex: 1 }}>
+                  {b.items.map((item, j) => (
+                    <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <span style={{
+                        flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
+                        background: 'rgba(21,101,192,0.1)', color: C.blue,
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 10, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        marginTop: 3,
+                      }}>
+                        {j + 1}
+                      </span>
+                      <span style={{
+                        fontFamily: "'Crimson Pro', Georgia, serif",
+                        fontSize: '1.05rem', color: C.sub, lineHeight: 1.75,
+                      }}>
+                        {item}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Scripture footer */}
+      <div className="wwb-scripture" style={{ background: C.navy, padding: '72px 24px', textAlign: 'center' }}>
+        <blockquote style={{
+          fontFamily: "'Playfair Display', 'Lora', Georgia, serif",
+          fontSize: 'clamp(1.1rem, 2.8vw, 1.55rem)',
+          fontStyle: 'italic', color: 'rgba(255,255,255,0.88)',
+          lineHeight: 1.7, maxWidth: 680, margin: '0 auto 16px',
+          position: 'relative', zIndex: 1,
+        }}>
+          &ldquo;All Scripture is God-breathed and is useful for teaching, rebuking, correcting and training in righteousness.&rdquo;
+        </blockquote>
+        <cite style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: 12, fontWeight: 700,
+          color: C.gold, letterSpacing: '1.5px',
+          textTransform: 'uppercase',
+          position: 'relative', zIndex: 1,
+        }}>
+          — 2 Timothy 3:16
+        </cite>
+      </div>
+
+      {/* Sticky TOC dots */}
+      <div className="wwb-toc">
+        {BELIEFS.map((b, i) => (
+          <div
+            key={i}
+            ref={el => tocRef.current[i] = el}
+            className="wwb-dot"
+            data-label={b.title}
+            onClick={() => scrollTo(i)}
+          />
+        ))}
+      </div>
+
     </PublicLayout>
   );
 }
-
 // ── C.I (Church Identity) ─────────────────────────────────────
 export function CIPage() {
   return (
@@ -383,13 +759,15 @@ export function CIPage() {
       <PageHero breadcrumbs={[{label:'Home',path:'/'},{label:'Introduction',path:'/introduction'},{label:'C.I'}]} title="C.I — Church Identity" sub="The identity and symbol of Manila Central Church — Philippine Life Word Mission" />
       <section style={{ background:C.white, padding:'72px 24px' }}>
         <div style={{ maxWidth:860, margin:'0 auto' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'280px 1fr', gap:48, alignItems:'start', marginBottom:56 }}>
+          <div className="pub-ci-col" style={{ marginBottom:56 }}>
             <div>
-              {/* Symbol placeholder */}
-              <div style={{ background:C.navy, borderRadius:16, aspectRatio:'1', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, padding:32 }}>
-                <div style={{ fontFamily:"'Lora',serif", fontSize:72, fontWeight:900, color:C.gold, lineHeight:1 }}>M</div>
-                <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', letterSpacing:'2px', textTransform:'uppercase' }}>Manila Central Church</div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', letterSpacing:'1px' }}>PLWM Philippines</div>
+              {/* Church Identity Banner */}
+              <div style={{ borderRadius:16, overflow:'hidden', aspectRatio:'1', background:C.navy }}>
+                <img
+                  src={process.env.PUBLIC_URL + '/banner.webp'}
+                  alt="Manila Central Church — PLWM"
+                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                />
               </div>
             </div>
             <div>
@@ -417,30 +795,12 @@ export function CIPage() {
           {/* Verse */}
           <div style={{ background:C.navy, borderRadius:14, padding:'28px 32px', textAlign:'center' }}>
             <p style={{ fontFamily:"'Lora',serif", fontSize:'1.3rem', color:'#fff', lineHeight:1.65, marginBottom:10, fontStyle:'italic' }}>
-              "I shall not die, but live, And declare the works of the LORD."
+              "Declare his glory among the nations, his marvelous works among all the peoples."
             </p>
-            <span style={{ fontSize:13, color:C.gold, fontWeight:700 }}>— Psalm 118:17</span>
+            <span style={{ fontSize:13, color:C.gold, fontWeight:700 }}>— Psalm 96:3</span>
           </div>
         </div>
       </section>
-      <style>{`
-        @media (max-width: 900px) {
-          [style*="grid-template-columns: '1fr 1fr'"],
-          [style*="gridTemplateColumns:'1fr 1fr'"],
-          [style*="gridTemplateColumns: '1fr 1fr'"],
-          [style*="gridTemplateColumns:'1fr 380px'"],
-          [style*="gridTemplateColumns: '1fr 380px'"],
-          [style*="gridTemplateColumns:'280px 1fr'"],
-          [style*="gridTemplateColumns: '280px 1fr'"] { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 600px) {
-          section { padding-left: 12px !important; padding-right: 12px !important; }
-          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr 1fr !important; }
-        }
-        @media (max-width: 380px) {
-          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </PublicLayout>
   );
 }

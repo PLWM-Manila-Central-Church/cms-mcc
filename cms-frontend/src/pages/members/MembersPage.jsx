@@ -6,9 +6,10 @@ import useIsMobile from '../../hooks/useIsMobile';
 
 /* ── Status colours (admin view only) ─────────────────────────── */
 const STATUS_COLORS = {
-  Active:   { bg: '#dcfce7', color: '#16a34a' },
-  Inactive: { bg: '#f3f4f6', color: '#6b7280' },
-  Visitor:  { bg: '#fef9c3', color: '#ca8a04' },
+  New:           { bg: '#eff6ff', color: '#3b82f6' },
+  Active:        { bg: '#dcfce7', color: '#16a34a' },
+  'Semi-Active': { bg: '#fef9c3', color: '#ca8a04' },
+  Inactive:      { bg: '#f3f4f6', color: '#6b7280' },
 };
 
 /* ── Avatar gradient pool ───────────────────────────────────────── */
@@ -91,35 +92,60 @@ function MemberCard({ m, onView, onEdit, canEdit, isMember }) {
   );
 }
 
-/* ── Admin Table Row ─────────────────────────────────────────────── */
-function TableRow({ m, idx, canEdit, onView, onEdit }) {
+/* ── Age / date helpers ──────────────────────────────────────────── */
+const calcAge = (d) => {
+  if (!d) return null;
+  const b = new Date(d), n = new Date();
+  let a = n.getFullYear() - b.getFullYear();
+  if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--;
+  return a >= 0 ? a : null;
+};
+const fmtBday = (d) => {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+/* ── Admin Table Row  (masterfile / spreadsheet style) ──────────── */
+function TableRow({ m, idx, rowNum, canEdit, selected, onToggleSelect, onView, onEdit }) {
   const [hov, setHov] = useState(false);
-  const grad = avatarGradient(m.first_name + m.last_name);
+  const sc = STATUS_COLORS[m.status] || { bg: '#f3f4f6', color: '#6b7280' };
+  const fleshAge = calcAge(m.birthdate);
+  const spiritAge = calcAge(m.spiritual_birthday);
   return (
     <tr
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      style={{ background: hov ? '#f0f7ff' : idx % 2 === 0 ? '#fff' : '#fafbfc', transition: 'background 0.12s' }}
+      onClick={() => onView(m.id)}
+      style={{ background: selected ? '#fef2f2' : hov ? '#e8f4fd' : idx % 2 === 0 ? '#fff' : '#fafbfc', transition: 'background 0.12s', cursor: 'pointer' }}
     >
-      <td style={tdStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: '50%', background: grad, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
-            {m.first_name[0]}{m.last_name[0]}
-          </div>
-          <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 14 }}>{m.last_name}, {m.first_name}</span>
-        </div>
+      <td style={{ padding:'10px 12px', width:36, borderBottom:'1px solid #f1f5f9', verticalAlign:'middle' }} onClick={e=>e.stopPropagation()}>
+        <input type="checkbox" checked={!!selected} onChange={onToggleSelect} style={{ cursor:'pointer', width:15, height:15 }} />
       </td>
-      <td style={tdStyle}>{m.email || '—'}</td>
-      <td style={tdStyle}>{m.phone || '—'}</td>
-      <td style={tdStyle}>{m.cellGroup?.name || '—'}</td>
-      <td style={tdStyle}>{m.group?.name || '—'}</td>
+      <td style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', fontSize: 12, width: 40 }}>{rowNum}</td>
+      <td style={{ ...tdStyle, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>
+        {m.last_name}, {m.first_name}
+      </td>
+      <td style={{ ...tdStyle, textAlign: 'center', width: 50 }}>
+        {m.gender ? m.gender.charAt(0) : '—'}
+      </td>
+      <td style={{ ...tdStyle, fontSize: 13 }}>{m.cellGroup?.name || '—'}</td>
+      <td style={{ ...tdStyle, fontSize: 13 }}>{m.group?.name || '—'}</td>
       <td style={tdStyle}>
-        <span style={{ background: STATUS_COLORS[m.status]?.bg, color: STATUS_COLORS[m.status]?.color, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+        <span style={{ background: sc.bg, color: sc.color, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
           {m.status}
         </span>
       </td>
-      <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 12 }}>{m.barcode}</td>
-      <td style={tdStyle}>
+      <td style={{ ...tdStyle, textAlign: 'center', fontSize: 13 }}>
+        {fleshAge !== null ? fleshAge : '—'}
+      </td>
+      <td style={{ ...tdStyle, fontSize: 13, whiteSpace: 'nowrap' }}>{fmtBday(m.birthdate)}</td>
+      <td style={{ ...tdStyle, textAlign: 'center', fontSize: 13 }}>
+        {spiritAge !== null ? spiritAge : '—'}
+      </td>
+      <td style={{ ...tdStyle, fontSize: 13, whiteSpace: 'nowrap' }}>{fmtBday(m.spiritual_birthday)}</td>
+      <td style={{ ...tdStyle, fontSize: 13 }}>{m.phone || '—'}</td>
+      <td style={tdStyle} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={() => onView(m.id)} style={actionBtnSm('#e8f4fd', '#0066b3')}>View</button>
           {canEdit && <button onClick={() => onEdit(m.id)} style={actionBtnSm('#f0fdf4', '#16a34a')}>Edit</button>}
@@ -149,7 +175,14 @@ export default function MembersPage() {
   const [error, setError]             = useState('');
   const [search, setSearch]           = useState('');
   const [statusFilter, setStatus]     = useState('');
+  const [cgFilter, setCgFilter]       = useState('');
+  const [groupFilter, setGroupFilter] = useState('');
+  const [cellGroups, setCellGroups]   = useState([]);
+  const [groups, setGroups]           = useState([]);
   const [searchInput, setSearchInput] = useState('');
+  const [sorts, setSorts]             = useState([]);
+  const [selected, setSelected]       = useState(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const limit = isMobile ? 15 : 20;
 
@@ -159,18 +192,87 @@ export default function MembersPage() {
       const params = new URLSearchParams({ page, limit });
       if (search)       params.append('search', search);
       if (statusFilter) params.append('status', statusFilter);
+      if (cgFilter)     params.append('cell_group_id', cgFilter);
+      if (groupFilter)  params.append('group_id', groupFilter);
       const res = await axiosInstance.get(`/members?${params}`);
       const d   = res.data.data;
       setMembers(d.members); setTotal(d.total); setTotalPages(d.total_pages);
     } catch { setError('Failed to load members.'); }
     finally { setLoading(false); }
-  }, [page, search, statusFilter, limit]);
+  }, [page, search, statusFilter, cgFilter, groupFilter, limit]);
 
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
+  // Load cell groups for filter dropdown
+  useEffect(() => {
+    axiosInstance.get('/cellgroups')
+      .then(res => setCellGroups(res.data.data || []))
+      .catch(() => {});
+  }, []);
+
+  // Load groups for filter dropdown
+  useEffect(() => {
+    axiosInstance.get('/members/dropdowns/groups')
+      .then(res => setGroups(res.data.data || []))
+      .catch(() => {});
+  }, []);
+
   const handleSearch = () => { setPage(1); setSearch(searchInput); };
   const handleKey    = (e) => { if (e.key === 'Enter') handleSearch(); };
-  const clearFilters = () => { setSearchInput(''); setSearch(''); setStatus(''); setPage(1); };
+  const clearFilters = () => { setSearchInput(''); setSearch(''); setStatus(''); setCgFilter(''); setGroupFilter(''); setPage(1); setSorts([]); setSelected(new Set()); };
+
+  // ── Multi-sort ──────────────────────────────────────────────
+  const toggleSort = (col) => {
+    setSorts(prev => {
+      const idx = prev.findIndex(s => s.col === col);
+      if (idx === -1) return [...prev, { col, dir: 'asc' }];
+      if (prev[idx].dir === 'asc') { const next = [...prev]; next[idx] = { col, dir: 'desc' }; return next; }
+      return prev.filter((_, i) => i !== idx);
+    });
+    setSelected(new Set());
+  };
+
+  const sortedMembers = [...members].sort((a, b) => {
+    for (const { col, dir } of sorts) {
+      let av = '', bv = '';
+      if (col === 'name')   { av = `${a.last_name} ${a.first_name}`.toLowerCase(); bv = `${b.last_name} ${b.first_name}`.toLowerCase(); }
+      if (col === 'gender') { av = a.gender || ''; bv = b.gender || ''; }
+      if (col === 'cg')     { av = a.cellGroup?.name || ''; bv = b.cellGroup?.name || ''; }
+      if (col === 'group')  { av = a.group?.name || ''; bv = b.group?.name || ''; }
+      if (col === 'status') { av = a.status || ''; bv = b.status || ''; }
+      if (av < bv) return dir === 'asc' ? -1 : 1;
+      if (av > bv) return dir === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
+  const SortIndicator = ({ col }) => {
+    const idx = sorts.findIndex(s => s.col === col);
+    if (idx === -1) return <span style={{ color:'#cbd5e1', marginLeft:3, fontSize:10 }}>⇅</span>;
+    return (
+      <span style={{ color:'#005599', marginLeft:3, fontSize:10, fontWeight:700 }}>
+        {sorts[idx].dir === 'asc' ? '↑' : '↓'}
+        {sorts.length > 1 && <sup style={{ fontSize:8 }}>{idx + 1}</sup>}
+      </span>
+    );
+  };
+
+  // ── Bulk delete ─────────────────────────────────────────────
+  const toggleSelect = (id) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll    = () => setSelected(prev => prev.size === sortedMembers.length ? new Set() : new Set(sortedMembers.map(m => m.id)));
+
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!window.confirm(`Delete ${selected.size} selected member${selected.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all([...selected].map(id => axiosInstance.delete(`/members/${id}`)));
+      setSelected(new Set());
+      fetchMembers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Some deletes failed.');
+    } finally { setBulkDeleting(false); }
+  };
 
   /* ── Shared pagination ──────────────────────────────────────── */
   const Pagination = () => totalPages > 1 ? (
@@ -272,7 +374,7 @@ export default function MembersPage() {
   }
 
   /* ── ADMIN / STAFF view ──────────────────────────────────────── */
-  const tableCols = ['Name', 'Email', 'Phone', 'Cell Group', 'Group', 'Status', 'Barcode', 'Actions'];
+  // tableCols replaced by sortable headers below
 
   return (
     <div>
@@ -294,20 +396,52 @@ export default function MembersPage() {
             value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={handleKey}
             placeholder="Search name, email, phone…"
             style={{ flex: 1, padding: '10px 14px', fontSize: 15, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', fontFamily: 'inherit', minWidth: 0 }}
+            onFocus={e => e.target.style.borderColor = '#0066b3'}
+            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
           />
           <button onClick={handleSearch} style={{ background: '#005599', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
             Search
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {['', 'Active', 'Inactive', 'Visitor'].map(s => (
-            <button key={s} onClick={() => { setPage(1); setStatus(s); }}
-              style={{ border: 'none', borderRadius: 20, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: statusFilter === s ? '#005599' : '#f1f5f9', color: statusFilter === s ? '#fff' : '#475569', minHeight: 38 }}>
-              {s || 'All'}
-            </button>
+
+        {/* Cell group filter */}
+        <select
+          value={cgFilter}
+          onChange={e => { setPage(1); setCgFilter(e.target.value); }}
+          style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: cgFilter ? '#005599' : '#64748b', fontWeight: cgFilter ? 600 : 400, minHeight: 38 }}
+        >
+          <option value="">All Cell Groups</option>
+          {cellGroups.map(cg => (
+            <option key={cg.id} value={cg.id}>{cg.name}</option>
           ))}
-        </div>
-        {(search || statusFilter) && (
+        </select>
+
+        {/* Group filter */}
+        <select
+          value={groupFilter}
+          onChange={e => { setPage(1); setGroupFilter(e.target.value); }}
+          style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: groupFilter ? '#005599' : '#64748b', fontWeight: groupFilter ? 600 : 400, minHeight: 38 }}
+        >
+          <option value="">All Groups</option>
+          {groups.map(g => (
+            <option key={g.id} value={g.id}>{g.name}</option>
+          ))}
+        </select>
+
+        {/* Status filter dropdown */}
+        <select
+          value={statusFilter}
+          onChange={e => { setPage(1); setStatus(e.target.value); }}
+          style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: statusFilter ? '#005599' : '#64748b', fontWeight: statusFilter ? 600 : 400, minHeight: 38 }}
+        >
+          <option value="">All Status</option>
+          <option value="New">New</option>
+          <option value="Active">Active</option>
+          <option value="Semi-Active">Semi-Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+
+        {(search || statusFilter || cgFilter || groupFilter) && (
           <button onClick={clearFilters} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 9, padding: '7px 14px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', minHeight: 38 }}>✕ Clear</button>
         )}
       </div>
@@ -329,23 +463,48 @@ export default function MembersPage() {
           ))}
         </div>
       ) : (
+        <>
+        {selected.size > 0 && (
+          <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10, marginBottom:10 }}>
+            <span style={{ fontSize:13, color:'#dc2626', fontWeight:600 }}>{selected.size} member{selected.size>1?'s':''} selected</span>
+            <button onClick={handleBulkDelete} disabled={bulkDeleting}
+              style={{ background:'#dc2626', color:'#fff', border:'none', borderRadius:8, padding:'6px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity:bulkDeleting?0.6:1 }}>
+              {bulkDeleting ? 'Deleting…' : '🗑 Delete Selected'}
+            </button>
+            <button onClick={() => setSelected(new Set())}
+              style={{ background:'none', border:'1px solid #e2e8f0', borderRadius:8, padding:'6px 12px', fontSize:13, color:'#94a3b8', cursor:'pointer', fontFamily:'inherit' }}>
+              Cancel
+            </button>
+          </div>
+        )}
         <div className="desktop-table" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ background: '#f8fafc' }}>
                 <tr>
-                  {tableCols.map(h => (
-                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th style={{ padding:'10px 12px', width:36 }}>
+                    <input type="checkbox" checked={sortedMembers.length>0 && selected.size===sortedMembers.length}
+                      onChange={toggleAll} style={{ cursor:'pointer', width:15, height:15 }} />
+                  </th>
+                  {[['#','',40],['Name','name',null],['M/F','gender',50],['Cell Group','cg',null],['Group','group',null],['Status','status',null],['Flesh Age',null,80],['Flesh Birthday',null,130],['Spirit Age',null,80],['Spiritual Birthday',null,130],['Mobile',null,120],['Actions',null,null]].map(([label, col, w]) => (
+                    <th key={label} onClick={col ? ()=>toggleSort(col) : undefined}
+                      style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #e2e8f0', whiteSpace:'nowrap', cursor:col?'pointer':'default', userSelect:'none', width:w||undefined, transition:'background 0.1s' }}
+                      onMouseEnter={e=>{if(col)e.currentTarget.style.background='#f0f7ff';}}
+                      onMouseLeave={e=>{e.currentTarget.style.background='';}}
+                    >
+                      {label}{col && <SortIndicator col={col} />}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={tableCols.length} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>Loading…</td></tr>
-                ) : members.length === 0 ? (
-                  <tr><td colSpan={tableCols.length} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No members found.</td></tr>
-                ) : members.map((m, i) => (
-                  <TableRow key={m.id} m={m} idx={i} canEdit={canEdit}
+                  <tr><td colSpan={13} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>Loading…</td></tr>
+                ) : sortedMembers.length === 0 ? (
+                  <tr><td colSpan={13} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No members found.</td></tr>
+                ) : sortedMembers.map((m, i) => (
+                  <TableRow key={m.id} m={m} idx={i} rowNum={(page-1)*limit+i+1} canEdit={canEdit}
+                    selected={selected.has(m.id)} onToggleSelect={() => toggleSelect(m.id)}
                     onView={id => navigate(`/members/${id}`)}
                     onEdit={id => navigate(`/members/${id}/edit`)}
                   />
@@ -354,6 +513,7 @@ export default function MembersPage() {
             </table>
           </div>
         </div>
+        </>
       )}
 
       <Pagination />

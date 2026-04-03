@@ -5,7 +5,18 @@ const auditLog = require("../helpers/auditLog.helper");
 
 // ── Get All Cell Groups ──────────────────────────────────────
 exports.getAllCellGroups = async () => {
-  return await CellGroup.findAll({ order: [["name", "ASC"]] });
+  const groups = await CellGroup.findAll({ order: [["name", "ASC"]] });
+  // Attach member count to each group
+  const withCounts = await Promise.all(
+    groups.map(async (g) => {
+      const plain = g.toJSON();
+      plain.memberCount = await Member.count({
+        where: { cell_group_id: g.id, is_deleted: 0 },
+      });
+      return plain;
+    })
+  );
+  return withCounts;
 };
 
 // ── Get Cell Group By ID ─────────────────────────────────────

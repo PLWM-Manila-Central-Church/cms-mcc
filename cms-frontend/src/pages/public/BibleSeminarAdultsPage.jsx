@@ -37,7 +37,7 @@ export default function BibleSeminarAdultsPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: C.blue }}>
               <span style={{ width: 20, height: 2, background: C.blue, borderRadius: 2, display: 'inline-block' }} />Session 1
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 28, alignItems: 'center' }}>
+            <div className="pub-vid-col">
               <VideoEmbed videoId={VIDEOS[0].id} title={VIDEOS[0].title} start={227} />
               <div>
                 <div style={{ background: C.navy, color: '#fff', fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 5, display: 'inline-block', marginBottom: 12 }}>Session 1</div>
@@ -80,24 +80,6 @@ export default function BibleSeminarAdultsPage() {
           </div>
         </div>
       </section>
-      <style>{`
-        @media (max-width: 900px) {
-          [style*="grid-template-columns: '1fr 1fr'"],
-          [style*="gridTemplateColumns:'1fr 1fr'"],
-          [style*="gridTemplateColumns: '1fr 1fr'"],
-          [style*="gridTemplateColumns:'1fr 380px'"],
-          [style*="gridTemplateColumns: '1fr 380px'"],
-          [style*="gridTemplateColumns:'280px 1fr'"],
-          [style*="gridTemplateColumns: '280px 1fr'"] { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 600px) {
-          section { padding-left: 12px !important; padding-right: 12px !important; }
-          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr 1fr !important; }
-        }
-        @media (max-width: 380px) {
-          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </PublicLayout>
   );
 }

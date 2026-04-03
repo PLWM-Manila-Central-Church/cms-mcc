@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const STATUS_META = {
   pending:  { bg: '#fffbeb', color: '#d97706', label: 'Pending' },
@@ -20,11 +21,11 @@ const FILE_ICONS = {
 
 export default function ArchivesPage() {
   const { user, hasPermission } = useAuth();
+  const isMobile   = useIsMobile();
   const canUpload  = hasPermission('archives', 'create');
   const canApprove = hasPermission('archives', 'update');
-  // isApprover: anyone with archives:update permission (System Admin, Pastor)
-  // Fixed: was using user?.roleId which doesn't exist in the stored user object
   const isApprover = canApprove;
+  const isAdmin    = user?.roleName === 'System Admin';
 
   const [records, setRecords]       = useState([]);
   const [total, setTotal]           = useState(0);
@@ -77,6 +78,16 @@ export default function ArchivesPage() {
   useEffect(() => { fetchCategories(); }, [fetchCategories]);
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
+  // Prevent body scroll when mobile detail modal is open
+  useEffect(() => {
+    if (isMobile && detailRecord) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isMobile, detailRecord]);
+
   const resetForm = () => {
     setForm({ category_id: '', title: '', description: '', document_date: '', visibility: 'public' });
     setSelectedFile(null); setEditRecord(null); setFormError('');
@@ -92,6 +103,7 @@ export default function ArchivesPage() {
       visibility:    record.visibility || 'public'
     });
     setSelectedFile(null);
+    setDetailRecord(null); // close detail on mobile
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -102,13 +114,7 @@ export default function ArchivesPage() {
       const formData = new FormData();
       Object.entries(form).forEach(([k, v]) => { if (v) formData.append(k, v); });
       if (selectedFile) formData.append('file', selectedFile);
-
-      // Content-Type must be explicitly set to null — not omitted — so axios clears
-      // the instance-level 'application/json' default and lets the browser set
-      // 'multipart/form-data; boundary=...' automatically with the correct boundary.
-      // Without this, multer receives the request as application/json and req.file is undefined.
       const uploadHeaders = { 'Content-Type': null };
-
       if (editRecord) {
         await axiosInstance.put(`/archives/${editRecord.id}`, formData, { headers: uploadHeaders });
       } else {
@@ -153,9 +159,108 @@ export default function ArchivesPage() {
 
   const formatDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
 
+  // ── Detail Panel content (shared between desktop sidebar and mobile modal) ──
+  const DetailContent = () => (
+    <>
+      <div style={s.detailHeader}>
+        <h2 style={s.detailTitle}>{FILE_ICONS[detailRecord.file_type]} {detailRecord.title}</h2>
+        <button onClick={() => setDetailRecord(null)} style={s.closeBtn}>✕</button>
+      </div>
+
+      <div style={s.detailBody}>
+        <div style={s.detailRow}>
+          <span style={s.detailLabel}>Category</span>
+          <span style={s.detailValue}>{detailRecord.category?.name}</span>
+        </div>
+        <div style={s.detailRow}>
+          <span style={s.detailLabel}>Document Date</span>
+          <span style={s.detailValue}>{formatDate(detailRecord.document_date)}</span>
+        </div>
+        <div style={s.detailRow}>
+          <span style={s.detailLabel}>File Type</span>
+          <span style={s.detailValue}>{detailRecord.file_type?.toUpperCase()}</span>
+        </div>
+        <div style={s.detailRow}>
+          <span style={s.detailLabel}>Visibility</span>
+          <span style={{ ...s.badge, ...(() => { const vm = VISIBILITY_META[detailRecord.visibility]; return { background: vm?.bg, color: vm?.color }; })() }}>
+            {VISIBILITY_META[detailRecord.visibility]?.label}
+          </span>
+        </div>
+        <div style={s.detailRow}>
+          <span style={s.detailLabel}>Status</span>
+          <span style={{ ...s.badge, ...(() => { const sm = STATUS_META[detailRecord.status]; return { background: sm?.bg, color: sm?.color }; })() }}>
+            {STATUS_META[detailRecord.status]?.label}
+          </span>
+        </div>
+        <div style={s.detailRow}>
+          <span style={s.detailLabel}>Uploaded by</span>
+          <span style={s.detailValue}>{detailRecord.uploadedByUser?.email}</span>
+        </div>
+        {detailRecord.approvedByUser && (
+          <div style={s.detailRow}>
+            <span style={s.detailLabel}>Approved by</span>
+            <span style={s.detailValue}>{detailRecord.approvedByUser?.email}</span>
+          </div>
+        )}
+        {detailRecord.description && (
+          <div style={s.detailDesc}>{detailRecord.description}</div>
+        )}
+
+        <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${detailRecord.file_url}`}
+          target="_blank" rel="noreferrer" style={s.downloadBtn}>
+          ⬇ Download File
+        </a>
+
+        {detailRecord.ArchiveVersions?.length > 0 && (
+          <div style={s.versionsSection}>
+            <div style={s.sectionTitle}>Version History ({detailRecord.ArchiveVersions.length})</div>
+            {detailRecord.ArchiveVersions.map(v => (
+              <div key={v.id} style={s.versionRow}>
+                <span style={s.versionNum}>v{v.version_number}</span>
+                <span style={s.versionMeta}>{v.file_type?.toUpperCase()} · {v.uploadedByUser?.email}</span>
+                <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${v.file_url}`}
+                  target="_blank" rel="noreferrer" style={s.versionLink}>Download</a>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={s.detailActions}>
+          {canUpload && (detailRecord.uploaded_by === user?.id || isApprover) && (
+            <button onClick={() => openEdit(detailRecord)} style={s.editBtn}>Edit</button>
+          )}
+          {detailRecord.status === 'pending' && canApprove && (
+            <button onClick={() => handleApprove(detailRecord.id)} style={s.approveBtn}>✓ Approve</button>
+          )}
+          {isAdmin && (
+            <button onClick={() => handleDelete(detailRecord.id)} style={s.deleteBtn}>Delete</button>
+          )}
+        </div>
+
+        {/* Access logs */}
+        {isApprover && (
+          <div style={s.versionsSection}>
+            <div style={s.sectionTitle}>Access Log</div>
+            {logsLoading ? (
+              <div style={{ color: '#94a3b8', fontSize: '13px' }}>Loading logs...</div>
+            ) : accessLogs.length === 0 ? (
+              <div style={{ color: '#94a3b8', fontSize: '13px' }}>No access logs yet.</div>
+            ) : accessLogs.map(log => (
+              <div key={log.id} style={s.logRow}>
+                <span style={s.logUser}>{log.accessedByUser?.email}</span>
+                <span style={s.logTime}>{new Date(log.accessed_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+
   return (
     <div style={s.page}>
-      <div style={s.layout}>
+      <div style={{ ...s.layout, flexDirection: isMobile ? 'column' : 'row' }}>
         {/* ── LEFT PANEL ────────────────────────────────── */}
         <div style={s.leftPanel}>
           <div style={s.pageHeader}>
@@ -261,7 +366,7 @@ export default function ArchivesPage() {
                 const stMeta  = STATUS_META[record.status]     || STATUS_META.pending;
                 const visMeta = VISIBILITY_META[record.visibility] || VISIBILITY_META.public;
                 const icon    = FILE_ICONS[record.file_type] || '📄';
-                const isSelected = detailRecord?.id === record.id;
+                const isSelected = !isMobile && detailRecord?.id === record.id;
 
                 return (
                   <div key={record.id}
@@ -281,7 +386,7 @@ export default function ArchivesPage() {
                     {record.status === 'pending' && isApprover && (
                       <div style={s.pendingActions} onClick={e => e.stopPropagation()}>
                         <button onClick={() => handleApprove(record.id)} style={s.approveBtn}>✓ Approve</button>
-                        <button onClick={() => handleDelete(record.id)} style={s.rejectBtn}>✕ Delete</button>
+                        {isAdmin && <button onClick={() => handleDelete(record.id)} style={s.rejectBtn}>✕ Delete</button>}
                       </div>
                     )}
                   </div>
@@ -299,112 +404,54 @@ export default function ArchivesPage() {
           )}
         </div>
 
-        {/* ── RIGHT DETAIL PANEL ────────────────────────── */}
-        {detailRecord && (
+        {/* ── DESKTOP: right side detail panel ─────────── */}
+        {!isMobile && detailRecord && (
           <div style={s.detailPanel}>
-            <div style={s.detailHeader}>
-              <h2 style={s.detailTitle}>{FILE_ICONS[detailRecord.file_type]} {detailRecord.title}</h2>
-              <button onClick={() => setDetailRecord(null)} style={s.closeBtn}>✕</button>
-            </div>
-
-            <div style={s.detailBody}>
-              <div style={s.detailRow}>
-                <span style={s.detailLabel}>Category</span>
-                <span style={s.detailValue}>{detailRecord.category?.name}</span>
-              </div>
-              <div style={s.detailRow}>
-                <span style={s.detailLabel}>Document Date</span>
-                <span style={s.detailValue}>{formatDate(detailRecord.document_date)}</span>
-              </div>
-              <div style={s.detailRow}>
-                <span style={s.detailLabel}>File Type</span>
-                <span style={s.detailValue}>{detailRecord.file_type?.toUpperCase()}</span>
-              </div>
-              <div style={s.detailRow}>
-                <span style={s.detailLabel}>Visibility</span>
-                <span style={{ ...s.badge, ...(() => { const vm = VISIBILITY_META[detailRecord.visibility]; return { background: vm?.bg, color: vm?.color }; })() }}>
-                  {VISIBILITY_META[detailRecord.visibility]?.label}
-                </span>
-              </div>
-              <div style={s.detailRow}>
-                <span style={s.detailLabel}>Status</span>
-                <span style={{ ...s.badge, ...(() => { const sm = STATUS_META[detailRecord.status]; return { background: sm?.bg, color: sm?.color }; })() }}>
-                  {STATUS_META[detailRecord.status]?.label}
-                </span>
-              </div>
-              {detailRecord.description && (
-                <div style={s.detailDesc}>{detailRecord.description}</div>
-              )}
-              <div style={s.detailRow}>
-                <span style={s.detailLabel}>Uploaded by</span>
-                <span style={s.detailValue}>{detailRecord.uploadedByUser?.email}</span>
-              </div>
-              {detailRecord.approvedByUser && (
-                <div style={s.detailRow}>
-                  <span style={s.detailLabel}>Approved by</span>
-                  <span style={s.detailValue}>{detailRecord.approvedByUser?.email}</span>
-                </div>
-              )}
-
-              <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${detailRecord.file_url}`}
-                target="_blank" rel="noreferrer" style={s.downloadBtn}>
-                ⬇ Download File
-              </a>
-
-              {detailRecord.ArchiveVersions?.length > 0 && (
-                <div style={s.versionsSection}>
-                  <div style={s.sectionTitle}>Version History ({detailRecord.ArchiveVersions.length})</div>
-                  {detailRecord.ArchiveVersions.map(v => (
-                    <div key={v.id} style={s.versionRow}>
-                      <span style={s.versionNum}>v{v.version_number}</span>
-                      <span style={s.versionMeta}>{v.file_type?.toUpperCase()} · {v.uploadedByUser?.email}</span>
-                      <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${v.file_url}`}
-                        target="_blank" rel="noreferrer" style={s.versionLink}>Download</a>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Actions */}
-              <div style={s.detailActions}>
-                {canUpload && (detailRecord.uploaded_by === user?.id || isApprover) && (
-                  <button onClick={() => openEdit(detailRecord)} style={s.editBtn}>Edit</button>
-                )}
-                {detailRecord.status === 'pending' && canApprove && (
-                  <button onClick={() => handleApprove(detailRecord.id)} style={s.approveBtn}>✓ Approve</button>
-                )}
-                {(detailRecord.uploaded_by === user?.id || isApprover) && (
-                  <button onClick={() => handleDelete(detailRecord.id)} style={s.deleteBtn}>Delete</button>
-                )}
-              </div>
-
-              {/* Access logs — only for users with archives:update (Pastor, Admin) */}
-              {isApprover && (
-                <div style={s.versionsSection}>
-                  <div style={s.sectionTitle}>Access Log</div>
-                  {logsLoading ? (
-                    <div style={{ color: '#94a3b8', fontSize: '13px' }}>Loading logs...</div>
-                  ) : accessLogs.length === 0 ? (
-                    <div style={{ color: '#94a3b8', fontSize: '13px' }}>No access logs yet.</div>
-                  ) : accessLogs.map(log => (
-                    <div key={log.id} style={s.logRow}>
-                      <span style={s.logUser}>{log.accessedByUser?.email}</span>
-                      <span style={s.logTime}>{new Date(log.accessed_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <DetailContent />
           </div>
         )}
       </div>
+
+      {/* ── MOBILE: bottom-sheet modal overlay ─────────── */}
+      {isMobile && detailRecord && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setDetailRecord(null)}
+            style={{
+              position: 'fixed', inset: 0,
+              background: 'rgba(11,36,71,0.45)',
+              backdropFilter: 'blur(2px)',
+              zIndex: 400,
+            }}
+          />
+          {/* Sheet */}
+          <div style={{
+            position: 'fixed',
+            left: 0, right: 0, bottom: 0,
+            background: '#fff',
+            borderRadius: '20px 20px 0 0',
+            zIndex: 401,
+            maxHeight: '85vh',
+            overflowY: 'auto',
+            boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
+            paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+          }}>
+            {/* Drag handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+              <div style={{ width: 40, height: 4, background: '#e2e8f0', borderRadius: 2 }} />
+            </div>
+            <DetailContent />
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 const s = {
   page:           { fontFamily: "'Inter', sans-serif" },
-  layout:         { display: 'flex', gap: '24px', alignItems: 'flex-start', flexWrap: 'wrap' },
+  layout:         { display: 'flex', gap: '24px', alignItems: 'flex-start' },
   leftPanel:      { flex: 1, minWidth: 0 },
   detailPanel:    { width: 'min(360px, 100%)', flexShrink: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', position: 'sticky', top: '24px' },
   pageHeader:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
@@ -443,15 +490,15 @@ const s = {
   pagination:     { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '20px' },
   pageBtn:        { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', cursor: 'pointer' },
   pageInfo:       { fontSize: '13px', color: '#64748b' },
-  detailHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '20px 20px 16px', borderBottom: '1px solid #f1f5f9' },
+  detailHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '16px 20px 14px', borderBottom: '1px solid #f1f5f9' },
   detailTitle:    { fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0, flex: 1, paddingRight: '10px', wordBreak: 'break-word' },
-  closeBtn:       { background: 'none', border: 'none', fontSize: '16px', color: '#94a3b8', cursor: 'pointer', flexShrink: 0 },
+  closeBtn:       { background: 'none', border: 'none', fontSize: '18px', color: '#94a3b8', cursor: 'pointer', flexShrink: 0, padding: '0 4px' },
   detailBody:     { padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' },
   detailRow:      { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   detailLabel:    { fontSize: '12px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' },
   detailValue:    { fontSize: '13px', color: '#0f172a', fontWeight: '500' },
   detailDesc:     { fontSize: '13px', color: '#475569', lineHeight: '1.5', background: '#f8fafc', borderRadius: '8px', padding: '10px' },
-  downloadBtn:    { display: 'block', textAlign: 'center', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', borderRadius: '8px', padding: '10px', fontSize: '13px', fontWeight: '600', textDecoration: 'none', marginTop: '4px' },
+  downloadBtn:    { display: 'block', textAlign: 'center', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', borderRadius: '8px', padding: '12px', fontSize: '14px', fontWeight: '600', textDecoration: 'none', marginTop: '4px' },
   versionsSection:{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', marginTop: '4px' },
   sectionTitle:   { fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' },
   versionRow:     { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '1px solid #f8fafc' },

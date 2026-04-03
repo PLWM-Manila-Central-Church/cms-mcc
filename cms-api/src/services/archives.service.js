@@ -45,17 +45,49 @@ const detailIncludes = [
   },
 ];
 
+// ── Role visibility rules ────────────────────────────────────
+// confidential  → System Admin, Pastor only
+// restricted    → System Admin, Pastor, Finance Team, Registration Team
+// public        → all roles
+const ADMIN_PASTOR        = ["System Admin", "Pastor"];
+const ADMIN_PASTOR_FINANCE = ["System Admin", "Pastor", "Finance Team", "Registration Team"];
+
+const visibilityFilter = (roleName) => {
+  if (ADMIN_PASTOR.includes(roleName)) return null;         // sees everything
+  if (ADMIN_PASTOR_FINANCE.includes(roleName)) {
+    return { [require("sequelize").Op.ne]: "confidential" }; // no confidential
+  }
+  // All other roles: public only
+  return "public";
+};
+
 // ── Get All Records (paginated) ──────────────────────────────
 exports.getAllRecords = async ({
-  page = 1, limit = 15, category_id, status, visibility, search,
+  page = 1, limit = 15, category_id, status, visibility, search, roleName,
 } = {}) => {
+  const { Op } = require("sequelize");
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where  = { is_deleted: 0 };
 
   if (category_id) where.category_id = category_id;
   if (status)      where.status      = status;
-  if (visibility)  where.visibility  = visibility;
   if (search)      where.title       = { [Op.like]: `%${search}%` };
+
+  // Role-based visibility enforcement
+  const roleVisibility = visibilityFilter(roleName);
+  if (visibility) {
+    // Requested filter must not exceed what role can see
+    if (roleVisibility === "public" && visibility !== "public") {
+      // Not allowed; return empty
+      return { records: [], total: 0, total_pages: 0 };
+    }
+    if (typeof roleVisibility === "object" && visibility === "confidential" && !ADMIN_PASTOR.includes(roleName)) {
+      return { records: [], total: 0, total_pages: 0 };
+    }
+    where.visibility = visibility;
+  } else if (roleVisibility !== null) {
+    where.visibility = roleVisibility;
+  }
 
   const { count, rows } = await ArchiveRecord.findAndCountAll({
     where,

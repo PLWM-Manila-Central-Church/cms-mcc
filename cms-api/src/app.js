@@ -28,17 +28,25 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(morgan("dev"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev")); // Fix #10
+app.use(express.json({ limit: "10kb" })); // Fix #9
+app.use(express.urlencoded({ extended: true, limit: "10kb" })); // Fix #9
 
-// ── Static file serving for archive uploads ──────────────────
-// Mounted at BOTH paths because REACT_APP_API_URL on Vercel ends with /api,
-// so the frontend builds download URLs as:  <API_URL>/uploads/... = .../api/uploads/...
-// We serve under /uploads as well for direct Railway URL access.
+// ── Authenticated file serving for archive uploads ───────────
+// Files require a valid JWT — unauthenticated requests get 401.
+// Both paths kept so the frontend works whether REACT_APP_API_URL
+// ends with /api (Vercel) or not (direct Railway URL).
+const fs         = require("fs");
 const uploadsDir = path.join(__dirname, "../uploads");
-app.use("/uploads",     express.static(uploadsDir)); // direct:  https://railway.app/uploads/...
-app.use("/api/uploads", express.static(uploadsDir)); // via /api: https://railway.app/api/uploads/...
+
+const serveUpload = (req, res) => {
+  const safeName = path.basename(req.params.filename); // prevent path traversal
+  const filePath = path.join(uploadsDir, "archives", safeName);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ message: "File not found" });
+  }
+  res.sendFile(path.resolve(filePath));
+};
 
 // ── Rate Limiters ─────────────────────────────────────────────
 const loginLimiter = rateLimit({
@@ -61,6 +69,17 @@ app.use("/api/auth/login",           loginLimiter);
 app.use("/api/auth/forgot-password", forgotPasswordLimiter);
 app.use("/api/auth/refresh-token",   refreshLimiter);
 
+// ── Global API Rate Limiter ───────────────────────────────────
+// Catches runaway clients / frontend bugs before they exhaust the DB pool.
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 150,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests. Please slow down." },
+});
+app.use("/api/", globalLimiter);
+
 // ── Public Routes (no auth) ───────────────────────────────────
 app.use("/api/public",        require("./routes/public.routes"));
 // ── Routes ───────────────────────────────────────────────────
@@ -76,6 +95,7 @@ app.use("/api/services",      require("./routes/services.routes"));
 app.use("/api/services",      require("./routes/service-extras.routes"));
 app.use("/api/finance",       require("./routes/finance.routes"));
 app.use("/api/events",        require("./routes/events.routes"));
+app.use("/api/events",        require("./routes/ministry-invites.routes"));
 app.use("/api/inventory",     require("./routes/inventory.routes"));
 app.use("/api/archives",      require("./routes/archives.routes"));
 app.use("/api/ministry",      require("./routes/ministry.routes"));
@@ -83,10 +103,15 @@ app.use("/api/notifications", require("./routes/notifications.routes"));
 app.use("/api/settings",      require("./routes/settings.routes"));
 app.use("/api/audit",         require("./routes/audit.routes"));
 app.use("/api/audit-logs",    require("./routes/audit.routes"));
+app.use("/api/member-portal", require("./routes/member-portal.routes"));
 
 // ── Dropdown aliases for frontend member form ────────────────
 const { CellGroup, Group } = require("./models");
 const verifyToken = require("./middlewares/verifyToken");
+
+// Fix #3 — authenticated file serving (replaces public express.static)
+app.get("/uploads/archives/:filename",     verifyToken, serveUpload);
+app.get("/api/uploads/archives/:filename", verifyToken, serveUpload);
 
 app.get("/api/members/dropdowns/cell-groups", verifyToken, async (req, res) => {
   const data = await CellGroup.findAll({ order: [["name", "ASC"]] });

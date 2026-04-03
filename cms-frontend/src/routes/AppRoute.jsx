@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
 import MainLayout from '../components/layout/MainLayout';
@@ -12,6 +12,8 @@ import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 // CMS (protected)
 import MembersPage       from '../pages/members/MembersPage';
 import MemberFormPage    from '../pages/members/MemberFormPage';
+import MemberPortal      from '../pages/members/MemberPortal';
+import MemberPortalSettings from '../pages/members/MemberPortalSettings';
 import MemberProfilePage from '../pages/members/MemberProfilePage';
 import CellGroupsPage    from '../pages/cellgroups/CellGroupsPage';
 import MinistryPage      from '../pages/ministry/MinistryPage';
@@ -28,6 +30,7 @@ import InventoryPage     from '../pages/inventory/InventoryPage';
 import ArchivesPage      from '../pages/archives/ArchivesPage';
 import AuditLogPage      from '../pages/audit/AuditLogPage';
 import SettingsPage      from '../pages/settings/SettingsPage';
+import MySettingsPage    from '../pages/settings/MySettingsPage';
 import DashboardPage     from '../pages/dashboard/DashboardPage';
 
 // Public site (no auth)
@@ -49,8 +52,34 @@ const UnauthorizedPage = () => (
   </div>
 );
 
+// Members can ONLY access /portal — redirect everyone else away from it
+const PortalRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.roleName !== 'Member') return <Navigate to="/dashboard" replace />;
+  if (user.forcePasswordChange && location.pathname !== '/force-change-password') {
+    return <Navigate to="/force-change-password" replace />;
+  }
+  return children;
+};
+
+// Ministry Leaders manage their members exclusively through the Ministry page
+// (roster tab). Trying to access /members redirects them to /ministry.
+const MembersRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
+  if (isMinistryLeader) return <Navigate to="/ministry" replace />;
+  return children;
+};
+
 const AppRoutes = () => {
   const { user } = useAuth();
+
+  // Where to redirect logged-in users trying to access login/public auth pages
+  const homeRedirect = user?.roleName === 'Member' ? '/portal' : '/dashboard';
 
   return (
     <Routes>
@@ -70,14 +99,19 @@ const AppRoutes = () => {
       <Route path="/introduction/ci"          element={<CIPage />} />
 
       {/* ── Auth ── */}
-      <Route path="/login"           element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
-      <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />} />
-      <Route path="/reset-password"  element={user ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />} />
+      <Route path="/login"           element={user ? <Navigate to={homeRedirect} replace /> : <LoginPage />} />
+      <Route path="/forgot-password" element={user ? <Navigate to={homeRedirect} replace /> : <ForgotPasswordPage />} />
+      <Route path="/reset-password"  element={user ? <Navigate to={homeRedirect} replace /> : <ResetPasswordPage />} />
       <Route path="/force-change-password" element={<ProtectedRoute><ForceChangePassword /></ProtectedRoute>} />
+
+      {/* ── Member Portal (Member role only, no sidebar) ── */}
+      <Route path="/portal"          element={<PortalRoute><MemberPortal /></PortalRoute>} />
+      <Route path="/portal/settings" element={<PortalRoute><MemberPortalSettings /></PortalRoute>} />
 
       {/* ── CMS (protected) ── */}
       <Route path="/dashboard"  element={<ProtectedRoute><MainLayout><DashboardPage /></MainLayout></ProtectedRoute>} />
       <Route path="/settings"   element={<ProtectedRoute module="settings" action="read"><MainLayout><SettingsPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/my-settings" element={<ProtectedRoute><MainLayout><MySettingsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/audit-logs" element={<ProtectedRoute module="audit" action="read"><MainLayout><AuditLogPage /></MainLayout></ProtectedRoute>} />
       <Route path="/archives"   element={<ProtectedRoute><MainLayout><ArchivesPage /></MainLayout></ProtectedRoute>} />
       <Route path="/inventory"  element={<ProtectedRoute><MainLayout><InventoryPage /></MainLayout></ProtectedRoute>} />
@@ -91,10 +125,19 @@ const AppRoutes = () => {
       <Route path="/users"      element={<ProtectedRoute module="users" action="read"><MainLayout><UsersPage /></MainLayout></ProtectedRoute>} />
       <Route path="/users/new"  element={<ProtectedRoute module="users" action="create"><MainLayout><UserFormPage /></MainLayout></ProtectedRoute>} />
       <Route path="/users/:id/edit" element={<ProtectedRoute module="users" action="update"><MainLayout><UserFormPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/members"        element={<ProtectedRoute><MainLayout><MembersPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/members/new"    element={<ProtectedRoute><MainLayout><MemberFormPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/members/:id"    element={<ProtectedRoute><MainLayout><MemberProfilePage /></MainLayout></ProtectedRoute>} />
-      <Route path="/members/:id/edit" element={<ProtectedRoute><MainLayout><MemberFormPage /></MainLayout></ProtectedRoute>} />
+
+      {/* Members routes — Ministry Leaders are redirected to /ministry */}
+      <Route path="/members" element={
+        <ProtectedRoute>
+          <MainLayout>
+            <MembersRoute><MembersPage /></MembersRoute>
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/members/new"    element={<ProtectedRoute><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
+      <Route path="/members/:id"    element={<ProtectedRoute><MainLayout><MembersRoute><MemberProfilePage /></MembersRoute></MainLayout></ProtectedRoute>} />
+      <Route path="/members/:id/edit" element={<ProtectedRoute><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
+
       <Route path="/cell-groups" element={<ProtectedRoute module="cellgroups" action="read"><MainLayout><CellGroupsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/ministry"    element={<ProtectedRoute><MainLayout><MinistryPage /></MainLayout></ProtectedRoute>} />
 

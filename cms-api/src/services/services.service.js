@@ -1,7 +1,9 @@
 "use strict";
 
-const auditLog = require("../helpers/auditLog.helper");
-const { Service, ServiceAttendanceSummary } = require("../models");
+const { Op }       = require("sequelize");
+const auditLog     = require("../helpers/auditLog.helper");
+const notifService = require("./notifications.service");
+const { Service, ServiceAttendanceSummary, ServiceResponse, User } = require("../models");
 
 // ── Get All Services (paginated) ─────────────────────────────
 exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
@@ -11,11 +13,6 @@ exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
 
   const { count, rows } = await Service.findAndCountAll({
     where,
-    // FIX BUG 6 (part A): include the attendance summary so ServicesPage and
-    // AttendanceOverviewPage can render the progress bars.
-    // The association uses alias "summary" (see models/index.js), so we must
-    // use that alias here. We then remap to "ServiceAttendanceSummary" below
-    // to match what the frontend already expects.
     include: [
       {
         model: ServiceAttendanceSummary,
@@ -29,11 +26,29 @@ exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
     distinct: true,
   });
 
-  // FIX BUG 6 (part B): remap alias "summary" → "ServiceAttendanceSummary"
-  // so the frontend key access `svc.ServiceAttendanceSummary?.total_attended` works.
+  // Fetch ATTENDING pre-registration counts for all services in this page
+  const serviceIds = rows.map((r) => r.id);
+  const preRegCounts = {};
+  if (serviceIds.length > 0) {
+    const { Op } = require("sequelize");
+    const preRegs = await ServiceResponse.findAll({
+      where: {
+        service_id: { [Op.in]: serviceIds },
+        attendance_status: "ATTENDING",
+      },
+      attributes: ["service_id"],
+    });
+    preRegs.forEach((pr) => {
+      preRegCounts[pr.service_id] = (preRegCounts[pr.service_id] || 0) + 1;
+    });
+  }
+
+  // Remap alias "summary" → "ServiceAttendanceSummary" and attach pre_registered_count
   const services = rows.map((row) => {
     const plain = row.toJSON();
     plain.ServiceAttendanceSummary = plain.summary || null;
+    // pre_registered_count = ATTENDING responses; used when actual check-ins = 0
+    plain.pre_registered_count = preRegCounts[plain.id] || 0;
     return plain;
   });
 
@@ -115,10 +130,7 @@ exports.updateService = async (id, data, updatedBy) => {
 exports.deleteService = async (id, deletedBy) => {
   const service = await Service.findByPk(id);
   if (!service) throw { status: 404, message: "Service not found" };
-
-  if (service.status === "completed")
-    throw { status: 400, message: "Cannot delete a completed service" };
-
+  // Completed services can be deleted (admin request)
   await service.destroy();
   auditLog.log({ userId: deletedBy, action: "DELETE_SERVICE", targetTable: "services", targetId: id });
   return { message: "Service deleted successfully." };
@@ -147,6 +159,28 @@ exports.updateStatus = async (id, status, updatedBy) => {
     };
 
   await service.update({ status });
+
+  // ── Publish notification — broadcast to all portal members ──
+  if (status === "published") {
+    try {
+      const portalUsers = await User.findAll({
+        where: { is_active: 1, member_id: { [Op.ne]: null } },
+        attributes: ["id"],
+      });
+      const userIds = portalUsers.map((u) => u.id);
+      if (userIds.length > 0) {
+        await notifService.bulkCreateNotifications(userIds, {
+          type:           "service_published",
+          message:        `Sunday service "${service.title}" is now open for pre-registration.`,
+          reference_id:   service.id,
+          reference_type: "service",
+        });
+      }
+    } catch (err) {
+      console.error("[Services] Publish notifications failed:", err.message);
+    }
+  }
+
   auditLog.log({ userId: updatedBy, action: "UPDATE_SERVICE_STATUS", targetTable: "services", targetId: id, newValues: { status } });
   return service;
 };
