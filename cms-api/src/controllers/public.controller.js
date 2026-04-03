@@ -1,6 +1,6 @@
 "use strict";
 
-const { CellGroup, Event } = require("../models");
+const { CellGroup, Event, EventCategory } = require("../models");
 const { Op } = require("sequelize");
 
 // ── Public Stats (no auth — used by the public landing page) ─
@@ -14,9 +14,17 @@ exports.getPublicStats = async (req, res, next) => {
         status: "published",
         is_deleted: 0,
       },
-      attributes: ["id", "title", "start_date", "end_date", "location", "category_id"],
+      attributes: ["id", "title", "start_date", "end_date", "start_time", "location", "category_id", "description"],
+      include: [
+        {
+          model: EventCategory,
+          as: "category",
+          attributes: ["id", "name"],
+          required: false,
+        },
+      ],
       order: [["start_date", "ASC"]],
-      limit: 10,
+      limit: 12,
     });
 
     res.json({

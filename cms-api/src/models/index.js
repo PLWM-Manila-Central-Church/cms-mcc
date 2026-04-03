@@ -38,6 +38,8 @@ const ArchiveAccessLog = require("./ArchiveAccessLog.model");
 const Notification = require("./Notification.model");
 const AuditLog = require("./AuditLog.model");
 const SystemSetting = require("./SystemSetting.model");
+const MinistryMembership  = require("./MinistryMembership.model");
+const MinistryEventInvite = require("./MinistryEventInvite.model");
 
 // ── Roles & Permissions ──────────────────────────────────────
 Role.belongsToMany(Permission, {
@@ -247,6 +249,26 @@ ArchiveRecord.belongsTo(User, {
   as: "deletedByUser",
 });
 
+// ── User leader associations ─────────────────────────────────
+User.belongsTo(MinistryRole, { foreignKey: "ministry_role_id",    as: "leadsMinistry"  });
+User.belongsTo(CellGroup,    { foreignKey: "leads_cell_group_id", as: "leadsCellGroup" });
+User.belongsTo(Group,        { foreignKey: "leads_group_id",      as: "leadsGroup"     });
+
+// ── MinistryMembership ───────────────────────────────────────
+MinistryMembership.belongsTo(MinistryRole, { foreignKey: "ministry_role_id", as: "ministryRole"  });
+MinistryMembership.belongsTo(Member,       { foreignKey: "member_id",        as: "member"        });
+MinistryMembership.belongsTo(User,         { foreignKey: "added_by",         as: "addedByUser"   });
+MinistryRole.hasMany(MinistryMembership,   { foreignKey: "ministry_role_id"                      });
+Member.hasMany(MinistryMembership,         { foreignKey: "member_id"                             });
+
+// ── MinistryEventInvite ──────────────────────────────────────
+MinistryEventInvite.belongsTo(Event,        { foreignKey: "event_id"                                        });
+MinistryEventInvite.belongsTo(MinistryRole, { foreignKey: "ministry_role_id", as: "ministryRole"            });
+MinistryEventInvite.belongsTo(Member,       { foreignKey: "member_id",        as: "member"                  });
+MinistryEventInvite.belongsTo(User,         { foreignKey: "invited_by",       as: "invitedByUser"           });
+Event.hasMany(MinistryEventInvite,          { foreignKey: "event_id"                                        });
+Member.hasMany(MinistryEventInvite,         { foreignKey: "member_id"                                       });
+
 // ── Notification ─────────────────────────────────────────────
 User.hasMany(Notification, { foreignKey: "user_id" });
 Notification.belongsTo(User, { foreignKey: "user_id" });
@@ -300,4 +322,6 @@ module.exports = {
   Notification,
   AuditLog,
   SystemSetting,
+  MinistryMembership,
+  MinistryEventInvite,
 };

@@ -24,8 +24,14 @@ export const AuthProvider = ({ children }) => {
     const res = await axiosInstance.post('/auth/login', { email, password });
     const { accessToken, refreshToken, user, permissions, forcePasswordChange } = res.data.data;
 
-    // Store forcePasswordChange inside the user object so ProtectedRoute can enforce it
-    const userWithFlag = { ...user, forcePasswordChange: !!forcePasswordChange };
+    // Store forcePasswordChange and ministryRoleId inside the user object.
+    // forcePasswordChange: enforced by ProtectedRoute on next navigation.
+    // ministryRoleId: used by EventDetailPage and members.service.js scoping.
+    const userWithFlag = {
+      ...user,
+      forcePasswordChange: !!forcePasswordChange,
+      ministryRoleId:      user.ministryRoleId || null,
+    };
 
     localStorage.setItem('accessToken',  accessToken);
     localStorage.setItem('refreshToken', refreshToken);

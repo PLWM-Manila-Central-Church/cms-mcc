@@ -1,6 +1,20 @@
 "use strict";
 
 const rolesService = require("../services/roles.service");
+const { Role } = require("../models");
+
+// ── Minimal list — any authenticated user (used in user creation form) ──
+exports.listRoles = async (req, res, next) => {
+  try {
+    const roles = await Role.findAll({
+      attributes: ["id", "role_name"],
+      order: [["role_name", "ASC"]],
+    });
+    res.json({ success: true, data: roles });
+  } catch (err) {
+    next(err);
+  }
+};
 
 exports.getAllRoles = async (req, res, next) => {
   try {

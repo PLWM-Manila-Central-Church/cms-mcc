@@ -111,7 +111,7 @@ export default function AttendanceOverviewPage() {
         <h2 style={s.sectionTitle}>🔍 Member Attendance History</h2>
         <p style={s.sectionSub}>Search a member to see which services they attended</p>
 
-        <div style={{ position: 'relative', maxWidth: '500px' }}>
+        <div style={{ position: 'relative', maxWidth: '500px', width: '100%' }}>
           <input
             value={memberSearch}
             onChange={e => handleMemberSearch(e.target.value)}
@@ -202,9 +202,12 @@ export default function AttendanceOverviewPage() {
         ) : (
           <div style={s.serviceGrid}>
             {services.map(svc => {
-              const meta     = STATUS_META[svc.status] || STATUS_META.draft;
-              const attended = svc.ServiceAttendanceSummary?.total_attended ?? 0;
-              const pct      = svc.capacity ? Math.round((attended / svc.capacity) * 100) : 0;
+              const meta       = STATUS_META[svc.status] || STATUS_META.draft;
+              const attended   = svc.ServiceAttendanceSummary?.total_attended ?? 0;
+              const preReg     = svc.pre_registered_count ?? 0;
+              const display    = attended > 0 ? attended : preReg;
+              const isPreReg   = attended === 0 && preReg > 0;
+              const pct        = svc.capacity ? Math.round((display / svc.capacity) * 100) : 0;
 
               return (
                 <div
@@ -230,8 +233,9 @@ export default function AttendanceOverviewPage() {
                       background: pct >= 90 ? '#dc2626' : pct >= 70 ? '#d97706' : '#16a34a' }} />
                   </div>
                   <div style={s.serviceCardStats}>
-                    <span style={{ fontWeight: '700', color: '#0f172a' }}>{attended}</span>
+                    <span style={{ fontWeight: '700', color: isPreReg ? '#d97706' : '#0f172a' }}>{display}</span>
                     <span style={{ color: '#94a3b8' }}> / {svc.capacity} &nbsp;({pct}%)</span>
+                    {isPreReg && <span style={{ fontSize: 11, color: '#d97706', fontWeight: 600, marginLeft: 6 }}>pre-reg</span>}
                   </div>
                 </div>
               );
@@ -239,12 +243,7 @@ export default function AttendanceOverviewPage() {
           </div>
         )}
       </div>
-      <style>{`
-        @media (max-width: 768px) {
-          [style*="grid-template-columns: '1fr 1fr'"],
-          [style*="gridTemplateColumns: '1fr 1fr'"] { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+
     </div>
   );
 }
@@ -271,7 +270,7 @@ const s = {
   historySub:         { fontSize: '13px', color: '#64748b', marginTop: '2px' },
   emptyHistory:       { padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   historyList:        { display: 'flex', flexDirection: 'column', gap: '10px' },
-  historyItem:        { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: '#f8fafc', borderRadius: '10px', flexWrap: 'wrap', gap: '8px' },
+  historyItem:        { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '14px 16px', background: '#f8fafc', borderRadius: '10px', flexWrap: 'wrap', gap: '8px' },
   historyItemLeft:    {},
   historyItemRight:   { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' },
   historyServiceTitle:{ fontSize: '14px', fontWeight: '600', color: '#0f172a' },
