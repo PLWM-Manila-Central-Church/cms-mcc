@@ -13,7 +13,19 @@
 
 module.exports = {
 up: async (queryInterface, Sequelize) => {
-  // Ensure services:create permission exists
+  // Check if roles table has data yet (fresh install = seeders haven't run)
+  const [roles] = await queryInterface.sequelize.query(
+    `SELECT id FROM roles WHERE name = 'Member' LIMIT 1`
+  );
+
+  if (!roles.length) {
+    console.log("Roles not seeded yet — skipping fix-permissions migration.");
+    return;
+  }
+
+  const roleId = roles[0].id;
+
+  // Get or create services:create permission
   let [permissions] = await queryInterface.sequelize.query(
     `SELECT id FROM permissions WHERE module = 'services' AND action = 'create' LIMIT 1`
   );
@@ -33,7 +45,7 @@ up: async (queryInterface, Sequelize) => {
   const permissionId = permissions[0].id;
 
   const [existing] = await queryInterface.sequelize.query(
-    `SELECT id FROM role_permissions WHERE role_id = 7 AND permission_id = ${permissionId} LIMIT 1`
+    `SELECT id FROM role_permissions WHERE role_id = ${roleId} AND permission_id = ${permissionId} LIMIT 1`
   );
 
   if (existing.length) {
@@ -42,14 +54,13 @@ up: async (queryInterface, Sequelize) => {
   }
 
   await queryInterface.bulkInsert("role_permissions", [{
-    role_id: 7,
+    role_id: roleId,
     permission_id: permissionId,
     created_at: new Date(),
   }]);
 
   console.log("✔ Added services:create to Member role.");
 },
-
   down: async (queryInterface) => {
     const [permissions] = await queryInterface.sequelize.query(
       `SELECT id FROM permissions WHERE module = 'services' AND action = 'create' LIMIT 1`
