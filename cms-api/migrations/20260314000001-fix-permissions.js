@@ -15,7 +15,7 @@ module.exports = {
 up: async (queryInterface, Sequelize) => {
   // Check if roles table has data yet (fresh install = seeders haven't run)
   const [roles] = await queryInterface.sequelize.query(
-    `SELECT id FROM roles WHERE name = 'Member' LIMIT 1`
+    `SELECT id FROM roles WHERE role_name = 'Member' LIMIT 1`
   );
 
   if (!roles.length) {
