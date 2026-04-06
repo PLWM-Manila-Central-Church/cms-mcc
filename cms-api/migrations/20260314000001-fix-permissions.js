@@ -12,38 +12,43 @@
 //   no DB change needed for those.
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    // Get the services:create permission id
-    const [permissions] = await queryInterface.sequelize.query(
+up: async (queryInterface, Sequelize) => {
+  // Ensure services:create permission exists
+  let [permissions] = await queryInterface.sequelize.query(
+    `SELECT id FROM permissions WHERE module = 'services' AND action = 'create' LIMIT 1`
+  );
+
+  if (!permissions.length) {
+    await queryInterface.bulkInsert("permissions", [{
+      module: "services",
+      action: "create",
+      created_at: new Date(),
+      updated_at: new Date(),
+    }]);
+    [permissions] = await queryInterface.sequelize.query(
       `SELECT id FROM permissions WHERE module = 'services' AND action = 'create' LIMIT 1`
     );
+  }
 
-    if (!permissions.length) {
-      throw new Error("services:create permission not found in permissions table.");
-    }
+  const permissionId = permissions[0].id;
 
-    const permissionId = permissions[0].id;
+  const [existing] = await queryInterface.sequelize.query(
+    `SELECT id FROM role_permissions WHERE role_id = 7 AND permission_id = ${permissionId} LIMIT 1`
+  );
 
-    // Check if Member role (role_id: 7) already has services:create
-    const [existing] = await queryInterface.sequelize.query(
-      `SELECT id FROM role_permissions WHERE role_id = 7 AND permission_id = ${permissionId} LIMIT 1`
-    );
+  if (existing.length) {
+    console.log("Member already has services:create — skipping.");
+    return;
+  }
 
-    if (existing.length) {
-      console.log("Member already has services:create — skipping.");
-      return;
-    }
+  await queryInterface.bulkInsert("role_permissions", [{
+    role_id: 7,
+    permission_id: permissionId,
+    created_at: new Date(),
+  }]);
 
-    await queryInterface.bulkInsert("role_permissions", [
-      {
-        role_id: 7,
-        permission_id: permissionId,
-        created_at: new Date(),
-      },
-    ]);
-
-    console.log("✓ Added services:create to Member role.");
-  },
+  console.log("✔ Added services:create to Member role.");
+},
 
   down: async (queryInterface) => {
     const [permissions] = await queryInterface.sequelize.query(
