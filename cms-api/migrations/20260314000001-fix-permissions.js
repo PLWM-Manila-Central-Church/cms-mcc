@@ -68,8 +68,14 @@ up: async (queryInterface, Sequelize) => {
 
     if (!permissions.length) return;
 
+    const [roles] = await queryInterface.sequelize.query(
+      `SELECT id FROM roles WHERE role_name = 'Member' LIMIT 1`
+    );
+
+    if (!roles.length) return;
+
     await queryInterface.bulkDelete("role_permissions", {
-      role_id: 7,
+      role_id: roles[0].id,
       permission_id: permissions[0].id,
     });
   },
