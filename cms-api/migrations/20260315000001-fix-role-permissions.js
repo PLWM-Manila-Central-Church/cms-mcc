@@ -1,7 +1,27 @@
 "use strict";
 
 module.exports = {
-  up: async (queryInterface) => {
+  up: async (queryInterface, Sequelize) => {
+    const now = new Date();
+    const existingPerms = await queryInterface.sequelize.query(
+      "SELECT module, action FROM permissions",
+      { type: queryInterface.sequelize.QueryTypes.SELECT },
+    );
+    const existingSet = new Set(existingPerms.map(p => `${p.module}.${p.action}`));
+
+    const permsToAdd = [
+      { module: "events", action: "create", description: "Create events", created_at: now, updated_at: now },
+      { module: "events", action: "read", description: "View events", created_at: now, updated_at: now },
+      { module: "events", action: "update", description: "Edit events", created_at: now, updated_at: now },
+      { module: "events", action: "delete", description: "Delete events", created_at: now, updated_at: now },
+      { module: "ministry", action: "update", description: "Edit ministry assignments", created_at: now, updated_at: now },
+      { module: "inventory", action: "update", description: "Edit inventory items", created_at: now, updated_at: now },
+    ].filter(p => !existingSet.has(`${p.module}.${p.action}`));
+
+    if (permsToAdd.length > 0) {
+      await queryInterface.bulkInsert("permissions", permsToAdd);
+    }
+
     const permissions = await queryInterface.sequelize.query(
       "SELECT id, module, action FROM permissions",
       { type: queryInterface.sequelize.QueryTypes.SELECT },

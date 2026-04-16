@@ -1,6 +1,23 @@
 "use strict";
 module.exports = {
   up: async (queryInterface) => {
+    const now = new Date();
+    const existingPerms = await queryInterface.sequelize.query(
+      "SELECT module, action FROM permissions",
+      { type: queryInterface.sequelize.QueryTypes.SELECT },
+    );
+    const existingSet = new Set(existingPerms.map(p => `${p.module}.${p.action}`));
+
+    if (!existingSet.has("inventory.create")) {
+      await queryInterface.bulkInsert("permissions", [{
+        module: "inventory",
+        action: "create",
+        description: "Add inventory items",
+        created_at: now,
+        updated_at: now,
+      }]);
+    }
+
     const permissions = await queryInterface.sequelize.query(
       "SELECT id, module, action FROM permissions",
       { type: queryInterface.sequelize.QueryTypes.SELECT },
