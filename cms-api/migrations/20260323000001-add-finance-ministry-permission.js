@@ -44,12 +44,26 @@ module.exports = {
       { type: queryInterface.sequelize.QueryTypes.SELECT }
     );
 
-    const ministryRead = permissions.find(
+    let ministryRead = permissions.find(
       (p) => p.module === "ministry" && p.action === "read"
     );
+
     if (!ministryRead) {
-      throw new Error("Permission ministry:read not found. Run base seeders first.");
+      await queryInterface.bulkInsert("permissions", [{
+        module: "ministry",
+        action: "read",
+        description: "View ministry assignments",
+        created_at: now,
+        updated_at: now,
+      }]);
+      const newPerm = await queryInterface.sequelize.query(
+        "SELECT id FROM permissions WHERE module = 'ministry' AND action = 'read' LIMIT 1",
+        { type: queryInterface.sequelize.QueryTypes.SELECT }
+      );
+      if (newPerm.length) ministryRead = { id: newPerm[0].id };
     }
+
+    if (!ministryRead) return;
 
     const financeTeamId = roleMap["Finance Team"];
     if (!financeTeamId) return;

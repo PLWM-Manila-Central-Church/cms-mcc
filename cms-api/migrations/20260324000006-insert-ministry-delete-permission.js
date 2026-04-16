@@ -45,12 +45,26 @@ module.exports = {
       { type: queryInterface.sequelize.QueryTypes.SELECT }
     );
 
-    const ministryDelete = permissions.find(
+    let ministryDelete = permissions.find(
       (p) => p.module === "ministry" && p.action === "delete"
     );
+
     if (!ministryDelete) {
-      throw new Error("Permission ministry:delete not found. Run base seeders first.");
+      await queryInterface.bulkInsert("permissions", [{
+        module: "ministry",
+        action: "delete",
+        description: "Delete ministry assignments",
+        created_at: now,
+        updated_at: now,
+      }]);
+      const newPerm = await queryInterface.sequelize.query(
+        "SELECT id FROM permissions WHERE module = 'ministry' AND action = 'delete' LIMIT 1",
+        { type: queryInterface.sequelize.QueryTypes.SELECT }
+      );
+      if (newPerm.length) ministryDelete = { id: newPerm[0].id };
     }
+
+    if (!ministryDelete) return;
 
     const regTeamId = roleMap["Registration Team"];
     if (!regTeamId) return;

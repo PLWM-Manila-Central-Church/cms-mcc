@@ -36,28 +36,37 @@ module.exports = {
       }
     }
 
-    const existingPerms = await queryInterface.sequelize.query(
-      "SELECT module, action FROM permissions",
-      { type: queryInterface.sequelize.QueryTypes.SELECT },
-    );
-    const existingSet = new Set(existingPerms.map(p => `${p.module}.${p.action}`));
-
-    if (!existingSet.has("inventory.create")) {
-      await queryInterface.bulkInsert("permissions", [{
-        module: "inventory",
-        action: "create",
-        description: "Add inventory items",
-        created_at: now,
-        updated_at: now,
-      }]);
-    }
-
     const permissions = await queryInterface.sequelize.query(
       "SELECT id, module, action FROM permissions",
       { type: queryInterface.sequelize.QueryTypes.SELECT },
     );
-    const invCreate = permissions.find(x => x.module === "inventory" && x.action === "create");
-    if (!invCreate) throw new Error("Permission not found: inventory.create");
+    let invCreate = permissions.find(x => x.module === "inventory" && x.action === "create");
+
+    if (!invCreate) {
+      const existingPerms = await queryInterface.sequelize.query(
+        "SELECT module, action FROM permissions",
+        { type: queryInterface.sequelize.QueryTypes.SELECT },
+      );
+      const existingSet = new Set(existingPerms.map(p => `${p.module}.${p.action}`));
+
+      if (!existingSet.has("inventory.create")) {
+        await queryInterface.bulkInsert("permissions", [{
+          module: "inventory",
+          action: "create",
+          description: "Add inventory items",
+          created_at: now,
+          updated_at: now,
+        }]);
+      }
+
+      const newPerm = await queryInterface.sequelize.query(
+        "SELECT id FROM permissions WHERE module = 'inventory' AND action = 'create' LIMIT 1",
+        { type: queryInterface.sequelize.QueryTypes.SELECT }
+      );
+      if (newPerm.length) invCreate = { id: newPerm[0].id };
+    }
+
+    if (!invCreate) return;
 
     const roles = await queryInterface.sequelize.query(
       `SELECT id FROM roles WHERE role_name = 'Pastor' LIMIT 1`,
