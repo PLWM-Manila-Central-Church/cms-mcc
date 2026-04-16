@@ -2,7 +2,6 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // ── Add registered_by to event_registrations ──────────────
     await queryInterface.addColumn("event_registrations", "registered_by", {
       type: Sequelize.INTEGER.UNSIGNED,
       allowNull: true,
@@ -12,7 +11,21 @@ module.exports = {
       after: "registered_at",
     });
 
-    // ── Fix permissions ───────────────────────────────────────
+    const now = new Date();
+    const existingPerms = await queryInterface.sequelize.query(
+      "SELECT module, action FROM permissions",
+      { type: queryInterface.sequelize.QueryTypes.SELECT },
+    );
+    const existingSet = new Set(existingPerms.map(p => `${p.module}.${p.action}`));
+
+    const permsToAdd = [
+      { module: "events", action: "delete", description: "Delete events", created_at: now, updated_at: now },
+    ].filter(p => !existingSet.has(`${p.module}.${p.action}`));
+
+    if (permsToAdd.length > 0) {
+      await queryInterface.bulkInsert("permissions", permsToAdd);
+    }
+
     const permissions = await queryInterface.sequelize.query(
       "SELECT id, module, action FROM permissions",
       { type: queryInterface.sequelize.QueryTypes.SELECT },
