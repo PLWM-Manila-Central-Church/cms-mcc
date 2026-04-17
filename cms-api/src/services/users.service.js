@@ -37,7 +37,7 @@ exports.getUserById = async (id) => {
 
 // ── Create User ──────────────────────────────────────────────
 exports.createUser = async (data, createdBy) => {
-  const { email, password, role_id, member_id, invited_member_id } = data;
+  const { email, password, role_id, member_id, invited_member_id, leads_cell_group_id, leads_group_id, leads_ministry_id } = data;
 
   const existing = await User.findOne({ where: { email } });
   if (existing) throw { status: 409, message: "Email already in use" };
@@ -53,6 +53,9 @@ exports.createUser = async (data, createdBy) => {
     role_id,
     member_id: member_id || null,
     invited_member_id: invited_member_id || null,
+    leads_cell_group_id: leads_cell_group_id || null,
+    leads_group_id: leads_group_id || null,
+    leads_ministry_id: leads_ministry_id || null,
     is_active: 1,
     force_password_change: 1,
   });
@@ -67,7 +70,7 @@ exports.updateUser = async (id, data, updatedBy) => {
   const user = await User.findByPk(id);
   if (!user) throw { status: 404, message: "User not found" };
 
-  const { email, role_id, member_id, invited_member_id, is_active } = data;
+  const { email, role_id, member_id, invited_member_id, is_active, leads_cell_group_id, leads_group_id, leads_ministry_id } = data;
 
   if (email && email !== user.email) {
     const existing = await User.findOne({ where: { email } });
@@ -85,6 +88,9 @@ exports.updateUser = async (id, data, updatedBy) => {
     ...(member_id !== undefined && { member_id }),
     ...(invited_member_id !== undefined && { invited_member_id }),
     ...(is_active !== undefined && { is_active }),
+    ...(leads_cell_group_id !== undefined && { leads_cell_group_id }),
+    ...(leads_group_id !== undefined && { leads_group_id }),
+    ...(leads_ministry_id !== undefined && { leads_ministry_id }),
   });
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_USER", targetTable: "users", targetId: id });

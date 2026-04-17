@@ -60,4 +60,18 @@ router.delete(
   ctrl.deleteAssignment,
 );
 
+// ── Ministry Leader: Substitute Requests ─────────────────────
+router.get(
+  "/substitutes/pending",
+  auth,
+  authorize("ministry", "read"),
+  ctrl.getPendingSubstitutes,
+);
+router.put(
+  "/substitutes/:id/resolve",
+  auth,
+  authorize("ministry", "update"),
+  ctrl.resolveSubstitute,
+);
+
 module.exports = router;
