@@ -367,5 +367,4 @@ exports.removeMemberFromMinistry = async (ministryRoleId, memberId) => {
   if (!row) throw { status: 404, message: "Member is not in this ministry roster" };
   await row.destroy();
   return { message: "Member removed from ministry roster." };
->>>>>>> 24f00f8f1ab5014682d1a63558e43e45d28d96c7
 };
