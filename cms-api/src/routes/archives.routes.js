@@ -4,7 +4,7 @@ const router    = require("express").Router();
 const ctrl      = require("../controllers/archives.controller");
 const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
-const upload    = require("../middlewares/upload"); // FIX BUG 1: multer file parser
+const { upload, verifyMime } = require("../middlewares/upload");
 
 // ── Categories (MUST be before /:id) ─────────────────────────
 router.get("/categories",        auth, authorize("archives", "read"),   ctrl.getAllCategories);
@@ -18,8 +18,8 @@ router.get("/",    auth, authorize("archives", "read"),   ctrl.getAllRecords);
 router.get("/:id", auth, authorize("archives", "read"),   ctrl.getRecordById);
 
 // upload.single("file") parses multipart/form-data and populates req.file
-router.post("/",   auth, authorize("archives", "create"), upload.single("file"), ctrl.createRecord);
-router.put("/:id", auth, authorize("archives", "update"), upload.single("file"), ctrl.updateRecord);
+router.post("/",   auth, authorize("archives", "create"), upload.single("file"), verifyMime, ctrl.createRecord);
+router.put("/:id", auth, authorize("archives", "update"), upload.single("file"), verifyMime, ctrl.updateRecord);
 
 router.patch("/:id/approve", auth, authorize("archives", "update"), ctrl.approveRecord);
 router.delete("/:id",        auth, authorize("archives", "delete"), ctrl.deleteRecord);

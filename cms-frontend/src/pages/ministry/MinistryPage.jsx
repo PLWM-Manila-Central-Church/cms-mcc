@@ -1,82 +1,475 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
+import useIsMobile from '../../hooks/useIsMobile';
 
-/* ─────────────────────────────────────────────────────────────
-   Helpers
-───────────────────────────────────────────────────────────── */
 function fmtDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Main Page
-───────────────────────────────────────────────────────────── */
 export default function MinistryPage() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const isMember = user?.roleName === 'Member';
-  const [tab, setTab] = useState(isMember ? 'substitutes' : 'assignments');
+
+  // Ministry Leader = Registration Team user with a ministry sub-role assigned.
+  // They see ONLY the roster — no tabs, no Assignments, Roles, or Substitutes.
+  const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
+
+  // CHANGE 1: Fetch ministry name dynamically
+  const [ministryName, setMinistryName] = useState('Ministry');
+
+  useEffect(() => {
+    if (isMinistryLeader && user?.ministryRoleId) {
+      axiosInstance.get(`/ministry/roles/${user.ministryRoleId}`)
+        .then(res => {
+          if (res.data?.data?.name) {
+            setMinistryName(res.data.data.name);
+          }
+        })
+        .catch(() => {
+          // Silent fail - keep default "Ministry" if fetch fails
+        });
+    }
+  }, [isMinistryLeader, user?.ministryRoleId]);
 
   const tabs = isMember
     ? [{ key: 'substitutes', label: '🔄 Substitute Requests' }]
     : [
         { key: 'assignments', label: '📋 Assignments' },
         { key: 'roles',       label: '🎭 Roles' },
+        { key: 'substitutes', label: '🔄 Substitute Requests' },
       ];
 
+  const defaultTab = isMember ? 'substitutes' : 'assignments';
+  const [tab, setTab] = useState(defaultTab);
+
   return (
-    <div style={S.page}>
+    <div style={{ ...S.page, padding: isMobile ? '16px 12px' : '28px 32px' }}>
       <div style={S.header}>
         <div>
-          <h1 style={S.title}>Ministry</h1>
+          {/* CHANGE 1: Dynamic ministry name for ministry leaders */}
+          <h1 style={S.title}>{isMinistryLeader ? `${ministryName} Ministry` : 'Ministry'}</h1>
           <p style={S.subtitle}>
-            {isMember ? 'Submit substitute requests for your ministry assignments' : 'Manage ministry roles and service assignments'}
+            {isMinistryLeader
+              ? 'Manage your ministry roster and event invites'
+              : isMember
+                ? 'Submit substitute requests for your ministry assignments'
+                : 'Manage ministry roles and service assignments'}
           </p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={S.tabs}>
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            style={{ ...S.tab, ...(tab === t.key ? S.tabActive : {}) }}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs — hidden for ministry leaders (they only see the roster) */}
+      {!isMinistryLeader && (
+        <div style={S.tabs}>
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              style={{ ...S.tab, ...(tab === t.key ? S.tabActive : {}) }}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {tab === 'assignments' && <AssignmentsTab />}
-      {tab === 'roles'       && <RolesTab />}
-      {tab === 'substitutes' && <SubstituteRequestsTab />}
+      {isMinistryLeader && <RosterTab ministryRoleId={user?.ministryRoleId} />}
+      {!isMinistryLeader && tab === 'assignments' && <AssignmentsTab />}
+      {!isMinistryLeader && tab === 'roles'       && <RolesTab />}
+      {!isMinistryLeader && tab === 'substitutes' && <SubstituteRequestsTab />}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }
-        /* ── Responsive tables ── */
-        table { width: 100%; border-collapse: collapse; }
-        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        @media (max-width: 768px) {
-          table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
-        }
-        @media (max-width: 480px) {
-          table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
-        }
-`}</style>
-      <style>{`
-        /* Ministry page responsive */
         table { width: 100%; border-collapse: collapse; }
         @media (max-width: 768px) {
           table td, table th { font-size: 11px !important; padding: 7px 8px !important; white-space: nowrap; }
-          [style*="justifyContent: 'space-between'"] { flex-wrap: wrap !important; gap: 8px !important; }
-          [style*="display: 'flex', gap: '12px'"][style*="marginBottom"] { flex-wrap: wrap !important; }
         }
         @media (max-width: 480px) {
           table td, table th { font-size: 10.5px !important; padding: 6px !important; }
         }
       `}</style>
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Roster Tab (Ministry Leader only)
+───────────────────────────────────────────────────────────── */
+function RosterTab({ ministryRoleId }) {
+  const navigate = useNavigate();
+  const [members,      setMembers]      = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState('');
+  const [search,       setSearch]       = useState('');
+  const [addSearch,    setAddSearch]    = useState('');
+  const [addResults,   setAddResults]   = useState([]);
+  const [addDropOpen,  setAddDropOpen]  = useState(false);
+  const [adding,       setAdding]       = useState(false);
+  const [bulkRemoving, setBulkRemoving] = useState(false);
+  const [actionErr,    setActionErr]    = useState('');
+  const [selected,     setSelected]     = useState(new Set());   // member IDs (number)
+  const [confirmBulk,  setConfirmBulk]  = useState(false);
+  // CHANGE 3: Add filter states
+  const [filterCellGroup, setFilterCellGroup] = useState('');
+  const [filterGroup,     setFilterGroup]     = useState('');
+  const addInputRef   = useRef(null);
+  const searchTimeout = useRef(null);
+  const dropRef       = useRef(null);
+
+  const load = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await axiosInstance.get('/ministry/members');
+      setMembers(res.data.data || []);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Failed to load ministry members.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setAddDropOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleAddSearch = (val) => {
+    setAddSearch(val);
+    setActionErr('');
+    clearTimeout(searchTimeout.current);
+    if (!val.trim()) { setAddResults([]); setAddDropOpen(false); return; }
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await axiosInstance.get(`/ministry/members/search?q=${encodeURIComponent(val.trim())}`);
+        const found = res.data.data || [];
+        const existingIds = new Set(members.map(m => m.member?.id || m.member_id));
+        const filtered = found.filter(m => !existingIds.has(m.id));
+        setAddResults(filtered);
+        setAddDropOpen(filtered.length > 0);
+      } catch { setAddResults([]); setAddDropOpen(false); }
+    }, 300);
+  };
+
+  const handleAdd = async (member) => {
+    setAdding(true); setActionErr(''); setAddDropOpen(false);
+    try {
+      await axiosInstance.post('/ministry/members', { member_id: member.id });
+      setAddSearch(''); setAddResults([]);
+      load();
+    } catch (e) {
+      setActionErr(e.response?.data?.message || 'Failed to add member.');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  // ── Derived filtered list (must be before multi-select helpers) ──
+  const filtered = members.filter(m => {
+    const name = `${m.member?.first_name || ''} ${m.member?.last_name || ''}`.toLowerCase();
+    const matchesSearch = name.includes(search.toLowerCase());
+    
+    // CHANGE 3: Apply Cell Group and Group filters
+    const matchesCellGroup = !filterCellGroup || m.member?.cellGroup?.name === filterCellGroup;
+    const matchesGroup = !filterGroup || m.member?.group?.name === filterGroup;
+    
+    return matchesSearch && matchesCellGroup && matchesGroup;
+  });
+
+  // CHANGE 3: Extract unique Cell Groups and Groups for filter dropdowns
+  const uniqueCellGroups = [...new Set(members.map(m => m.member?.cellGroup?.name).filter(Boolean))].sort();
+  const uniqueGroups = [...new Set(members.map(m => m.member?.group?.name).filter(Boolean))].sort();
+
+  // ── Multi-select helpers ──────────────────────────────────────
+  const allFilteredIds = () => {
+    return filtered.map(row => row.member?.id || row.member_id).filter(Boolean);
+  };
+  const allSelected = filtered.length > 0 && filtered.every(row => {
+    const id = row.member?.id || row.member_id;
+    return selected.has(id);
+  });
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(allFilteredIds()));
+    }
+  };
+  const toggleSelect = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkRemove = async () => {
+    setBulkRemoving(true); setActionErr('');
+    const ids = [...selected];
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        await axiosInstance.delete(`/ministry/members/${id}`);
+      } catch { failed++; }
+    }
+    setSelected(new Set());
+    setConfirmBulk(false);
+    setBulkRemoving(false);
+    if (failed > 0) setActionErr(`${failed} member(s) could not be removed.`);
+    load();
+  };
+
+  // Keep selection consistent when filter changes
+  useEffect(() => {
+    const visibleIds = new Set(filtered.map(row => row.member?.id || row.member_id).filter(Boolean));
+    setSelected(prev => new Set([...prev].filter(id => visibleIds.has(id))));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  return (
+    <>
+      {/* ── Add Member to Ministry ───────────────────────────── */}
+      <div style={{ ...S.tableCard, padding: '20px 24px', marginBottom: '20px', overflow: 'visible' }}>
+        <div style={{ fontSize: '13px', fontWeight: '700', color: '#005599', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+          Add Member to Ministry
+        </div>
+        <div ref={dropRef} style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', opacity: 0.4, pointerEvents: 'none' }}>🔍</span>
+            <input
+              ref={addInputRef}
+              value={addSearch}
+              onChange={e => handleAddSearch(e.target.value)}
+              onFocus={() => addResults.length > 0 && setAddDropOpen(true)}
+              placeholder="Type a member name to search…"
+              autoComplete="off"
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '10px 36px 10px 36px', fontSize: '14px',
+                border: '1.5px solid #e2e8f0', borderRadius: '10px',
+                outline: 'none', color: '#0f172a', background: '#fafbfc',
+                transition: 'border-color 0.15s',
+              }}
+              onFocusCapture={e => { e.target.style.borderColor = '#005599'; }}
+              onBlurCapture={e => { e.target.style.borderColor = '#e2e8f0'; }}
+            />
+            {addSearch && (
+              <button
+                onMouseDown={e => { e.preventDefault(); setAddSearch(''); setAddResults([]); setAddDropOpen(false); addInputRef.current?.focus(); }}
+                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#94a3b8', padding: '2px 4px' }}
+              >✕</button>
+            )}
+          </div>
+          {addDropOpen && addResults.length > 0 && (
+            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 50, overflow: 'hidden' }}>
+              <div style={{ padding: '8px 14px 6px', fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9' }}>
+                {addResults.length} result{addResults.length !== 1 ? 's' : ''}
+              </div>
+              {addResults.map(m => (
+                <div
+                  key={m.id}
+                  onMouseDown={e => { e.preventDefault(); if (!adding) handleAdd(m); }}
+                  style={{ padding: '11px 14px', cursor: adding ? 'not-allowed' : 'pointer', fontSize: '14px', borderBottom: '1px solid #f8faff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: adding ? 0.6 : 1 }}
+                  onMouseEnter={e => { if (!adding) e.currentTarget.style.background = '#f0f6ff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '7px', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {(m.first_name?.[0] || '?').toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: '600', color: '#0f172a' }}>{m.last_name}, {m.first_name}</div>
+                      {m.cellGroup?.name && <div style={{ fontSize: '12px', color: '#64748b' }}>{m.cellGroup.name}</div>}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#fff', fontWeight: '700', background: 'linear-gradient(135deg,#003d70,#005599)', padding: '3px 10px', borderRadius: '20px' }}>+ Add</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {addSearch && !addDropOpen && addResults.length === 0 && !adding && (
+            <div style={{ marginTop: '6px', fontSize: '13px', color: '#94a3b8', padding: '0 2px' }}>No members found matching "{addSearch}"</div>
+          )}
+        </div>
+        {actionErr && <div style={{ marginTop: 8, color: '#dc2626', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>⚠ {actionErr}</div>}
+      </div>
+
+      {/* ── Toolbar ──────────────────────────────────────────── */}
+      <div style={{ ...S.toolbar, justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+          <div style={S.searchWrap}>
+            <span style={S.searchIcon}>🔍</span>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search ministry members…" style={S.searchInput} />
+            {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
+          </div>
+          
+          {/* CHANGE 3: Filter dropdowns for Cell Group and Group */}
+          {uniqueCellGroups.length > 0 && (
+            <select 
+              value={filterCellGroup} 
+              onChange={e => setFilterCellGroup(e.target.value)}
+              style={{ padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', outline: 'none', color: '#0f172a', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <option value="">All Cell Groups</option>
+              {uniqueCellGroups.map(cg => <option key={cg} value={cg}>{cg}</option>)}
+            </select>
+          )}
+          
+          {uniqueGroups.length > 0 && (
+            <select 
+              value={filterGroup} 
+              onChange={e => setFilterGroup(e.target.value)}
+              style={{ padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', outline: 'none', color: '#0f172a', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <option value="">All Groups</option>
+              {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          )}
+          
+          <div style={S.countBadge}>{filtered.length} member{filtered.length !== 1 ? 's' : ''}</div>
+        </div>
+
+        {selected.size > 0 && (
+          <button
+            onClick={() => setConfirmBulk(true)}
+            style={{ background: 'linear-gradient(135deg,#dc2626,#ef4444)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+          >
+            🗑 Remove {selected.size} selected
+          </button>
+        )}
+      </div>
+
+      {error && <div style={S.errBanner}><span>⚠ {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
+
+      {/* ── Bulk Remove Confirm Modal ─────────────────────────── */}
+      {confirmBulk && (
+        <div style={S.backdrop}>
+          <div style={S.modalBox}>
+            <div style={S.modalAccent} />
+            <div style={S.modalBody}>
+              <div style={S.delIcon}>🗑️</div>
+              <div style={S.modalTitle}>Remove {selected.size} Member{selected.size !== 1 ? 's' : ''}?</div>
+              <div style={S.modalSub}>
+                This will remove the selected {selected.size === 1 ? 'member' : `${selected.size} members`} from the ministry. This action cannot be undone.
+              </div>
+              <div style={S.modalActions}>
+                <button onClick={() => setConfirmBulk(false)} style={S.cancelBtn} disabled={bulkRemoving}>Cancel</button>
+                <button
+                  onClick={handleBulkRemove}
+                  style={{ ...S.saveBtn, background: 'linear-gradient(135deg,#dc2626,#ef4444)', opacity: bulkRemoving ? 0.7 : 1 }}
+                  disabled={bulkRemoving}
+                >
+                  {bulkRemoving ? <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={S.miniSpinner} />Removing…</span> : 'Yes, Remove'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Members Table ─────────────────────────────────────── */}
+      <div style={S.tableCard}>
+        {loading ? (
+          <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color: '#64748b', marginTop: '12px' }}>Loading…</span></div>
+        ) : filtered.length === 0 ? (
+          <div style={S.centerMsg}>
+            <span style={S.emptyIcon}>👥</span>
+            <span style={S.emptyTitle}>{search ? 'No matches found' : 'No members in ministry yet'}</span>
+            <span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Use the search above to add members.'}</span>
+          </div>
+        ) : (
+          <div style={S.tableScroll}>
+            <table style={S.table}>
+              <thead>
+                <tr style={S.thead}>
+                  <th style={{ ...S.th, width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleSelectAll}
+                      title={allSelected ? 'Deselect all' : 'Select all'}
+                      style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#005599' }}
+                    />
+                  </th>
+                  <th style={{ ...S.th, width: '36px' }}>#</th>
+                  <th style={S.th}>Name</th>
+                  <th style={S.th}>Cell Group</th>
+                  <th style={S.th}>Group</th>
+                  <th style={S.th}>Spiritual Birthday</th>
+                  <th style={S.th}>Number</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((row, i) => {
+                  const m    = row.member || {};
+                  const id   = m.id || row.member_id;
+                  const name = `${m.first_name || ''} ${m.last_name || ''}`.trim() || '—';
+                  const sbd  = m.spiritual_birthday
+                    ? new Date(m.spiritual_birthday).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
+                    : '—';
+                  const isChecked = selected.has(id);
+                  return (
+                    <tr
+                      key={row.id}
+                      style={{ ...S.row, background: isChecked ? '#f0f6ff' : '#fff' }}
+                    >
+                      <td style={{ ...S.td, textAlign: 'center', width: '40px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelect(id)}
+                          style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#005599' }}
+                        />
+                      </td>
+                      <td style={{ ...S.td, color: '#94a3b8', fontWeight: 500, width: 36 }}>{i + 1}</td>
+                      <td style={S.td}>
+                        <div style={S.nameCell}>
+                          <div style={{ ...S.avatar, background: isChecked ? 'linear-gradient(135deg,#003d70,#13B5EA)' : 'linear-gradient(135deg,#005599,#13B5EA)' }}>
+                            {name[0]?.toUpperCase() || '?'}
+                          </div>
+                          <span style={S.nameTxt}>{name}</span>
+                        </div>
+                      </td>
+                      <td style={{ ...S.td, color: '#64748b' }}>{m.cellGroup?.name || '—'}</td>
+                      <td style={{ ...S.td, color: '#64748b' }}>{m.group?.name || '—'}</td>
+                      <td style={{ ...S.td, color: '#64748b' }}>{sbd}</td>
+                      <td style={{ ...S.td, color: '#64748b' }}>{m.phone || '—'}</td>
+                      <td style={{ ...S.td, textAlign: 'right' }}>
+                        <button
+                          style={{ ...S.editBtn, marginRight: '6px' }}
+                          onClick={() => navigate(`/members/${id}`)}
+                          title="View member profile"
+                        >
+                          View
+                        </button>
+                        <button
+                          style={{ ...S.deleteBtn }}
+                          onClick={() => { setSelected(new Set([id])); setConfirmBulk(true); }}
+                          title="Remove from ministry"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -95,15 +488,11 @@ function AssignmentsTab() {
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState('');
   const [search,      setSearch]      = useState('');
-
-  // Modal
-  const [modal,   setModal]   = useState(null); // null | 'add' | 'edit'
+  const [modal,   setModal]   = useState(null);
   const [editing, setEditing] = useState(null);
   const [form,    setForm]    = useState({ service_id: '', member_id: '', ministry_role_id: '' });
   const [saving,  setSaving]  = useState(false);
   const [formErr, setFormErr] = useState('');
-
-  // Delete
   const [delTarget, setDelTarget] = useState(null);
   const [deleting,  setDeleting]  = useState(false);
   const [delErr,    setDelErr]    = useState('');
@@ -123,79 +512,43 @@ function AssignmentsTab() {
       setServices(sRes.data.data?.services || []);
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to load assignments.');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const openAdd = () => {
-    setForm({ service_id: '', member_id: '', ministry_role_id: '' });
-    setFormErr(''); setEditing(null); setModal('add');
-  };
-
+  const openAdd  = () => { setForm({ service_id: '', member_id: '', ministry_role_id: '' }); setFormErr(''); setEditing(null); setModal('add'); };
   const openEdit = (a) => {
-    setForm({
-      service_id:      a.service_id       || a.Service?.id       || '',
-      member_id:       a.member_id        || a.Member?.id        || '',
-      ministry_role_id:a.ministry_role_id || a.ministryRole?.id  || '',
-      confirmed:            a.confirmed            || 0,
-      substitute_requested: a.substitute_requested || 0,
-    });
+    setForm({ service_id: a.service_id || a.Service?.id || '', member_id: a.member_id || a.Member?.id || '', ministry_role_id: a.ministry_role_id || a.ministryRole?.id || '', confirmed: a.confirmed || 0, substitute_requested: a.substitute_requested || 0 });
     setFormErr(''); setEditing(a); setModal('edit');
   };
-
   const closeModal = () => { setModal(null); setEditing(null); setFormErr(''); };
 
   const handleSave = async () => {
-    if (!form.service_id || !form.member_id || !form.ministry_role_id) {
-      setFormErr('Service, member, and role are all required.');
-      return;
-    }
+    if (!form.service_id || !form.member_id || !form.ministry_role_id) { setFormErr('Service, member, and role are all required.'); return; }
     setSaving(true); setFormErr('');
     try {
       if (modal === 'add') {
-        await axiosInstance.post('/ministry/assignments', {
-          service_id:       Number(form.service_id),
-          member_id:        Number(form.member_id),
-          ministry_role_id: Number(form.ministry_role_id),
-        });
+        await axiosInstance.post('/ministry/assignments', { service_id: Number(form.service_id), member_id: Number(form.member_id), ministry_role_id: Number(form.ministry_role_id) });
       } else {
-        await axiosInstance.put(`/ministry/assignments/${editing.id}`, {
-          ministry_role_id:     Number(form.ministry_role_id),
-          confirmed:            Number(form.confirmed),
-          substitute_requested: Number(form.substitute_requested),
-        });
+        await axiosInstance.put(`/ministry/assignments/${editing.id}`, { ministry_role_id: Number(form.ministry_role_id), confirmed: Number(form.confirmed), substitute_requested: Number(form.substitute_requested) });
       }
       closeModal(); load();
-    } catch (e) {
-      setFormErr(e.response?.data?.message || 'Save failed.');
-    } finally {
-      setSaving(false);
-    }
+    } catch (e) { setFormErr(e.response?.data?.message || 'Save failed.'); }
+    finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     setDeleting(true); setDelErr('');
-    try {
-      await axiosInstance.delete(`/ministry/assignments/${delTarget.id}`);
-      setDelTarget(null); load();
-    } catch (e) {
-      setDelErr(e.response?.data?.message || 'Delete failed.');
-    } finally {
-      setDeleting(false);
-    }
+    try { await axiosInstance.delete(`/ministry/assignments/${delTarget.id}`); setDelTarget(null); load(); }
+    catch (e) { setDelErr(e.response?.data?.message || 'Delete failed.'); }
+    finally { setDeleting(false); }
   };
 
   const filtered = assignments.filter(a => {
     const q = search.toLowerCase();
     const name = `${a.Member?.first_name || ''} ${a.Member?.last_name || ''}`.toLowerCase();
-    return (
-      name.includes(q) ||
-      a.ministryRole?.name?.toLowerCase().includes(q) ||
-      a.Service?.title?.toLowerCase().includes(q)
-    );
+    return name.includes(q) || a.ministryRole?.name?.toLowerCase().includes(q) || a.Service?.title?.toLowerCase().includes(q);
   });
 
   return (
@@ -203,195 +556,62 @@ function AssignmentsTab() {
       <div style={S.toolbar}>
         <div style={S.searchWrap}>
           <span style={S.searchIcon}>🔍</span>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search member, role, or service…"
-            style={S.searchInput}
-          />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search member, role, or service…" style={S.searchInput} />
           {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
         </div>
         <div style={S.countBadge}>{filtered.length} assignment{filtered.length !== 1 ? 's' : ''}</div>
         {canAdd && <button style={S.addBtn} onClick={openAdd}>+ New Assignment</button>}
       </div>
-
-      {error && (
-        <div style={S.errBanner}>
-          <span>⚠ {error}</span>
-          <button onClick={load} style={S.retryBtn}>Retry</button>
-        </div>
-      )}
-
+      {error && <div style={S.errBanner}><span>⚠ {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
       <div style={S.tableCard}>
         {loading ? (
           <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color:'#64748b', marginTop:'12px' }}>Loading…</span></div>
         ) : filtered.length === 0 ? (
-          <div style={S.centerMsg}>
-            <span style={S.emptyIcon}>📋</span>
-            <span style={S.emptyTitle}>{search ? 'No matches found' : 'No assignments yet'}</span>
-            <span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Assignment" to get started.'}</span>
-          </div>
+          <div style={S.centerMsg}><span style={S.emptyIcon}>📋</span><span style={S.emptyTitle}>{search ? 'No matches found' : 'No assignments yet'}</span><span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Assignment" to get started.'}</span></div>
         ) : (
-          <table style={S.table}>
-            <thead>
-              <tr style={S.thead}>
-                <th style={S.th}>#</th>
-                <th style={S.th}>Member</th>
-                <th style={S.th}>Ministry Role</th>
-                <th style={S.th}>Service</th>
-                <th style={S.th}>Date</th>
-                <th style={S.th}>Status</th>
-                <th style={{ ...S.th, textAlign:'right' }}>Actions</th>
-              </tr>
-            </thead>
+          <div style={S.tableScroll}><table style={S.table}>
+            <thead><tr style={S.thead}><th style={S.th}>#</th><th style={S.th}>Member</th><th style={S.th}>Ministry Role</th><th style={S.th}>Service</th><th style={S.th}>Date</th><th style={S.th}>Status</th><th style={{ ...S.th, textAlign:'right' }}>Actions</th></tr></thead>
             <tbody>
               {filtered.map((a, i) => {
-                const memberName = a.Member
-                  ? `${a.Member.first_name} ${a.Member.last_name}`
-                  : '—';
+                const memberName = a.Member ? `${a.Member.first_name} ${a.Member.last_name}` : '—';
                 return (
                   <tr key={a.id} style={S.row}>
                     <td style={{ ...S.td, color:'#94a3b8', fontWeight:500 }}>{i + 1}</td>
-                    <td style={S.td}>
-                      <div style={S.nameCell}>
-                        <div style={S.avatar}>{memberName[0]?.toUpperCase() || '?'}</div>
-                        <span style={S.nameTxt}>{memberName}</span>
-                      </div>
-                    </td>
-                    <td style={S.td}>
-                      <span style={S.rolePill}>{a.ministryRole?.name || '—'}</span>
-                    </td>
-                    <td style={{ ...S.td, maxWidth:'180px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {a.Service?.title || '—'}
-                    </td>
+                    <td style={S.td}><div style={S.nameCell}><div style={S.avatar}>{memberName[0]?.toUpperCase() || '?'}</div><span style={S.nameTxt}>{memberName}</span></div></td>
+                    <td style={S.td}><span style={S.rolePill}>{a.ministryRole?.name || '—'}</span></td>
+                    <td style={{ ...S.td, maxWidth:'180px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{a.Service?.title || '—'}</td>
                     <td style={S.td}>{fmtDate(a.Service?.service_date)}</td>
-                    <td style={S.td}>
-                      <div style={S.statusCol}>
-                        <span style={{ ...S.pill, ...(a.confirmed ? S.pillGreen : S.pillGray) }}>
-                          {a.confirmed ? 'Confirmed' : 'Pending'}
-                        </span>
-                        {a.substitute_requested ? (
-                          <span style={{ ...S.pill, ...S.pillOrange }}>Sub Requested</span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td style={{ ...S.td, textAlign:'right' }}>
-                      {canEdit && <button style={S.editBtn} onClick={() => openEdit(a)}>Edit</button>}
-                      {canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(a); setDelErr(''); }}>Remove</button>}
-                    </td>
+                    <td style={S.td}><div style={S.statusCol}><span style={{ ...S.pill, ...(a.confirmed ? S.pillGreen : S.pillGray) }}>{a.confirmed ? 'Confirmed' : 'Pending'}</span>{a.substitute_requested ? <span style={{ ...S.pill, ...S.pillOrange }}>Sub Requested</span> : null}</div></td>
+                    <td style={{ ...S.td, textAlign:'right' }}>{canEdit && <button style={S.editBtn} onClick={() => openEdit(a)}>Edit</button>}{canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(a); setDelErr(''); }}>Remove</button>}</td>
                   </tr>
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
-
-      {/* Add / Edit Modal */}
       {modal && (
         <div style={S.backdrop} onClick={closeModal}>
           <div style={S.modalBox} onClick={e => e.stopPropagation()}>
             <div style={S.modalAccent} />
             <div style={S.modalBody}>
               <h3 style={S.modalTitle}>{modal === 'add' ? '+ New Assignment' : 'Edit Assignment'}</h3>
-              <p style={S.modalSub}>
-                {modal === 'add'
-                  ? 'Assign a member to a ministry role for a service.'
-                  : 'Update role or confirmation status.'}
-              </p>
-
+              <p style={S.modalSub}>{modal === 'add' ? 'Assign a member to a ministry role for a service.' : 'Update role or confirmation status.'}</p>
               {formErr && <div style={S.formErr}>⚠ {formErr}</div>}
-
-              {modal === 'add' && (
-                <>
-                  <div style={S.fieldGroup}>
-                    <label style={S.label}>Service <span style={{ color:'#ef4444' }}>*</span></label>
-                    <select
-                      value={form.service_id}
-                      onChange={e => { setForm({ ...form, service_id: e.target.value }); setFormErr(''); }}
-                      style={S.select}
-                    >
-                      <option value="">— Select a service —</option>
-                      {services.map(s => (
-                        <option key={s.id} value={s.id}>
-                          {s.title} ({fmtDate(s.service_date)})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={S.fieldGroup}>
-                    <label style={S.label}>Member <span style={{ color:'#ef4444' }}>*</span></label>
-                    <select
-                      value={form.member_id}
-                      onChange={e => { setForm({ ...form, member_id: e.target.value }); setFormErr(''); }}
-                      style={S.select}
-                    >
-                      <option value="">— Select a member —</option>
-                      {members.map(m => (
-                        <option key={m.id} value={m.id}>
-                          {m.first_name} {m.last_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-
-              <div style={S.fieldGroup}>
-                <label style={S.label}>Ministry Role <span style={{ color:'#ef4444' }}>*</span></label>
-                <select
-                  value={form.ministry_role_id}
-                  onChange={e => { setForm({ ...form, ministry_role_id: e.target.value }); setFormErr(''); }}
-                  style={S.select}
-                >
-                  <option value="">— Select a role —</option>
-                  {roles.map(r => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {modal === 'edit' && (
-                <div style={{ display:'flex', gap:'20px', marginBottom:'4px' }}>
-                  <label style={S.checkLabel}>
-                    <input
-                      type="checkbox"
-                      checked={!!form.confirmed}
-                      onChange={e => setForm({ ...form, confirmed: e.target.checked ? 1 : 0 })}
-                      style={{ marginRight:'8px', accentColor:'#005599' }}
-                    />
-                    Confirmed
-                  </label>
-                  <label style={S.checkLabel}>
-                    <input
-                      type="checkbox"
-                      checked={!!form.substitute_requested}
-                      onChange={e => setForm({ ...form, substitute_requested: e.target.checked ? 1 : 0 })}
-                      style={{ marginRight:'8px', accentColor:'#f59e0b' }}
-                    />
-                    Substitute Requested
-                  </label>
-                </div>
-              )}
-
+              {modal === 'add' && (<>
+                <div style={S.fieldGroup}><label style={S.label}>Service <span style={{ color:'#ef4444' }}>*</span></label><select value={form.service_id} onChange={e => { setForm({ ...form, service_id: e.target.value }); setFormErr(''); }} style={S.select}><option value="">— Select a service —</option>{services.map(s => <option key={s.id} value={s.id}>{s.title} ({fmtDate(s.service_date)})</option>)}</select></div>
+                <div style={S.fieldGroup}><label style={S.label}>Member <span style={{ color:'#ef4444' }}>*</span></label><select value={form.member_id} onChange={e => { setForm({ ...form, member_id: e.target.value }); setFormErr(''); }} style={S.select}><option value="">— Select a member —</option>{members.map(m => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}</select></div>
+              </>)}
+              <div style={S.fieldGroup}><label style={S.label}>Ministry Role <span style={{ color:'#ef4444' }}>*</span></label><select value={form.ministry_role_id} onChange={e => { setForm({ ...form, ministry_role_id: e.target.value }); setFormErr(''); }} style={S.select}><option value="">— Select a role —</option>{roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
+              {modal === 'edit' && (<div style={{ display:'flex', gap:'20px', marginBottom:'4px' }}><label style={S.checkLabel}><input type="checkbox" checked={!!form.confirmed} onChange={e => setForm({ ...form, confirmed: e.target.checked ? 1 : 0 })} style={{ marginRight:'8px', accentColor:'#005599' }} />Confirmed</label><label style={S.checkLabel}><input type="checkbox" checked={!!form.substitute_requested} onChange={e => setForm({ ...form, substitute_requested: e.target.checked ? 1 : 0 })} style={{ marginRight:'8px', accentColor:'#f59e0b' }} />Substitute Requested</label></div>)}
               <div style={S.modalActions}>
                 <button style={S.cancelBtn} onClick={closeModal} disabled={saving}>Cancel</button>
-                <button
-                  style={{ ...S.saveBtn, opacity: saving ? 0.8 : 1 }}
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving
-                    ? <span style={S.loadRow}><span style={S.miniSpinner} />{modal === 'add' ? 'Assigning…' : 'Saving…'}</span>
-                    : modal === 'add' ? 'Create Assignment' : 'Save Changes'}
-                </button>
+                <button style={{ ...S.saveBtn, opacity: saving ? 0.8 : 1 }} onClick={handleSave} disabled={saving}>{saving ? <span style={S.loadRow}><span style={S.miniSpinner} />{modal === 'add' ? 'Assigning…' : 'Saving…'}</span> : modal === 'add' ? 'Create Assignment' : 'Save Changes'}</button>
               </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* Delete Confirm */}
       {delTarget && (
         <div style={S.backdrop} onClick={() => setDelTarget(null)}>
           <div style={{ ...S.modalBox, maxWidth:'420px' }} onClick={e => e.stopPropagation()}>
@@ -399,19 +619,11 @@ function AssignmentsTab() {
             <div style={S.modalBody}>
               <div style={S.delIcon}>🗑️</div>
               <h3 style={S.modalTitle}>Remove Assignment?</h3>
-              <p style={S.modalSub}>
-                Remove <strong>{delTarget.Member?.first_name} {delTarget.Member?.last_name}</strong> as <strong>{delTarget.ministryRole?.name}</strong> from <strong>{delTarget.Service?.title}</strong>?
-              </p>
+              <p style={S.modalSub}>Remove <strong>{delTarget.Member?.first_name} {delTarget.Member?.last_name}</strong> as <strong>{delTarget.ministryRole?.name}</strong> from <strong>{delTarget.Service?.title}</strong>?</p>
               {delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}>⚠ {delErr}</div>}
               <div style={S.modalActions}>
                 <button style={S.cancelBtn} onClick={() => setDelTarget(null)} disabled={deleting}>Cancel</button>
-                <button
-                  style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }}
-                  onClick={handleDelete}
-                  disabled={deleting}
-                >
-                  {deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Removing…</span> : 'Yes, Remove'}
-                </button>
+                <button style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }} onClick={handleDelete} disabled={deleting}>{deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Removing…</span> : 'Yes, Remove'}</button>
               </div>
             </div>
           </div>
@@ -422,7 +634,7 @@ function AssignmentsTab() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Roles Tab
+   Roles Tab — shows member_count badge per role
 ───────────────────────────────────────────────────────────── */
 function RolesTab() {
   const { hasPermission } = useAuth();
@@ -433,27 +645,20 @@ function RolesTab() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
   const [search,  setSearch]  = useState('');
-
   const [modal,   setModal]   = useState(null);
   const [editing, setEditing] = useState(null);
   const [name,    setName]    = useState('');
   const [saving,  setSaving]  = useState(false);
   const [formErr, setFormErr] = useState('');
-
   const [delTarget, setDelTarget] = useState(null);
   const [deleting,  setDeleting]  = useState(false);
   const [delErr,    setDelErr]    = useState('');
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
-    try {
-      const res = await axiosInstance.get('/ministry/roles');
-      setRoles(res.data.data || []);
-    } catch (e) {
-      setError(e.response?.data?.message || 'Failed to load roles.');
-    } finally {
-      setLoading(false);
-    }
+    try { const res = await axiosInstance.get('/ministry/roles'); setRoles(res.data.data || []); }
+    catch (e) { setError(e.response?.data?.message || 'Failed to load roles.'); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -466,29 +671,18 @@ function RolesTab() {
     if (!name.trim()) { setFormErr('Role name is required.'); return; }
     setSaving(true); setFormErr('');
     try {
-      if (modal === 'add') {
-        await axiosInstance.post('/ministry/roles', { name: name.trim() });
-      } else {
-        await axiosInstance.put(`/ministry/roles/${editing.id}`, { name: name.trim() });
-      }
+      if (modal === 'add') { await axiosInstance.post('/ministry/roles', { name: name.trim() }); }
+      else { await axiosInstance.put(`/ministry/roles/${editing.id}`, { name: name.trim() }); }
       closeModal(); load();
-    } catch (e) {
-      setFormErr(e.response?.data?.message || 'Save failed.');
-    } finally {
-      setSaving(false);
-    }
+    } catch (e) { setFormErr(e.response?.data?.message || 'Save failed.'); }
+    finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     setDeleting(true); setDelErr('');
-    try {
-      await axiosInstance.delete(`/ministry/roles/${delTarget.id}`);
-      setDelTarget(null); load();
-    } catch (e) {
-      setDelErr(e.response?.data?.message || 'Delete failed.');
-    } finally {
-      setDeleting(false);
-    }
+    try { await axiosInstance.delete(`/ministry/roles/${delTarget.id}`); setDelTarget(null); load(); }
+    catch (e) { setDelErr(e.response?.data?.message || 'Delete failed.'); }
+    finally { setDeleting(false); }
   };
 
   const filtered = roles.filter(r => r.name?.toLowerCase().includes(search.toLowerCase()));
@@ -498,150 +692,79 @@ function RolesTab() {
       <div style={S.toolbar}>
         <div style={S.searchWrap}>
           <span style={S.searchIcon}>🔍</span>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search roles…"
-            style={S.searchInput}
-          />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search roles…" style={S.searchInput} />
           {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
         </div>
         <div style={S.countBadge}>{filtered.length} role{filtered.length !== 1 ? 's' : ''}</div>
         {canAdd && <button style={S.addBtn} onClick={openAdd}>+ New Role</button>}
       </div>
-
-      {error && (
-        <div style={S.errBanner}>
-          <span>⚠ {error}</span>
-          <button onClick={load} style={S.retryBtn}>Retry</button>
-        </div>
-      )}
-
+      {error && <div style={S.errBanner}><span>⚠ {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
       <div style={S.tableCard}>
-        {loading ? (
-          <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color:'#64748b', marginTop:'12px' }}>Loading…</span></div>
-        ) : filtered.length === 0 ? (
-          <div style={S.centerMsg}>
-            <span style={S.emptyIcon}>🎭</span>
-            <span style={S.emptyTitle}>{search ? 'No matches found' : 'No roles yet'}</span>
-            <span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Role" to create the first ministry role.'}</span>
-          </div>
-        ) : (
-          <table style={S.table}>
-            <thead>
-              <tr style={S.thead}>
-                <th style={S.th}>#</th>
-                <th style={S.th}>Role Name</th>
-                <th style={{ ...S.th, textAlign:'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r, i) => (
-                <tr key={r.id} style={S.row}>
-                  <td style={{ ...S.td, color:'#94a3b8', fontWeight:500, width:'48px' }}>{i + 1}</td>
-                  <td style={S.td}>
-                    <div style={S.nameCell}>
-                      <div style={{ ...S.avatar, background:'linear-gradient(135deg,#7c3aed,#a78bfa)' }}>
-                        {r.name?.[0]?.toUpperCase() || '?'}
-                      </div>
-                      <span style={S.nameTxt}>{r.name}</span>
-                    </div>
-                  </td>
-                  <td style={{ ...S.td, textAlign:'right' }}>
-                    {canEdit && <button style={S.editBtn} onClick={() => openEdit(r)}>Edit</button>}
-                    {canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(r); setDelErr(''); }}>Delete</button>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        {loading
+          ? <div style={S.centerMsg}><div style={S.spinner} /></div>
+          : filtered.length === 0
+            ? <div style={S.centerMsg}><span style={S.emptyIcon}>🎭</span><span style={S.emptyTitle}>{search ? 'No matches found' : 'No roles yet'}</span><span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Role" to create the first ministry role.'}</span></div>
+            : <div style={S.tableScroll}><table style={S.table}>
+                <thead>
+                  <tr style={S.thead}>
+                    <th style={S.th}>#</th>
+                    <th style={S.th}>Role Name</th>
+                    <th style={S.th}>Members</th>
+                    <th style={{ ...S.th, textAlign:'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r, i) => (
+                    <tr key={r.id} style={S.row}>
+                      <td style={{ ...S.td, color:'#94a3b8', fontWeight:500, width:'48px' }}>{i + 1}</td>
+                      <td style={S.td}>
+                        <div style={S.nameCell}>
+                          <div style={{ ...S.avatar, background:'linear-gradient(135deg,#7c3aed,#a78bfa)' }}>{r.name?.[0]?.toUpperCase() || '?'}</div>
+                          <span style={S.nameTxt}>{r.name}</span>
+                        </div>
+                      </td>
+                      <td style={S.td}>
+                        {/* Member count badge */}
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '4px',
+                          background: r.member_count > 0 ? '#eff6ff' : '#f8fafc',
+                          color: r.member_count > 0 ? '#1d4ed8' : '#94a3b8',
+                          fontSize: '12px', fontWeight: '700',
+                          padding: '3px 10px', borderRadius: '20px',
+                        }}>
+                          👥 {r.member_count || 0}
+                        </span>
+                      </td>
+                      <td style={{ ...S.td, textAlign:'right' }}>
+                        {canEdit   && <button style={S.editBtn}   onClick={() => openEdit(r)}>Edit</button>}
+                        {canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(r); setDelErr(''); }}>Delete</button>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+        }
       </div>
-
-      {/* Add / Edit Modal */}
-      {modal && (
-        <div style={S.backdrop} onClick={closeModal}>
-          <div style={{ ...S.modalBox, maxWidth:'440px' }} onClick={e => e.stopPropagation()}>
-            <div style={S.modalAccent} />
-            <div style={S.modalBody}>
-              <h3 style={S.modalTitle}>{modal === 'add' ? '+ New Ministry Role' : 'Edit Role'}</h3>
-              <p style={S.modalSub}>
-                {modal === 'add' ? 'e.g. Worship Leader, Usher, Sound Engineer…' : `Editing: ${editing?.name}`}
-              </p>
-              {formErr && <div style={S.formErr}>⚠ {formErr}</div>}
-              <div style={S.fieldGroup}>
-                <label style={S.label}>Role Name <span style={{ color:'#ef4444' }}>*</span></label>
-                <input
-                  value={name}
-                  onChange={e => { setName(e.target.value); setFormErr(''); }}
-                  placeholder="e.g. Worship Leader"
-                  autoFocus
-                  style={S.input}
-                />
-              </div>
-              <div style={S.modalActions}>
-                <button style={S.cancelBtn} onClick={closeModal} disabled={saving}>Cancel</button>
-                <button
-                  style={{ ...S.saveBtn, opacity: saving ? 0.8 : 1 }}
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving
-                    ? <span style={S.loadRow}><span style={S.miniSpinner} />{modal === 'add' ? 'Creating…' : 'Saving…'}</span>
-                    : modal === 'add' ? 'Create Role' : 'Save Changes'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirm */}
-      {delTarget && (
-        <div style={S.backdrop} onClick={() => setDelTarget(null)}>
-          <div style={{ ...S.modalBox, maxWidth:'420px' }} onClick={e => e.stopPropagation()}>
-            <div style={{ ...S.modalAccent, background:'#ef4444' }} />
-            <div style={S.modalBody}>
-              <div style={S.delIcon}>🗑️</div>
-              <h3 style={S.modalTitle}>Delete Role?</h3>
-              <p style={S.modalSub}>
-                Delete <strong>"{delTarget.name}"</strong>? This cannot be undone. Roles with active assignments cannot be deleted.
-              </p>
-              {delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}>⚠ {delErr}</div>}
-              <div style={S.modalActions}>
-                <button style={S.cancelBtn} onClick={() => setDelTarget(null)} disabled={deleting}>Cancel</button>
-                <button
-                  style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }}
-                  onClick={handleDelete}
-                  disabled={deleting}
-                >
-                  {deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Deleting…</span> : 'Yes, Delete'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {modal && (<div style={S.backdrop} onClick={closeModal}><div style={{ ...S.modalBox, maxWidth:'440px' }} onClick={e => e.stopPropagation()}><div style={S.modalAccent} /><div style={S.modalBody}><h3 style={S.modalTitle}>{modal === 'add' ? '+ New Ministry Role' : 'Edit Role'}</h3><p style={S.modalSub}>{modal === 'add' ? 'Add a new ministry team (e.g. Choir, Media Team, Ushers…)' : `Editing: ${editing?.name}`}</p>{formErr && <div style={S.formErr}>⚠ {formErr}</div>}<div style={S.fieldGroup}><label style={S.label}>Role Name <span style={{ color:'#ef4444' }}>*</span></label><input value={name} onChange={e => { setName(e.target.value); setFormErr(''); }} placeholder="e.g. Worship Leader" autoFocus style={S.input} /></div><div style={S.modalActions}><button style={S.cancelBtn} onClick={closeModal} disabled={saving}>Cancel</button><button style={{ ...S.saveBtn, opacity: saving ? 0.8 : 1 }} onClick={handleSave} disabled={saving}>{saving ? <span style={S.loadRow}><span style={S.miniSpinner} />{modal === 'add' ? 'Creating…' : 'Saving…'}</span> : modal === 'add' ? 'Create Role' : 'Save Changes'}</button></div></div></div></div>)}
+      {delTarget && (<div style={S.backdrop} onClick={() => setDelTarget(null)}><div style={{ ...S.modalBox, maxWidth:'420px' }} onClick={e => e.stopPropagation()}><div style={{ ...S.modalAccent, background:'#ef4444' }} /><div style={S.modalBody}><div style={S.delIcon}>🗑️</div><h3 style={S.modalTitle}>Delete Role?</h3><p style={S.modalSub}>Delete <strong>"{delTarget.name}"</strong>? This cannot be undone. Roles with active assignments or roster members cannot be deleted.</p>{delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}>⚠ {delErr}</div>}<div style={S.modalActions}><button style={S.cancelBtn} onClick={() => setDelTarget(null)} disabled={deleting}>Cancel</button><button style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }} onClick={handleDelete} disabled={deleting}>{deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Deleting…</span> : 'Yes, Delete'}</button></div></div></div></div>)}
     </>
   );
 }
 
-
 /* ─────────────────────────────────────────────────────────────
-   Substitute Requests Tab (Member role only)
+   Substitute Requests Tab
 ───────────────────────────────────────────────────────────── */
 function SubstituteRequestsTab() {
-  const [requests, setRequests]     = useState([]);
-  const [services, setServices]     = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState('');
-  const [showForm, setShowForm]     = useState(false);
-  const [saving, setSaving]         = useState(false);
-  const [formError, setFormError]   = useState('');
-  const [form, setForm]             = useState({ service_id: '', reason: '', proposed_member_id: '' });
-  const [memberSearch, setMemberSearch]   = useState('');
+  const [requests, setRequests]   = useState([]);
+  const [services, setServices]   = useState([]);
+  const [loading,  setLoading]    = useState(true);
+  const [error,    setError]      = useState('');
+  const [showForm, setShowForm]   = useState(false);
+  const [saving,   setSaving]     = useState(false);
+  const [formError,setFormError]  = useState('');
+  const [form,     setForm]       = useState({ service_id: '', reason: '', proposed_member_id: '' });
+  const [memberSearch,  setMemberSearch]  = useState('');
   const [memberResults, setMemberResults] = useState([]);
-  // useRef keeps timeout ID stable across renders — fixes the broken debounce
   const searchTimeout = useRef(null);
 
   const STATUS_META = {
@@ -654,18 +777,14 @@ function SubstituteRequestsTab() {
     setLoading(true);
     try {
       const [subRes, svcRes] = await Promise.all([
-        // Use /mine so Members only see their own requests (requires services:create)
         axiosInstance.get('/services/substitutes/mine'),
         axiosInstance.get('/services?limit=100'),
       ]);
       const all = subRes.data.data || [];
       setRequests(Array.isArray(all) ? all : []);
       setServices(svcRes.data.data?.services || []);
-    } catch {
-      setError('Failed to load data.');
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError('Failed to load data.'); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -675,221 +794,81 @@ function SubstituteRequestsTab() {
     clearTimeout(searchTimeout.current);
     if (!val.trim()) { setMemberResults([]); return; }
     searchTimeout.current = setTimeout(async () => {
-      try {
-        const res = await axiosInstance.get(`/members?search=${encodeURIComponent(val)}&limit=5`);
-        setMemberResults(res.data.data?.members || []);
-      } catch {}
+      try { const res = await axiosInstance.get(`/members?search=${encodeURIComponent(val)}&limit=5`); setMemberResults(res.data.data?.members || []); } catch {}
     }, 300);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.service_id || !form.reason.trim()) {
-      setFormError('Please select a service and provide a reason.');
-      return;
-    }
-    setSaving(true);
-    setFormError('');
+    if (!form.service_id || !form.reason.trim()) { setFormError('Please select a service and provide a reason.'); return; }
+    setSaving(true); setFormError('');
     try {
-      const payload = {
-        service_id: Number(form.service_id),
-        reason:     form.reason,
-        ...(form.proposed_member_id && { proposed_member_id: Number(form.proposed_member_id) }),
-      };
-      await axiosInstance.post('/services/substitutes', payload);
-      setShowForm(false);
-      setForm({ service_id: '', reason: '', proposed_member_id: '' });
-      setMemberSearch('');
-      fetchData();
-    } catch (err) {
-      setFormError(err.response?.data?.message || 'Failed to submit request.');
-    } finally {
-      setSaving(false);
-    }
+      await axiosInstance.post('/services/substitutes', { service_id: Number(form.service_id), reason: form.reason, ...(form.proposed_member_id && { proposed_member_id: Number(form.proposed_member_id) }) });
+      setShowForm(false); setForm({ service_id: '', reason: '', proposed_member_id: '' }); setMemberSearch(''); fetchData();
+    } catch (err) { setFormError(err.response?.data?.message || 'Failed to submit request.'); }
+    finally { setSaving(false); }
   };
 
   const publishedServices = services.filter(s => s.status === 'published');
 
   return (
     <>
-      <div style={S.toolbar}>
-        <button onClick={() => { setShowForm(!showForm); setFormError(''); }} style={S.addBtn}>
-          {showForm ? '✕ Cancel' : '+ New Request'}
-        </button>
-      </div>
-
-      {/* Submit Form */}
+      <div style={S.toolbar}><button onClick={() => { setShowForm(!showForm); setFormError(''); }} style={S.addBtn}>{showForm ? '✕ Cancel' : '+ New Request'}</button></div>
       {showForm && (
         <div style={{ ...S.tableCard, padding: '24px', marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px' }}>
-            Submit Substitute Request
-          </h3>
+          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px' }}>Submit Substitute Request</h3>
           {formError && <div style={S.formErr}>{formError}</div>}
           <form onSubmit={handleSubmit}>
-            <div style={S.fieldGroup}>
-              <label style={S.label}>Service *</label>
-              <select
-                value={form.service_id}
-                onChange={e => setForm({ ...form, service_id: e.target.value })}
-                style={S.select}
-                required
-              >
-                <option value="">— Select a service —</option>
-                {publishedServices.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.title} — {fmtDate(s.service_date)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={S.fieldGroup}>
-              <label style={S.label}>Reason *</label>
-              <textarea
-                value={form.reason}
-                onChange={e => setForm({ ...form, reason: e.target.value })}
-                placeholder="Explain why you cannot attend this service..."
-                rows={3}
-                style={{ ...S.input, resize: 'vertical', fontFamily: 'inherit' }}
-                required
-              />
-            </div>
-
+            <div style={S.fieldGroup}><label style={S.label}>Service *</label><select value={form.service_id} onChange={e => setForm({ ...form, service_id: e.target.value })} style={S.select} required><option value="">— Select a service —</option>{publishedServices.map(s => <option key={s.id} value={s.id}>{s.title} — {fmtDate(s.service_date)}</option>)}</select></div>
+            <div style={S.fieldGroup}><label style={S.label}>Reason *</label><textarea value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Explain why you cannot attend this service..." rows={3} style={{ ...S.input, resize: 'vertical', fontFamily: 'inherit' }} required /></div>
             <div style={S.fieldGroup}>
               <label style={S.label}>Proposed Replacement (optional)</label>
               <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  value={memberSearch}
-                  onChange={e => handleMemberSearch(e.target.value)}
-                  placeholder="Search member by name..."
-                  style={S.input}
-                />
+                <input type="text" value={memberSearch} onChange={e => handleMemberSearch(e.target.value)} placeholder="Search member by name..." style={S.input} />
                 {memberResults.length > 0 && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10 }}>
-                    {memberResults.map(m => (
-                      <div
-                        key={m.id}
-                        onClick={() => {
-                          setForm({ ...form, proposed_member_id: m.id });
-                          setMemberSearch(`${m.last_name}, ${m.first_name}`);
-                          setMemberResults([]);
-                        }}
-                        style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid #f1f5f9' }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#f0f6ff'}
-                        onMouseLeave={e => e.currentTarget.style.background = '#fff'}
-                      >
-                        {m.last_name}, {m.first_name}
-                      </div>
-                    ))}
+                    {memberResults.map(m => <div key={m.id} onClick={() => { setForm({ ...form, proposed_member_id: m.id }); setMemberSearch(`${m.last_name}, ${m.first_name}`); setMemberResults([]); }} style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid #f1f5f9' }} onMouseEnter={e => e.currentTarget.style.background = '#f0f6ff'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>{m.last_name}, {m.first_name}</div>)}
                   </div>
                 )}
               </div>
-              {form.proposed_member_id && (
-                <p style={{ fontSize: '12px', color: '#16a34a', margin: '4px 0 0' }}>
-                  ✓ Replacement selected
-                </p>
-              )}
+              {form.proposed_member_id && <p style={{ fontSize: '12px', color: '#16a34a', margin: '4px 0 0' }}>✓ Replacement selected</p>}
             </div>
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowForm(false)} style={S.cancelBtn}>Cancel</button>
-              <button type="submit" disabled={saving} style={{ ...S.saveBtn, opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Submitting...' : 'Submit Request'}
-              </button>
-            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}><button type="button" onClick={() => setShowForm(false)} style={S.cancelBtn}>Cancel</button><button type="submit" disabled={saving} style={{ ...S.saveBtn, opacity: saving ? 0.7 : 1 }}>{saving ? 'Submitting...' : 'Submit Request'}</button></div>
           </form>
         </div>
       )}
-
-      {/* Requests List */}
       {error && <div style={S.errBanner}>{error}</div>}
-
-      {loading ? (
-        <div style={S.centerMsg}><div style={S.spinner} /></div>
-      ) : requests.length === 0 ? (
-        <div style={S.centerMsg}>
-          <div style={S.emptyIcon}>🔄</div>
-          <div style={S.emptyTitle}>No substitute requests yet</div>
-          <div style={S.emptyHint}>Click "+ New Request" to submit one.</div>
-        </div>
-      ) : (
-        <div style={S.tableCard}>
-          <table style={S.table}>
-            <thead>
-              <tr style={S.thead}>
-                <th style={S.th}>Service</th>
-                <th style={S.th}>Reason</th>
-                <th style={S.th}>Proposed Replacement</th>
-                <th style={S.th}>Status</th>
-                <th style={S.th}>Submitted</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map(r => {
-                const meta = STATUS_META[r.status] || STATUS_META.pending;
-                // Service comes via assignment.Service (nested include)
-                const serviceTitle = r.assignment?.Service?.title || `Service #${r.assignment?.service_id || '—'}`;
-                // Proposed replacement via proposedSubstituteUser.member
-                const proposed = r.proposedSubstituteUser?.member;
-                return (
-                  <tr key={r.id} style={S.row}>
-                    <td style={{ ...S.td, fontWeight: '600', color: '#0f172a' }}>
-                      {serviceTitle}
-                    </td>
-                    <td style={{ ...S.td, maxWidth: '220px', color: '#374151' }}>{r.reason}</td>
-                    <td style={S.td}>
-                      {proposed
-                        ? `${proposed.last_name}, ${proposed.first_name}`
-                        : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>None</span>
-                      }
-                    </td>
-                    <td style={S.td}>
-                      <span style={{ ...S.pill, background: meta.bg, color: meta.color }}>{meta.label}</span>
-                    </td>
-                    <td style={{ ...S.td, color: '#64748b' }}>{fmtDate(r.created_at)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {loading ? <div style={S.centerMsg}><div style={S.spinner} /></div>
+      : requests.length === 0 ? <div style={S.centerMsg}><div style={S.emptyIcon}>🔄</div><div style={S.emptyTitle}>No substitute requests yet</div><div style={S.emptyHint}>Click "+ New Request" to submit one.</div></div>
+      : <div style={S.tableCard}><div style={S.tableScroll}><table style={S.table}><thead><tr style={S.thead}><th style={S.th}>Service</th><th style={S.th}>Reason</th><th style={S.th}>Proposed Replacement</th><th style={S.th}>Status</th><th style={S.th}>Submitted</th></tr></thead><tbody>{requests.map(r => { const meta = STATUS_META[r.status] || STATUS_META.pending; const serviceTitle = r.assignment?.Service?.title || `Service #${r.assignment?.service_id || '—'}`; const proposed = r.proposedSubstituteUser?.member; return (<tr key={r.id} style={S.row}><td style={{ ...S.td, fontWeight: '600', color: '#0f172a' }}>{serviceTitle}</td><td style={{ ...S.td, maxWidth: '220px', color: '#374151' }}>{r.reason}</td><td style={S.td}>{proposed ? `${proposed.last_name}, ${proposed.first_name}` : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>None</span>}</td><td style={S.td}><span style={{ ...S.pill, background: meta.bg, color: meta.color }}>{meta.label}</span></td><td style={{ ...S.td, color: '#64748b' }}>{fmtDate(r.created_at)}</td></tr>); })}</tbody></table></div></div>}
     </>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Styles
-───────────────────────────────────────────────────────────── */
 const S = {
   page:       { padding:'28px 32px', fontFamily:"'Inter',-apple-system,sans-serif" },
   header:     { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px' },
   title:      { fontSize:'24px', fontWeight:'800', color:'#0f172a', margin:'0 0 4px', letterSpacing:'-0.3px' },
   subtitle:   { fontSize:'14px', color:'#64748b', margin:0 },
-
-  tabs:       { display:'flex', gap:'4px', marginBottom:'24px', background:'#f1f5f9', padding:'4px', borderRadius:'10px', width:'fit-content' },
+  tabs:       { display:'flex', gap:'4px', marginBottom:'24px', background:'#f1f5f9', padding:'4px', borderRadius:'10px', width:'fit-content', flexWrap:'wrap' },
   tab:        { background:'transparent', border:'none', borderRadius:'8px', padding:'8px 20px', fontSize:'13px', fontWeight:'600', color:'#64748b', cursor:'pointer', transition:'all 0.15s' },
   tabActive:  { background:'#fff', color:'#005599', boxShadow:'0 1px 4px rgba(0,0,0,0.1)' },
-
-  toolbar:    { display:'flex', alignItems:'center', gap:'12px', marginBottom:'20px' },
-  searchWrap: { position:'relative', flex:1, maxWidth:'380px' },
+  toolbar:    { display:'flex', alignItems:'center', gap:'12px', marginBottom:'20px', flexWrap:'wrap' },
+  searchWrap: { position:'relative', flex:1, minWidth: 0 },
   searchIcon: { position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', fontSize:'14px', opacity:0.45, pointerEvents:'none' },
   searchInput:{ width:'100%', padding:'10px 36px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'14px', outline:'none', boxSizing:'border-box', background:'#fff', color:'#0f172a' },
   clearBtn:   { position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:'12px', color:'#94a3b8', padding:'2px 4px' },
   countBadge: { fontSize:'13px', color:'#64748b', fontWeight:'600', background:'#f1f5f9', padding:'6px 14px', borderRadius:'20px' },
   addBtn:     { background:'linear-gradient(135deg,#003d70,#005599)', color:'#fff', border:'none', borderRadius:'10px', padding:'11px 20px', fontSize:'14px', fontWeight:'700', cursor:'pointer', whiteSpace:'nowrap' },
-
   errBanner:  { background:'#fef2f2', border:'1px solid #fecaca', color:'#dc2626', borderRadius:'10px', padding:'12px 16px', fontSize:'13px', marginBottom:'16px', display:'flex', justifyContent:'space-between', alignItems:'center' },
   retryBtn:   { background:'none', border:'1px solid #dc2626', borderRadius:'6px', color:'#dc2626', fontSize:'12px', fontWeight:'600', cursor:'pointer', padding:'4px 10px' },
-
   tableCard:  { background:'#fff', borderRadius:'16px', border:'1px solid #e8f0fe', overflow:'hidden', boxShadow:'0 2px 12px rgba(0,85,153,0.06)' },
+  tableScroll:{ overflowX:'auto', WebkitOverflowScrolling:'touch' },
   table:      { width:'100%', borderCollapse:'collapse' },
   thead:      { background:'linear-gradient(90deg,#f8faff,#f0f6ff)' },
   th:         { padding:'13px 16px', fontSize:'11px', fontWeight:'700', color:'#64748b', textAlign:'left', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #e8f0fe' },
   row:        { borderBottom:'1px solid #f1f5f9' },
   td:         { padding:'14px 16px', fontSize:'14px', color:'#1e293b', background:'#fff', transition:'background 0.15s' },
-
   nameCell:   { display:'flex', alignItems:'center', gap:'10px' },
   avatar:     { width:'32px', height:'32px', borderRadius:'8px', background:'linear-gradient(135deg,#005599,#13B5EA)', color:'#fff', fontSize:'13px', fontWeight:'800', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
   nameTxt:    { fontWeight:'600', color:'#0f172a' },
@@ -899,16 +878,13 @@ const S = {
   pillGreen:  { background:'#f0fdf4', color:'#16a34a' },
   pillGray:   { background:'#f1f5f9', color:'#64748b' },
   pillOrange: { background:'#fffbeb', color:'#d97706' },
-
   editBtn:    { background:'#e8f4fd', color:'#005599', border:'none', borderRadius:'7px', padding:'6px 14px', fontSize:'12px', fontWeight:'700', cursor:'pointer', marginRight:'6px' },
   deleteBtn:  { background:'#fef2f2', color:'#ef4444', border:'none', borderRadius:'7px', padding:'6px 14px', fontSize:'12px', fontWeight:'700', cursor:'pointer' },
-
   centerMsg:  { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'64px 24px', gap:'8px' },
   spinner:    { width:'32px', height:'32px', border:'3px solid #e2e8f0', borderTop:'3px solid #005599', borderRadius:'50%', animation:'spin 0.7s linear infinite' },
   emptyIcon:  { fontSize:'48px', lineHeight:1, marginBottom:'4px' },
   emptyTitle: { fontSize:'16px', fontWeight:'700', color:'#374151' },
   emptyHint:  { fontSize:'13px', color:'#94a3b8' },
-
   backdrop:   { position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:'24px' },
   modalBox:   { background:'#fff', borderRadius:'20px', width:'100%', maxWidth:'520px', overflow:'hidden', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' },
   modalAccent:{ height:'5px', background:'linear-gradient(90deg,#003d70,#005599,#13B5EA)' },

@@ -27,6 +27,7 @@ export default function ServicesPage() {
   const navigate = useNavigate();
   const { hasPermission, user } = useAuth();
   const canCreate  = hasPermission('services', 'create');
+  const canDelete  = hasPermission('services', 'delete');
   const isMember   = user?.roleName === 'Member';
 
   const [services, setServices]     = useState([]);
@@ -117,8 +118,7 @@ export default function ServicesPage() {
     }
   };
 
-  const handleStatusChange = async (serviceId, newStatus) => {
-    setStatusUpdating(serviceId);
+  const handleStatusChange = async (serviceId, newStatus) => {    setStatusUpdating(serviceId);
     try {
       await axiosInstance.patch(`/services/${serviceId}/status`, { status: newStatus });
       fetchServices();
@@ -126,6 +126,16 @@ export default function ServicesPage() {
       setError(err.response?.data?.message || 'Failed to update status.');
     } finally {
       setStatusUpdating(null);
+    }
+  };
+
+  const handleDeleteService = async (service) => {
+    if (!window.confirm(`Delete "${service.title}"? This cannot be undone.`)) return;
+    try {
+      await axiosInstance.delete(`/services/${service.id}`);
+      fetchServices();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete service.');
     }
   };
 
@@ -279,7 +289,7 @@ export default function ServicesPage() {
 
       {/* Table */}
       <div style={styles.tableWrap}>
-        <table style={styles.table}>
+        <div style={styles.tableScroll}><table style={styles.table}>
           <thead>
             <tr style={styles.thead}>
               <th style={styles.th}>Service</th>
@@ -299,7 +309,6 @@ export default function ServicesPage() {
             ) : services.map((s, i) => {
               const meta         = STATUS_META[s.status] || STATUS_META.draft;
               const nextStatuses = (canCreate && !isMember) ? STATUS_FLOW[s.status] : [];
-              const attended     = s.ServiceAttendanceSummary?.total_attended ?? 0;
               const myResponse   = myResponses[s.id];
               const canPreReg    = isMember && s.status === 'published' && !!user?.memberId;
 
@@ -314,8 +323,19 @@ export default function ServicesPage() {
                   <td style={styles.td}>{formatTime(s.service_time)}</td>
                   <td style={styles.td}>{s.capacity}</td>
                   <td style={styles.td}>
-                    <span style={{ fontWeight: '700', color: '#0066b3' }}>{attended}</span>
-                    <span style={{ color: '#94a3b8' }}> / {s.capacity}</span>
+                    {(() => {
+                      const checked = s.ServiceAttendanceSummary?.total_attended ?? 0;
+                      const preReg  = s.pre_registered_count ?? 0;
+                      const display = checked > 0 ? checked : preReg;
+                      const isPreReg = checked === 0 && preReg > 0;
+                      return (
+                        <>
+                          <span style={{ fontWeight: '700', color: isPreReg ? '#d97706' : '#0066b3' }}>{display}</span>
+                          <span style={{ color: '#94a3b8' }}> / {s.capacity}</span>
+                          {isPreReg && <div style={{ fontSize: 10, color: '#d97706', fontWeight: 600, marginTop: 2 }}>pre-reg</div>}
+                        </>
+                      );
+                    })()}
                   </td>
                   <td style={styles.td}>
                     <span style={{ ...styles.badge, background: meta.bg, color: meta.color }}>
@@ -338,6 +358,14 @@ export default function ServicesPage() {
                           {STATUS_ACTION_LABEL[ns]}
                         </button>
                       ))}
+                      {/* Delete button for completed/cancelled — admin/regteam only */}
+                      {canDelete && !isMember && ['completed', 'cancelled'].includes(s.status) && (
+                        <button
+                          onClick={() => handleDeleteService(s)}
+                          style={{ ...styles.statusBtn, background: '#fef2f2', color: '#dc2626' }}>
+                          Delete
+                        </button>
+                      )}
                       {/* Member: Pre-register button */}
                       {canPreReg && (
                         <button onClick={() => openPreReg(s)} style={styles.preRegBtn}>
@@ -360,7 +388,7 @@ export default function ServicesPage() {
               );
             })}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {/* Pagination */}
@@ -451,21 +479,11 @@ export default function ServicesPage() {
         </div>
       )}
       <style>{`
-        /* ── Responsive tables ── */
         table { width: 100%; border-collapse: collapse; }
-        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         @media (max-width: 768px) {
-          table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
+          table td, table th { font-size: 11px !important; padding: 7px 8px !important; white-space: nowrap; }
         }
-        @media (max-width: 480px) {
-          table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
-        }
-
-      
-        @media (max-width: 900px) {
-          [style*="gridTemplateColumns: '1fr 1fr'"],
-          [style*="gridTemplateColumns: 'repeat"] { grid-template-columns: 1fr !important; }
-        }`}</style>
+      `}</style>
     </div>
   );
 }
@@ -479,7 +497,7 @@ const STATUS_ACTION_STYLE = {
 
 const styles = {
   page:        { fontFamily: "'Inter', sans-serif" },
-  pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
+  pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
   title:       { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   subtitle:    { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
   addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
@@ -500,6 +518,7 @@ const styles = {
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
   successBox:  { background: '#dcfce7', border: '1px solid #86efac', color: '#16a34a', borderRadius: '8px', padding: '16px', fontSize: '14px', textAlign: 'center', margin: '16px 0' },
   tableWrap:   { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  tableScroll: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:       { width: '100%', borderCollapse: 'collapse' },
   thead:       { background: '#f8fafc' },
   th:          { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },

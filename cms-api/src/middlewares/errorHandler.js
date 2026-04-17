@@ -44,8 +44,9 @@ module.exports = (err, req, res, next) => {
     return res.status(401).json({ message: "Token expired" });
   }
 
-  // Default server error
+  // Default server error — never expose internal messages in production
+  const isDev = process.env.NODE_ENV === "development";
   return res.status(err.status || 500).json({
-    message: err.message || "Internal server error",
+    message: isDev ? (err.message || "Internal server error") : "Internal server error",
   });
 };

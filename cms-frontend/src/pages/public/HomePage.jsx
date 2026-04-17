@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+  import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout from './PublicLayout';
 
@@ -32,7 +32,9 @@ function Reveal({ children, delay = 0 }) {
 function HeroVideo() {
   const containerRef = useRef(null);
   const playerRef    = useRef(null);
-  const START_SEC    = 227; // where to start and loop back to
+  const intervalRef  = useRef(null);
+  const START_SEC    = 227; // 3:47 — loop start
+  const END_SEC      = 249; // 4:09 — loop end
 
   useEffect(() => {
     // Load the YT IFrame API script once
@@ -62,9 +64,18 @@ function HeroVideo() {
           onReady: (e) => {
             e.target.mute();
             e.target.playVideo();
+            // Poll every 500ms — seek back to START_SEC when we reach END_SEC
+            intervalRef.current = setInterval(() => {
+              try {
+                const t = e.target.getCurrentTime();
+                if (t >= END_SEC) {
+                  e.target.seekTo(START_SEC, true);
+                }
+              } catch (_) {}
+            }, 500);
           },
           onStateChange: (e) => {
-            // When video ends (state 0), seek back to start and keep playing
+            // Fallback: if video somehow ends, restart from START_SEC
             if (e.data === window.YT.PlayerState.ENDED) {
               e.target.seekTo(START_SEC, true);
               e.target.playVideo();
@@ -86,6 +97,7 @@ function HeroVideo() {
     }
 
     return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch (_) {}
         playerRef.current = null;
@@ -110,8 +122,9 @@ function HeroVideo() {
 }
 
 export default function HomePage() {
-  const [cgCount, setCgCount] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [cgCount, setCgCount]         = useState(null);
+  const [liveEvents, setLiveEvents]   = useState([]);
+  const [isMobile, setIsMobile]       = useState(window.innerWidth < 768);
 
   useEffect(() => {
     const handle = () => setIsMobile(window.innerWidth < 768);
@@ -120,13 +133,15 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    // Fetch live cellgroup count from CMS public API
     const API = process.env.REACT_APP_API_URL || '';
-    if (!API) { setCgCount(17); return; }
-    fetch(`${API}/api/public/stats`)
+    const base = API.replace(/\/api$/, '');
+    fetch(`${base}/api/public/stats`)
       .then(r => r.json())
-      .then(d => setCgCount(d.data?.cellGroups ?? 17))
-      .catch(() => setCgCount(17));
+      .then(d => {
+        setCgCount(d.data?.cellGroups ?? 17);
+        setLiveEvents(d.data?.upcomingEvents ?? []);
+      })
+      .catch(() => { setCgCount(17); setLiveEvents([]); });
   }, []);
 
   return (
@@ -226,7 +241,7 @@ export default function HomePage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', gap: 28, alignItems: 'start' }}>
             <div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="pub-2col" style={{ gap: 14 }}>
                 {[
                   { icon: '🇵🇭', lang: 'Filipino Service', langColor: '#c62828', time: 'Sunday 9:30–11:10 AM', title: 'Filipino Sunday Sermon Service', pastor: 'Sr. Pastor Park Heung Soon', loc: 'Main Hall (3rd Floor)' },
                   { icon: '🇰🇷', lang: 'Korean Service',   langColor: C.blue,    time: 'Sunday 2:00–4:00 PM', title: 'Korean Sunday Sermon Service', pastor: 'Sr. Pastor Park Heung Soon', loc: 'Medium Hall (2nd Floor)' },
@@ -248,9 +263,7 @@ export default function HomePage() {
                 ))}
               </div>
               <Reveal delay={0.3}>
-                <div style={{ marginTop: 16, padding: '14px 16px', background: 'rgba(21,101,192,0.08)', border: '1px solid rgba(21,101,192,0.18)', borderRadius: 10, fontSize: 13, color: C.sub, lineHeight: 1.6 }}>
-                  <strong style={{ color: C.blue }}>Cell Group Meetings</strong> — Tuesday & Thursday evenings at 7:00 PM across various locations in Metro Manila.
-                </div>
+                <div style={{ marginTop: 16 }} />
               </Reveal>
             </div>
 
@@ -262,13 +275,12 @@ export default function HomePage() {
                   <span style={{ flex: 1, height: 1, background: C.border, display: 'inline-block' }} />
                 </div>
                 {[
-                  { title: 'Rosario Batangas Bible Seminar', date: 'March 16–20, 2026 · 6PM–8PM' },
                   { title: '2026 Summer Retreat — Batch 1', date: 'Apr 2–4 · Taal Galilee Retreat Center' },
                   { title: '2026 Summer Retreat — Batch 2', date: 'Apr 9–11 · Taal Galilee Retreat Center' },
                   { title: "Women's Group Fellowship", date: 'March 20 · 7PM–9PM · Medium Hall' },
                   { title: 'Men\'s Group Fellowship', date: 'March 21 · 7PM–9PM · Small Hall' },
                 ].map((a, i) => (
-                  <div key={i} style={{ padding: '10px 0', borderBottom: i < 4 ? `1px solid ${C.border}` : 'none', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <div key={i} style={{ padding: '10px 0', borderBottom: i < 3 ? `1px solid ${C.border}` : 'none', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <div style={{ width: 7, height: 7, background: C.blue, borderRadius: '50%', marginTop: 6, flexShrink: 0 }} />
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 2 }}>{a.title}</div>
@@ -291,7 +303,6 @@ export default function HomePage() {
                 <span style={{ width: 20, height: 2, background: C.blue, borderRadius: 2, display: 'inline-block' }} />Events & Retreats
               </div>
               <h2 style={{ fontFamily: "'Lora',serif", fontSize: 'clamp(1.6rem,3vw,2.3rem)', fontWeight: 700, color: C.text, marginBottom: 8 }}>Upcoming Retreats / Events</h2>
-              <p style={{ fontSize: 15, color: C.muted, marginBottom: 16 }}>Events posted by our Registration Team and Admins.</p>
             </div>
           </Reveal>
 
@@ -302,36 +313,37 @@ export default function HomePage() {
           </Reveal>
 
           <div style={{ display: 'flex', gap: 18, overflowX: 'auto', paddingBottom: 12 }}>
-            {[
-              { title: '2026 Summer Retreat — Batch 1 (Manila Region)', date: 'Apr 2–4', type: 'Retreat', venue: 'Taal Galilee Retreat Center', bg: `linear-gradient(135deg, ${C.navy}, ${C.navySoft})`, emoji: '🏕️', fee: '₱900 (Adult)' },
-              { title: '2026 Summer Retreat — Batch 2', date: 'Apr 9–11', type: 'Retreat', venue: 'Taal Galilee Retreat Center', bg: `linear-gradient(135deg, ${C.navyMid}, ${C.navy})`, emoji: '⛺', fee: '₱900 (Adult)' },
-              { title: 'Murcia & Pontevedra Mission Trip', date: 'Apr 19–26', type: 'Mission', venue: 'Negros Occidental', bg: 'linear-gradient(135deg, #1a3d2e, #0f2416)', emoji: '🌿', fee: null },
-              { title: 'Rosario Batangas Bible Seminar', date: 'Mar 16–20', type: 'Seminar', venue: 'Brgy. Bagong Pook, Rosario, Batangas', bg: 'linear-gradient(135deg, #4a1a1a, #2d0f0f)', emoji: '📖', fee: null },
-              { title: 'Jinju Church Mission Team Collaboration', date: 'TBA', type: 'Mission', venue: 'Manila Central Church', bg: 'linear-gradient(135deg, #1a3a5e, #0f1e3a)', emoji: '✝️', fee: null },
-            ].map((ev, i) => (
-              <div key={i} style={{ flexShrink: 0, width: 250, background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', transition: 'all 0.22s', cursor: 'default' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = C.blue; e.currentTarget.style.boxShadow = '0 8px 28px rgba(11,36,71,0.13)'; e.currentTarget.style.transform = 'translateY(-3px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}>
-                <div style={{ height: 130, background: ev.bg, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38, opacity: 0.6 }}>
-                  {ev.emoji}
-                  <span style={{ position: 'absolute', top: 10, left: 10, background: C.gold, color: C.navy, fontSize: 10.5, fontWeight: 800, padding: '3px 9px', borderRadius: 5 }}>{ev.date}</span>
-                  <span style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(11,36,71,0.65)', color: 'rgba(255,255,255,0.9)', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.4px', backdropFilter: 'blur(4px)' }}>{ev.type}</span>
-                </div>
-                <div style={{ padding: 16 }}>
-                  <div style={{ fontFamily: "'Lora',serif", fontSize: '0.92rem', fontWeight: 600, color: C.text, lineHeight: 1.4, marginBottom: 6 }}>{ev.title}</div>
-                  <div style={{ fontSize: 11.5, color: C.muted, marginBottom: ev.fee ? 5 : 12, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {ev.venue}</div>
-                  {ev.fee && <div style={{ fontSize: 11.5, color: C.blue, fontWeight: 700, marginBottom: 12 }}>💳 {ev.fee}</div>}
-                  <button style={{ background: C.blue, color: '#fff', border: 'none', borderRadius: 7, padding: '8px 0', width: '100%', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Register</button>
-                </div>
+            {liveEvents.length === 0 ? (
+              <div style={{ padding: '32px 24px', color: C.muted, fontSize: 14, fontStyle: 'italic' }}>
+                No upcoming events at this time. Check back soon!
               </div>
-            ))}
+            ) : liveEvents.map((ev, i) => {
+              const CAT_COLORS = ['linear-gradient(135deg,#0B2447,#1A3D72)', 'linear-gradient(135deg,#14305E,#0B2447)', 'linear-gradient(135deg,#1a3d2e,#0f2416)', 'linear-gradient(135deg,#4a1a1a,#2d0f0f)', 'linear-gradient(135deg,#1a3a5e,#0f1e3a)'];
+              const bg = CAT_COLORS[i % CAT_COLORS.length];
+              const catName = ev.category?.name || 'Event';
+              const fmtDate = (d) => { if (!d) return ''; const dt = new Date(d + 'T00:00:00'); return dt.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }); };
+              const dateStr = ev.end_date && ev.end_date !== ev.start_date
+                ? `${fmtDate(ev.start_date)}–${fmtDate(ev.end_date)}`
+                : fmtDate(ev.start_date);
+              return (
+                <div key={ev.id} style={{ flexShrink: 0, width: 250, background: '#fff', border: `1.5px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', transition: 'all 0.22s', cursor: 'default' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = C.blue; e.currentTarget.style.boxShadow = '0 8px 28px rgba(11,36,71,0.13)'; e.currentTarget.style.transform = 'translateY(-3px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}>
+                  <div style={{ height: 130, background: bg, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span style={{ position: 'absolute', top: 10, left: 10, background: C.gold, color: C.navy, fontSize: 10.5, fontWeight: 800, padding: '3px 9px', borderRadius: 5 }}>{dateStr}</span>
+                    <span style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(11,36,71,0.65)', color: 'rgba(255,255,255,0.9)', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.4px', backdropFilter: 'blur(4px)' }}>{catName}</span>
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    <div style={{ fontFamily: "'Lora',serif", fontSize: '0.92rem', fontWeight: 600, color: C.text, lineHeight: 1.4, marginBottom: 6 }}>{ev.title}</div>
+                    {ev.location && <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {ev.location}</div>}
+                    <a href="/bible-seminar/schedule" style={{ display: 'block', background: C.blue, color: '#fff', border: 'none', borderRadius: 7, padding: '8px 0', width: '100%', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', textDecoration: 'none' }}>Learn More</a>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          <Reveal delay={0.2}>
-            <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: C.muted, padding: 14, background: '#fff', borderRadius: 10, border: `1px solid ${C.border}` }}>
-              📌 <strong style={{ color: C.blue }}>Book 2–3 months in advance</strong> to guarantee your slot at retreats.
-            </div>
-          </Reveal>
         </div>
       </section>
 
@@ -441,8 +453,8 @@ export default function HomePage() {
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>📍 Lot 2 Blk 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City</div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
                     <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer" style={{ background: '#FF0000', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>▶ YouTube</a>
-                    <a href="https://www.facebook.com/group/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ background: '#1877F2', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>📘 Facebook</a>
-                    <a href="https://www.jbch.org.ph" target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>🌐 Website</a>
+                    <a href="https://www.facebook.com/groups/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ background: '#1877F2', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>📘 Facebook</a>
+                    <a href="https://www.jbch.org/en/" target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>🌐 Website</a>
                   </div>
                 </div>
               </div>

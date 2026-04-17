@@ -2,6 +2,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import { LANGS, getLangCode, saveLangCode } from '../../utils/langUtils';
 
 const POLL_INTERVAL = 30000;
 
@@ -21,7 +22,7 @@ const TYPE_ICON = {
 };
 const defaultType = TYPE_ICON.info;
 
-export default function Header({ sidebarWidth, isMobile = false, onHamburger, drawerOpen = false }) {
+export default function Header({ sidebarWidth, isMobile = false }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -30,6 +31,41 @@ export default function Header({ sidebarWidth, isMobile = false, onHamburger, dr
   const [panelOpen, setPanelOpen] = useState(false);
   const [loading,   setLoading]   = useState(false);
   const panelRef = useRef(null);
+
+  // Language state
+  const [langOpen,    setLangOpen]    = useState(false);
+  const [currentLang, setCurrentLang] = useState(() => {
+    const saved = LANGS.find(l => l.code === getLangCode());
+    return saved ? saved.label : 'English';
+  });
+  const langRef = useRef(null);
+
+  // Close lang dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (langRef.current && !langRef.current.contains(e.target)) setLangOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Keep in sync with portal/landing page language changes
+  useEffect(() => {
+    const handler = (e) => {
+      const lang = LANGS.find(l => l.code === (e.detail?.code || getLangCode()));
+      if (lang) setCurrentLang(lang.label);
+    };
+    window.addEventListener('plwm-lang-change', handler);
+    return () => window.removeEventListener('plwm-lang-change', handler);
+  }, []);
+
+  const switchLang = (lang) => {
+    setCurrentLang(lang.label);
+    setLangOpen(false);
+    saveLangCode(lang.code);
+    // Reload so the googtrans cookie takes effect cleanly — matches PublicLayout behaviour
+    window.location.reload();
+  };
 
   const fetchNotifs = useCallback(async () => {
     try {
@@ -93,34 +129,60 @@ export default function Header({ sidebarWidth, isMobile = false, onHamburger, dr
     setLoading(false);
   };
 
+  // Task 4.6 — deep-link navigation on notification click
+  const handleNotifClick = (n) => {
+    if (!n.is_read) markOne(n.id);
+    if (!n.reference_id || !n.reference_type) return;
+    switch (n.reference_type) {
+      case 'service':
+        if (user?.roleName === 'Member') {
+          navigate('/portal?tab=events');
+        } else {
+          navigate('/services');
+        }
+        break;
+      case 'event':
+        if (user?.roleName === 'Member') {
+          navigate('/portal?tab=events');
+        } else {
+          navigate(`/events/${n.reference_id}`);
+        }
+        break;
+      case 'ministry_invite':
+        if (user?.roleName === 'Member') {
+          navigate('/portal?tab=events');
+        } else {
+          navigate(`/events/${n.reference_id}`);
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleLogout = async () => { await logout(); navigate('/login'); };
+
+  const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
 
   const roleColors = {
     'System Admin':      { bg: '#fef2f2', color: '#dc2626', dot: '#dc2626' },
     'Pastor':            { bg: '#f5f3ff', color: '#7c3aed', dot: '#7c3aed' },
     'Registration Team': { bg: '#eff6ff', color: '#005599', dot: '#13B5EA' },
+    'Ministry Leader':   { bg: '#e0f2fe', color: '#0369a1', dot: '#0284c7' },
     'Finance Team':      { bg: '#f0fdf4', color: '#059669', dot: '#059669' },
     'Cell Group Leader': { bg: '#fffbeb', color: '#d97706', dot: '#d97706' },
     'Group Leader':      { bg: '#ecfeff', color: '#0891b2', dot: '#0891b2' },
     'Member':            { bg: '#f8fafc', color: '#64748b', dot: '#94a3b8' },
   };
-  const rc = roleColors[user?.roleName] || roleColors['Member'];
+  const displayRole = isMinistryLeader ? 'Ministry Leader' : (user?.roleName || 'Member');
+  const rc = roleColors[displayRole] || roleColors['Member'];
 
-  // Panel width: full-screen on mobile, fixed on desktop
   const panelWidth = isMobile ? 'calc(100vw - 24px)' : '360px';
 
   return (
     <div style={{ ...S.header, left: sidebarWidth }}>
       <div style={S.left}>
-        {/* Hamburger — mobile only */}
-        {isMobile && (
-          <button onClick={onHamburger} style={S.hamburger} aria-label="Toggle menu" aria-expanded={drawerOpen}>
-            <span style={{ ...S.hbar, transform: drawerOpen ? 'translateY(6px) rotate(45deg)' : 'none' }} />
-            <span style={{ ...S.hbar, opacity: drawerOpen ? 0 : 1 }} />
-            <span style={{ ...S.hbar, transform: drawerOpen ? 'translateY(-6px) rotate(-45deg)' : 'none' }} />
-          </button>
-        )}
-
+        {/* NO hamburger on mobile — navigation is via bottom tab bar + More drawer */}
         <span style={S.plwmBadge}>PLWM-MCC</span>
         {!isMobile && (
           <>
@@ -131,21 +193,56 @@ export default function Header({ sidebarWidth, isMobile = false, onHamburger, dr
       </div>
 
       <div style={S.right}>
-        {/* Role tag — hide on very small screens */}
         {!isMobile && (
           <div style={{ ...S.roleTag, background: rc.bg }}>
             <span style={{ ...S.roleDot, background: rc.dot }} />
-            <span style={{ ...S.roleText, color: rc.color }}>{user?.roleName}</span>
+            <span style={{ ...S.roleText, color: rc.color }}>{displayRole}</span>
           </div>
         )}
 
-        {/* Email — hide on mobile */}
         {!isMobile && (
           <>
             <div style={S.divider} />
             <span style={S.email}>{user?.email}</span>
           </>
         )}
+
+        {/* Language picker */}
+        <div ref={langRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => setLangOpen(p => !p)}
+            style={{ background: langOpen ? '#e8f4fd' : 'transparent', border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', color: '#374151', fontFamily: 'inherit', fontWeight: 500 }}
+            title="Change language"
+          >
+            <span style={{ fontSize: 15 }}>{LANGS.find(l => l.label === currentLang)?.flag || '🌐'}</span>
+            {!isMobile && <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{currentLang === 'English' ? 'EN' : currentLang.slice(0, 2).toUpperCase()}</span>}
+          </button>
+
+          {langOpen && (
+            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', zIndex: 300, minWidth: 200, overflow: 'hidden', animation: 'slideDown 0.18s ease' }}>
+              <div style={{ padding: '8px 14px 6px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Language</div>
+              {[{ groupLabel: 'International', langs: LANGS.slice(0, 2) }, { groupLabel: 'Filipino Languages', langs: LANGS.slice(2) }].map(group => (
+                <div key={group.groupLabel}>
+                  <div style={{ padding: '4px 14px 2px', fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{group.groupLabel}</div>
+                  {group.langs.map(lang => (
+                    <button key={lang.code} onClick={() => switchLang(lang)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', fontSize: 13, fontWeight: currentLang === lang.label ? 700 : 400, color: currentLang === lang.label ? '#005599' : '#374151', background: currentLang === lang.label ? '#eff6ff' : 'transparent', border: 'none', width: '100%', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'background 0.12s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = currentLang === lang.label ? '#eff6ff' : '#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background = currentLang === lang.label ? '#eff6ff' : 'transparent'}
+                    >
+                      <span style={{ fontSize: 16 }}>{lang.flag}</span>
+                      <span>{lang.label}</span>
+                      {currentLang === lang.label && <span style={{ marginLeft: 'auto', color: '#005599', fontSize: 12 }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+              ))}
+              <div style={{ padding: '8px 14px', borderTop: '1px solid #f1f5f9', fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>
+                Powered by Google Translate
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Notifications bell */}
         <div ref={panelRef} style={S.bellWrap}>
@@ -184,7 +281,7 @@ export default function Header({ sidebarWidth, isMobile = false, onHamburger, dr
                     return (
                       <div key={n.id}
                         style={{ ...S.notifRow, background: n.is_read ? '#fff' : '#f0f6ff', borderLeft: `3px solid ${n.is_read ? 'transparent' : t.dot}` }}
-                        onClick={() => !n.is_read && markOne(n.id)}
+                        onClick={() => handleNotifClick(n)}
                       >
                         <div style={{ ...S.notifIconWrap, background: t.bg }}>
                           <span style={S.notifIcon}>{t.icon}</span>
@@ -214,39 +311,37 @@ export default function Header({ sidebarWidth, isMobile = false, onHamburger, dr
 }
 
 const S = {
-  header:      { position:'fixed', top:0, right:0, height:'64px', background:'#fff', borderBottom:'2px solid #e8f4fd', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 16px', zIndex:99, transition:'left 0.25s ease', boxShadow:'0 2px 12px rgba(0,85,153,0.08)' },
-  left:        { display:'flex', alignItems:'center', gap:'10px' },
-  hamburger:   { display:'flex', flexDirection:'column', gap:5, background:'none', border:'none', cursor:'pointer', padding:'8px 6px', borderRadius:6 },
-  hbar:        { display:'block', width:22, height:2, background:'#374151', borderRadius:2, transition:'all 0.25s' },
-  plwmBadge:   { fontSize:'11px', fontWeight:'800', color:'#005599', letterSpacing:'1.5px', background:'#e8f4fd', padding:'3px 10px', borderRadius:'6px', whiteSpace:'nowrap' },
-  divider:     { width:'1px', height:'20px', background:'#e2e8f0', flexShrink:0 },
-  pageTitle:   { fontSize:'15px', fontWeight:'600', color:'#374151', margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'300px' },
-  right:       { display:'flex', alignItems:'center', gap:'10px' },
-  roleTag:     { display:'flex', alignItems:'center', gap:'6px', border:'1px solid #e2e8f0', borderRadius:'20px', padding:'5px 13px', whiteSpace:'nowrap' },
-  roleDot:     { width:'7px', height:'7px', borderRadius:'50%', flexShrink:0 },
-  roleText:    { fontSize:'12px', fontWeight:'700' },
-  email:       { fontSize:'13px', color:'#64748b', maxWidth:'200px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' },
-  logoutBtn:   { background:'linear-gradient(135deg,#005599,#13B5EA)', border:'none', color:'#fff', borderRadius:'8px', padding:'7px 16px', fontSize:'13px', fontWeight:'600', cursor:'pointer', letterSpacing:'0.2px', whiteSpace:'nowrap' },
-  bellWrap:    { position:'relative' },
-  bellBtn:     { position:'relative', border:'none', borderRadius:'8px', width:'38px', height:'38px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.15s' },
-  bellIcon:    { fontSize:'18px', lineHeight:1 },
-  badge:       { position:'absolute', top:'4px', right:'4px', background:'#ef4444', color:'#fff', fontSize:'9px', fontWeight:'800', borderRadius:'10px', padding:'1px 4px', minWidth:'14px', textAlign:'center', lineHeight:'12px', border:'1.5px solid #fff' },
-  panel:       { position:'absolute', top:'calc(100% + 10px)', right:0, background:'#fff', borderRadius:'16px', boxShadow:'0 8px 40px rgba(0,0,0,0.14)', border:'1px solid #e8f0fe', overflow:'hidden', zIndex:200, animation:'slideDown 0.2s ease' },
-  panelHeader: { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 18px 12px', borderBottom:'1px solid #f1f5f9' },
-  panelTitle:  { fontSize:'15px', fontWeight:'800', color:'#0f172a' },
-  unreadPill:  { background:'#e8f4fd', color:'#005599', fontSize:'11px', fontWeight:'700', padding:'2px 8px', borderRadius:'20px' },
-  panelActions:{ display:'flex', gap:'10px' },
-  actionLink:  { background:'none', border:'none', fontSize:'12px', fontWeight:'600', color:'#005599', cursor:'pointer', padding:0 },
-  panelList:   { maxHeight:'360px', overflowY:'auto' },
-  notifRow:    { display:'flex', alignItems:'flex-start', gap:'12px', padding:'12px 16px', cursor:'pointer', transition:'background 0.15s', borderBottom:'1px solid #f8fafc' },
-  notifIconWrap:{ width:'34px', height:'34px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:'2px' },
-  notifIcon:   { fontSize:'16px' },
-  notifContent:{ flex:1, minWidth:0 },
-  notifMsg:    { fontSize:'13px', color:'#1e293b', margin:'0 0 4px', lineHeight:'1.45', fontWeight:'500' },
-  notifTime:   { fontSize:'11px', color:'#94a3b8', fontWeight:'500' },
-  deleteNotif: { background:'none', border:'none', color:'#cbd5e1', cursor:'pointer', fontSize:'11px', padding:'2px 4px', flexShrink:0, lineHeight:1, marginTop:'2px', borderRadius:'4px' },
-  emptyPanel:  { display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 24px', gap:'6px' },
-  emptyBell:   { fontSize:'36px', marginBottom:'4px' },
-  emptyText:   { fontSize:'14px', fontWeight:'700', color:'#374151' },
-  emptyHint:   { fontSize:'12px', color:'#94a3b8' },
+  header:      { position: 'fixed', top: 0, right: 0, height: '64px', background: '#fff', borderBottom: '2px solid #e8f4fd', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', zIndex: 99, transition: 'left 0.25s ease', boxShadow: '0 2px 12px rgba(0,85,153,0.08)' },
+  left:        { display: 'flex', alignItems: 'center', gap: '10px' },
+  plwmBadge:   { fontSize: '11px', fontWeight: '800', color: '#005599', letterSpacing: '1.5px', background: '#e8f4fd', padding: '3px 10px', borderRadius: '6px', whiteSpace: 'nowrap' },
+  divider:     { width: '1px', height: '20px', background: '#e2e8f0', flexShrink: 0 },
+  pageTitle:   { fontSize: '15px', fontWeight: '600', color: '#374151', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' },
+  right:       { display: 'flex', alignItems: 'center', gap: '10px' },
+  roleTag:     { display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '5px 13px', whiteSpace: 'nowrap' },
+  roleDot:     { width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0 },
+  roleText:    { fontSize: '12px', fontWeight: '700' },
+  email:       { fontSize: '13px', color: '#64748b', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  logoutBtn:   { background: 'linear-gradient(135deg,#005599,#13B5EA)', border: 'none', color: '#fff', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', letterSpacing: '0.2px', whiteSpace: 'nowrap' },
+  bellWrap:    { position: 'relative' },
+  bellBtn:     { position: 'relative', border: 'none', borderRadius: '8px', width: '38px', height: '38px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' },
+  bellIcon:    { fontSize: '18px', lineHeight: 1 },
+  badge:       { position: 'absolute', top: '4px', right: '4px', background: '#ef4444', color: '#fff', fontSize: '9px', fontWeight: '800', borderRadius: '10px', padding: '1px 4px', minWidth: '14px', textAlign: 'center', lineHeight: '12px', border: '1.5px solid #fff' },
+  panel:       { position: 'absolute', top: 'calc(100% + 10px)', right: 0, background: '#fff', borderRadius: '16px', boxShadow: '0 8px 40px rgba(0,0,0,0.14)', border: '1px solid #e8f0fe', overflow: 'hidden', zIndex: 200, animation: 'slideDown 0.2s ease' },
+  panelHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 18px 12px', borderBottom: '1px solid #f1f5f9' },
+  panelTitle:  { fontSize: '15px', fontWeight: '800', color: '#0f172a' },
+  unreadPill:  { background: '#e8f4fd', color: '#005599', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px' },
+  panelActions:{ display: 'flex', gap: '10px' },
+  actionLink:  { background: 'none', border: 'none', fontSize: '12px', fontWeight: '600', color: '#005599', cursor: 'pointer', padding: 0 },
+  panelList:   { maxHeight: '360px', overflowY: 'auto' },
+  notifRow:    { display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 16px', cursor: 'pointer', transition: 'background 0.15s', borderBottom: '1px solid #f8fafc' },
+  notifIconWrap:{ width: '34px', height: '34px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' },
+  notifIcon:   { fontSize: '16px' },
+  notifContent:{ flex: 1, minWidth: 0 },
+  notifMsg:    { fontSize: '13px', color: '#1e293b', margin: '0 0 4px', lineHeight: '1.45', fontWeight: '500' },
+  notifTime:   { fontSize: '11px', color: '#94a3b8', fontWeight: '500' },
+  deleteNotif: { background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: '11px', padding: '2px 4px', flexShrink: 0, lineHeight: 1, marginTop: '2px', borderRadius: '4px' },
+  emptyPanel:  { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 24px', gap: '6px' },
+  emptyBell:   { fontSize: '36px', marginBottom: '4px' },
+  emptyText:   { fontSize: '14px', fontWeight: '700', color: '#374151' },
+  emptyHint:   { fontSize: '12px', color: '#94a3b8' },
 };

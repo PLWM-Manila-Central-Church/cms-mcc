@@ -29,14 +29,38 @@ exports.getNotificationById = async (id, userId) => {
 
 // ── Create Notification ──────────────────────────────────────
 exports.createNotification = async (data) => {
-  const { user_id, type, message } = data;
+  const { user_id, type, message, reference_id = null, reference_type = null } = data;
   return await Notification.create({
     user_id,
     type,
     message,
     is_read: 0,
     read_at: null,
+    reference_id,
+    reference_type,
   });
+};
+
+// ── Bulk Create Notifications ────────────────────────────────
+// Used for broadcast notifications (event/service publish).
+// Accepts an array of user IDs and a shared payload.
+exports.bulkCreateNotifications = async (
+  userIds,
+  { type, message, reference_id = null, reference_type = null },
+) => {
+  if (!userIds || userIds.length === 0) return;
+  const now = new Date();
+  const records = userIds.map((uid) => ({
+    user_id:        uid,
+    type,
+    message,
+    is_read:        0,
+    read_at:        null,
+    reference_id,
+    reference_type,
+    created_at:     now,
+  }));
+  return await Notification.bulkCreate(records, { ignoreDuplicates: true });
 };
 
 // ── Mark Notification as Read ────────────────────────────────

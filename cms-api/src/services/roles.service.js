@@ -1,7 +1,8 @@
 "use strict";
 
 const { Role, User } = require("../models");
-const auditLog = require("../helpers/auditLog.helper");
+const auditLog        = require("../helpers/auditLog.helper");
+const permissionCache = require("../helpers/permissionCache.helper");
 
 // ── Get All Roles ────────────────────────────────────────────
 exports.getAllRoles = async () => {
@@ -55,6 +56,7 @@ exports.updateRole = async (id, data, updatedBy) => {
   });
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_ROLE", targetTable: "roles", targetId: id });
+  permissionCache.invalidate(parseInt(id));
   return role;
 };
 
@@ -75,5 +77,6 @@ exports.deleteRole = async (id, deletedBy) => {
 
   await role.destroy();
   auditLog.log({ userId: deletedBy, action: "DELETE_ROLE", targetTable: "roles", targetId: id });
+  permissionCache.invalidate(parseInt(id));
   return { message: "Role deleted successfully." };
 };

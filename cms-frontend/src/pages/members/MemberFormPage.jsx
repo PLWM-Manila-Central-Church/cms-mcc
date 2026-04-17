@@ -1,22 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
+import useIsMobile from '../../hooks/useIsMobile';
 
 export default function MemberFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
+  const isMobile = useIsMobile();
 
   const [form, setForm] = useState({
     first_name: '', last_name: '', email: '', phone: '',
     birthdate: '', spiritual_birthday: '', address: '',
     gender: '', status: 'Active',
-    cell_group_id: '', group_id: '', referred_by: '',
+    cell_group_id: '', group_id: '', referred_by: '', ministry_role_id: '',
   });
 
-  const [cellGroups, setCellGroups] = useState([]);
-  const [groups, setGroups]         = useState([]);
-  const [members, setMembers]       = useState([]);
+  const [cellGroups,    setCellGroups]    = useState([]);
+  const [groups,        setGroups]        = useState([]);
+  const [members,       setMembers]       = useState([]);
+  const [ministryRoles, setMinistryRoles] = useState([]);
   const [loading, setLoading]       = useState(false);
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState('');
@@ -24,14 +27,16 @@ export default function MemberFormPage() {
   useEffect(() => {
     const loadDropdowns = async () => {
       try {
-        const [cgRes, grRes, memRes] = await Promise.all([
+        const [cgRes, grRes, memRes, mrRes] = await Promise.all([
           axiosInstance.get('/members/dropdowns/cell-groups'),
           axiosInstance.get('/members/dropdowns/groups'),
           axiosInstance.get('/members?limit=500&page=1'),
+          axiosInstance.get('/ministry/roles'),
         ]);
         setCellGroups(cgRes.data.data || []);
         setGroups(grRes.data.data || []);
         setMembers(memRes.data.data.members || []);
+        setMinistryRoles(mrRes.data.data || []);
       } catch {}
     };
     loadDropdowns();
@@ -57,6 +62,7 @@ export default function MemberFormPage() {
           cell_group_id:      m.cell_group_id      || '',
           group_id:           m.group_id           || '',
           referred_by:        m.referred_by        || '',
+          ministry_role_id:   '',
         });
       } catch {
         setError('Failed to load member.');
@@ -114,7 +120,7 @@ export default function MemberFormPage() {
         {/* Personal Info */}
         <div style={styles.section}>
           <h2 style={styles.sectionTitle}>Personal Information</h2>
-          <div style={styles.grid2}>
+          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'16px' }}>
             <Field label="First Name *" name="first_name" value={form.first_name} onChange={handleChange} required />
             <Field label="Last Name *"  name="last_name"  value={form.last_name}  onChange={handleChange} required />
             <Field label="Email"        name="email"      value={form.email}       onChange={handleChange} type="email" />
@@ -138,7 +144,7 @@ export default function MemberFormPage() {
         {/* Classification */}
         <div style={styles.section}>
           <h2 style={styles.sectionTitle}>Classification</h2>
-          <div style={styles.grid2}>
+          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'16px' }}>
             <div style={styles.fieldWrap}>
               <label style={styles.label}>Gender</label>
               <select name="gender" value={form.gender} onChange={handleChange} style={styles.select}>
@@ -151,9 +157,10 @@ export default function MemberFormPage() {
             <div style={styles.fieldWrap}>
               <label style={styles.label}>Status</label>
               <select name="status" value={form.status} onChange={handleChange} style={styles.select}>
+                <option value="New">New</option>
                 <option value="Active">Active</option>
+                <option value="Semi-Active">Semi-Active</option>
                 <option value="Inactive">Inactive</option>
-                <option value="Visitor">Visitor</option>
               </select>
             </div>
 
@@ -190,6 +197,18 @@ export default function MemberFormPage() {
                   ))}
               </select>
             </div>
+
+            {!isEdit && (
+              <div style={styles.fieldWrap}>
+                <label style={styles.label}>Ministry</label>
+                <select name="ministry_role_id" value={form.ministry_role_id} onChange={handleChange} style={styles.select}>
+                  <option value="">— None —</option>
+                  {ministryRoles.map(mr => (
+                    <option key={mr.id} value={mr.id}>{mr.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -221,13 +240,7 @@ function Field({ label, name, value, onChange, type = 'text', required }) {
         onFocus={e => e.target.style.borderColor = '#0066b3'}
         onBlur={e => e.target.style.borderColor = '#e2e8f0'}
       />
-      <style>{`
-        @media (max-width: 768px) {
-          [style*="gridTemplateColumns: '1fr 1fr'"],
-          [style*="grid-template-columns: '1fr 1fr'"] { grid-template-columns: 1fr !important; }
-          [style*="padding: '32px'"] { padding: 16px !important; }
-        }
-      `}</style>
+
     </div>
   );
 }
@@ -247,14 +260,14 @@ const styles = {
   },
   form:    { display: 'flex', flexDirection: 'column', gap: '24px' },
   section: {
-    background: '#fff', borderRadius: '12px', padding: '24px',
+    background: '#fff', borderRadius: '12px', padding: 'clamp(16px,4vw,24px)',
     boxShadow: '0 1px 8px rgba(0,0,0,0.06)'
   },
   sectionTitle: {
     fontSize: '15px', fontWeight: '700', color: '#005599',
     margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9'
   },
-  grid2:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
+  grid2:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }, // overridden below
   fieldWrap:{ display: 'flex', flexDirection: 'column', gap: '6px' },
   label:    { fontSize: '13px', fontWeight: '600', color: '#374151' },
   input: {
@@ -272,7 +285,7 @@ const styles = {
     borderRadius: '8px', outline: 'none', background: '#fff',
     color: '#0f172a', width: '100%', boxSizing: 'border-box'
   },
-  formActions: { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
+  formActions: { display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' },
   cancelBtn: {
     background: '#f1f5f9', color: '#475569', border: 'none',
     borderRadius: '8px', padding: '12px 24px', fontSize: '14px',

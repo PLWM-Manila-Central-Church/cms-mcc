@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
   return (
     <div style={S.page}>
       {/* ── Left panel ── */}
-      <div style={S.left}>
+      <div style={S.left} className="forgot-left">
         <div style={{ ...S.bgPhoto, backgroundImage: `url(${BG_URL})` }} />
         <div style={S.overlay} />
         <div style={S.leftContent}>
@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
       </div>
 
       {/* ── Right panel ── */}
-      <div style={S.right}>
+      <div style={S.right} className="forgot-right">
         <div style={S.card}>
           <div style={S.cardAccent} />
           <div style={S.cardBody}>
@@ -159,6 +159,10 @@ export default function ForgotPasswordPage() {
       <style>{`
         @keyframes spin    { to { transform: rotate(360deg); } }
         @keyframes fadeUp  { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        @media (max-width: 768px) {
+          .forgot-left { display: none !important; }
+          .forgot-right { flex: 1 !important; padding: 24px 16px !important; }
+        }
       `}</style>
     </div>
   );
@@ -203,8 +207,8 @@ const S = {
   field:       { display:'flex', flexDirection:'column', gap:'7px' },
   label:       { fontSize:'12px', fontWeight:'700', color:'#374151', letterSpacing:'0.4px', textTransform:'uppercase' },
   fieldIcon:   { position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', fontSize:'14px', opacity:0.5, pointerEvents:'none' },
-  input:       { padding:'12px 16px 12px 40px', fontSize:'14px', border:'1.5px solid #e2e8f0', borderRadius:'10px', outline:'none', transition:'border-color 0.2s,box-shadow 0.2s', width:'100%', boxSizing:'border-box', color:'#0f172a', background:'#fafbfc' },
-  submitBtn:   { background:'linear-gradient(135deg,#003d70 0%,#005599 50%,#13B5EA 100%)', color:'#fff', border:'none', borderRadius:'10px', padding:'14px', fontSize:'15px', fontWeight:'700', cursor:'pointer', transition:'opacity 0.2s', letterSpacing:'0.3px', width:'100%' },
+  input:       { padding:'12px 16px 12px 40px', fontSize:'16px', border:'1.5px solid #e2e8f0', borderRadius:'10px', outline:'none', transition:'border-color 0.2s,box-shadow 0.2s', width:'100%', boxSizing:'border-box', color:'#0f172a', background:'#fafbfc' },
+  submitBtn:   { background:'linear-gradient(135deg,#003d70 0%,#005599 50%,#13B5EA 100%)', color:'#fff', border:'none', borderRadius:'10px', padding:'14px', fontSize:'15px', fontWeight:'700', cursor:'pointer', transition:'opacity 0.2s', letterSpacing:'0.3px', width:'100%', minHeight:'52px' },
   loadingRow:  { display:'flex', alignItems:'center', justifyContent:'center', gap:'10px' },
   spinner:     { display:'inline-block', width:'16px', height:'16px', border:'2.5px solid rgba(255,255,255,0.3)', borderTop:'2.5px solid #fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' },
 

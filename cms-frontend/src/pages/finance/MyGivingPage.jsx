@@ -105,7 +105,7 @@ export default function MyGivingPage() {
 
       {/* Table */}
       <div style={s.tableWrap}>
-        <table style={s.table}>
+        <div style={s.tableScroll}><table style={s.table}>
           <thead>
             <tr style={s.thead}>
               <th style={s.th}>Date</th>
@@ -139,7 +139,7 @@ export default function MyGivingPage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {/* Pagination */}
@@ -171,12 +171,13 @@ const s = {
   paymentIcon:    { fontSize: '20px' },
   paymentName:    { fontSize: '13px', fontWeight: '700', color: '#78350f' },
   paymentValue:   { fontSize: '14px', color: '#92400e', marginTop: '2px', fontFamily: 'monospace' },
-  filterBar:      { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
+  filterBar:      { display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
   filterLabel:    { fontSize: '14px', color: '#374151', fontWeight: '500' },
   filterInput:    { padding: '8px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none' },
   clearBtn:       { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   errorBox:       { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
   tableWrap:      { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  tableScroll:    { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:          { width: '100%', borderCollapse: 'collapse' },
   thead:          { background: '#f8fafc' },
   th:             { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },

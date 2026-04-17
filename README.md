@@ -1,28 +1,71 @@
 # PLWM-MCC Church Management System
 
-**Philippine Life Word Mission — Manila Central Church**  
-Parañaque City, Philippines
+A full-stack web application for managing church operations at **Philippine Life Word Mission — Manila Central Church (PLWM-MCC)**.
 
 ---
 
 ## Overview
 
-A full-stack Church Management System (CMS) built for PLWM Manila Central Church. The system includes a **public-facing church website** and a **protected internal management system** for staff and members.
+The CMS covers member management, attendance tracking, event registration, finance recording, ministry assignments, inventory, archives, and more — all behind a role-based access control system.
+
+It consists of two separate applications that live in this monorepo:
+
+| Folder | Stack | Deployed on |
+|--------|-------|-------------|
+| `frontend/` | React.js | Vercel |
+| `backend/` | Node.js · Express · Sequelize · MySQL | Railway |
+
+---
+
+## Features
+
+- **Member Management** — masterfile-style directory with cell group, group, status, age, and birthday fields
+- **User Accounts** — role-based access; first login requires a password change
+- **Member Portal** — dedicated interface for church members to view their profile, attendance, offerings, and register for services/events
+- **Attendance** — manual check-in, barcode scan, and pre-registration (RSVP) with real-time display
+- **Services** — create, publish, and complete services; attendance recorded per service
+- **Events** — registration with capacity tracking; visible on the public landing page
+- **Finance** — tithe and offering records per member
+- **Ministry** — role assignments per service with member confirmation
+- **Inventory** — item tracking, request workflow, and low-stock alerts
+- **Archives** — file storage with visibility tiers (public / restricted / confidential)
+- **Cell Groups & Groups** — manage church organizational structure
+- **Audit Logs** — system activity history
+- **Settings** — admin-only system configuration
+- **Public Landing Page** — church information, live event listings, service schedules, and social links
+
+---
+
+## Roles
+
+| Role | Access |
+|------|--------|
+| System Admin | Full access to everything |
+| Pastor | Read-heavy access; can see confidential archives |
+| Registration Team | Members, users, attendance, events, services |
+| Finance Team | Finance records; restricted archives |
+| Cell Group Leader | Cell groups, attendance recording |
+| Group Leader | Groups, attendance recording |
+| Member | Member portal only |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | React.js (Create React App) |
-| **Backend** | Node.js + Express + Sequelize |
-| **Database** | MySQL (hosted on Railway) |
-| **Auth** | JWT (8h access token + 7d refresh token) |
-| **Email** | Brevo API (`BREVO_API_KEY`) |
-| **Frontend hosting** | Vercel |
-| **Backend hosting** | Railway |
-| **ORM migrations** | sequelize-cli |
+**Frontend**
+- React 18
+- React Router v6
+- Axios
+- Google Translate integration (multi-language support)
+
+**Backend**
+- Node.js + Express
+- Sequelize ORM
+- MySQL 8+
+- JWT authentication (access + refresh tokens)
+- Multer (file uploads)
+- Resend (transactional email)
+- Express Rate Limit
 
 ---
 
@@ -30,244 +73,140 @@ A full-stack Church Management System (CMS) built for PLWM Manila Central Church
 
 ```
 cms-mcc/
-├── cms-frontend/          # React frontend (deployed to Vercel)
-│   ├── public/
-│   │   ├── index.html     # viewport-fit=cover for notch/fold support
-│   │   ├── logo.jpg       # Church logo
-│   │   ├── mcc.jpg        # MCC building photo (login page background)
-│   │   └── smr.jpg        # Summer retreat photo
+├── frontend/
 │   └── src/
-│       ├── api/           # Axios instance + interceptors
-│       ├── components/
-│       │   └── layout/
-│       │       ├── MainLayout.jsx   # Responsive: drawer on mobile, collapse on tablet
-│       │       ├── Sidebar.jsx      # Nav sidebar with mobile drawer mode
-│       │       └── Header.jsx       # Top bar with hamburger + notifications
-│       ├── context/
-│       │   └── AuthContext.jsx      # JWT auth + permissions
-│       ├── pages/
-│       │   ├── public/              # Public church website (no auth)
-│       │   │   ├── PublicLayout.jsx # Shared nav + footer + Google Translate
-│       │   │   ├── HomePage.jsx     # Landing page with YouTube video hero
-│       │   │   ├── BibleSeminarPage.jsx
-│       │   │   ├── BibleSeminarAdultsPage.jsx  # 5 video series
-│       │   │   ├── BibleSeminarSchedulePage.jsx
-│       │   │   ├── LatestSermonPage.jsx
-│       │   │   └── OtherPages.jsx   # Sermon, World Mission, Introduction, Beliefs, CI
-│       │   ├── auth/
-│       │   │   ├── LoginPage.jsx    # Split layout (mcc.jpg bg + form)
-│       │   │   ├── ForgotPasswordPage.jsx
-│       │   │   ├── ResetPasswordPage.jsx
-│       │   │   └── ForceChangePassword.jsx
-│       │   └── [cms pages]/         # Dashboard, Members, Finance, Events, etc.
-│       ├── routes/
-│       │   ├── AppRoute.jsx         # Route definitions (public + protected)
-│       │   └── ProtectedRoute.jsx   # Guards: unauthenticated → /login
-│       ├── utils/
-│       │   └── constants.js         # NAV_ITEMS, permissions, role constants
-│       ├── index.css                # Global responsive CSS + breakpoints
-│       └── index.js
+│       ├── api/              # Axios instance
+│       ├── components/       # Shared layout components (Sidebar, Header)
+│       ├── context/          # Auth context
+│       ├── hooks/            # Custom hooks
+│       ├── pages/            # Page components (one folder per feature)
+│       ├── routes/           # Route definitions and guards
+│       └── utils/            # Constants, language utilities
 │
-└── cms-api/               # Express backend (deployed to Railway)
-    ├── migrations/        # Sequelize migration files
-    ├── seeders/           # Seed data
+└── backend/
+    ├── migrations/           # Sequelize migration files
+    ├── seeders/              # Database seed files
     └── src/
-        ├── app.js         # Express app + CORS + route registration
-        ├── server.js      # DB connect + listen
-        ├── config/        # DB + Sequelize config
-        ├── controllers/   # Request handlers
-        ├── services/      # Business logic
-        ├── models/        # Sequelize models (37 tables)
-        ├── routes/        # Express routers
-        ├── middlewares/   # verifyToken, authorize, errorHandler
-        ├── helpers/
-        │   └── auditLog.helper.js   # Fire-and-forget audit logging
-        └── utils/
-            └── mailer.js            # Brevo API email
+        ├── config/           # Database and Sequelize config
+        ├── controllers/      # Route handler logic
+        ├── helpers/          # Audit log, permission cache
+        ├── middlewares/      # Auth, authorization, error handler, upload
+        ├── models/           # Sequelize models
+        ├── routes/           # Express route definitions
+        ├── services/         # Business logic layer
+        └── utils/            # Mailer and other utilities
 ```
 
 ---
 
-## Roles & Permissions
+## Getting Started (Local Development)
 
-| Role | Description |
-|---|---|
-| **System Admin** | Full access to all modules |
-| **Pastor** | Dashboard, members, finance view, events, audit logs |
-| **Registration Team** | Members, events, services, attendance |
-| **Finance Team** | Finance, members view |
-| **Cell Group Leader** | Cell groups, members view, events, inventory requests |
-| **Group Leader** | Group view, events, inventory requests |
-| **Member** | My giving, events (self-registration), services |
+### Prerequisites
+- Node.js 18+
+- MySQL 8+
+- npm
 
----
+### Backend
 
-## Public Website Routes
+```bash
+cd backend
+npm install
+# Create a .env file — see Environment Variables section below
+npx sequelize-cli db:migrate
+npx sequelize-cli db:seed:all
+npm run dev
+```
 
-| Path | Page |
-|---|---|
-| `/` | Home (YouTube video hero, gatherings, events, mission) |
-| `/bible-seminar` | Bible Seminar introduction (7 topics) |
-| `/bible-seminar/adults` | 5-video adult seminar series |
-| `/bible-seminar/schedule` | 2026 seminar & retreat schedule |
-| `/sermon/latest` | Latest sermon (playlist embed) |
-| `/sermon/sunday` | Sunday sermon archive |
-| `/sermon/christian-life` | Christian Life Seminar series |
-| `/world-mission` | PLWM overview (108 churches, 60 branches) |
-| `/world-mission/status` | Full church & branch list |
-| `/introduction` | Church introduction |
-| `/introduction/beliefs` | What We Believe (7 doctrinal statements) |
-| `/introduction/ci` | Church Identity |
+### Frontend
 
----
-
-## CMS Routes (Protected)
-
-| Path | Module |
-|---|---|
-| `/dashboard` | Role-specific dashboard with stats |
-| `/members` | Member directory, profiles, form |
-| `/cell-groups` | Cell group management |
-| `/ministry` | Ministry roles and assignments |
-| `/users` | User account management |
-| `/attendance` | Service attendance overview |
-| `/services` | Service schedules + attendance |
-| `/finance` | Financial records + giving |
-| `/events` | Events + registration |
-| `/inventory` | Inventory items + requests |
-| `/archives` | Document archive + versions |
-| `/audit-logs` | System audit log |
-| `/settings` | System settings |
+```bash
+cd frontend
+npm install
+# Create a .env file — see Environment Variables section below
+npm start
+```
 
 ---
 
 ## Environment Variables
 
-### Frontend (Vercel)
+**Backend** — create `backend/.env`:
 
-```env
-REACT_APP_API_URL=https://your-railway-app.railway.app
 ```
-
-### Backend (Railway)
-
-```env
 PORT=5000
-NODE_ENV=production
-
-# Database
-DB_HOST=your-railway-db-host
-DB_PORT=3306
-DB_NAME=cms_mcc
-DB_USER=root
-DB_PASSWORD=your-password
-
-# JWT
-JWT_SECRET=your-jwt-secret
-JWT_EXPIRES_IN=8h
-REFRESH_TOKEN_SECRET=your-refresh-secret
-REFRESH_TOKEN_EXPIRES_IN=7d
-
-# CORS
-ALLOWED_ORIGIN=https://cms-mcc.vercel.app,https://your-other-origin.com
-
-# Email (Brevo)
-BREVO_API_KEY=your-brevo-api-key
-SMTP_FROM=PLWM-MCC <noreply@yourdomain.com>
-
-# Frontend URL (for password reset links)
-FRONTEND_URL=https://cms-mcc.vercel.app
-
-# Misc
+DB_HOST=
+DB_PORT=
+DB_NAME=
+DB_USER=
+DB_PASS=
+JWT_SECRET=
+JWT_REFRESH_SECRET=
+RESEND_API_KEY=
+RESEND_FROM=
+FRONTEND_URL=
+ALLOWED_ORIGIN=
 BCRYPT_ROUNDS=10
 ```
 
----
+**Frontend** — create `frontend/.env`:
 
-## Local Development
-
-### Frontend
-```bash
-cd cms-frontend
-npm install
-# Create .env.local:
-echo "REACT_APP_API_URL=http://localhost:5000" > .env.local
-npm start
 ```
-
-### Backend
-```bash
-cd cms-api
-npm install
-# Create .env file with variables above (DB pointing to local MySQL)
-npx sequelize-cli db:migrate
-npx sequelize-cli db:seed:all
-npm run dev
+REACT_APP_API_URL=http://localhost:5000/api
 ```
 
 ---
 
 ## Deployment
 
-### Vercel (Frontend)
-1. Connect GitHub repo to Vercel
-2. Set `REACT_APP_API_URL` in Vercel environment variables
-3. Build command: `npm run build`
-4. Output directory: `build`
+| Service | Platform | Trigger |
+|---------|----------|---------|
+| Backend API | Railway | Push to `main` / `fix/bug` branch |
+| Frontend | Vercel | Push to `fix/bug` branch (promoted to production) |
 
-### Railway (Backend)
-1. Connect GitHub repo to Railway
-2. Set all backend environment variables in Railway dashboard
-3. Start command: `npx sequelize-cli db:migrate && node src/server.js`
-
----
-
-## Responsive Design
-
-The entire app is optimized for all device sizes:
-
-| Breakpoint | Target devices |
-|---|---|
-| `≤ 320px` | Samsung Galaxy Z Fold (closed), very small phones |
-| `≤ 480px` | Small phones (iPhone SE, Galaxy A series) |
-| `≤ 768px` | Phones (iPhone 14, Galaxy S24) |
-| `≤ 1024px` | Tablets (iPad, Galaxy Tab, iPad mini) |
-| `> 1024px` | Laptops and desktops |
-
-**Mobile behavior:**
-- CMS sidebar becomes a full-screen drawer with backdrop overlay
-- Header shows hamburger menu; hides email and role tag
-- All data tables scroll horizontally
-- All multi-column grids stack to single column
-- Login page shows form only (photo panel hidden)
-
-**Public website:**
-- Navigation dropdowns are click-toggle (works on touch)
-- Language bar + nav bar scroll as one unit (no floating gap)
-- YouTube video hero disabled on mobile (replaced with solid background)
-- All section grids collapse at 900px → 600px → 320px progressively
+**After pushing backend changes that include new migrations:**
+```bash
+npx sequelize-cli db:migrate
+```
+Railway runs this automatically if configured in the start command.
 
 ---
 
-## PLWM Mission Data
+## API
 
-- **108 PLWM Churches** across Luzon, Visayas, Mindanao, and Palawan
-- **60 Mission Branches** nationwide
-- Scripture: *"I shall not die, but live, and declare the works of the LORD."* — Psalm 118:17
+The backend exposes a RESTful API at `/api`. All protected routes require a `Bearer` JWT in the `Authorization` header.
+
+Key route groups:
+
+```
+/api/auth           — login, logout, refresh, forgot/reset password
+/api/members        — CRUD for church members
+/api/users          — CRUD for system users
+/api/services       — church service management + attendance
+/api/events         — event management + registration
+/api/finance        — financial records
+/api/attendance     — attendance records
+/api/ministry       — ministry role assignments
+/api/inventory      — inventory items + requests
+/api/archives       — file archive records
+/api/cell-groups    — cell group management
+/api/notifications  — in-app notifications
+/api/audit          — audit log reads
+/api/settings       — system settings (admin only)
+/api/roles          — role management
+/api/public         — unauthenticated endpoints (landing page stats + events)
+/api/member-portal  — member-only portal endpoints
+```
 
 ---
 
-## Known Placeholders
+## Languages
 
-The following contact information is currently placeholder and should be updated:
+The system supports multi-language display via Google Translate integration. The selected language persists across the landing page, CMS, and member portal using a shared `localStorage` key.
 
-- Church address (Parañaque City, Philippines)
-- Church phone number
-- Church email address
+Supported languages: English, Korean, Filipino (Tagalog), Cebuano, Ilocano, Hiligaynon, Waray, Bikol.
 
 ---
 
 ## License
 
-© 2026 Manila Central Church · Philippine Life Word Mission (PLWM)  
-All rights reserved. Built for community, powered by faith.
+Internal use only — PLWM Manila Central Church.
