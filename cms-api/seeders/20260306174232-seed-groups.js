@@ -3,14 +3,29 @@
 module.exports = {
   up: async (queryInterface) => {
     const now = new Date();
-    await queryInterface.bulkInsert("groups", [
-      { name: "Men's Group", created_at: now, updated_at: now },
-      { name: "Women's Group", created_at: now, updated_at: now },
-      { name: "Young Adults", created_at: now, updated_at: now },
-      { name: "High School", created_at: now, updated_at: now },
-      { name: "Elementary", created_at: now, updated_at: now },
-      { name: "Preschool", created_at: now, updated_at: now },
-    ]);
+
+    const existingGroups = await queryInterface.sequelize.query(
+      "SELECT name FROM groups",
+      { type: queryInterface.sequelize.QueryTypes.SELECT },
+    );
+    const existingNames = new Set(existingGroups.map(g => g.name));
+
+    const groupsToAdd = [
+      { name: "Men's Group" },
+      { name: "Women's Group" },
+      { name: "Young Adults" },
+      { name: "High School" },
+      { name: "Elementary" },
+      { name: "Preschool" },
+    ].filter(g => !existingNames.has(g.name)).map(g => ({
+      name: g.name,
+      created_at: now,
+      updated_at: now,
+    }));
+
+    if (groupsToAdd.length > 0) {
+      await queryInterface.bulkInsert("groups", groupsToAdd);
+    }
   },
 
   down: async (queryInterface) => {
