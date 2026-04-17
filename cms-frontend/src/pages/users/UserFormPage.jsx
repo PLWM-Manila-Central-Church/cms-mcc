@@ -23,9 +23,8 @@ const EMPTY_FORM = {
   birthdate: '', spiritual_birthday: '',
   address: '',
   cell_group_id: '', group_id: '',
-  member_ministry_id: '',
   // Leader fields
-  leads_cell_group_id: '', leads_group_id: '', ministry_role_id: '',
+  leads_cell_group_id: '', leads_group_id: '', leads_ministry_id: '',
 };
 
 export default function UserFormPage() {
@@ -37,7 +36,7 @@ export default function UserFormPage() {
   const [roles,         setRoles]         = useState([]);
   const [cellGroups,    setCellGroups]    = useState([]);
   const [groups,        setGroups]        = useState([]);
-  const [ministryRoles, setMinistryRoles] = useState([]);
+  const [ministries,   setMinistries]    = useState([]);
   const [loading,       setLoading]       = useState(false);
   const [saving,        setSaving]        = useState(false);
   const [error,         setError]         = useState('');
@@ -58,7 +57,7 @@ export default function UserFormPage() {
       .catch(() => {});
 
     axiosInstance.get('/ministry/roles')
-      .then(res => setMinistryRoles(res.data.data || []))
+      .then(res => setMinistries(res.data.data || []))
       .catch(() => {});
   }, []);
 
@@ -82,11 +81,10 @@ export default function UserFormPage() {
           address:             u.member?.address     || '',
           cell_group_id:       u.member?.cell_group_id || '',
           group_id:            u.member?.group_id   || '',
-          member_ministry_id:  u.member?.MinistryMemberships?.[0]?.ministry_role_id || '',
           // Leader fields (on the user record itself)
           leads_cell_group_id: u.leads_cell_group_id || '',
           leads_group_id:      u.leads_group_id      || '',
-          ministry_role_id:    u.ministry_role_id    || '',
+          leads_ministry_id:   u.leads_ministry_id   || '',
         });
       })
       .catch(() => setError('Failed to load user.'))
@@ -102,7 +100,7 @@ export default function UserFormPage() {
         role_id:             value,
         leads_cell_group_id: '',
         leads_group_id:      '',
-        ministry_role_id:    '',
+        leads_ministry_id:   '',
       }));
     } else {
       setForm(f => ({ ...f, [name]: value }));
@@ -131,11 +129,10 @@ export default function UserFormPage() {
       address:             form.address            || null,
       cell_group_id:       form.cell_group_id       ? parseInt(form.cell_group_id)       : null,
       group_id:            form.group_id            ? parseInt(form.group_id)            : null,
-      member_ministry_id:  form.member_ministry_id  ? parseInt(form.member_ministry_id)  : null,
       // Leader fields — only sent when relevant; null clears a previous assignment
       leads_cell_group_id: form.leads_cell_group_id ? parseInt(form.leads_cell_group_id) : null,
-      leads_group_id:      form.leads_group_id      ? parseInt(form.leads_group_id)      : null,
-      ministry_role_id:    form.ministry_role_id    ? parseInt(form.ministry_role_id)    : null,
+      leads_group_id:       form.leads_group_id      ? parseInt(form.leads_group_id)      : null,
+      leads_ministry_id:    form.leads_ministry_id    ? parseInt(form.leads_ministry_id)    : null,
     };
     if (!isEdit) payload.password = form.password;
 
@@ -164,9 +161,9 @@ export default function UserFormPage() {
 
   // Derived — which leader dropdowns to show based on selected role
   const selectedRoleId    = parseInt(form.role_id) || 0;
-  const isCGLeader        = selectedRoleId === 5;
-  const isGroupLeader     = selectedRoleId === 6;
-  const isMinistryLeader  = selectedRoleId === 3; // Only Reg Team can hold a Ministry sub-role; Admin sees all members without scoping
+  const isCGLeader        = selectedRoleId === 5; // Cell Group Leader
+  const isGroupLeader     = selectedRoleId === 6; // Group Leader
+  const isMinistryLeader = selectedRoleId === 8; // Ministry Leader
   const showLeaderSection = isCGLeader || isGroupLeader || isMinistryLeader;
 
   if (loading) return <div style={S.loading}>Loading...</div>;
@@ -315,16 +312,6 @@ export default function UserFormPage() {
           </div>
 
           <div style={{ ...S.field, marginTop: 16 }}>
-            <label style={S.label}>Ministry</label>
-            <select name="member_ministry_id" value={form.member_ministry_id} onChange={handleChange} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
-              <option value="">— None —</option>
-              {ministryRoles.map(mr => (
-                <option key={mr.id} value={mr.id}>{mr.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ ...S.field, marginTop: 16 }}>
             <label style={S.label}>Address</label>
             <textarea
               name="address" value={form.address}
@@ -382,18 +369,18 @@ export default function UserFormPage() {
 
             {isMinistryLeader && (
               <div style={{ ...S.field, marginTop: isCGLeader || isGroupLeader ? 16 : 0 }}>
-                <label style={S.label}>Ministry Sub-Role</label>
+                <label style={S.label}>Leads Ministry</label>
                 <select
-                  name="ministry_role_id" value={form.ministry_role_id}
+                  name="leads_ministry_id" value={form.leads_ministry_id}
                   onChange={handleChange} style={selectStyle}
                   onFocus={onFocus} onBlur={onBlur}
                 >
-                  <option value="">— None —</option>
-                  {ministryRoles.map(mr => (
-                    <option key={mr.id} value={mr.id}>{mr.name}</option>
+                  <option value="">— Select Ministry —</option>
+                  {ministries.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
                   ))}
                 </select>
-                <p style={S.hint}>Assigns this user as a Ministry Leader for that ministry team.</p>
+                <p style={S.hint}>The ministry this user is responsible for leading.</p>
               </div>
             )}
           </div>

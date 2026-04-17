@@ -93,20 +93,20 @@ exports.searchMembersForRoster = async (req, res, next) => {
 
 exports.getMyMinistryMembers = async (req, res, next) => {
   try {
-    if (!req.user.ministryRoleId)
+    if (!req.user.leadsMinistryId)
       return res.status(403).json({ message: "You are not a Ministry Leader" });
-    const data = await ministryService.getMyMinistryMembers(req.user.ministryRoleId);
+    const data = await ministryService.getMyMinistryMembers(req.user.leadsMinistryId);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
 
 exports.addMemberToMinistry = async (req, res, next) => {
   try {
-    if (!req.user.ministryRoleId)
+    if (!req.user.leadsMinistryId)
       return res.status(403).json({ message: "You are not a Ministry Leader" });
     const { member_id } = req.body;
     const data = await ministryService.addMemberToMinistry(
-      req.user.ministryRoleId, member_id, req.user.userId
+      req.user.leadsMinistryId, member_id, req.user.userId
     );
     res.status(201).json({ success: true, data });
   } catch (err) { next(err); }
@@ -114,10 +114,10 @@ exports.addMemberToMinistry = async (req, res, next) => {
 
 exports.removeMemberFromMinistry = async (req, res, next) => {
   try {
-    if (!req.user.ministryRoleId)
+    if (!req.user.leadsMinistryId)
       return res.status(403).json({ message: "You are not a Ministry Leader" });
     const data = await ministryService.removeMemberFromMinistry(
-      req.user.ministryRoleId, req.params.memberId
+      req.user.leadsMinistryId, req.params.memberId
     );
     res.json({ success: true, data });
   } catch (err) { next(err); }
@@ -127,7 +127,7 @@ exports.removeMemberFromMinistry = async (req, res, next) => {
 exports.getPendingSubstitutes = async (req, res, next) => {
   try {
     const user = req.user;
-    const ministryId = user.leads_ministry_id || user.leads_cell_group_id || user.leads_group_id;
+    const ministryId = user.leadsMinistryId || user.leadsGroupId || user.leadsCellGroupId;
     if (!ministryId) {
       return res.status(403).json({ message: "You are not a leader" });
     }
@@ -141,7 +141,7 @@ exports.getPendingSubstitutes = async (req, res, next) => {
 exports.resolveSubstitute = async (req, res, next) => {
   try {
     const user = req.user;
-    const ministryId = user.leads_ministry_id || user.leads_cell_group_id || user.leads_group_id;
+    const ministryId = user.leadsMinistryId || user.leadsGroupId || user.leadsCellGroupId;
     if (!ministryId) {
       return res.status(403).json({ message: "You are not a leader" });
     }
