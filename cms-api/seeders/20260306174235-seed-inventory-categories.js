@@ -3,18 +3,46 @@
 module.exports = {
   up: async (queryInterface) => {
     const now = new Date();
-    await queryInterface.bulkInsert("inventory_categories", [
-      { name: "Audio Equipment", created_at: now, updated_at: now },
-      { name: "Visual Equipment", created_at: now, updated_at: now },
-      { name: "Furniture", created_at: now, updated_at: now },
-      { name: "Office Supplies", created_at: now, updated_at: now },
-      { name: "Cleaning Supplies", created_at: now, updated_at: now },
-      { name: "Kitchen Supplies", created_at: now, updated_at: now },
-      { name: "Instruments", created_at: now, updated_at: now },
-      { name: "Bibles & Books", created_at: now, updated_at: now },
-      { name: "Event Supplies", created_at: now, updated_at: now },
-      { name: "Others", created_at: now, updated_at: now },
-    ]);
+
+    let existingNames = new Set();
+    try {
+      const existingCats = await queryInterface.sequelize.query(
+        "SELECT name FROM inventory_categories",
+        { type: queryInterface.sequelize.QueryTypes.SELECT },
+      );
+      existingNames = new Set(existingCats.map(c => c.name));
+    } catch (err) {
+      console.log("Warning: Could not check existing inventory_categories, continuing anyway:", err.message);
+    }
+
+    const categoriesToAdd = [
+      { name: "Audio Equipment" },
+      { name: "Visual Equipment" },
+      { name: "Furniture" },
+      { name: "Office Supplies" },
+      { name: "Cleaning Supplies" },
+      { name: "Kitchen Supplies" },
+      { name: "Instruments" },
+      { name: "Bibles & Books" },
+      { name: "Event Supplies" },
+      { name: "Others" },
+    ].filter(c => !existingNames.has(c.name)).map(c => ({
+      ...c,
+      created_at: now,
+      updated_at: now,
+    }));
+
+    if (categoriesToAdd.length > 0) {
+      try {
+        await queryInterface.bulkInsert("inventory_categories", categoriesToAdd);
+      } catch (err) {
+        if (err.message && err.message.includes("Duplicate")) {
+          console.log("Inventory categories already exist, skipping insert");
+        } else {
+          throw err;
+        }
+      }
+    }
   },
 
   down: async (queryInterface) => {
