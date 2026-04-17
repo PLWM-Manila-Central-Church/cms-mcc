@@ -14,6 +14,7 @@ const User = sequelize.define(
     role_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
     member_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     invited_member_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    leads_ministry_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: null },
     email: { type: DataTypes.STRING(150), allowNull: false, unique: true },
     password_hash: { type: DataTypes.STRING(255), allowNull: false },
     is_active: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 1 },

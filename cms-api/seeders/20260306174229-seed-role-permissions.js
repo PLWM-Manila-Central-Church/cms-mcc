@@ -172,6 +172,18 @@ module.exports = {
       { role_id: 6, permission_id: p("archives", "read"), created_at: now },
       { role_id: 6, permission_id: p("ministry", "read"), created_at: now },
 
+      // ── Ministry Leader ─────────────────────────────────────────
+      { role_id: 8, permission_id: p("ministry", "read"), created_at: now },
+      { role_id: 8, permission_id: p("ministry", "create"), created_at: now },
+      { role_id: 8, permission_id: p("ministry", "update"), created_at: now },
+      { role_id: 8, permission_id: p("ministry", "delete"), created_at: now },
+      { role_id: 8, permission_id: p("events", "read"), created_at: now },
+      { role_id: 8, permission_id: p("attendance", "read"), created_at: now },
+      { role_id: 8, permission_id: p("services", "read"), created_at: now },
+      { role_id: 8, permission_id: p("archives", "read"), created_at: now },
+      { role_id: 8, permission_id: p("cellgroups", "read"), created_at: now },
+      { role_id: 8, permission_id: p("inventory", "read"), created_at: now },
+
       // ── Member ────────────────────────────────────────────────
       { role_id: 7, permission_id: p("members", "read"), created_at: now },
       { role_id: 7, permission_id: p("finance", "read"), created_at: now },

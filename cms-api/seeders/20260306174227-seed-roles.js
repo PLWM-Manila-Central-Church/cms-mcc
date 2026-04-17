@@ -53,6 +53,14 @@ module.exports = {
         updated_at: now,
       },
       {
+        role_name: "Ministry Leader",
+        description:
+          "Leads and coordinates a specific ministry team. Can manage ministry members and service assignments.",
+        is_system: 1,
+        created_at: now,
+        updated_at: now,
+      },
+      {
         role_name: "Member",
         description:
           "Basic access. Can view own profile, financial records, pre-register for services, and register for events.",
