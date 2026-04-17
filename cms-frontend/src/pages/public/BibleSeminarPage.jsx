@@ -28,7 +28,7 @@ export default function BibleSeminarPage() {
       {/* Intro */}
       <section style={{ background: C.white, padding: '72px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'start', marginBottom: 56 }}>
+          <div className="pub-2col" style={{ marginBottom: 56 }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: C.blue }}>
                 <span style={{ width: 20, height: 2, background: C.blue, borderRadius: 2, display: 'inline-block' }} />What is the Bible Seminar?
@@ -105,24 +105,6 @@ export default function BibleSeminarPage() {
           </div>
         </div>
       </section>
-      <style>{`
-        @media (max-width: 900px) {
-          [style*="grid-template-columns: '1fr 1fr'"],
-          [style*="gridTemplateColumns:'1fr 1fr'"],
-          [style*="gridTemplateColumns: '1fr 1fr'"],
-          [style*="gridTemplateColumns:'1fr 380px'"],
-          [style*="gridTemplateColumns: '1fr 380px'"],
-          [style*="gridTemplateColumns:'280px 1fr'"],
-          [style*="gridTemplateColumns: '280px 1fr'"] { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 600px) {
-          section { padding-left: 12px !important; padding-right: 12px !important; }
-          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr 1fr !important; }
-        }
-        @media (max-width: 380px) {
-          [style*="repeat(auto-fill, minmax(210px"] { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </PublicLayout>
   );
 }

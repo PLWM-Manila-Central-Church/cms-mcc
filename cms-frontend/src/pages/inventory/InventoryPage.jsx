@@ -18,6 +18,7 @@ const STATUS_STYLE = {
 export default function InventoryPage() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission('inventory', 'create');
+  const canDelete = hasPermission('inventory', 'delete');
   const canRequest = !canManage;
 
   const [tab, setTab] = useState('items'); // items | requests
@@ -74,7 +75,7 @@ export default function InventoryPage() {
       const params = new URLSearchParams({ page: itemPage, limit });
       if (filterCat)  params.append('category_id', filterCat);
       if (itemSearch) params.append('search', itemSearch);
-      const res = await axiosInstance.get(`/inventory?${params}`);
+      const res = await axiosInstance.get(`/inventory/items?${params}`);
       const d   = res.data.data;
       setItems(d.items); setTotalItems(d.total);
       setItemPages(d.total_pages);
@@ -127,11 +128,19 @@ export default function InventoryPage() {
     try {
       const payload = { ...itemForm, quantity: parseInt(itemForm.quantity) };
       if (!payload.low_stock_threshold) delete payload.low_stock_threshold;
-      if (editItem) await axiosInstance.put(`/inventory/${editItem.id}`, payload);
-      else          await axiosInstance.post('/inventory', payload);
+      if (editItem) await axiosInstance.put(`/inventory/items/${editItem.id}`, payload);
+      else          await axiosInstance.post('/inventory/items', payload);
       setShowItemForm(false); resetItemForm(); fetchItems();
     } catch (err) { setItemFormErr(err.response?.data?.message || 'Failed to save item.'); }
     finally { setSavingItem(false); }
+  };
+
+  const handleDeleteItem = async (item) => {
+    if (!window.confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
+    try {
+      await axiosInstance.delete(`/inventory/items/${item.id}`);
+      fetchItems();
+    } catch (err) { setItemError(err.response?.data?.message || 'Failed to delete item.'); }
   };
 
   const handleReviewRequest = async (id, status) => {
@@ -257,7 +266,7 @@ export default function InventoryPage() {
 
           {/* Items table */}
           <div style={s.tableWrap}>
-            <table style={s.table}>
+            <div style={s.tableScroll}><table style={s.table}>
               <thead>
                 <tr style={s.thead}>
                   <th style={s.th}>Item</th>
@@ -266,7 +275,7 @@ export default function InventoryPage() {
                   <th style={s.th}>Unit</th>
                   <th style={s.th}>Type</th>
                   <th style={s.th}>Condition</th>
-                  {canManage && <th style={s.th}>Actions</th>}
+                  {(canManage || canDelete) && <th style={s.th}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -298,16 +307,19 @@ export default function InventoryPage() {
                       <td style={s.td}>
                         {item.condition && <span style={{ ...s.badge, background: condStyle.bg, color: condStyle.color }}>{item.condition}</span>}
                       </td>
-                      {canManage && (
+                      {(canManage || canDelete) && (
                         <td style={s.td}>
-                          <button onClick={() => openEditItem(item)} style={s.editBtn}>Edit</button>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            {canManage && <button onClick={() => openEditItem(item)} style={s.editBtn}>Edit</button>}
+                            {canDelete && <button onClick={() => handleDeleteItem(item)} style={{ ...s.editBtn, background: '#fef2f2', color: '#dc2626' }}>Delete</button>}
+                          </div>
                         </td>
                       )}
                     </tr>
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           {itemPages > 1 && (
@@ -374,7 +386,7 @@ export default function InventoryPage() {
 
           {/* Requests table */}
           <div style={s.tableWrap}>
-            <table style={s.table}>
+            <div style={s.tableScroll}><table style={s.table}>
               <thead>
                 <tr style={s.thead}>
                   <th style={s.th}>Item</th>
@@ -430,7 +442,7 @@ export default function InventoryPage() {
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           {canManage && reqPages > 1 && (
@@ -484,6 +496,7 @@ const s = {
   filterChip:   { border: 'none', borderRadius: '20px', padding: '6px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   errorBox:     { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
   tableWrap:    { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  tableScroll:  { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:        { width: '100%', borderCollapse: 'collapse' },
   thead:        { background: '#f8fafc' },
   th:           { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },

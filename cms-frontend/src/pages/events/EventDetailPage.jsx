@@ -30,6 +30,16 @@ export default function EventDetailPage() {
   const [removingId, setRemovingId] = useState(null);
   const [removeMsg, setRemoveMsg]   = useState('');
 
+  // ── Ministry Invite Panel (Ministry Leaders only) ────────────
+  const [invites,         setInvites]         = useState([]);
+  const [inviteLoading,   setInviteLoading]   = useState(false);
+  const [inviteError,     setInviteError]     = useState('');
+  const [inviteSuccess,   setInviteSuccess]   = useState('');
+  const [ministryMembers, setMinistryMembers] = useState([]);
+  const [selectedIds,     setSelectedIds]     = useState(new Set());
+  const [inviteDeadline,  setInviteDeadline]  = useState('');
+  const [sendingInvites,  setSendingInvites]  = useState(false);
+
   const fetchEvent = useCallback(async () => {
     setLoading(true); setError('');
     try {
@@ -41,6 +51,26 @@ export default function EventDetailPage() {
   }, [id]);
 
   useEffect(() => { fetchEvent(); }, [fetchEvent]);
+
+  // Fetch invites + ministry roster when the user is a Ministry Leader
+  useEffect(() => {
+    if (!user?.ministryRoleId || !id) return;
+    setInviteLoading(true);
+    Promise.all([
+      axiosInstance.get(`/events/${id}/invites`),
+      axiosInstance.get('/ministry/members'),
+    ])
+      .then(([invRes, memRes]) => {
+        setInvites(invRes.data.data || []);
+        // Normalize: /ministry/members may return MinistryMembership rows (with .member nested)
+        // OR flat Member objects. Flatten to a consistent array of plain member objects.
+        const raw = memRes.data.data || [];
+        const normalized = raw.map(item => item.member ?? item).filter(m => m && m.id);
+        setMinistryMembers(normalized);
+      })
+      .catch(() => setInviteError('Failed to load invite data.'))
+      .finally(() => setInviteLoading(false));
+  }, [id, user?.ministryRoleId]);
 
   const isRegistered   = event?.EventRegistrations?.some(r => r.member_id === user?.memberId);
   const regCount       = event?.EventRegistrations?.length ?? 0;
@@ -74,6 +104,36 @@ export default function EventDetailPage() {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to remove registration.');
     } finally { setRemovingId(null); }
+  };
+
+  const toggleMember = (memberId) =>
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(memberId) ? next.delete(memberId) : next.add(memberId);
+      return next;
+    });
+
+  const handleSendInvites = async () => {
+    if (selectedIds.size === 0) return;
+    setSendingInvites(true); setInviteError(''); setInviteSuccess('');
+    try {
+      const res = await axiosInstance.post(`/events/${id}/invites`, {
+        ministry_role_id:  user.ministryRoleId,
+        member_ids:        [...selectedIds],
+        response_deadline: inviteDeadline || null,
+      });
+      const { created, skipped } = res.data.data;
+      setInviteSuccess(
+        `${created.length} invite${created.length !== 1 ? 's' : ''} sent` +
+        (skipped.length ? `, ${skipped.length} already invited` : '') + '.'
+      );
+      setSelectedIds(new Set());
+      // Refresh invite list
+      const invRes = await axiosInstance.get(`/events/${id}/invites`);
+      setInvites(invRes.data.data || []);
+    } catch (err) {
+      setInviteError(err.response?.data?.message || 'Failed to send invites.');
+    } finally { setSendingInvites(false); }
   };
 
   const formatDate = (d) =>
@@ -205,7 +265,7 @@ export default function EventDetailPage() {
             <div style={s.emptyReg}>No registrations yet.</div>
           ) : (
             <div style={s.tableWrap}>
-              <table style={s.table}>
+              <div style={s.tableScroll}><table style={s.table}>
                 <thead>
                   <tr style={s.thead}>
                     <th style={s.th}>#</th>
@@ -264,8 +324,113 @@ export default function EventDetailPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </div>
+          )}
+        </div>
+      )}
+      {/* ── Ministry Invite Panel (Ministry Leaders only) ── */}
+      {user?.ministryRoleId && (
+        <div style={{ ...s.regSection, marginTop: 24 }}>
+          <h2 style={s.regTitle}>⚡ Ministry Invites</h2>
+          <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px 0' }}>
+            Invite members of your ministry to participate in this event.
+          </p>
+
+          {inviteError   && <div style={s.errorBox}>{inviteError}</div>}
+          {inviteSuccess && <div style={s.successBox}>{inviteSuccess}</div>}
+
+          {/* Multi-select member list */}
+          {inviteLoading ? (
+            <div style={{ padding: '16px', color: '#94a3b8', fontSize: 14 }}>Loading ministry members…</div>
+          ) : ministryMembers.length === 0 ? (
+            <div style={{ padding: '16px', color: '#94a3b8', fontSize: 14 }}>No members in your ministry roster yet.</div>
+          ) : (
+            <>
+              <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Response Deadline</label>
+                <input
+                  type="datetime-local"
+                  value={inviteDeadline}
+                  onChange={e => setInviteDeadline(e.target.value)}
+                  style={{ padding: '6px 10px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 7, outline: 'none', fontFamily: 'inherit' }}
+                />
+                <span style={{ fontSize: 12, color: '#94a3b8' }}>(optional)</span>
+              </div>
+
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', marginBottom: 12 }}>
+                {ministryMembers.map((mem, i) => {
+                  const checked = selectedIds.has(mem.id);
+                  // Check if already invited
+                  const existing = invites.find(inv => inv.member_id === mem.id);
+                  return (
+                    <div
+                      key={mem.id}
+                      onClick={() => !existing && toggleMember(mem.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px',
+                        background: checked ? '#e8f4fd' : i % 2 === 0 ? '#fff' : '#f8fafc',
+                        borderBottom: i < ministryMembers.length - 1 ? '1px solid #f1f5f9' : 'none',
+                        cursor: existing ? 'default' : 'pointer',
+                        opacity: existing ? 0.6 : 1,
+                      }}
+                    >
+                      <input
+                        type="checkbox" checked={checked} readOnly
+                        disabled={!!existing}
+                        style={{ cursor: existing ? 'default' : 'pointer', flexShrink: 0 }}
+                      />
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                        {mem.first_name?.[0]}{mem.last_name?.[0]}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>
+                          {mem.first_name} {mem.last_name}
+                        </div>
+                        {mem.email && <div style={{ fontSize: 12, color: '#94a3b8' }}>{mem.email}</div>}
+                      </div>
+                      {existing && (
+                        <span style={{
+                          padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                          background: existing.response_status === 'attending'     ? '#dcfce7' :
+                                      existing.response_status === 'not_attending' ? '#fef2f2' : '#f1f5f9',
+                          color:      existing.response_status === 'attending'     ? '#16a34a' :
+                                      existing.response_status === 'not_attending' ? '#dc2626' : '#64748b',
+                        }}>
+                          {existing.response_status === 'attending'     ? '✅ Attending' :
+                           existing.response_status === 'not_attending' ? '❌ Not Attending' : '⏳ Pending'}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button
+                  onClick={handleSendInvites}
+                  disabled={sendingInvites || selectedIds.size === 0}
+                  style={{
+                    background: selectedIds.size === 0 ? '#e2e8f0' : 'linear-gradient(135deg,#7c3aed,#9333ea)',
+                    color: selectedIds.size === 0 ? '#94a3b8' : '#fff',
+                    border: 'none', borderRadius: 8, padding: '10px 20px',
+                    fontSize: 14, fontWeight: 700, cursor: selectedIds.size === 0 ? 'not-allowed' : 'pointer',
+                    opacity: sendingInvites ? 0.7 : 1,
+                  }}
+                >
+                  {sendingInvites ? 'Sending…' : `Send Invites (${selectedIds.size})`}
+                </button>
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    style={{ background: 'none', border: 'none', fontSize: 13, color: '#94a3b8', cursor: 'pointer' }}
+                  >
+                    Clear selection
+                  </button>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -277,7 +442,7 @@ const s = {
   page:         { fontFamily: "'Segoe UI', sans-serif" },
   loading:      { padding: '48px', textAlign: 'center', color: '#94a3b8' },
   backBtn:      { background: 'none', border: 'none', color: '#0066b3', fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: '0 0 20px 0', display: 'block' },
-  headerCard:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '28px 32px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  headerCard:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: 'clamp(16px,4vw,32px)', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   headerTop:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
   badge:        { padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', marginRight: '8px' },
   categoryTag:  { fontSize: '13px', color: '#94a3b8', fontWeight: '500' },
@@ -299,6 +464,7 @@ const s = {
   regTitle:     { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 16px 0' },
   emptyReg:     { padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   tableWrap:    { borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' },
+  tableScroll:  { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:        { width: '100%', borderCollapse: 'collapse' },
   thead:        { background: '#f8fafc' },
   th:           { padding: '10px 14px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },

@@ -5,7 +5,7 @@ exports.getStats = async (req, res, next) => {
   try {
     const data = await dashboardService.getStats({
       memberId: req.user.memberId,
-      roleId:   req.user.roleId,
+      roleName: req.user.roleName,
     });
     res.json({ success: true, data });
   } catch (err) {

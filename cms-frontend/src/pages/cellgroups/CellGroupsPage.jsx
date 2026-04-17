@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const EMPTY_FORM = { name: '', area: '' };
 
 export default function CellGroupsPage() {
   const { hasPermission } = useAuth();
+  const isMobile = useIsMobile();
   const canCreate = hasPermission('cellgroups', 'create');
   const canUpdate = hasPermission('cellgroups', 'update');
   const canDelete = hasPermission('cellgroups', 'delete');
@@ -115,7 +117,7 @@ export default function CellGroupsPage() {
   );
 
   return (
-    <div style={S.page}>
+    <div style={{ ...S.page, padding: isMobile ? '16px 12px' : '32px' }}>
 
       {/* ── Header ── */}
       <div style={S.pageHeader}>
@@ -144,7 +146,7 @@ export default function CellGroupsPage() {
 
       {/* ── Search ── */}
       <div style={S.toolbar}>
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
           <span style={S.searchIcon}>🔍</span>
           <input
             type="text"
@@ -162,14 +164,16 @@ export default function CellGroupsPage() {
         </span>
       </div>
 
-      {/* ── Table ── */}
-      <div style={S.tableWrap}>
-        {loading ? (
+      {/* ── Table (desktop) / Cards (mobile) ── */}
+      {loading ? (
+        <div style={{ ...S.tableWrap, padding: '48px 0' }}>
           <div style={S.empty}>
             <div style={S.spinner} />
             <p>Loading…</p>
           </div>
-        ) : filtered.length === 0 ? (
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={S.tableWrap}>
           <div style={S.empty}>
             <div style={S.emptyIcon}>🏘️</div>
             <p style={S.emptyTitle}>{search ? 'No results found' : 'No cell groups yet'}</p>
@@ -177,14 +181,63 @@ export default function CellGroupsPage() {
               {search ? 'Try a different search term.' : canCreate ? 'Click "+ New Cell Group" to add the first one.' : 'No cell groups have been created.'}
             </p>
           </div>
-        ) : (
-          <table style={S.table}>
+        </div>
+      ) : isMobile ? (
+        /* ── Mobile card list ── */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {filtered.map((g) => (
+            <div key={g.id} style={{
+              background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14,
+              padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+            }}>
+              {/* Top row: avatar + name + member count badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                <div style={{ ...S.groupAvatar, width: 44, height: 44, fontSize: 17, flexShrink: 0 }}>
+                  {g.name?.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {g.name}
+                  </div>
+                  {g.area
+                    ? <span style={{ ...S.areaBadge, marginTop: 3, display: 'inline-block' }}>{g.area}</span>
+                    : <span style={{ fontSize: 12, color: '#cbd5e1' }}>No area</span>
+                  }
+                </div>
+                {/* Member count — prominent on mobile */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#eff6ff', borderRadius: 10, padding: '6px 12px', flexShrink: 0 }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: '#1d4ed8', lineHeight: 1 }}>{g.memberCount ?? 0}</span>
+                  <span style={{ fontSize: 10, color: '#3b82f6', fontWeight: 600, marginTop: 2 }}>Members</span>
+                </div>
+              </div>
+              {/* Action buttons */}
+              {(canUpdate || canDelete) && (
+                <div style={{ display: 'flex', gap: 8, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
+                  {canUpdate && (
+                    <button onClick={() => openEdit(g)} style={{ ...S.editBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      ✏️ Edit
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button onClick={() => { setDelTarget(g); setDelError(''); }} style={{ ...S.deleteBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      🗑 Delete
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* ── Desktop table ── */
+        <div style={S.tableWrap}>
+          <div style={S.tableScroll}><table style={S.table}>
             <thead>
               <tr>
                 <th style={S.th}>#</th>
                 <th style={S.th}>Name</th>
                 <th style={S.th}>Area</th>
-                <th style={S.th}>Created</th>
+                <th style={S.th}>Members</th>
                 {(canUpdate || canDelete) && <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>}
               </tr>
             </thead>
@@ -194,45 +247,32 @@ export default function CellGroupsPage() {
                   <td style={S.td}><span style={S.rowNum}>{i + 1}</span></td>
                   <td style={S.td}>
                     <div style={S.groupNameRow}>
-                      <div style={S.groupAvatar}>
-                        {g.name?.charAt(0).toUpperCase()}
-                      </div>
+                      <div style={S.groupAvatar}>{g.name?.charAt(0).toUpperCase()}</div>
                       <span style={S.groupName}>{g.name}</span>
                     </div>
                   </td>
                   <td style={S.td}>
-                    {g.area
-                      ? <span style={S.areaBadge}>{g.area}</span>
-                      : <span style={S.noArea}>—</span>
-                    }
+                    {g.area ? <span style={S.areaBadge}>{g.area}</span> : <span style={S.noArea}>—</span>}
                   </td>
                   <td style={S.td}>
-                    <span style={S.dateText}>
-                      {g.created_at ? new Date(g.created_at).toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' }) : '—'}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#eff6ff', color: '#1d4ed8', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
+                      {g.memberCount ?? 0}
                     </span>
                   </td>
                   {(canUpdate || canDelete) && (
                     <td style={{ ...S.td, textAlign: 'right' }}>
                       <div style={S.actionsRow}>
-                        {canUpdate && (
-                          <button onClick={() => openEdit(g)} style={S.editBtn}>
-                            ✏️ Edit
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button onClick={() => { setDelTarget(g); setDelError(''); }} style={S.deleteBtn}>
-                            🗑 Delete
-                          </button>
-                        )}
+                        {canUpdate && <button onClick={() => openEdit(g)} style={S.editBtn}>✏️ Edit</button>}
+                        {canDelete && <button onClick={() => { setDelTarget(g); setDelError(''); }} style={S.deleteBtn}>🗑 Delete</button>}
                       </div>
                     </td>
                   )}
                 </tr>
               ))}
             </tbody>
-          </table>
-        )}
-      </div>
+          </table></div>
+        </div>
+      )}
 
       {/* ── Add / Edit Modal ── */}
       {modal && (
@@ -333,20 +373,12 @@ export default function CellGroupsPage() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
         table tr:hover td { background: #f0f6ff !important; }
-        /* ── Responsive tables ── */
         table { width: 100%; border-collapse: collapse; }
-        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         @media (max-width: 768px) {
           table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
         }
         @media (max-width: 480px) {
           table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
-        }
-`}</style>
-      <style>{`
-        @media (max-width: 768px) {
-          [style*="justifyContent: 'space-between'"] { flex-wrap: wrap !important; gap: 10px !important; }
-          [style*="padding: '10px 36px"] { width: 100% !important; box-sizing: border-box !important; }
         }
       `}</style>
     </div>
@@ -354,9 +386,9 @@ export default function CellGroupsPage() {
 }
 
 const S = {
-  page:        { padding: '32px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" },
+  page:        { padding: '32px', fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" },
 
-  pageHeader:  { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' },
+  pageHeader:  { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
   pageTitle:   { fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px' },
   pageSubtitle:{ fontSize: '14px', color: '#64748b', margin: 0 },
 
@@ -367,13 +399,14 @@ const S = {
   statNum:     { fontSize: '28px', fontWeight: '800', color: '#005599', lineHeight: 1 },
   statLabel:   { fontSize: '12px', color: '#64748b', fontWeight: '600', letterSpacing: '0.4px', textTransform: 'uppercase' },
 
-  toolbar:     { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' },
+  toolbar:     { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' },
   searchIcon:  { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', opacity: 0.5, pointerEvents: 'none' },
-  search:      { padding: '10px 36px 10px 36px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', outline: 'none', width: '280px', color: '#0f172a', background: '#fafbfc' },
+  search:      { padding: '10px 36px 10px 36px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', outline: 'none', width: '100%', minWidth: 0, color: '#0f172a', background: '#fafbfc' },
   clearSearch: { position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '12px', cursor: 'pointer', color: '#94a3b8', padding: '2px 4px' },
   resultCount: { fontSize: '13px', color: '#94a3b8', whiteSpace: 'nowrap' },
 
   tableWrap:   { background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' },
+  tableScroll: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:       { width: '100%', borderCollapse: 'collapse' },
   th:          { padding: '14px 20px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', letterSpacing: '0.6px', textTransform: 'uppercase', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
   tr:          { borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' },
@@ -423,5 +456,5 @@ const S = {
   delText:     { fontSize: '15px', color: '#0f172a', margin: '0 0 8px', lineHeight: '1.5' },
   delHint:     { fontSize: '13px', color: '#94a3b8', margin: '0 0 16px' },
 
-  toast:       { position: 'fixed', bottom: '28px', right: '28px', color: '#fff', borderRadius: '10px', padding: '13px 20px', fontSize: '14px', fontWeight: '600', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.2)', animation: 'slideIn 0.25s ease both', display: 'flex', alignItems: 'center', gap: '8px' },
+  toast:       { position: 'fixed', bottom: 'calc(68px + env(safe-area-inset-bottom, 0px) + 8px)', right: '16px', color: '#fff', borderRadius: '10px', padding: '13px 20px', fontSize: '14px', fontWeight: '600', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.2)', animation: 'slideIn 0.25s ease both', display: 'flex', alignItems: 'center', gap: '8px' },
 };

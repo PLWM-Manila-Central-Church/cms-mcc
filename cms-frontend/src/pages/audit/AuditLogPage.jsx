@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const ACTION_COLORS = {
   CREATE:  { bg: '#f0fdf4', color: '#16a34a' },
@@ -28,6 +29,7 @@ const getActionColor = (action = '') => {
 };
 
 export default function AuditLogPage() {
+  const isMobile = useIsMobile();
   const [logs, setLogs]           = useState([]);
   const [total, setTotal]         = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -124,7 +126,7 @@ export default function AuditLogPage() {
 
       {/* Logs table */}
       <div style={s.tableWrap}>
-        <table style={s.table}>
+        <div style={s.tableScroll}><table style={s.table}>
           <thead>
             <tr style={s.thead}>
               <th style={s.th}>#</th>
@@ -192,7 +194,7 @@ export default function AuditLogPage() {
                   {isExpanded && (
                     <tr key={`${log.id}-detail`} style={{ background: '#f8fafc' }}>
                       <td colSpan={8} style={s.diffCell}>
-                        <div style={s.diffGrid}>
+                        <div style={{ ...s.diffGrid, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
                           {log.old_values && (
                             <div style={s.diffPanel}>
                               <div style={s.diffTitle}>Before</div>
@@ -213,7 +215,7 @@ export default function AuditLogPage() {
               );
             })}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {totalPages > 1 && (
@@ -224,19 +226,10 @@ export default function AuditLogPage() {
         </div>
       )}
       <style>{`
-        /* ── Responsive tables ── */
         table { width: 100%; border-collapse: collapse; }
-        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         @media (max-width: 768px) {
-          table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
+          table td, table th { font-size: 11px !important; padding: 6px 8px !important; white-space: nowrap; }
         }
-        @media (max-width: 480px) {
-          table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
-        }
-        /* Audit log diff grid collapse */
-        @media (max-width: 768px) {{
-          [style*="gridTemplateColumns: '1fr 1fr'"] {{ grid-template-columns: 1fr !important; }}
-        }}
       `}</style>
     </div>
   );
@@ -256,6 +249,7 @@ const s = {
   clearBtn:    { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', alignSelf: 'flex-end' },
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', marginBottom: '14px' },
   tableWrap:   { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  tableScroll: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:       { width: '100%', borderCollapse: 'collapse' },
   thead:       { background: '#f8fafc' },
   th:          { padding: '10px 14px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' },

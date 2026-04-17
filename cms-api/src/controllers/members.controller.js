@@ -4,7 +4,7 @@ const membersService = require("../services/members.service");
 
 exports.getAllMembers = async (req, res, next) => {
   try {
-    const result = await membersService.getAllMembers(req.query);
+    const result = await membersService.getAllMembers(req.query, req.user);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -22,7 +22,7 @@ exports.getMemberById = async (req, res, next) => {
 
 exports.createMember = async (req, res, next) => {
   try {
-    const result = await membersService.createMember(req.body, req.user.userId);
+    const result = await membersService.createMember(req.body, req.user.userId, req.user);
     res.status(201).json({ success: true, data: result });
   } catch (err) {
     next(err);

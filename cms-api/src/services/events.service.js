@@ -191,18 +191,20 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
 
   if (newStatus === "published") {
     try {
-      const registrations = await EventRegistration.findAll({ where: { event_id: id } });
-      for (const reg of registrations) {
-        const userRecord = await User.findOne({
-          where: { member_id: reg.member_id, is_active: true }, attributes: ["id"],
+      // Notify ALL active portal users (not just already-registered ones).
+      // Uses bulkCreate for a single DB insert instead of N round-trips.
+      const portalUsers = await User.findAll({
+        where:      { is_active: true, member_id: { [Op.ne]: null } },
+        attributes: ["id"],
+      });
+      const userIds = portalUsers.map((u) => u.id);
+      if (userIds.length > 0) {
+        await notifService.bulkCreateNotifications(userIds, {
+          type:           "event_published",
+          message:        `Event "${event.title}" is now open for registration.`,
+          reference_id:   id,
+          reference_type: "event",
         });
-        if (userRecord) {
-          await notifService.createNotification({
-            user_id: userRecord.id,
-            type:    "event_published",
-            message: `Event "${event.title}" is now open for registration.`,
-          });
-        }
       }
     } catch (err) {
       console.error("[Events] Publish notifications failed:", err.message);

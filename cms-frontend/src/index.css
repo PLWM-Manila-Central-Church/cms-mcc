@@ -40,6 +40,12 @@ code {
   --radius:      12px;
   --shadow-sm:   0 1px 4px rgba(0,0,0,0.06);
   --shadow-md:   0 4px 20px rgba(0,0,0,0.10);
+
+  /* ── Safe area insets (iPhone notch / Dynamic Island / home bar) */
+  --sat: env(safe-area-inset-top,    0px);
+  --sar: env(safe-area-inset-right,  0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left,   0px);
 }
 
 @media (max-width: 1024px) {
@@ -67,6 +73,22 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 /* ── Touch targets ───────────────────────────────────────────── */
 button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+
+/* ── Minimum tap target size on mobile (Apple HIG: 44×44px) ──── */
+@media (max-width: 768px) {
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ── Prevent iOS Safari auto-zoom on input focus ─────────────── */
+/* iOS zooms in when input font-size < 16px — this stops that    */
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
 
 /* ── Lora: display/headings ──────────────────────────────────── */
 .font-display { font-family: 'Lora', Georgia, serif !important; }
@@ -104,7 +126,7 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 /* ── Mobile card list (replaces table on mobile) ─────────────── */
 .mobile-card-list { display: none; }
 @media (max-width: 768px) {
-  .desktop-table  { display: none !important; }
+  .desktop-table    { display: none !important; }
   .mobile-card-list { display: flex; flex-direction: column; gap: 10px; }
 }
 
@@ -142,7 +164,7 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 480px) {
   .cms-filter-bar { gap: 8px; }
   .cms-filter-bar input,
-  .cms-filter-bar select { font-size: 15px; }
+  .cms-filter-bar select { font-size: 16px; }
 }
 
 /* ── Pagination ──────────────────────────────────────────────── */
@@ -160,7 +182,58 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 
 /* ── Bottom nav spacer (mobile) ──────────────────────────────── */
 @media (max-width: 768px) {
-  main { padding-bottom: calc(var(--nav-bottom-h) + 8px) !important; }
+  main { padding-bottom: calc(var(--nav-bottom-h) + var(--sab) + 8px) !important; }
+}
+
+/* ── Bottom sheet backdrop ───────────────────────────────────── */
+.bottom-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 500;
+  animation: bsBackdropIn 0.2s ease;
+}
+@keyframes bsBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Bottom sheet panel ──────────────────────────────────────── */
+.bottom-sheet-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  z-index: 501;
+  max-height: 92dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(16px + var(--sab));
+  animation: bsPanelIn 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.15);
+}
+@keyframes bsPanelIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.bottom-sheet-panel.closing {
+  animation: bsPanelOut 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+@keyframes bsPanelOut {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+}
+
+/* ── Bottom sheet handle ─────────────────────────────────────── */
+.bottom-sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: #cbd5e1;
+  border-radius: 99px;
+  margin: 12px auto 0;
 }
 
 /* ── Google Translate suppression ────────────────────────────── */

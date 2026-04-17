@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/axiosInstance';
+import useIsMobile from '../../hooks/useIsMobile';
 
 // Convert snake_case / camelCase keys to "Title Case With Spaces"
 const prettifyKey = (key) =>
@@ -52,6 +53,8 @@ const GROUP_ICONS = {
 };
 
 export default function SettingsPage() {
+  const isMobile = useIsMobile();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [settings, setSettings] = useState({});
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
@@ -96,9 +99,22 @@ export default function SettingsPage() {
   const getValue = (key) =>
     key in changes ? changes[key] : (settings[key]?.value ?? '');
 
-  const handleChange = (key, value) => {
+  const handleChange = async (key, value) => {
     setChanges(prev => ({ ...prev, [key]: value }));
     setSaved(false);
+    // Auto-save boolean toggles immediately
+    if (value === 'true' || value === 'false') {
+      try {
+        await api.put('/settings', { [key]: value });
+        setSettings(prev => ({
+          ...prev,
+          [key]: { ...prev[key], value },
+        }));
+        setChanges(prev => { const n = { ...prev }; delete n[key]; return n; });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } catch { /* silent — user can still use Save button */ }
+    }
   };
 
   const handleSave = async () => {
@@ -147,7 +163,7 @@ export default function SettingsPage() {
             style={{ ...s.toggle, background: isOn ? '#005599' : '#d1d5db' }}
             aria-label={`Toggle ${setting.label}`}
           >
-            <span style={{ ...s.toggleThumb, transform: isOn ? 'translateX(22px)' : 'translateX(2px)' }} />
+            <span style={{ ...s.toggleThumb, left: isOn ? '24px' : '3px', transform: 'none' }} />
           </button>
           <span style={{ ...s.toggleLabel, color: isOn ? '#005599' : '#6b7280' }}>
             {isOn ? 'Enabled' : 'Disabled'}
@@ -164,13 +180,31 @@ export default function SettingsPage() {
       );
     }
 
+    if (type === 'number') {
+      return (
+        <input
+          type="number"
+          style={s.input}
+          value={value}
+          min="0"
+          onChange={e => handleChange(key, e.target.value.replace(/[^0-9]/g, ''))}
+          onKeyDown={e => {
+            if (!/[0-9]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab'].includes(e.key)) {
+              e.preventDefault();
+            }
+          }}
+          placeholder="Enter number..."
+        />
+      );
+    }
+
     return (
       <input
-        type={type === 'number' ? 'number' : type === 'email' ? 'email' : type === 'password' ? 'password' : 'text'}
+        type={type === 'email' ? 'email' : type === 'password' ? 'password' : 'text'}
         style={s.input}
         value={value}
         onChange={e => handleChange(key, e.target.value)}
-        placeholder={`Enter ${setting.label.toLowerCase()}…`}
+        placeholder={`Enter ${setting.label.toLowerCase()}...`}
       />
     );
   };
@@ -209,8 +243,35 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <div style={s.layout}>
+      <div style={{ ...s.layout, flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 0 : '24px' }}>
         {/* ── Sidebar nav ──────────────────────────────────── */}
+        {isMobile ? (
+          <div style={{ marginBottom: 16 }}>
+            <button
+              onClick={() => setMobileNavOpen(o => !o)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, fontSize: 14, fontWeight: 700, color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <span>{GROUP_ICONS[activeGroup] || '⚙️'} {activeGroup || 'Select Category'}</span>
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>{mobileNavOpen ? '▲' : '▼'}</span>
+            </button>
+            {mobileNavOpen && (
+              <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, marginTop: 4, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+                {groups.map(group => {
+                  const count = Object.values(settings).filter(s => s.group === group).length;
+                  const isActive = group === activeGroup;
+                  return (
+                    <button key={group} onClick={() => { setActiveGroup(group); setMobileNavOpen(false); }}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: isActive ? '#e8f4fd' : '#fff', border: 'none', borderBottom: '1px solid #f1f5f9', fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? '#005599' : '#374151', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                      <span style={{ fontSize: 18 }}>{GROUP_ICONS[group] || '⚙️'}</span>
+                      <span style={{ flex: 1 }}>{group}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: isActive ? '#bde3f5' : '#f3f4f6', color: isActive ? '#005599' : '#6b7280' }}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
         <nav style={s.sidebar}>
           {groups.map(group => {
             const count = Object.values(settings).filter(s => s.group === group).length;
@@ -230,6 +291,7 @@ export default function SettingsPage() {
             );
           })}
         </nav>
+        )}
 
         {/* ── Settings panel ───────────────────────────────── */}
         <div style={s.panel}>
@@ -277,27 +339,14 @@ export default function SettingsPage() {
         </div>
       </div>
       <style>{`
-        /* Settings responsive */
-        @media (max-width: 768px) {
-          /* Stack sidebar above content */
-          [style*="display: 'flex', gap: '24px'"] { flex-direction: column !important; }
-          /* Full-width sidebar nav on mobile */
-        }
-        @media (max-width: 600px) {
-          [style*="width: '200px'"] { width: 100% !important; position: static !important; }
-          [style*="width: 'clamp(140px"] { width: 100% !important; }
-          [style*="display: 'flex', alignItems: 'center', gap: '16px'"] { flex-direction: column !important; align-items: flex-start !important; }
-        }
-        @media (max-width: 400px) {
-          [style*="padding: '16px 24px'"] { padding: 12px 14px !important; }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );
 }
 
 const s = {
-  page:        { fontFamily: "'Inter', sans-serif", maxWidth: '1100px' },
+  page:        { fontFamily: "'Inter', sans-serif" },
   centered:    { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px' },
   spinner:     { width: '36px', height: '36px', border: '3px solid #e5e7eb', borderTop: '3px solid #1e4080', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
@@ -318,21 +367,21 @@ const s = {
   navCount:    { fontSize: '11px', fontWeight: '700', padding: '2px 7px', borderRadius: '10px' },
   // Panel
   panel:       { flex: 1, minWidth: 0 },
-  panelHeader: { display: 'flex', alignItems: 'center', gap: '14px', padding: '20px 24px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px 14px 0 0', borderBottom: '2px solid #eff6ff' },
+  panelHeader: { display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px 14px 0 0', borderBottom: '2px solid #eff6ff' },
   panelIcon:   { fontSize: '28px' },
   panelTitle:  { fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 },
   panelSub:    { fontSize: '13px', color: '#64748b', margin: '2px 0 0' },
   settingsList:{ background: '#fff', border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 14px 14px', overflow: 'hidden' },
-  settingRow:  { display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 24px', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' },
+  settingRow:  { display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px 16px', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s', flexWrap: 'wrap' },
   settingRowDirty: { background: '#fefce8' },
-  settingLeft: { width: 'clamp(140px, 30%, 220px)', flexShrink: 0 },
+  settingLeft: { width: '100%', flexShrink: 0 },
   settingLabel:{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '3px' },
   settingKey:  { fontSize: '11px', color: '#94a3b8', fontFamily: "'Fira Code', 'Courier New', monospace", background: '#f8fafc', padding: '1px 6px', borderRadius: '4px' },
-  settingRight:{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' },
+  settingRight:{ flex: 1, minWidth: '160px', display: 'flex', alignItems: 'center', gap: '8px' },
   input:       { flex: 1, padding: '9px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: '#fff', fontFamily: 'inherit', transition: 'border-color 0.15s' },
   revertBtn:   { background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', color: '#64748b', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   toggleRow:   { display: 'flex', alignItems: 'center', gap: '10px' },
   toggle:      { width: '46px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 },
-  toggleThumb: { position: 'absolute', top: '3px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'transform 0.2s' },
+  toggleThumb: { position: 'absolute', top: '3px', left: '3px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' },
   toggleLabel: { fontSize: '13px', fontWeight: '600' },
 };

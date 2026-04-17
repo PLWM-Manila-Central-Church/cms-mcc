@@ -18,14 +18,26 @@ const extractFileFields = (file) => {
 // ── Records ──────────────────────────────────────────────────
 exports.getAllRecords = async (req, res, next) => {
   try {
-    const data = await archivesService.getAllRecords(req.query);
+    const data = await archivesService.getAllRecords({
+      ...req.query,
+      roleName: req.user?.roleName,
+    });
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
 
 exports.getRecordById = async (req, res, next) => {
   try {
+    // Enforce single-record visibility
     const data = await archivesService.getRecordById(req.params.id);
+    const roleName = req.user?.roleName;
+    if (data.visibility === "confidential" && !["System Admin", "Pastor"].includes(roleName)) {
+      return res.status(403).json({ success: false, message: "Access forbidden" });
+    }
+    if (data.visibility === "restricted" &&
+        !["System Admin", "Pastor", "Finance Team", "Registration Team"].includes(roleName)) {
+      return res.status(403).json({ success: false, message: "Access forbidden" });
+    }
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
@@ -60,6 +72,10 @@ exports.approveRecord = async (req, res, next) => {
 
 exports.deleteRecord = async (req, res, next) => {
   try {
+    // Only System Admin can delete archives
+    if (req.user?.roleName !== "System Admin") {
+      return res.status(403).json({ success: false, message: "Only System Admin can delete archive records." });
+    }
     const data = await archivesService.deleteRecord(req.params.id, req.user.userId);
     res.json({ success: true, data });
   } catch (err) { next(err); }

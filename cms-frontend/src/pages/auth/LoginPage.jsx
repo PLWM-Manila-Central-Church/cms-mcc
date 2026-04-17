@@ -27,7 +27,13 @@ export default function LoginPage() {
     setError('');
     try {
       const { forcePasswordChange } = await login(form.email, form.password);
-      navigate(forcePasswordChange ? '/force-change-password' : '/dashboard');
+      if (forcePasswordChange) {
+        navigate('/force-change-password');
+      } else {
+        // Read roleName from the user object now stored in context
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        navigate(storedUser.roleName === 'Member' ? '/portal' : '/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -428,7 +434,7 @@ const S = {
   },
   input: {
     padding: '12px 16px 12px 40px',
-    fontSize: '14px',
+    fontSize: '16px',
     border: '1.5px solid #e2e8f0',
     borderRadius: '10px',
     outline: 'none',
@@ -463,6 +469,7 @@ const S = {
     transition: 'opacity 0.2s, transform 0.15s',
     letterSpacing: '0.3px',
     width: '100%',
+    minHeight: '52px',
   },
   loadingRow: {
     display: 'flex',
