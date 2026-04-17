@@ -102,19 +102,6 @@ exports.createUser = async (data, createdBy) => {
   return created;
 };
 
-  // Assign ministry membership if selected
-  if (member_ministry_id && resolvedMemberId) {
-    await MinistryMembership.create({
-      ministry_role_id: parseInt(member_ministry_id),
-      member_id:        resolvedMemberId,
-      added_by:         createdBy,
-    });
-  }
-  const created = await exports.getUserById(user.id);
-  auditLog.log({ userId: createdBy, action: "CREATE_USER", targetTable: "users", targetId: created.id });
-  return created;
-};
-
 // ── Update User ──────────────────────────────────────────────
 exports.updateUser = async (id, data, updatedBy) => {
   const user = await User.findByPk(id);
