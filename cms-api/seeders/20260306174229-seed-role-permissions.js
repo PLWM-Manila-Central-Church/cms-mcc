@@ -148,6 +148,18 @@ module.exports = {
       { role_name: "Group Leader", module: "archives", action: "read" },
       { role_name: "Group Leader", module: "ministry", action: "read" },
 
+      // ── Ministry Leader ─────────────────────────────────────────
+      { role_name: "Ministry Leader", module: "ministry", action: "read" },
+      { role_name: "Ministry Leader", module: "ministry", action: "create" },
+      { role_name: "Ministry Leader", module: "ministry", action: "update" },
+      { role_name: "Ministry Leader", module: "ministry", action: "delete" },
+      { role_name: "Ministry Leader", module: "events", action: "read" },
+      { role_name: "Ministry Leader", module: "attendance", action: "read" },
+      { role_name: "Ministry Leader", module: "services", action: "read" },
+      { role_name: "Ministry Leader", module: "archives", action: "read" },
+      { role_name: "Ministry Leader", module: "cellgroups", action: "read" },
+      { role_name: "Ministry Leader", module: "inventory", action: "read" },
+
       // ── Member ────────────────────────────────────────────────
       { role_name: "Member", module: "members", action: "read" },
       { role_name: "Member", module: "finance", action: "read" },
