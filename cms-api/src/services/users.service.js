@@ -154,45 +154,7 @@ exports.updateUser = async (id, data, updatedBy) => {
   }
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_USER", targetTable: "users", targetId: id });
-  return await exports.getUserById(id);
-};
-
-  // Sync all editable fields on the linked member record
-  if (user.member_id) {
-    const member = await Member.findByPk(user.member_id);
-    if (member) {
-      await member.update({
-        ...(first_name          && { first_name:         first_name.trim() }),
-        ...(last_name           && { last_name:          last_name.trim() }),
-        ...(phone              !== undefined && { phone:              phone              || null }),
-        ...(gender             !== undefined && { gender:             gender             || null }),
-        ...(birthdate          !== undefined && { birthdate:          birthdate          || null }),
-        ...(spiritual_birthday !== undefined && { spiritual_birthday: spiritual_birthday || null }),
-        ...(address            !== undefined && { address:            address            || null }),
-        ...(cell_group_id      !== undefined && { cell_group_id:      cell_group_id ? parseInt(cell_group_id) : null }),
-        ...(group_id           !== undefined && { group_id:           group_id      ? parseInt(group_id)      : null }),
-      });
-
-      // Upsert ministry membership on the linked member
-      if (member_ministry_id !== undefined && member_ministry_id) {
-        // Find any existing membership for this specific ministry role on this member
-        const existingMembership = await MinistryMembership.findOne({
-          where: { member_id: user.member_id, ministry_role_id: parseInt(member_ministry_id) },
-        });
-        // Only create if not already a member of this ministry
-        if (!existingMembership) {
-          await MinistryMembership.create({
-            ministry_role_id: parseInt(member_ministry_id),
-            member_id:        user.member_id,
-            added_by:         updatedBy,
-          });
-        }
-      }
-    }
-  }
-
-  auditLog.log({ userId: updatedBy, action: "UPDATE_USER", targetTable: "users", targetId: id });
-  return await exports.getUserById(id);
+return await exports.getUserById(id);
 };
 
 // ── Deactivate User (Soft Delete) ────────────────────────────
