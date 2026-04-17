@@ -11,6 +11,7 @@ const ROLE_COLORS = {
   'Finance Team':      { bg: '#f0fdf4', color: '#16a34a' },
   'Cell Group Leader': { bg: '#fffbeb', color: '#d97706' },
   'Group Leader':      { bg: '#ecfeff', color: '#0891b2' },
+  'Ministry Leader':   { bg: '#fdf4ff', color: '#c026d3' },
   'Member':            { bg: '#f8fafc', color: '#64748b' },
 };
 

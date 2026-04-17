@@ -42,6 +42,8 @@ exports.createUser = async (data, createdBy) => {
     // Member fields — all collected from the form
     first_name, last_name, phone, gender, birthdate,
     spiritual_birthday, address, cell_group_id, group_id,
+    // Leader fields
+    leads_cell_group_id, leads_group_id, leads_ministry_id,
   } = data;
 
   const existing = await User.findOne({ where: { email } });
@@ -78,6 +80,9 @@ exports.createUser = async (data, createdBy) => {
     role_id,
     member_id:         resolvedMemberId,
     invited_member_id: invited_member_id || null,
+    leads_cell_group_id: leads_cell_group_id || null,
+    leads_group_id:      leads_group_id      || null,
+    leads_ministry_id:    leads_ministry_id    || null,
     is_active:         1,
     force_password_change: 1,
   });
@@ -96,6 +101,8 @@ exports.updateUser = async (id, data, updatedBy) => {
     email, role_id, member_id, invited_member_id, is_active,
     first_name, last_name, phone, gender, birthdate,
     spiritual_birthday, address, cell_group_id, group_id,
+    // Leader fields
+    leads_cell_group_id, leads_group_id, leads_ministry_id,
   } = data;
 
   if (email && email !== user.email) {
@@ -114,6 +121,9 @@ exports.updateUser = async (id, data, updatedBy) => {
     ...(member_id        !== undefined && { member_id }),
     ...(invited_member_id !== undefined && { invited_member_id }),
     ...(is_active        !== undefined && { is_active }),
+    ...(leads_cell_group_id !== undefined && { leads_cell_group_id }),
+    ...(leads_group_id      !== undefined && { leads_group_id }),
+    ...(leads_ministry_id   !== undefined && { leads_ministry_id }),
   });
 
   // Sync all editable fields on the linked member record

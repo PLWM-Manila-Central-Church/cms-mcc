@@ -289,3 +289,46 @@ exports.removeMemberFromMinistry = async (ministryRoleId, memberId) => {
   await row.destroy();
   return { message: "Member removed from ministry roster." };
 };
+
+// ── Ministry Leader: Get Pending Substitutes ───────────────────
+exports.getPendingSubstitutes = async (ministryRoleId) => {
+  const SubstituteRequest = require("../models/SubstituteRequest.model");
+  
+  return await SubstituteRequest.findAll({
+    where: { status: "pending", ministry_role_id: ministryRoleId },
+    include: [
+      {
+        model: Member,
+        as: "requester",
+        attributes: ["id", "first_name", "last_name"],
+      },
+      {
+        model: Service,
+        attributes: ["id", "title", "service_date", "service_time"],
+      },
+      {
+        model: MinistryRole,
+        as: "ministryRole",
+        attributes: ["id", "name"],
+      },
+    ],
+    order: [["created_at", "ASC"]],
+  });
+};
+
+// ── Ministry Leader: Resolve Substitute ───────────────────────
+exports.resolveSubstitute = async (id, data, userId) => {
+  const SubstituteRequest = require("../models/SubstituteRequest.model");
+  
+  const request = await SubstituteRequest.findByPk(id);
+  if (!request) throw { status: 404, message: "Substitute request not found" };
+
+  const { status } = data;
+  if (!["approved", "rejected"].includes(status)) {
+    throw { status: 400, message: "Status must be 'approved' or 'rejected'" };
+  }
+
+  await request.update({ status });
+  auditLog.log({ userId, action: "RESOLVE_SUBSTITUTE", targetTable: "substitute_requests", targetId: id });
+  return request;
+};

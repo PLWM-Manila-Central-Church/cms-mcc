@@ -84,29 +84,29 @@ exports.deleteAssignment = async (req, res, next) => {
 // ── Ministry Roster (Ministry Leader only) ───────────────────
 exports.searchMembersForRoster = async (req, res, next) => {
   try {
-    if (!req.user.ministryRoleId)
+    if (!req.user.leads_ministry_id)
       return res.status(403).json({ message: "You are not a Ministry Leader" });
-    const data = await ministryService.searchMembersForRoster(req.query.q || "");
+    const data = await ministryService.searchMembersForRoster(req.user.leads_ministry_id, req.query.q || "");
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
 
 exports.getMyMinistryMembers = async (req, res, next) => {
   try {
-    if (!req.user.ministryRoleId)
+    if (!req.user.leads_ministry_id)
       return res.status(403).json({ message: "You are not a Ministry Leader" });
-    const data = await ministryService.getMyMinistryMembers(req.user.ministryRoleId);
+    const data = await ministryService.getMyMinistryMembers(req.user.leads_ministry_id);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
 
 exports.addMemberToMinistry = async (req, res, next) => {
   try {
-    if (!req.user.ministryRoleId)
+    if (!req.user.leads_ministry_id)
       return res.status(403).json({ message: "You are not a Ministry Leader" });
     const { member_id } = req.body;
     const data = await ministryService.addMemberToMinistry(
-      req.user.ministryRoleId, member_id, req.user.userId
+      req.user.leads_ministry_id, member_id, req.user.userId
     );
     res.status(201).json({ success: true, data });
   } catch (err) { next(err); }
@@ -114,11 +114,30 @@ exports.addMemberToMinistry = async (req, res, next) => {
 
 exports.removeMemberFromMinistry = async (req, res, next) => {
   try {
-    if (!req.user.ministryRoleId)
+    if (!req.user.leads_ministry_id)
       return res.status(403).json({ message: "You are not a Ministry Leader" });
     const data = await ministryService.removeMemberFromMinistry(
-      req.user.ministryRoleId, req.params.memberId
+      req.user.leads_ministry_id, req.params.memberId
     );
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+// ── Ministry Leader: Substitute Requests ─────────────────────
+exports.getPendingSubstitutes = async (req, res, next) => {
+  try {
+    if (!req.user.leads_ministry_id)
+      return res.status(403).json({ message: "You are not a Ministry Leader" });
+    const data = await ministryService.getPendingSubstitutes(req.user.leads_ministry_id);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.resolveSubstitute = async (req, res, next) => {
+  try {
+    if (!req.user.leads_ministry_id)
+      return res.status(403).json({ message: "You are not a Ministry Leader" });
+    const data = await ministryService.resolveSubstitute(req.params.id, req.body, req.user.userId);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
