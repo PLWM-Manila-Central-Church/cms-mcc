@@ -102,3 +102,32 @@ exports.deleteAssignment = async (req, res, next) => {
     next(err);
   }
 };
+
+// ── Ministry Leader: Substitute Requests ─────────────────────
+exports.getPendingSubstitutes = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const ministryId = user.leads_ministry_id || user.leads_cell_group_id || user.leads_group_id;
+    if (!ministryId) {
+      return res.status(403).json({ message: "You are not a leader" });
+    }
+    const data = await ministryService.getPendingSubstitutes(ministryId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.resolveSubstitute = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const ministryId = user.leads_ministry_id || user.leads_cell_group_id || user.leads_group_id;
+    if (!ministryId) {
+      return res.status(403).json({ message: "You are not a leader" });
+    }
+    const data = await ministryService.resolveSubstitute(req.params.id, req.body, ministryId, req.user.userId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};

@@ -8,19 +8,27 @@ export default function UserFormPage() {
   const isEdit = Boolean(id);
 
   const [form, setForm] = useState({
-    email: '', password: '', role_id: '', member_id: ''
+    email: '', password: '', role_id: '', member_id: '',
+    leads_cell_group_id: '', leads_group_id: '', leads_ministry_id: ''
   });
-  const [roles,   setRoles]   = useState([]);   // fetched from API
+  const [roles, setRoles] = useState([]);
   const [members, setMembers] = useState([]);
+  const [cellGroups, setCellGroups] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [ministries, setMinistries] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [saving,  setSaving]  = useState(false);
-  const [error,   setError]   = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
-  // Load roles from API — never rely on hardcoded IDs
+  const isCellGroupLeader = parseInt(form.role_id) === 5;
+  const isGroupLeader = parseInt(form.role_id) === 6;
+  const isMinistryLeader = parseInt(form.role_id) === 8;
+  const showLeaderSection = isCellGroupLeader || isGroupLeader || isMinistryLeader;
+
   useEffect(() => {
     axiosInstance.get('/roles')
       .then(res => setRoles(res.data.data || []))
-      .catch(() => {}); // roles list failure is non-critical; user sees empty dropdown
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -30,17 +38,38 @@ export default function UserFormPage() {
   }, []);
 
   useEffect(() => {
+    axiosInstance.get('/cellgroups')
+      .then(res => setCellGroups(res.data.data || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    axiosInstance.get('/members/dropdowns/groups')
+      .then(res => setGroups(res.data.data || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    axiosInstance.get('/ministry/roles')
+      .then(res => setMinistries(res.data.data || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!isEdit) return;
     const loadUser = async () => {
       setLoading(true);
       try {
         const res = await axiosInstance.get(`/users/${id}`);
-        const u   = res.data.data;
+        const u = res.data.data;
         setForm({
-          email:     u.email     || '',
-          password:  '',
-          role_id:   u.role_id   || '',
+          email: u.email || '',
+          password: '',
+          role_id: u.role_id || '',
           member_id: u.member_id || '',
+          leads_cell_group_id: u.leads_cell_group_id || '',
+          leads_group_id: u.leads_group_id || '',
+          leads_ministry_id: u.leads_ministry_id || '',
         });
       } catch {
         setError('Failed to load user.');
@@ -52,7 +81,12 @@ export default function UserFormPage() {
   }, [id, isEdit]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'role_id') {
+      setForm({ ...form, role_id: value, leads_cell_group_id: '', leads_group_id: '', leads_ministry_id: '' });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
     setError('');
   };
 
@@ -62,11 +96,21 @@ export default function UserFormPage() {
     setError('');
 
     const payload = {
-      email:     form.email,
-      role_id:   parseInt(form.role_id),
+      email: form.email,
+      role_id: parseInt(form.role_id),
       member_id: form.member_id ? parseInt(form.member_id) : null,
     };
     if (!isEdit) payload.password = form.password;
+
+    if (isCellGroupLeader && form.leads_cell_group_id) {
+      payload.leads_cell_group_id = parseInt(form.leads_cell_group_id);
+    }
+    if (isGroupLeader && form.leads_group_id) {
+      payload.leads_group_id = parseInt(form.leads_group_id);
+    }
+    if (isMinistryLeader && form.leads_ministry_id) {
+      payload.leads_ministry_id = parseInt(form.leads_ministry_id);
+    }
 
     try {
       if (isEdit) {
@@ -179,6 +223,51 @@ export default function UserFormPage() {
             </p>
           </div>
         </div>
+
+        {showLeaderSection && (
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>Leader Assignment</h2>
+            <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 20px 0' }}>
+              Assign which cell group, group, or ministry this user leads.
+            </p>
+
+            {isCellGroupLeader && (
+              <div style={styles.field}>
+                <label style={styles.label}>Leads Cell Group</label>
+                <select name="leads_cell_group_id" value={form.leads_cell_group_id} onChange={handleChange} style={styles.select}>
+                  <option value="">— None —</option>
+                  {cellGroups.map(cg => (
+                    <option key={cg.id} value={cg.id}>{cg.name}{cg.area ? ` (${cg.area})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {isGroupLeader && (
+              <div style={styles.field}>
+                <label style={styles.label}>Leads Group</label>
+                <select name="leads_group_id" value={form.leads_group_id} onChange={handleChange} style={styles.select}>
+                  <option value="">— None —</option>
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {isMinistryLeader && (
+              <div style={styles.field}>
+                <label style={styles.label}>Leads Ministry</label>
+                <select name="leads_ministry_id" value={form.leads_ministry_id} onChange={handleChange} style={styles.select}>
+                  <option value="">— Select Ministry —</option>
+                  {ministries.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={styles.formActions}>
           <button type="button" onClick={() => navigate('/users')} style={styles.cancelBtn}>
