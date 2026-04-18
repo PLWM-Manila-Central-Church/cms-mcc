@@ -1,71 +1,75 @@
 # PLWM-MCC Church Management System
 
-A full-stack web application for managing church operations at **Philippine Life Word Mission — Manila Central Church (PLWM-MCC)**.
+A comprehensive web-based platform for managing church operations at **Philippine Life Word Mission — Manila Central Church (PLWM-MCC)**.
 
 ---
 
-## Overview
+## About
 
-The CMS covers member management, attendance tracking, event registration, finance recording, ministry assignments, inventory, archives, and more — all behind a role-based access control system.
+The PLWM-MCC Church Management System is a full-stack web application designed to streamline and digitize church administrative workflows. It provides role-based access control, enabling different ministry teams to manage their specific areas while maintaining data security and integrity.
 
-It consists of two separate applications that live in this monorepo:
-
-| Folder | Stack | Deployed on |
-|--------|-------|-------------|
-| `frontend/` | React.js | Vercel |
-| `backend/` | Node.js · Express · Sequelize · MySQL | Railway |
-
----
-
-## Features
-
-- **Member Management** — masterfile-style directory with cell group, group, status, age, and birthday fields
-- **User Accounts** — role-based access; first login requires a password change
-- **Member Portal** — dedicated interface for church members to view their profile, attendance, offerings, and register for services/events
-- **Attendance** — manual check-in, barcode scan, and pre-registration (RSVP) with real-time display
-- **Services** — create, publish, and complete services; attendance recorded per service
-- **Events** — registration with capacity tracking; visible on the public landing page
-- **Finance** — tithe and offering records per member
-- **Ministry** — role assignments per service with member confirmation
-- **Inventory** — item tracking, request workflow, and low-stock alerts
-- **Archives** — file storage with visibility tiers (public / restricted / confidential)
-- **Cell Groups & Groups** — manage church organizational structure
-- **Audit Logs** — system activity history
-- **Settings** — admin-only system configuration
-- **Public Landing Page** — church information, live event listings, service schedules, and social links
-
----
-
-## Roles
-
-| Role | Access |
-|------|--------|
-| System Admin | Full access to everything |
-| Pastor | Read-heavy access; can see confidential archives |
-| Registration Team | Members, users, attendance, events, services |
-| Finance Team | Finance records; restricted archives |
-| Cell Group Leader | Cell groups, attendance recording |
-| Group Leader | Groups, attendance recording |
-| Member | Member portal only |
+The system handles member directories, attendance tracking, event management, financial records, ministry assignments, inventory, and more — all through an intuitive web interface.
 
 ---
 
 ## Tech Stack
 
-**Frontend**
-- React 18
-- React Router v6
-- Axios
-- Google Translate integration (multi-language support)
+### Frontend
+- **Framework:** React 18
+- **Routing:** React Router v6
+- **HTTP Client:** Axios
+- **Internationalization:** Google Translate API (multi-language support)
 
-**Backend**
-- Node.js + Express
-- Sequelize ORM
-- MySQL 8+
-- JWT authentication (access + refresh tokens)
-- Multer (file uploads)
-- Resend (transactional email)
-- Express Rate Limit
+### Backend
+- **Runtime:** Node.js
+- **Framework:** Express.js
+- **ORM:** Sequelize
+- **Database:** MySQL 8+
+- **Authentication:** JWT (Access + Refresh tokens)
+- **File Uploads:** Multer
+- **Email:** Resend API
+- **Rate Limiting:** Express Rate Limit
+
+---
+
+## Features
+
+### Core Modules
+
+| Module | Description |
+|--------|-------------|
+| **Member Management** | Complete member directory with contact info, cell group assignment, membership status, birthday tracking |
+| **User Management** | Role-based user accounts with secure authentication |
+| **Attendance Tracking** | Manual check-in, barcode scanning, pre-registration (RSVP), real-time dashboard display |
+| **Service Management** | Create, publish, and complete church services with integrated attendance |
+| **Event Registration** | Event creation with capacity limits, visible on public landing page |
+| **Finance Records** | Tithe and offering tracking per member |
+| **Ministry Assignments** | Service-based ministry roles with member confirmation |
+| **Inventory System** | Item tracking, request workflow, low-stock alerts |
+| **File Archives** | Document storage with visibility levels (public, restricted, confidential) |
+| **Cell Groups** | Organizational structure management |
+| **Audit Logs** | System activity history for compliance |
+| **Settings** | Admin-only system configuration |
+
+### Additional Features
+
+- **Member Portal** — Dedicated interface for church members to view profiles, attendance, offerings
+- **Public Landing Page** — Church information, live events, service schedules, social links
+- **Multi-Language Support** — English, Korean, Filipino (Tagalog), Cebuano, Ilocano, Hiligaynon, Waray, Bikol
+
+---
+
+## User Roles & Access Levels
+
+| Role | Access Level |
+|------|-------------|
+| System Admin | Full system access |
+| Pastor | Read-heavy; access to confidential archives |
+| Registration Team | Members, users, attendance, events, services |
+| Finance Team | Finance records; restricted archives |
+| Cell Group Leader | Cell group management; attendance recording |
+| Group Leader | Group management; attendance recording |
+| Member | Member portal only |
 
 ---
 
@@ -73,140 +77,151 @@ It consists of two separate applications that live in this monorepo:
 
 ```
 cms-mcc/
-├── frontend/
+├── cms-api/                    # Backend API
+│   ├── migrations/             # Database migrations
+│   ├── seeders/                # Database seed data
 │   └── src/
-│       ├── api/              # Axios instance
-│       ├── components/       # Shared layout components (Sidebar, Header)
-│       ├── context/          # Auth context
-│       ├── hooks/            # Custom hooks
-│       ├── pages/            # Page components (one folder per feature)
-│       ├── routes/           # Route definitions and guards
-│       └── utils/            # Constants, language utilities
+│       ├── config/              # Configuration files
+│       ├── controllers/         # Route handlers
+│       ├── helpers/             # Utilities (audit logs, permissions)
+│       ├── middlewares/        # Express middleware
+│       ├── models/            # Sequelize models
+│       ├── routes/             # Route definitions
+│       ├── services/           # Business logic
+│       └── utils/              # Utilities (mailer, helpers)
 │
-└── backend/
-    ├── migrations/           # Sequelize migration files
-    ├── seeders/              # Database seed files
+└── frontend/                   # React Frontend
     └── src/
-        ├── config/           # Database and Sequelize config
-        ├── controllers/      # Route handler logic
-        ├── helpers/          # Audit log, permission cache
-        ├── middlewares/      # Auth, authorization, error handler, upload
-        ├── models/           # Sequelize models
-        ├── routes/           # Express route definitions
-        ├── services/         # Business logic layer
-        └── utils/            # Mailer and other utilities
-```
-
----
-
-## Getting Started (Local Development)
-
-### Prerequisites
-- Node.js 18+
-- MySQL 8+
-- npm
-
-### Backend
-
-```bash
-cd backend
-npm install
-# Create a .env file — see Environment Variables section below
-npx sequelize-cli db:migrate
-npx sequelize-cli db:seed:all
-npm run dev
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-# Create a .env file — see Environment Variables section below
-npm start
-```
-
----
-
-## Environment Variables
-
-**Backend** — create `backend/.env`:
-
-```
-PORT=5000
-DB_HOST=
-DB_PORT=
-DB_NAME=
-DB_USER=
-DB_PASS=
-JWT_SECRET=
-JWT_REFRESH_SECRET=
-RESEND_API_KEY=
-RESEND_FROM=
-FRONTEND_URL=
-ALLOWED_ORIGIN=
-BCRYPT_ROUNDS=10
-```
-
-**Frontend** — create `frontend/.env`:
-
-```
-REACT_APP_API_URL=http://localhost:5000/api
+        ├── api/                # Axios configuration
+        ├── components/        # Shared UI components
+        ├── context/            # React context providers
+        ├── hooks/             # Custom React hooks
+        ├── pages/             # Page components
+        ├── routes/            # Route definitions
+        └── utils/             # Constants, utilities
 ```
 
 ---
 
 ## Deployment
 
-| Service | Platform | Trigger |
-|---------|----------|---------|
-| Backend API | Railway | Push to `main` / `fix/bug` branch |
-| Frontend | Vercel | Push to `fix/bug` branch (promoted to production) |
+| Component | Platform | URL |
+|-----------|----------|-----|
+| Backend API | Railway | `cms-mcc-production.up.railway.app` |
+| Frontend | Vercel | `cms-mcc.vercel.app` |
 
-**After pushing backend changes that include new migrations:**
+**Deployment Trigger:** Push to `main` branch automatically deploys both frontend and backend.
+
+---
+
+## API Endpoints
+
+The backend exposes a RESTful API at `/api`. Protected routes require a Bearer JWT token.
+
+### Available Routes
+
+```
+/api/auth            → Authentication (login, logout, refresh, password reset)
+/api/members         → Member CRUD operations
+/api/users           → User CRUD operations
+/api/services        → Church service management
+/api/events          → Event management
+/api/finance         → Financial records
+/api/attendance      → Attendance tracking
+/api/ministry        → Ministry role assignments
+/api/inventory       → Inventory management
+/api/archives        → File archive records
+/api/cellgroups      → Cell group management
+/api/groups         → Ministry group management
+/api/notifications   → In-app notifications
+/api/audit           → Audit log access
+/api/settings        → System settings (admin)
+/api/roles           → Role management
+/api/public          → Public endpoints (landing page data)
+/api/member-portal   → Member-only portal endpoints
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- MySQL 8+
+- npm or yarn
+
+### Local Development Setup
+
+#### Backend
+
 ```bash
+cd cms-api
+npm install
+cp .env.example .env  # Configure your environment variables
 npx sequelize-cli db:migrate
+npx sequelize-cli db:seed:all
+npm run dev
 ```
-Railway runs this automatically if configured in the start command.
+
+#### Frontend
+
+```bash
+cd frontend
+npm install
+cp .env.example .env  # Configure your environment variables
+npm start
+```
+
+### Environment Variables
+
+**cms-api/.env:**
+```
+PORT=5000
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=church_cms
+DB_USER=root
+DB_PASS=your_password
+JWT_SECRET=your_jwt_secret
+JWT_REFRESH_SECRET=your_refresh_secret
+RESEND_API_KEY=your_resend_key
+RESEND_FROM=noreply@yourdomain.com
+FRONTEND_URL=http://localhost:3000
+ALLOWED_ORIGIN=http://localhost:3000
+BCRYPT_ROUNDS=10
+```
+
+**frontend/.env:**
+```
+REACT_APP_API_URL=http://localhost:5000/api
+```
 
 ---
 
-## API
+## Languages Supported
 
-The backend exposes a RESTful API at `/api`. All protected routes require a `Bearer` JWT in the `Authorization` header.
+The system provides multi-language support using Google Translate integration. Languages are persisted across the application via local storage.
 
-Key route groups:
-
-```
-/api/auth           — login, logout, refresh, forgot/reset password
-/api/members        — CRUD for church members
-/api/users          — CRUD for system users
-/api/services       — church service management + attendance
-/api/events         — event management + registration
-/api/finance        — financial records
-/api/attendance     — attendance records
-/api/ministry       — ministry role assignments
-/api/inventory      — inventory items + requests
-/api/archives       — file archive records
-/api/cell-groups    — cell group management
-/api/notifications  — in-app notifications
-/api/audit          — audit log reads
-/api/settings       — system settings (admin only)
-/api/roles          — role management
-/api/public         — unauthenticated endpoints (landing page stats + events)
-/api/member-portal  — member-only portal endpoints
-```
-
----
-
-## Languages
-
-The system supports multi-language display via Google Translate integration. The selected language persists across the landing page, CMS, and member portal using a shared `localStorage` key.
-
-Supported languages: English, Korean, Filipino (Tagalog), Cebuano, Ilocano, Hiligaynon, Waray, Bikol.
+- English
+- Korean
+- Filipino (Tagalog)
+- Cebuano
+- Ilocano
+- Hiligaynon
+- Waray
+- Bikol
 
 ---
 
 ## License
 
-Internal use only — PLWM Manila Central Church.
+**Internal Use Only** — PLWM Manila Central Church
+
+All rights reserved. This codebase is for the exclusive use of PLWM-MCC and its authorized personnel.
+
+---
+
+## Support
+
+For technical support or inquiries, please contact the system administrator.
