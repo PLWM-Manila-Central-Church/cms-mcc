@@ -70,10 +70,10 @@ module.exports = {
       { role_name: "System Admin", module: "ministry", action: "create" },
       { role_name: "System Admin", module: "ministry", action: "update" },
       { role_name: "System Admin", module: "ministry", action: "delete" },
-      { role_name: "System Admin", module: "cellgroups", action: "read" },
-      { role_name: "System Admin", module: "cellgroups", action: "create" },
-      { role_name: "System Admin", module: "cellgroups", action: "update" },
-      { role_name: "System Admin", module: "cellgroups", action: "delete" },
+      { role_name: "System Admin", module: "cell_groups", action: "read" },
+      { role_name: "System Admin", module: "cell_groups", action: "create" },
+      { role_name: "System Admin", module: "cell_groups", action: "update" },
+      { role_name: "System Admin", module: "cell_groups", action: "delete" },
       { role_name: "System Admin", module: "notifications", action: "read" },
       { role_name: "System Admin", module: "notifications", action: "create" },
       { role_name: "System Admin", module: "notifications", action: "update" },
@@ -94,7 +94,7 @@ module.exports = {
       { role_name: "Pastor", module: "archives", action: "read" },
       { role_name: "Pastor", module: "archives", action: "update" },
       { role_name: "Pastor", module: "ministry", action: "read" },
-      { role_name: "Pastor", module: "cellgroups", action: "read" },
+      { role_name: "Pastor", module: "cell_groups", action: "read" },
       { role_name: "Pastor", module: "audit", action: "read" },
 
       // ── Registration Team ────────────────────────────────────
@@ -114,7 +114,7 @@ module.exports = {
       { role_name: "Registration Team", module: "inventory", action: "read" },
       { role_name: "Registration Team", module: "archives", action: "read" },
       { role_name: "Registration Team", module: "archives", action: "create" },
-      { role_name: "Registration Team", module: "cellgroups", action: "read" },
+      { role_name: "Registration Team", module: "cell_groups", action: "read" },
       { role_name: "Registration Team", module: "ministry", action: "read" },
       { role_name: "Registration Team", module: "ministry", action: "create" },
 
@@ -134,7 +134,7 @@ module.exports = {
       { role_name: "Cell Group Leader", module: "inventory", action: "read" },
       { role_name: "Cell Group Leader", module: "inventory", action: "create" },
       { role_name: "Cell Group Leader", module: "archives", action: "read" },
-      { role_name: "Cell Group Leader", module: "cellgroups", action: "read" },
+      { role_name: "Cell Group Leader", module: "cell_groups", action: "read" },
       { role_name: "Cell Group Leader", module: "ministry", action: "read" },
 
       // ── Group Leader ──────────────────────────────────────────
@@ -157,7 +157,7 @@ module.exports = {
       { role_name: "Ministry Leader", module: "attendance", action: "read" },
       { role_name: "Ministry Leader", module: "services", action: "read" },
       { role_name: "Ministry Leader", module: "archives", action: "read" },
-      { role_name: "Ministry Leader", module: "cellgroups", action: "read" },
+      { role_name: "Ministry Leader", module: "cell_groups", action: "read" },
       { role_name: "Ministry Leader", module: "inventory", action: "read" },
 
       // ── Member ────────────────────────────────────────────────

@@ -32,6 +32,7 @@ const userIncludes = [
 // ── Get All Users ────────────────────────────────────────────
 exports.getAllUsers = async () => {
   return await User.findAll({
+    where: { is_deleted: 0 },
     attributes: { exclude: ["password_hash"] },
     include: userIncludes,
     order: [["created_at", "DESC"]],
@@ -40,7 +41,8 @@ exports.getAllUsers = async () => {
 
 // ── Get User By ID ───────────────────────────────────────────
 exports.getUserById = async (id) => {
-  const user = await User.findByPk(id, {
+  const user = await User.findOne({
+    where: { id, is_deleted: 0 },
     attributes: { exclude: ["password_hash"] },
     include: userIncludes,
   });
@@ -57,7 +59,7 @@ exports.createUser = async (data, createdBy) => {
     leads_cell_group_id, leads_group_id, leads_ministry_id,
   } = data;
 
-  const existing = await User.findOne({ where: { email } });
+  const existing = await User.findOne({ where: { email, is_deleted: 0 } });
   if (existing) throw { status: 409, message: "Email already in use" };
 
   const role = await Role.findByPk(role_id);
@@ -115,7 +117,7 @@ exports.updateUser = async (id, data, updatedBy) => {
   } = data;
 
   if (email && email !== user.email) {
-    const existing = await User.findOne({ where: { email } });
+    const existing = await User.findOne({ where: { email, is_deleted: 0 } });
     if (existing) throw { status: 409, message: "Email already in use" };
   }
 
@@ -162,7 +164,7 @@ exports.deactivateUser = async (id, requestingUserId) => {
   if (parseInt(id) === parseInt(requestingUserId))
     throw { status: 400, message: "You cannot deactivate your own account" };
 
-  const user = await User.findByPk(id);
+  const user = await User.findOne({ where: { id, is_deleted: 0 } });
   if (!user) throw { status: 404, message: "User not found" };
 
   await user.update({ is_active: 0 });
@@ -172,7 +174,7 @@ exports.deactivateUser = async (id, requestingUserId) => {
 
 // ── Activate User ─────────────────────────────────────────────
 exports.activateUser = async (id, requestingUserId) => {
-  const user = await User.findByPk(id);
+  const user = await User.findOne({ where: { id, is_deleted: 0 } });
   if (!user) throw { status: 404, message: "User not found" };
 
   await user.update({ is_active: 1 });
@@ -185,7 +187,7 @@ exports.hardDeleteUser = async (id, requestingUserId) => {
   if (parseInt(id) === parseInt(requestingUserId))
     throw { status: 400, message: "You cannot delete your own account" };
 
-  const user = await User.findByPk(id);
+  const user = await User.findOne({ where: { id, is_deleted: 0 } });
   if (!user) throw { status: 404, message: "User not found" };
 
   const sequelize = require("../config/db");
@@ -208,8 +210,8 @@ exports.hardDeleteUser = async (id, requestingUserId) => {
     await sequelize.query("DELETE FROM ministry_memberships WHERE added_by = :userId",          { replacements: { userId: id }, transaction: t });
     await sequelize.query("DELETE FROM ministry_event_invites WHERE invited_by = :userId",      { replacements: { userId: id }, transaction: t });
 
-    // Hard delete the user
-    await user.destroy({ transaction: t });
+    // Soft delete the user (set is_deleted = 1)
+    await user.update({ is_deleted: 1, deleted_at: new Date() }, { transaction: t });
 
     // Cascade: soft-delete the linked member (if any)
     if (linkedMemberId) {
