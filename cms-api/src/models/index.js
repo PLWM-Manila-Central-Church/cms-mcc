@@ -86,8 +86,8 @@ RefreshToken.belongsTo(User, { foreignKey: "user_id" });
 // ── Member ───────────────────────────────────────────────────
 Member.belongsTo(CellGroup, { foreignKey: "cell_group_id", as: "cellGroup" });
 CellGroup.hasMany(Member, { foreignKey: "cell_group_id" });
-Member.belongsTo(Group, { foreignKey: "group_id", as: "group" });
-Group.hasMany(Member, { foreignKey: "group_id" });
+Member.belongsTo(MinistryGroup, { foreignKey: "group_id", as: "group" });
+MinistryGroup.hasMany(Member, { foreignKey: "group_id" });
 Member.belongsTo(Member, { foreignKey: "referred_by", as: "referredByMember" });
 Member.hasMany(Member, { foreignKey: "referred_by", as: "referrals" });
 Member.belongsTo(User, { foreignKey: "deleted_by", as: "deletedByUser" });
@@ -252,7 +252,7 @@ ArchiveRecord.belongsTo(User, {
 // ── User leader associations ─────────────────────────────────
 User.belongsTo(MinistryRole, { foreignKey: "ministry_role_id",    as: "leadsMinistry"  });
 User.belongsTo(CellGroup,    { foreignKey: "leads_cell_group_id", as: "leadsCellGroup" });
-User.belongsTo(Group,        { foreignKey: "leads_group_id",      as: "leadsGroup"     });
+User.belongsTo(MinistryGroup, { foreignKey: "leads_group_id", as: "leadsGroup"   });
 
 // ── MinistryMembership ───────────────────────────────────────
 MinistryMembership.belongsTo(MinistryRole, { foreignKey: "ministry_role_id", as: "ministryRole"  });
@@ -290,7 +290,8 @@ module.exports = {
   RolePermission,
   Member,
   CellGroup,
-  Group,
+  MinistryGroup,
+  Group: MinistryGroup,
   EmergencyContact,
   MemberNote,
   MemberStatusHistory,

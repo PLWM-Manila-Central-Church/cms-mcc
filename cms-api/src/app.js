@@ -106,7 +106,7 @@ app.use("/api/audit-logs",    require("./routes/audit.routes"));
 app.use("/api/member-portal", require("./routes/member-portal.routes"));
 
 // ── Dropdown aliases for frontend member form ────────────────
-const { CellGroup, Group } = require("./models");
+const { CellGroup, MinistryGroup } = require("./models");
 const verifyToken = require("./middlewares/verifyToken");
 
 // Fix #3 — authenticated file serving (replaces public express.static)
@@ -118,7 +118,7 @@ app.get("/api/members/dropdowns/cell-groups", verifyToken, async (req, res) => {
   res.json({ success: true, data });
 });
 app.get("/api/members/dropdowns/groups", verifyToken, async (req, res) => {
-  const data = await Group.findAll({ order: [["name", "ASC"]] });
+  const data = await MinistryGroup.findAll({ order: [["name", "ASC"]] });
   res.json({ success: true, data });
 });
 

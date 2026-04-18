@@ -28,8 +28,17 @@ const User = sequelize.define(
     last_login_at:         { type: DataTypes.DATE,    allowNull: true },
     failed_login_attempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
     locked_until:          { type: DataTypes.DATE,    allowNull: true,  defaultValue: null },
+    is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+    deleted_at: { type: DataTypes.DATE, allowNull: true },
   },
-  { tableName: "users", timestamps: true, underscored: true },
+  {
+    tableName: "users",
+    timestamps: true,
+    underscored: true,
+    scopes: {
+      active: { where: { is_deleted: 0 } },
+    },
+  },
 );
 
 module.exports = User;

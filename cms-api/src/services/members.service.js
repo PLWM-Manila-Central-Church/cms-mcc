@@ -1,8 +1,8 @@
 "use strict";
 
-const { Op }                                                    = require("sequelize");
-const { Member, CellGroup, Group, EmergencyContact, User,
-        MinistryMembership }                                     = require("../models");
+const { Op } = require("sequelize");
+const { Member, CellGroup, MinistryGroup, EmergencyContact, User,
+  MinistryMembership } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
 
 const memberIncludes = [
@@ -13,7 +13,7 @@ const memberIncludes = [
     required: false,
   },
   {
-    model: Group,
+    model: MinistryGroup,
     as: "group",
     attributes: ["id", "name"],
     required: false,
@@ -125,7 +125,7 @@ exports.createMember = async (data, createdBy, user = {}) => {
   }
 
   if (group_id) {
-    const group = await Group.findByPk(group_id);
+    const group = await MinistryGroup.findByPk(group_id);
     if (!group) throw { status: 404, message: "Group not found" };
   }
 
@@ -199,7 +199,7 @@ exports.updateMember = async (id, data, updatedBy) => {
   }
 
   if (group_id) {
-    const group = await Group.findByPk(group_id);
+    const group = await MinistryGroup.findByPk(group_id);
     if (!group) throw { status: 404, message: "Group not found" };
   }
 

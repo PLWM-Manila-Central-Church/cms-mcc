@@ -47,7 +47,7 @@ const getUserPermissions = async (roleId) => {
 // ── Login ────────────────────────────────────────────────────
 exports.login = async (email, password, ip, device) => {
   const user = await User.findOne({
-    where: { email },
+    where: { email, is_deleted: 0 },
     include: [
       { model: Role,   as: "role" },
       { model: Member, as: "member", attributes: ["cell_group_id", "group_id"], required: false },
@@ -121,6 +121,7 @@ exports.refreshToken = async (token) => {
     throw { status: 401, message: "Refresh token expired or revoked" };
 
   const user = await User.findByPk(decoded.userId, {
+    where: { is_deleted: 0 },
     include: [
       { model: Role,   as: "role" },
       { model: Member, as: "member", attributes: ["cell_group_id", "group_id"], required: false },
@@ -149,7 +150,7 @@ exports.refreshToken = async (token) => {
 
 // ── Forgot Password ──────────────────────────────────────────
 exports.forgotPassword = async (email) => {
-  const user = await User.findOne({ where: { email } });
+  const user = await User.findOne({ where: { email, is_deleted: 0 } });
 
   // Always return same message to prevent email enumeration
   if (!user) return { message: "If that email exists, a reset link was sent." };
