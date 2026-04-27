@@ -15,13 +15,13 @@ exports.updateRoleSchema = Joi.object({
 exports.createAssignmentSchema = Joi.object({
   member_id:        Joi.number().integer().positive().required(),
   ministry_role_id: Joi.number().integer().positive().required(),
-  service_id:       Joi.number().integer().positive().allow(null).optional(),
+  service_id:       Joi.number().integer().positive().required(),
   notes:            Joi.string().max(500).allow(null, "").optional(),
 });
 
 exports.updateAssignmentSchema = Joi.object({
   member_id:        Joi.number().integer().positive().optional(),
   ministry_role_id: Joi.number().integer().positive().optional(),
-  service_id:       Joi.number().integer().positive().allow(null).optional(),
+  service_id:       Joi.number().integer().positive().required(),
   notes:            Joi.string().max(500).allow(null, "").optional(),
 }).min(1);

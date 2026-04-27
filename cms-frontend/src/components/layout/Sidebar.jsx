@@ -18,10 +18,10 @@ function NavIcon({ name, size = 18 }) {
 export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
   const { user, hasPermission } = useAuth();
 
-  // Ministry Leader = Registration Team user with a ministry sub-role.
+  // Ministry Leader = user with role_name 'Ministry Leader' and leadsMinistryId.
   // They manage members exclusively through the Ministry page (roster tab),
   // so the Members nav item is hidden for them.
-  const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
+  const isMinistryLeader = user?.roleName === 'Ministry Leader' && !!user?.leadsMinistryId;
 
   // Ministry Leaders only see these 5 nav items
   const MINISTRY_LEADER_PATHS = new Set(['/dashboard', '/ministry', '/events', '/archives', '/inventory']);

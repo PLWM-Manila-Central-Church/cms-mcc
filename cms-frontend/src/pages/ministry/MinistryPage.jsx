@@ -14,16 +14,16 @@ export default function MinistryPage() {
   const isMobile = useIsMobile();
   const isMember = user?.roleName === 'Member';
 
-  // Ministry Leader = Registration Team user with a ministry sub-role assigned.
+  // Ministry Leader = user with role_name 'Ministry Leader' and leadsMinistryId.
   // They see ONLY the roster — no tabs, no Assignments, Roles, or Substitutes.
-  const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
+  const isMinistryLeader = user?.roleName === 'Ministry Leader' && !!user?.leadsMinistryId;
 
   // CHANGE 1: Fetch ministry name dynamically
   const [ministryName, setMinistryName] = useState('Ministry');
 
   useEffect(() => {
-    if (isMinistryLeader && user?.ministryRoleId) {
-      axiosInstance.get(`/ministry/roles/${user.ministryRoleId}`)
+    if (isMinistryLeader && user?.leadsMinistryId) {
+      axiosInstance.get(`/ministry/roles/${user.leadsMinistryId}`)
         .then(res => {
           if (res.data?.data?.name) {
             setMinistryName(res.data.data.name);
@@ -33,7 +33,7 @@ export default function MinistryPage() {
           // Silent fail - keep default "Ministry" if fetch fails
         });
     }
-  }, [isMinistryLeader, user?.ministryRoleId]);
+  }, [isMinistryLeader, user?.leadsMinistryId]);
 
   const tabs = isMember
     ? [{ key: 'substitutes', label: '🔄 Substitute Requests' }]
@@ -77,7 +77,7 @@ export default function MinistryPage() {
         </div>
       )}
 
-      {isMinistryLeader && <RosterTab ministryRoleId={user?.ministryRoleId} />}
+      {isMinistryLeader && <RosterTab leadsMinistryId={user?.leadsMinistryId} />}
       {!isMinistryLeader && tab === 'assignments' && <AssignmentsTab />}
       {!isMinistryLeader && tab === 'roles'       && <RolesTab />}
       {!isMinistryLeader && tab === 'substitutes' && <SubstituteRequestsTab />}
@@ -97,8 +97,8 @@ export default function MinistryPage() {
 
 /* ─────────────────────────────────────────────────────────────
    Roster Tab (Ministry Leader only)
-───────────────────────────────────────────────────────────── */
-function RosterTab({ ministryRoleId }) {
+───────────────────────────────────────────────────────────────── */
+function RosterTab({ leadsMinistryId }) {
   const navigate = useNavigate();
   const [members,      setMembers]      = useState([]);
   const [loading,      setLoading]      = useState(true);

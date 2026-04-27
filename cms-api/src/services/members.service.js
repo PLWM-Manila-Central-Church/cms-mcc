@@ -27,24 +27,25 @@ exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_grou
 
   const {
     roleId          = null,
+    roleName        = null,
     leadsCellGroupId = null,
     leadsGroupId     = null,
-    ministryRoleId   = null,
+    leadsMinistryId  = null,
   } = user;
 
   // Role-based scoping — restrict what the caller can see
   // Role IDs: 5 = Cell Group Leader, 6 = Group Leader
-  // Ministry Leader = Registration Team (3) with ministryRoleId set
+  // Ministry Leader = role_name === 'Ministry Leader' with leadsMinistryId set
   if (roleId === 5 && leadsCellGroupId) {
     // Cell Group Leader: only their cell group
     where.cell_group_id = leadsCellGroupId;
   } else if (roleId === 6 && leadsGroupId) {
     // Group Leader: only their group
     where.group_id = leadsGroupId;
-  } else if (roleId === 3 && ministryRoleId) {
+  } else if (roleName === 'Ministry Leader' && leadsMinistryId) {
     // Ministry Leader: only members enrolled in their ministry
     const memberships = await MinistryMembership.findAll({
-      where:      { ministry_role_id: ministryRoleId },
+      where:      { ministry_role_id: leadsMinistryId },
       attributes: ["member_id"],
     });
     const memberIds = memberships.map((m) => m.member_id);
@@ -152,10 +153,10 @@ exports.createMember = async (data, createdBy, user = {}) => {
   // Auto-enroll into ministry:
   // 1. If an explicit ministry_role_id was passed in the form, use that.
   // 2. Otherwise, if the creator is a Ministry Leader, use their ministry.
-  const { roleId, ministryRoleId } = user;
+  const { roleName, leadsMinistryId } = user;
   const enrollRoleId = ministry_role_id
     ? parseInt(ministry_role_id)
-    : (roleId === 3 && ministryRoleId ? ministryRoleId : null);
+    : (roleName === 'Ministry Leader' && leadsMinistryId ? leadsMinistryId : null);
 
   if (enrollRoleId) {
     try {

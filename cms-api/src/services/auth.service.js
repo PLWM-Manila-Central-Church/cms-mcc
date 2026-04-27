@@ -97,7 +97,7 @@ exports.login = async (email, password, ip, device) => {
       email:          user.email,
       roleName:       user.role.role_name,
       memberId:       user.member_id       || null,
-      ministryRoleId: user.ministry_role_id || null,
+      leadsMinistryId: user.leads_ministry_id || null,
     },
     permissions,
   };

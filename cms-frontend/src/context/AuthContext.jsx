@@ -24,13 +24,13 @@ export const AuthProvider = ({ children }) => {
     const res = await axiosInstance.post('/auth/login', { email, password });
     const { accessToken, refreshToken, user, permissions, forcePasswordChange } = res.data.data;
 
-    // Store forcePasswordChange and ministryRoleId inside the user object.
+    // Store forcePasswordChange and leadsMinistryId inside the user object.
     // forcePasswordChange: enforced by ProtectedRoute on next navigation.
-    // ministryRoleId: used by EventDetailPage and members.service.js scoping.
+    // leadsMinistryId: used by Ministry Leader scoping.
     const userWithFlag = {
       ...user,
       forcePasswordChange: !!forcePasswordChange,
-      ministryRoleId:      user.ministryRoleId || null,
+      leadsMinistryId:     user.leadsMinistryId || null,
     };
 
     localStorage.setItem('accessToken',  accessToken);

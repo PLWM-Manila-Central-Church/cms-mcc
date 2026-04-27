@@ -162,7 +162,7 @@ export default function Header({ sidebarWidth, isMobile = false }) {
 
   const handleLogout = async () => { await logout(); navigate('/login'); };
 
-  const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
+  const isMinistryLeader = user?.roleName === 'Ministry Leader' && !!user?.leadsMinistryId;
 
   const roleColors = {
     'System Admin':      { bg: '#fef2f2', color: '#dc2626', dot: '#dc2626' },
