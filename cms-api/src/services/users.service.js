@@ -16,6 +16,7 @@ const userIncludes = [
     include: [
       {
         model: MinistryMembership,
+        as: "ministryMemberships",
         attributes: ["id", "ministry_role_id"],
         required: false,
       },
@@ -57,6 +58,7 @@ exports.createUser = async (data, createdBy) => {
     first_name, last_name, phone, gender, birthdate,
     spiritual_birthday, address, cell_group_id, group_id,
     leads_cell_group_id, leads_group_id, leads_ministry_id,
+    member_ministry_role_id,
   } = data;
 
   const existing = await User.findOne({ where: { email, is_deleted: 0 } });
@@ -68,6 +70,11 @@ exports.createUser = async (data, createdBy) => {
   // Validate: leads_ministry_id is only allowed for Ministry Leader role
   if (leads_ministry_id && role.role_name !== 'Ministry Leader') {
     throw { status: 400, message: "leads_ministry_id can only be set for Ministry Leader role" };
+  }
+
+  // Validate: member_ministry_role_id is NOT allowed for Ministry Leader role
+  if (member_ministry_role_id && role.role_name === 'Ministry Leader') {
+    throw { status: 400, message: "Use leads_ministry_id for Ministry Leader role, not member_ministry_role_id" };
   }
 
   const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -103,6 +110,21 @@ exports.createUser = async (data, createdBy) => {
     is_active: 1,
     force_password_change: 1,
   });
+
+  // If member_ministry_role_id is provided, add user to that ministry as a team member
+  if (member_ministry_role_id && resolvedMemberId) {
+    await MinistryMembership.findOrCreate({
+      where: {
+        ministry_role_id: parseInt(member_ministry_role_id),
+        member_id: resolvedMemberId,
+      },
+      defaults: {
+        ministry_role_id: parseInt(member_ministry_role_id),
+        member_id: resolvedMemberId,
+        added_by: createdBy,
+      },
+    });
+  }
 
   const created = await exports.getUserById(user.id);
   auditLog.log({ userId: createdBy, action: "CREATE_USER", targetTable: "users", targetId: created.id });
