@@ -65,6 +65,11 @@ exports.createUser = async (data, createdBy) => {
   const role = await Role.findByPk(role_id);
   if (!role) throw { status: 404, message: "Role not found" };
 
+  // Validate: leads_ministry_id is only allowed for Ministry Leader role
+  if (leads_ministry_id && role.role_name !== 'Ministry Leader') {
+    throw { status: 400, message: "leads_ministry_id can only be set for Ministry Leader role" };
+  }
+
   const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
   let resolvedMemberId = member_id || null;

@@ -70,7 +70,7 @@ const PortalRoute = ({ children }) => {
 const MembersRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
-  const isMinistryLeader = user?.roleName === 'Registration Team' && !!user?.ministryRoleId;
+  const isMinistryLeader = user?.roleName === 'Ministry Leader' && !!user?.leadsMinistryId;
   if (isMinistryLeader) return <Navigate to="/ministry" replace />;
   return children;
 };

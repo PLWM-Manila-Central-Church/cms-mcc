@@ -54,7 +54,7 @@ export default function EventDetailPage() {
 
   // Fetch invites + ministry roster when the user is a Ministry Leader
   useEffect(() => {
-    if (!user?.ministryRoleId || !id) return;
+    if (!user?.leadsMinistryId || !id) return;
     setInviteLoading(true);
     Promise.all([
       axiosInstance.get(`/events/${id}/invites`),
@@ -70,7 +70,7 @@ export default function EventDetailPage() {
       })
       .catch(() => setInviteError('Failed to load invite data.'))
       .finally(() => setInviteLoading(false));
-  }, [id, user?.ministryRoleId]);
+  }, [id, user?.leadsMinistryId]);
 
   const isRegistered   = event?.EventRegistrations?.some(r => r.member_id === user?.memberId);
   const regCount       = event?.EventRegistrations?.length ?? 0;
@@ -118,7 +118,7 @@ export default function EventDetailPage() {
     setSendingInvites(true); setInviteError(''); setInviteSuccess('');
     try {
       const res = await axiosInstance.post(`/events/${id}/invites`, {
-        ministry_role_id:  user.ministryRoleId,
+        ministry_role_id:  user.leadsMinistryId,
         member_ids:        [...selectedIds],
         response_deadline: inviteDeadline || null,
       });
@@ -330,7 +330,7 @@ export default function EventDetailPage() {
         </div>
       )}
       {/* ── Ministry Invite Panel (Ministry Leaders only) ── */}
-      {user?.ministryRoleId && (
+      {user?.leadsMinistryId && (
         <div style={{ ...s.regSection, marginTop: 24 }}>
           <h2 style={s.regTitle}>⚡ Ministry Invites</h2>
           <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px 0' }}>

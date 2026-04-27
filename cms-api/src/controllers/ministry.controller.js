@@ -41,7 +41,7 @@ exports.deleteRole = async (req, res, next) => {
 // ── Ministry Assignments ─────────────────────────────────────
 exports.getAllAssignments = async (req, res, next) => {
   try {
-    const data = await ministryService.getAllAssignments();
+    const data = await ministryService.getAllAssignments(req.user.leadsMinistryId);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
@@ -84,7 +84,7 @@ exports.deleteAssignment = async (req, res, next) => {
 // ── Ministry Roster (Ministry Leader only) ───────────────────
 exports.searchMembersForRoster = async (req, res, next) => {
   try {
-    if (!req.user.ministryRoleId)
+    if (!req.user.leadsMinistryId)
       return res.status(403).json({ message: "You are not a Ministry Leader" });
     const data = await ministryService.searchMembersForRoster(req.query.q || "");
     res.json({ success: true, data });
@@ -127,9 +127,9 @@ exports.removeMemberFromMinistry = async (req, res, next) => {
 exports.getPendingSubstitutes = async (req, res, next) => {
   try {
     const user = req.user;
-    const ministryId = user.leadsMinistryId || user.leadsGroupId || user.leadsCellGroupId;
+    const ministryId = user.leadsMinistryId;
     if (!ministryId) {
-      return res.status(403).json({ message: "You are not a leader" });
+      return res.status(403).json({ message: "You are not a Ministry Leader" });
     }
     const data = await ministryService.getPendingSubstitutes(ministryId);
     res.json({ success: true, data });
@@ -141,9 +141,9 @@ exports.getPendingSubstitutes = async (req, res, next) => {
 exports.resolveSubstitute = async (req, res, next) => {
   try {
     const user = req.user;
-    const ministryId = user.leadsMinistryId || user.leadsGroupId || user.leadsCellGroupId;
+    const ministryId = user.leadsMinistryId;
     if (!ministryId) {
-      return res.status(403).json({ message: "You are not a leader" });
+      return res.status(403).json({ message: "You are not a Ministry Leader" });
     }
     const data = await ministryService.resolveSubstitute(req.params.id, req.body, ministryId, req.user.userId);
     res.json({ success: true, data });

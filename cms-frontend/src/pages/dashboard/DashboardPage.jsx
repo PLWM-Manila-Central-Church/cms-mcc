@@ -105,7 +105,7 @@ export default function DashboardPage() {
   const [error, setError]   = useState('');
 
   const role    = user?.roleName || '';
-  const isMinistryLeader = role === R.REG && !!user?.ministryRoleId;
+  const isMinistryLeader = role === 'Ministry Leader' && !!user?.leadsMinistryId;
   const accent  = (ROLE_ACCENT[role]||ROLE_ACCENT[R.MEMBER]).primary;
   const acLight = (ROLE_ACCENT[role]||ROLE_ACCENT[R.MEMBER]).light;
 

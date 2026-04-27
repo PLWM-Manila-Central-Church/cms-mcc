@@ -46,20 +46,8 @@ exports.getAllRoles = async () => {
     raw: true,
   });
 
-  // Count from users who have been tagged with a ministry_role_id (leader assignment)
-  const userCounts = await User.findAll({
-    attributes: [
-      "ministry_role_id",
-      [User.sequelize.fn("COUNT", User.sequelize.col("id")), "cnt"],
-    ],
-    where: { ministry_role_id: roles.map(r => r.id) },
-    group: ["ministry_role_id"],
-    raw: true,
-  });
-
   const countMap = {};
   rosterCounts.forEach(c => { countMap[c.ministry_role_id] = (countMap[c.ministry_role_id] || 0) + parseInt(c.cnt, 10); });
-  userCounts.forEach(c => { countMap[c.ministry_role_id] = (countMap[c.ministry_role_id] || 0) + parseInt(c.cnt, 10); });
 
   return roles.map(r => ({
     ...r.toJSON(),
@@ -116,14 +104,6 @@ exports.deleteRole = async (id, deletedBy) => {
       message: `Cannot delete. ${inUse} assignment(s) are using this role`,
     };
 
-  // Block if any user is tagged with this role as their ministry sub-role
-  const taggedUsers = await User.count({ where: { ministry_role_id: id } });
-  if (taggedUsers > 0)
-    throw {
-      status: 400,
-      message: `Cannot delete. ${taggedUsers} user(s) are tagged with this ministry role.`,
-    };
-
   // Block if a roster exists under this role
   const rosterCount = await MinistryMembership.count({ where: { ministry_role_id: id } });
   if (rosterCount > 0)
@@ -138,8 +118,13 @@ exports.deleteRole = async (id, deletedBy) => {
 };
 
 // ── Get All Assignments ──────────────────────────────────────
-exports.getAllAssignments = async () => {
+exports.getAllAssignments = async (leadsMinistryId = null) => {
+  const where = {};
+  if (leadsMinistryId) {
+    where.ministry_role_id = leadsMinistryId;
+  }
   return await MinistryAssignment.findAll({
+    where,
     include: assignmentIncludes,
     order: [["created_at", "DESC"]],
   });
@@ -258,28 +243,45 @@ exports.deleteAssignment = async (id, deletedBy) => {
 };
 
 // ── Ministry Leader: Get Pending Substitutes ───────────────────
-exports.getPendingSubstitutes = async (ministryRoleId) => {
+exports.getPendingSubstitutes = async (leadsMinistryId) => {
   const SubstituteRequest = require("../models/SubstituteRequest.model");
-  
+
   return await SubstituteRequest.findAll({
-    where: { status: "pending", ministry_role_id: ministryRoleId },
+    where: { status: "pending" },
     include: [
+      {
+        model: MinistryAssignment,
+        as: "assignment",
+        where: { ministry_role_id: leadsMinistryId },
+        required: true,
+        include: [
+          { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"] },
+        ],
+      },
       { model: Member, as: "requester", attributes: ["id", "first_name", "last_name"] },
       { model: Service, attributes: ["id", "title", "service_date", "service_time"] },
-      { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"] },
     ],
     order: [["created_at", "ASC"]],
   });
 };
 
 // ── Ministry Leader: Resolve Substitute ───────────────────────
-exports.resolveSubstitute = async (id, data, ministryRoleId, userId) => {
+exports.resolveSubstitute = async (id, data, leadsMinistryId, userId) => {
   const SubstituteRequest = require("../models/SubstituteRequest.model");
-  
-  const request = await SubstituteRequest.findByPk(id);
+
+  const request = await SubstituteRequest.findByPk(id, {
+    include: [
+      {
+        model: MinistryAssignment,
+        as: "assignment",
+        attributes: ["ministry_role_id"],
+        required: true,
+      },
+    ],
+  });
   if (!request) throw { status: 404, message: "Substitute request not found" };
 
-  if (request.ministry_role_id !== ministryRoleId) {
+  if (request.assignment?.ministry_role_id !== leadsMinistryId) {
     throw { status: 403, message: "This request is not for your ministry" };
   }
 
