@@ -25,6 +25,8 @@ const EMPTY_FORM = {
   cell_group_id: '', group_id: '',
   // Leader fields
   leads_cell_group_id: '', leads_group_id: '', leads_ministry_id: '',
+  // Member ministry sub-role (via MinistryMembership)
+  member_ministry_role_id: '',
 };
 
 export default function UserFormPage() {
@@ -85,6 +87,8 @@ export default function UserFormPage() {
           leads_cell_group_id: u.leads_cell_group_id || '',
           leads_group_id:      u.leads_group_id      || '',
           leads_ministry_id:   u.leads_ministry_id   || '',
+          // Member sub-role via MinistryMembership
+          member_ministry_role_id: u.member?.ministryMemberships?.[0]?.ministry_role_id || '',
         });
       })
       .catch(() => setError('Failed to load user.'))
@@ -93,14 +97,15 @@ export default function UserFormPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // When role changes, clear leader-specific fields to avoid stale values
+// When role changes, clear leader-specific fields to avoid stale values
     if (name === 'role_id') {
       setForm(f => ({
         ...f,
         role_id:             value,
         leads_cell_group_id: '',
-        leads_group_id:      '',
-        leads_ministry_id:   '',
+        leads_group_id:       '',
+        leads_ministry_id:    '',
+        member_ministry_role_id: '',
       }));
     } else {
       setForm(f => ({ ...f, [name]: value }));
@@ -133,6 +138,8 @@ export default function UserFormPage() {
       leads_cell_group_id: form.leads_cell_group_id ? parseInt(form.leads_cell_group_id) : null,
       leads_group_id:       form.leads_group_id      ? parseInt(form.leads_group_id)      : null,
       leads_ministry_id:    form.leads_ministry_id    ? parseInt(form.leads_ministry_id)    : null,
+      // Member ministry sub-role (via MinistryMembership)
+      member_ministry_role_id: form.member_ministry_role_id ? parseInt(form.member_ministry_role_id) : null,
     };
     if (!isEdit) payload.password = form.password;
 
@@ -163,7 +170,7 @@ export default function UserFormPage() {
   const selectedRoleId    = parseInt(form.role_id) || 0;
   const isCGLeader        = selectedRoleId === 5; // Cell Group Leader
   const isGroupLeader     = selectedRoleId === 6; // Group Leader
-  const isMinistryLeader = selectedRoleId === 8; // Ministry Leader
+  const isMinistryLeader = selectedRoleId === 15; // Ministry Leader
   const showLeaderSection = isCGLeader || isGroupLeader || isMinistryLeader;
 
   if (loading) return <div style={S.loading}>Loading...</div>;
@@ -307,6 +314,28 @@ export default function UserFormPage() {
               <select name="group_id" value={form.group_id} onChange={handleChange} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
                 <option value="">— None —</option>
                 {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Member ministry sub-role (only for non-leader roles) */}
+          {!isMinistryLeader && (
+            <div style={{ ...S.field, marginTop: 16 }}>
+              <label style={S.label}>Ministry Role (Team Member)</label>
+              <select
+                name="member_ministry_role_id"
+                value={form.member_ministry_role_id}
+                onChange={handleChange}
+                style={selectStyle}
+                onFocus={onFocus}
+                onBlur={onBlur}
+              >
+                <option value="">— None —</option>
+                {ministries.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+              <p style={S.hint}>Assign this member to a ministry team (not as leader).</p>
               </select>
             </div>
           </div>
