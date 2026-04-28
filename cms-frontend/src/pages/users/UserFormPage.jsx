@@ -168,9 +168,9 @@ export default function UserFormPage() {
 
   // Derived — which leader dropdowns to show based on selected role
   const selectedRoleId    = parseInt(form.role_id) || 0;
-  const isCGLeader        = selectedRoleId === 5; // Cell Group Leader
-  const isGroupLeader     = selectedRoleId === 6; // Group Leader
-  const isMinistryLeader = selectedRoleId === 15; // Ministry Leader
+  const isCGLeader        = selectedRoleId === 5 || form.role_id === '5'; // Cell Group Leader
+  const isGroupLeader     = selectedRoleId === 6 || form.role_id === '6'; // Group Leader
+  const isMinistryLeader = selectedRoleId === 15 || form.role_id === '15'; // Ministry Leader
   const showLeaderSection = isCGLeader || isGroupLeader || isMinistryLeader;
 
   if (loading) return <div style={S.loading}>Loading...</div>;
@@ -336,9 +336,8 @@ export default function UserFormPage() {
                 ))}
               </select>
               <p style={S.hint}>Assign this member to a ministry team (not as leader).</p>
-              </select>
             </div>
-          </div>
+          )}
 
           <div style={{ ...S.field, marginTop: 16 }}>
             <label style={S.label}>Address</label>
