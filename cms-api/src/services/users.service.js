@@ -16,7 +16,7 @@ const userIncludes = [
     include: [
       {
         model: MinistryMembership,
-        as: "ministryMemberships",
+        as: "MinistryMemberships",
         attributes: ["id", "ministry_role_id"],
         required: false,
       },
@@ -141,6 +141,7 @@ exports.updateUser = async (id, data, updatedBy) => {
     first_name, last_name, phone, gender, birthdate,
     spiritual_birthday, address, cell_group_id, group_id,
     leads_cell_group_id, leads_group_id, leads_ministry_id,
+    member_ministry_role_id,
   } = data;
 
   if (email && email !== user.email) {
@@ -163,6 +164,33 @@ exports.updateUser = async (id, data, updatedBy) => {
     ...(leads_group_id !== undefined && { leads_group_id: leads_group_id ? parseInt(leads_group_id) : null }),
     ...(leads_ministry_id !== undefined && { leads_ministry_id: leads_ministry_id ? parseInt(leads_ministry_id) : null }),
   });
+
+  // Validate: member_ministry_role_id is NOT allowed for Ministry Leader role
+  if (member_ministry_role_id !== undefined) {
+    const role = await Role.findByPk(user.role_id);
+    if (role && role.role_name === 'Ministry Leader' && member_ministry_role_id) {
+      throw { status: 400, message: "Use leads_ministry_id for Ministry Leader role, not member_ministry_role_id" };
+    }
+  }
+
+  // Update linked member ministry membership
+  if (user.member_id && member_ministry_role_id !== undefined) {
+    if (member_ministry_role_id) {
+      const [membership, created] = await MinistryMembership.findOrCreate({
+        where: { member_id: user.member_id },
+        defaults: {
+          ministry_role_id: parseInt(member_ministry_role_id),
+          member_id: user.member_id,
+          added_by: updatedBy,
+        },
+      });
+      if (!created && membership.ministry_role_id !== parseInt(member_ministry_role_id)) {
+        await membership.update({ ministry_role_id: parseInt(member_ministry_role_id) });
+      }
+    } else {
+      await MinistryMembership.destroy({ where: { member_id: user.member_id } });
+    }
+  }
 
   // Update linked member if exists
   if (user.member_id) {

@@ -88,7 +88,7 @@ export default function UserFormPage() {
           leads_group_id:      u.leads_group_id      || '',
           leads_ministry_id:   u.leads_ministry_id   || '',
           // Member sub-role via MinistryMembership
-          member_ministry_role_id: u.member?.ministryMemberships?.[0]?.ministry_role_id || '',
+          member_ministry_role_id: u.member?.MinistryMemberships?.[0]?.ministry_role_id || '',
         });
       })
       .catch(() => setError('Failed to load user.'))
