@@ -61,11 +61,19 @@ exports.createUser = async (data, createdBy) => {
     member_ministry_role_id,
   } = data;
 
+  // DEBUG: Log received data
+  console.log('[DEBUG createUser] Received data:', {
+    role_id, leads_ministry_id, leads_group_id, leads_cell_group_id
+  });
+
   const existing = await User.findOne({ where: { email, is_deleted: 0 } });
   if (existing) throw { status: 409, message: "Email already in use" };
 
   const role = await Role.findByPk(role_id);
   if (!role) throw { status: 404, message: "Role not found" };
+
+  // DEBUG: Log role info
+  console.log('[DEBUG createUser] Role:', { role_id: role.id, role_name: role.role_name });
 
   // Validate: leads_ministry_id is only allowed for Ministry Leader role
   if (leads_ministry_id && role.role_name !== 'Ministry Leader') {
@@ -109,6 +117,15 @@ exports.createUser = async (data, createdBy) => {
     leads_ministry_id: leads_ministry_id ? parseInt(leads_ministry_id) : null,
     is_active: 1,
     force_password_change: 1,
+  });
+
+  // DEBUG: Log what was saved
+  console.log('[DEBUG createUser] User created:', {
+    id: user.id,
+    role_id: user.role_id,
+    leads_ministry_id: user.leads_ministry_id,
+    leads_group_id: user.leads_group_id,
+    leads_cell_group_id: user.leads_cell_group_id
   });
 
   // If member_ministry_role_id is provided, add user to that ministry as a team member

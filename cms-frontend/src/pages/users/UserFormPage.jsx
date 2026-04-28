@@ -143,6 +143,14 @@ export default function UserFormPage() {
     };
     if (!isEdit) payload.password = form.password;
 
+    // DEBUG: Log what we're sending
+    console.log('[DEBUG] Submitting payload:', {
+      role_id: payload.role_id,
+      leads_ministry_id: payload.leads_ministry_id,
+      leads_group_id: payload.leads_group_id,
+      leads_cell_group_id: payload.leads_cell_group_id
+    });
+
     try {
       if (isEdit) { await axiosInstance.put(`/users/${id}`, payload); }
       else        { await axiosInstance.post('/users', payload); }

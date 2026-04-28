@@ -149,16 +149,27 @@ module.exports = {
       { role_name: "Group Leader", module: "ministry", action: "read" },
 
       // ── Ministry Leader ─────────────────────────────────────────
+      // Ministry page permissions
       { role_name: "Ministry Leader", module: "ministry", action: "read" },
       { role_name: "Ministry Leader", module: "ministry", action: "create" },
       { role_name: "Ministry Leader", module: "ministry", action: "update" },
       { role_name: "Ministry Leader", module: "ministry", action: "delete" },
+      // Events page - can read and create invites
       { role_name: "Ministry Leader", module: "events", action: "read" },
+      { role_name: "Ministry Leader", module: "events", action: "create" },
+      // Attendance page - can read for their ministry
       { role_name: "Ministry Leader", module: "attendance", action: "read" },
+      // Services page - can read for scheduling
       { role_name: "Ministry Leader", module: "services", action: "read" },
+      // Archives page - can read, upload, download
       { role_name: "Ministry Leader", module: "archives", action: "read" },
-      { role_name: "Ministry Leader", module: "cell_groups", action: "read" },
+      { role_name: "Ministry Leader", module: "archives", action: "create" },
+      { role_name: "Ministry Leader", module: "archives", action: "update" },
+      // Inventory page - can request (read + create)
       { role_name: "Ministry Leader", module: "inventory", action: "read" },
+      { role_name: "Ministry Leader", module: "inventory", action: "create" },
+      // Dashboard - needed for sidebar access (not a permission module but included for completeness)
+      { role_name: "Ministry Leader", module: "dashboard", action: "read" },
 
       // ── Member ────────────────────────────────────────────────
       { role_name: "Member", module: "members", action: "read" },
