@@ -4,6 +4,13 @@ const { Op } = require("sequelize");
 const { Member, CellGroup, MinistryGroup, EmergencyContact, User,
   MinistryMembership } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
+const {
+  applyMemberScope,
+  ensureMemberInScope,
+  filterMemberUpdateForScopedLeader,
+  getScope,
+  isScopedLeader,
+} = require("../helpers/scopedLeader.helper");
 
 const memberIncludes = [
   {
@@ -25,36 +32,11 @@ exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_grou
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where  = { is_deleted: 0 };
 
-  const {
-    roleId          = null,
-    roleName        = null,
-    leadsCellGroupId = null,
-    leadsGroupId     = null,
-    leadsMinistryId  = null,
-  } = user;
+  await applyMemberScope(where, user);
 
   // Role-based scoping — restrict what the caller can see
   // Role IDs: 5 = Cell Group Leader, 6 = Group Leader
   // Ministry Leader = role_name === 'Ministry Leader' with leadsMinistryId set
-  if (roleId === 5 && leadsCellGroupId) {
-    // Cell Group Leader: only their cell group
-    where.cell_group_id = leadsCellGroupId;
-  } else if (roleId === 6 && leadsGroupId) {
-    // Group Leader: only their group
-    where.group_id = leadsGroupId;
-  } else if (roleName === 'Ministry Leader' && leadsMinistryId) {
-    // Ministry Leader: only members enrolled in their ministry
-    const memberships = await MinistryMembership.findAll({
-      where:      { ministry_role_id: leadsMinistryId },
-      attributes: ["member_id"],
-    });
-    const memberIds = memberships.map((m) => m.member_id);
-    // If the ministry has no members yet, return empty result immediately
-    if (memberIds.length === 0) {
-      return { members: [], total: 0, total_pages: 0 };
-    }
-    where.id = { [Op.in]: memberIds };
-  }
   // All other roles (System Admin=1, Pastor=2, Finance=4, Member=7) see all members
 
   // Query filters (applied on top of scope)
@@ -90,7 +72,8 @@ exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_grou
 };
 
 // ── Get Member By ID ─────────────────────────────────────────
-exports.getMemberById = async (id) => {
+exports.getMemberById = async (id, user = {}) => {
+  await ensureMemberInScope(id, user);
   const member = await Member.findOne({
     where: { id },
     include: [
@@ -174,7 +157,13 @@ exports.createMember = async (data, createdBy, user = {}) => {
 };
 
 // ── Update Member ────────────────────────────────────────────
-exports.updateMember = async (id, data, updatedBy) => {
+exports.updateMember = async (id, data, updatedBy, user = {}) => {
+  await ensureMemberInScope(id, user);
+  data = filterMemberUpdateForScopedLeader(data, user);
+  if (Object.keys(data).length === 0) {
+    throw { status: 400, message: "No allowed member fields to update" };
+  }
+
   const member = await Member.findOne({ where: { id } });
   if (!member) throw { status: 404, message: "Member not found" };
 
@@ -222,11 +211,15 @@ exports.updateMember = async (id, data, updatedBy) => {
   });
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_MEMBER", targetTable: "members", targetId: id });
-  return await exports.getMemberById(id);
+  return await exports.getMemberById(id, user);
 };
 
 // ── Soft Delete Member ───────────────────────────────────────
-exports.deleteMember = async (id, deletedBy) => {
+exports.deleteMember = async (id, deletedBy, user = {}) => {
+  if (isScopedLeader(user)) {
+    throw { status: 403, message: "Leaders can only remove members from their assigned scope" };
+  }
+
   const member = await Member.findOne({ where: { id } });
   if (!member) throw { status: 404, message: "Member not found" };
 
@@ -253,4 +246,39 @@ exports.deleteMember = async (id, deletedBy) => {
 
   auditLog.log({ userId: deletedBy, action: "DELETE_MEMBER", targetTable: "members", targetId: id });
   return { message: "Member deleted and linked user account deactivated." };
+};
+
+exports.unassignMemberFromScope = async (id, updatedBy, user = {}) => {
+  const scope = getScope(user);
+  if (!scope) throw { status: 403, message: "This action is only for scoped leaders" };
+  if (!scope.id) throw { status: 403, message: "No leader assignment is set for your account" };
+
+  await ensureMemberInScope(id, user);
+
+  if (scope.type === "ministry") {
+    const row = await MinistryMembership.findOne({
+      where: { ministry_role_id: scope.id, member_id: id },
+    });
+    if (!row) throw { status: 404, message: "Member is not in your ministry roster" };
+    await row.destroy();
+    auditLog.log({ userId: updatedBy, action: "UNASSIGN_MEMBER_MINISTRY", targetTable: "ministry_memberships", targetId: id });
+    return { message: "Member removed from your ministry roster." };
+  }
+
+  const member = await Member.findOne({ where: { id } });
+  if (!member) throw { status: 404, message: "Member not found" };
+
+  if (scope.type === "cell_group") {
+    await member.update({ cell_group_id: null });
+    auditLog.log({ userId: updatedBy, action: "UNASSIGN_MEMBER_CELL_GROUP", targetTable: "members", targetId: id });
+    return { message: "Member removed from your cell group." };
+  }
+
+  if (scope.type === "group") {
+    await member.update({ group_id: null });
+    auditLog.log({ userId: updatedBy, action: "UNASSIGN_MEMBER_GROUP", targetTable: "members", targetId: id });
+    return { message: "Member removed from your group." };
+  }
+
+  throw { status: 400, message: "Unsupported leader scope" };
 };

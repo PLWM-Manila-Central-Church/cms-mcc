@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
@@ -6,15 +7,21 @@ import useIsMobile from '../../hooks/useIsMobile';
 const EMPTY_FORM = { name: '', area: '' };
 
 export default function CellGroupsPage() {
-  const { hasPermission } = useAuth();
+  const navigate = useNavigate();
+  const { hasPermission, user } = useAuth();
   const isMobile = useIsMobile();
-  const canCreate = hasPermission('cellgroups', 'create');
-  const canUpdate = hasPermission('cellgroups', 'update');
-  const canDelete = hasPermission('cellgroups', 'delete');
+  const isCellGroupLeader = user?.roleName === 'Cell Group Leader';
+  const canCreate = hasPermission('cell_groups', 'create') && !isCellGroupLeader;
+  const canUpdate = hasPermission('cell_groups', 'update') && !isCellGroupLeader;
+  const canDelete = hasPermission('cell_groups', 'delete') && !isCellGroupLeader;
 
   const [groups,    setGroups]    = useState([]);
+  const [members,   setMembers]   = useState([]);
   const [loading,   setLoading]   = useState(true);
+  const [memberLoading, setMemberLoading] = useState(false);
   const [search,    setSearch]    = useState('');
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberAction, setMemberAction] = useState('');
 
   // Modal state
   const [modal,     setModal]     = useState(null); // null | 'add' | 'edit'
@@ -49,6 +56,36 @@ export default function CellGroupsPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadMembers = useCallback(async () => {
+    if (!isCellGroupLeader) return;
+    setMemberLoading(true);
+    setMemberAction('');
+    try {
+      const res = await axiosInstance.get('/members?limit=500&page=1');
+      setMembers(res.data.data.members || []);
+    } catch (err) {
+      setMemberAction(err.response?.data?.message || 'Failed to load cell group members.');
+    } finally {
+      setMemberLoading(false);
+    }
+  }, [isCellGroupLeader]);
+
+  useEffect(() => { loadMembers(); }, [loadMembers]);
+
+  const handleUnassignMember = async (member) => {
+    const name = `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'this member';
+    if (!window.confirm(`Remove ${name} from your cell group?`)) return;
+    setMemberAction('');
+    try {
+      await axiosInstance.patch(`/members/${member.id}/unassign-scope`);
+      showToast('Member removed from your cell group.');
+      loadMembers();
+      load();
+    } catch (err) {
+      setMemberAction(err.response?.data?.message || 'Failed to remove member.');
+    }
+  };
 
   // ── Modal helpers ────────────────────────────────────────────
   const openAdd = () => {
@@ -114,6 +151,10 @@ export default function CellGroupsPage() {
   const filtered = groups.filter(g =>
     g.name?.toLowerCase().includes(search.toLowerCase()) ||
     g.area?.toLowerCase().includes(search.toLowerCase())
+  );
+  const filteredMembers = members.filter(m =>
+    `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase().includes(memberSearch.toLowerCase()) ||
+    (m.email || '').toLowerCase().includes(memberSearch.toLowerCase())
   );
 
   return (
@@ -275,6 +316,61 @@ export default function CellGroupsPage() {
       )}
 
       {/* ── Add / Edit Modal ── */}
+      {isCellGroupLeader && (
+        <div style={{ ...S.tableWrap, marginTop: 24 }}>
+          <div style={{ padding: isMobile ? '16px' : '20px 24px', borderBottom: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 18, color: '#0f172a' }}>My Cell Group Members</h2>
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>
+                  {filteredMembers.length} of {members.length} members
+                </p>
+              </div>
+              <input
+                value={memberSearch}
+                onChange={e => setMemberSearch(e.target.value)}
+                placeholder="Search members..."
+                style={{ ...S.search, maxWidth: 280 }}
+              />
+            </div>
+            {memberAction && <div style={{ ...S.errorBox, margin: 0 }}>{memberAction}</div>}
+          </div>
+          <div style={S.tableScroll}>
+            <table style={S.table}>
+              <thead>
+                <tr>
+                  <th style={S.th}>Name</th>
+                  <th style={S.th}>Email</th>
+                  <th style={S.th}>Phone</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {memberLoading ? (
+                  <tr><td colSpan={4} style={S.centerCell}>Loading members...</td></tr>
+                ) : filteredMembers.length === 0 ? (
+                  <tr><td colSpan={4} style={S.centerCell}>No members found.</td></tr>
+                ) : filteredMembers.map(m => (
+                  <tr key={m.id} style={S.tr}>
+                    <td style={S.td}>
+                      <strong style={{ color: '#0f172a' }}>{m.last_name}, {m.first_name}</strong>
+                    </td>
+                    <td style={S.td}>{m.email || '-'}</td>
+                    <td style={S.td}>{m.phone || '-'}</td>
+                    <td style={{ ...S.td, textAlign: 'right' }}>
+                      <div style={S.actionsRow}>
+                        <button onClick={() => navigate(`/members/${m.id}/edit`)} style={S.editBtn}>Edit</button>
+                        <button onClick={() => handleUnassignMember(m)} style={S.deleteBtn}>Remove</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {modal && (
         <div style={S.overlay} onClick={closeModal}>
           <div style={S.modal} onClick={e => e.stopPropagation()}>
@@ -411,6 +507,7 @@ const S = {
   th:          { padding: '14px 20px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', letterSpacing: '0.6px', textTransform: 'uppercase', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
   tr:          { borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' },
   td:          { padding: '16px 20px', fontSize: '14px', color: '#374151', verticalAlign: 'middle' },
+  centerCell:  { padding: '42px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
 
   rowNum:      { fontSize: '12px', color: '#94a3b8', fontWeight: '600' },
   groupNameRow:{ display: 'flex', alignItems: 'center', gap: '12px' },

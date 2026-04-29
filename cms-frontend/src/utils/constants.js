@@ -18,7 +18,7 @@ export const NAV_ITEMS = [
     label: 'Cell Groups',
     path: '/cell-groups',
     icon: 'cellgroups',
-    permissions: { module: 'cellgroups', action: 'read' }
+    permissions: { module: 'cell_groups', action: 'read' }
   },
   {
     label: 'Ministry',

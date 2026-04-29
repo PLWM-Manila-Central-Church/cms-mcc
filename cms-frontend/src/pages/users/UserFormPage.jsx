@@ -143,14 +143,6 @@ export default function UserFormPage() {
     };
     if (!isEdit) payload.password = form.password;
 
-    // DEBUG: Log what we're sending
-    console.log('[DEBUG] Submitting payload:', {
-      role_id: payload.role_id,
-      leads_ministry_id: payload.leads_ministry_id,
-      leads_group_id: payload.leads_group_id,
-      leads_cell_group_id: payload.leads_cell_group_id
-    });
-
     try {
       if (isEdit) { await axiosInstance.put(`/users/${id}`, payload); }
       else        { await axiosInstance.post('/users', payload); }
@@ -175,10 +167,11 @@ export default function UserFormPage() {
   const onBlur  = e => e.target.style.borderColor = '#e2e8f0';
 
   // Derived — which leader dropdowns to show based on selected role
-  const selectedRoleId    = parseInt(form.role_id) || 0;
-  const isCGLeader        = selectedRoleId === 5 || form.role_id === '5'; // Cell Group Leader
-  const isGroupLeader     = selectedRoleId === 6 || form.role_id === '6'; // Group Leader
-  const isMinistryLeader = selectedRoleId === 15 || form.role_id === '15'; // Ministry Leader
+  const selectedRole = roles.find(r => String(r.id) === String(form.role_id));
+  const selectedRoleName = selectedRole?.role_name || '';
+  const isCGLeader       = selectedRoleName === 'Cell Group Leader';
+  const isGroupLeader    = selectedRoleName === 'Group Leader';
+  const isMinistryLeader = selectedRoleName === 'Ministry Leader';
   const showLeaderSection = isCGLeader || isGroupLeader || isMinistryLeader;
 
   if (loading) return <div style={S.loading}>Loading...</div>;

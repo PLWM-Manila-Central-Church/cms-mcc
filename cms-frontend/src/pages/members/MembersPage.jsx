@@ -24,7 +24,7 @@ const avatarGradient = (name) =>
   AVATAR_GRADIENTS[(name.charCodeAt(0) + (name.charCodeAt(1) || 0)) % AVATAR_GRADIENTS.length];
 
 /* ── Member Directory Card ──────────────────────────────────────── */
-function MemberCard({ m, onView, onEdit, canEdit, isMember }) {
+function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMember }) {
   const [hov, setHov] = useState(false);
   const grad = avatarGradient(m.first_name + m.last_name);
 
@@ -86,6 +86,7 @@ function MemberCard({ m, onView, onEdit, canEdit, isMember }) {
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
           <button onClick={() => onView(m.id)} style={actionBtnSm('#e8f4fd', '#0066b3')}>View</button>
           {canEdit && <button onClick={() => onEdit(m.id)} style={actionBtnSm('#f0fdf4', '#16a34a')}>Edit</button>}
+          {canUnassign && <button onClick={() => onUnassign(m)} style={actionBtnSm('#fef2f2', '#dc2626')}>Remove</button>}
         </div>
       )}
     </div>
@@ -107,7 +108,7 @@ const fmtBday = (d) => {
 };
 
 /* ── Admin Table Row  (masterfile / spreadsheet style) ──────────── */
-function TableRow({ m, idx, rowNum, canEdit, selected, onToggleSelect, onView, onEdit }) {
+function TableRow({ m, idx, rowNum, canEdit, canUnassign, canSelect, selected, onToggleSelect, onView, onEdit, onUnassign }) {
   const [hov, setHov] = useState(false);
   const sc = STATUS_COLORS[m.status] || { bg: '#f3f4f6', color: '#6b7280' };
   const fleshAge = calcAge(m.birthdate);
@@ -120,7 +121,7 @@ function TableRow({ m, idx, rowNum, canEdit, selected, onToggleSelect, onView, o
       style={{ background: selected ? '#fef2f2' : hov ? '#e8f4fd' : idx % 2 === 0 ? '#fff' : '#fafbfc', transition: 'background 0.12s', cursor: 'pointer' }}
     >
       <td style={{ padding:'10px 12px', width:36, borderBottom:'1px solid #f1f5f9', verticalAlign:'middle' }} onClick={e=>e.stopPropagation()}>
-        <input type="checkbox" checked={!!selected} onChange={onToggleSelect} style={{ cursor:'pointer', width:15, height:15 }} />
+        {canSelect && <input type="checkbox" checked={!!selected} onChange={onToggleSelect} style={{ cursor:'pointer', width:15, height:15 }} />}
       </td>
       <td style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', fontSize: 12, width: 40 }}>{rowNum}</td>
       <td style={{ ...tdStyle, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>
@@ -149,6 +150,7 @@ function TableRow({ m, idx, rowNum, canEdit, selected, onToggleSelect, onView, o
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={() => onView(m.id)} style={actionBtnSm('#e8f4fd', '#0066b3')}>View</button>
           {canEdit && <button onClick={() => onEdit(m.id)} style={actionBtnSm('#f0fdf4', '#16a34a')}>Edit</button>}
+          {canUnassign && <button onClick={() => onUnassign(m)} style={actionBtnSm('#fef2f2', '#dc2626')}>Remove</button>}
         </div>
       </td>
     </tr>
@@ -164,8 +166,11 @@ export default function MembersPage() {
   const { hasPermission, user } = useAuth();
   const isMobile    = useIsMobile();
   const isMember    = user?.roleName === 'Member';
-  const canCreate   = hasPermission('members', 'create');
+  const isScopedLeader = ['Cell Group Leader', 'Group Leader', 'Ministry Leader'].includes(user?.roleName);
+  const canCreate   = hasPermission('members', 'create') && !isScopedLeader;
   const canEdit     = hasPermission('members', 'update');
+  const canBulkDelete = hasPermission('members', 'delete') && !isScopedLeader;
+  const canUnassign = canEdit && isScopedLeader;
 
   const [members, setMembers]         = useState([]);
   const [total, setTotal]             = useState(0);
@@ -262,6 +267,7 @@ export default function MembersPage() {
   const toggleAll    = () => setSelected(prev => prev.size === sortedMembers.length ? new Set() : new Set(sortedMembers.map(m => m.id)));
 
   const handleBulkDelete = async () => {
+    if (!canBulkDelete) return;
     if (selected.size === 0) return;
     if (!window.confirm(`Delete ${selected.size} selected member${selected.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
     setBulkDeleting(true);
@@ -272,6 +278,22 @@ export default function MembersPage() {
     } catch (err) {
       alert(err.response?.data?.message || 'Some deletes failed.');
     } finally { setBulkDeleting(false); }
+  };
+
+  const handleUnassign = async (member) => {
+    const name = `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'this member';
+    if (!window.confirm(`Remove ${name} from your assigned group?`)) return;
+    try {
+      await axiosInstance.patch(`/members/${member.id}/unassign-scope`);
+      setSelected(prev => {
+        const next = new Set(prev);
+        next.delete(member.id);
+        return next;
+      });
+      fetchMembers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to remove member from your assignment.');
+    }
   };
 
   /* ── Shared pagination ──────────────────────────────────────── */
@@ -457,14 +479,16 @@ export default function MembersPage() {
             <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', background: '#fff', borderRadius: 14 }}>No members found.</div>
           ) : members.map(m => (
             <MemberCard key={m.id} m={m} canEdit={canEdit} isMember={false}
+              canUnassign={canUnassign}
               onView={id => navigate(`/members/${id}`)}
               onEdit={id => navigate(`/members/${id}/edit`)}
+              onUnassign={handleUnassign}
             />
           ))}
         </div>
       ) : (
         <>
-        {selected.size > 0 && (
+        {selected.size > 0 && canBulkDelete && (
           <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10, marginBottom:10 }}>
             <span style={{ fontSize:13, color:'#dc2626', fontWeight:600 }}>{selected.size} member{selected.size>1?'s':''} selected</span>
             <button onClick={handleBulkDelete} disabled={bulkDeleting}
@@ -483,8 +507,9 @@ export default function MembersPage() {
               <thead style={{ background: '#f8fafc' }}>
                 <tr>
                   <th style={{ padding:'10px 12px', width:36 }}>
-                    <input type="checkbox" checked={sortedMembers.length>0 && selected.size===sortedMembers.length}
+                    {canBulkDelete && <input type="checkbox" checked={sortedMembers.length>0 && selected.size===sortedMembers.length}
                       onChange={toggleAll} style={{ cursor:'pointer', width:15, height:15 }} />
+                    }
                   </th>
                   {[['#','',40],['Name','name',null],['M/F','gender',50],['Cell Group','cg',null],['Group','group',null],['Status','status',null],['Flesh Age',null,80],['Flesh Birthday',null,130],['Spirit Age',null,80],['Spiritual Birthday',null,130],['Mobile',null,120],['Actions',null,null]].map(([label, col, w]) => (
                     <th key={label} onClick={col ? ()=>toggleSort(col) : undefined}
@@ -504,9 +529,11 @@ export default function MembersPage() {
                   <tr><td colSpan={13} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No members found.</td></tr>
                 ) : sortedMembers.map((m, i) => (
                   <TableRow key={m.id} m={m} idx={i} rowNum={(page-1)*limit+i+1} canEdit={canEdit}
+                    canUnassign={canUnassign} canSelect={canBulkDelete}
                     selected={selected.has(m.id)} onToggleSelect={() => toggleSelect(m.id)}
                     onView={id => navigate(`/members/${id}`)}
                     onEdit={id => navigate(`/members/${id}/edit`)}
+                    onUnassign={handleUnassign}
                   />
                 ))}
               </tbody>

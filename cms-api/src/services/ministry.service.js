@@ -33,8 +33,9 @@ const assignmentIncludes = [
 ];
 
 // ── Get All Ministry Roles (with member_count) ───────────────
-exports.getAllRoles = async () => {
-  const roles = await MinistryRole.findAll({ order: [["name", "ASC"]] });
+exports.getAllRoles = async (leadsMinistryId = null) => {
+  const where = leadsMinistryId ? { id: leadsMinistryId } : {};
+  const roles = await MinistryRole.findAll({ where, order: [["name", "ASC"]] });
 
   // Count from ministry_memberships (roster-added members)
   const rosterCounts = await MinistryMembership.findAll({
@@ -56,7 +57,10 @@ exports.getAllRoles = async () => {
 };
 
 // ── Get Ministry Role By ID ──────────────────────────────────
-exports.getRoleById = async (id) => {
+exports.getRoleById = async (id, leadsMinistryId = null) => {
+  if (leadsMinistryId && parseInt(id, 10) !== parseInt(leadsMinistryId, 10)) {
+    throw { status: 403, message: "This ministry is outside your assignment" };
+  }
   const role = await MinistryRole.findByPk(id);
   if (!role) throw { status: 404, message: "Ministry role not found" };
   return role;
@@ -131,30 +135,40 @@ exports.getAllAssignments = async (leadsMinistryId = null) => {
 };
 
 // ── Get Assignment By ID ─────────────────────────────────────
-exports.getAssignmentById = async (id) => {
+exports.getAssignmentById = async (id, leadsMinistryId = null) => {
   const assignment = await MinistryAssignment.findByPk(id, {
     include: assignmentIncludes,
   });
   if (!assignment)
     throw { status: 404, message: "Ministry assignment not found" };
+  if (leadsMinistryId && assignment.ministry_role_id !== leadsMinistryId) {
+    throw { status: 403, message: "This assignment is outside your ministry" };
+  }
   return assignment;
 };
 
 // ── Get Assignments By Service ───────────────────────────────
-exports.getAssignmentsByService = async (serviceId) => {
+exports.getAssignmentsByService = async (serviceId, leadsMinistryId = null) => {
   const service = await Service.findByPk(serviceId);
   if (!service) throw { status: 404, message: "Service not found" };
 
+  const where = { service_id: serviceId };
+  if (leadsMinistryId) where.ministry_role_id = leadsMinistryId;
+
   return await MinistryAssignment.findAll({
-    where: { service_id: serviceId },
+    where,
     include: assignmentIncludes,
     order: [["created_at", "ASC"]],
   });
 };
 
 // ── Create Assignment ────────────────────────────────────────
-exports.createAssignment = async (data, createdBy) => {
-  const { service_id, member_id, ministry_role_id } = data;
+exports.createAssignment = async (data, createdBy, user = {}) => {
+  let { service_id, member_id, ministry_role_id } = data;
+  if (user.roleName === "Ministry Leader") {
+    if (!user.leadsMinistryId) throw { status: 403, message: "No ministry is assigned to your account" };
+    ministry_role_id = user.leadsMinistryId;
+  }
 
   const service = await Service.findByPk(service_id);
   if (!service) throw { status: 404, message: "Service not found" };
@@ -164,6 +178,13 @@ exports.createAssignment = async (data, createdBy) => {
 
   const role = await MinistryRole.findByPk(ministry_role_id);
   if (!role) throw { status: 404, message: "Ministry role not found" };
+
+  if (user.roleName === "Ministry Leader") {
+    const membership = await MinistryMembership.findOne({
+      where: { ministry_role_id, member_id },
+    });
+    if (!membership) throw { status: 403, message: "You can only assign members in your ministry roster" };
+  }
 
   const existing = await MinistryAssignment.findOne({
     where: { service_id, member_id, ministry_role_id },
@@ -182,7 +203,7 @@ exports.createAssignment = async (data, createdBy) => {
     substitute_requested: 0,
   });
 
-  const created = await exports.getAssignmentById(assignment.id);
+  const created = await exports.getAssignmentById(assignment.id, user.leadsMinistryId);
   auditLog.log({ userId: createdBy, action: "CREATE_MINISTRY_ASSIGNMENT", targetTable: "ministry_assignments", targetId: created.id });
 
   try {
@@ -209,10 +230,16 @@ exports.createAssignment = async (data, createdBy) => {
 };
 
 // ── Update Assignment ────────────────────────────────────────
-exports.updateAssignment = async (id, data, updatedBy) => {
+exports.updateAssignment = async (id, data, updatedBy, user = {}) => {
   const assignment = await MinistryAssignment.findByPk(id);
   if (!assignment)
     throw { status: 404, message: "Ministry assignment not found" };
+  if (user.roleName === "Ministry Leader") {
+    if (!user.leadsMinistryId || assignment.ministry_role_id !== user.leadsMinistryId) {
+      throw { status: 403, message: "This assignment is outside your ministry" };
+    }
+    data = { ...data, ministry_role_id: user.leadsMinistryId };
+  }
 
   const { confirmed, substitute_requested, ministry_role_id } = data;
 
@@ -228,14 +255,17 @@ exports.updateAssignment = async (id, data, updatedBy) => {
   });
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_MINISTRY_ASSIGNMENT", targetTable: "ministry_assignments", targetId: id });
-  return await exports.getAssignmentById(id);
+  return await exports.getAssignmentById(id, user.leadsMinistryId);
 };
 
 // ── Delete Assignment ────────────────────────────────────────
-exports.deleteAssignment = async (id, deletedBy) => {
+exports.deleteAssignment = async (id, deletedBy, user = {}) => {
   const assignment = await MinistryAssignment.findByPk(id);
   if (!assignment)
     throw { status: 404, message: "Ministry assignment not found" };
+  if (user.roleName === "Ministry Leader" && assignment.ministry_role_id !== user.leadsMinistryId) {
+    throw { status: 403, message: "This assignment is outside your ministry" };
+  }
 
   await assignment.destroy();
   auditLog.log({ userId: deletedBy, action: "DELETE_MINISTRY_ASSIGNMENT", targetTable: "ministry_assignments", targetId: id });

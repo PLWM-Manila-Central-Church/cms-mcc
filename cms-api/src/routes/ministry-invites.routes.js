@@ -22,7 +22,7 @@ router.get(
 router.post(
   "/:eventId/invites",
   auth,
-  authorize("events", "create"),
+  authorize("events", "invite"),
   ctrl.createInvites,
 );
 

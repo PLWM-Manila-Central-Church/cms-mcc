@@ -27,6 +27,7 @@ exports.createInvites = async (req, res, next) => {
       req.params.eventId,
       req.body,
       req.user.userId,
+      req.user.leadsMinistryId,
     );
     res.status(201).json({ success: true, data });
   } catch (err) { next(err); }

@@ -134,11 +134,11 @@ const AppRoutes = () => {
           </MainLayout>
         </ProtectedRoute>
       } />
-      <Route path="/members/new"    element={<ProtectedRoute><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
+      <Route path="/members/new"    element={<ProtectedRoute module="members" action="create"><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
       <Route path="/members/:id"    element={<ProtectedRoute><MainLayout><MembersRoute><MemberProfilePage /></MembersRoute></MainLayout></ProtectedRoute>} />
-      <Route path="/members/:id/edit" element={<ProtectedRoute><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
+      <Route path="/members/:id/edit" element={<ProtectedRoute module="members" action="update"><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
 
-      <Route path="/cell-groups" element={<ProtectedRoute module="cellgroups" action="read"><MainLayout><CellGroupsPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/cell-groups" element={<ProtectedRoute module="cell_groups" action="read"><MainLayout><CellGroupsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/ministry"    element={<ProtectedRoute><MainLayout><MinistryPage /></MainLayout></ProtectedRoute>} />
 
       <Route path="/unauthorized" element={<UnauthorizedPage />} />

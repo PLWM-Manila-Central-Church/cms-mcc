@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
 
-const R = { ADMIN:'System Admin', PASTOR:'Pastor', REG:'Registration Team', FINANCE:'Finance Team', CG:'Cell Group Leader', GRP:'Group Leader', MEMBER:'Member' };
+const R = { ADMIN:'System Admin', PASTOR:'Pastor', REG:'Registration Team', FINANCE:'Finance Team', CG:'Cell Group Leader', GRP:'Group Leader', ML:'Ministry Leader', MEMBER:'Member' };
 
 const ROLE_ACCENT = {
   [R.ADMIN]:   { primary:'#dc2626', light:'#fef2f2' },
@@ -13,6 +13,7 @@ const ROLE_ACCENT = {
   [R.FINANCE]: { primary:'#059669', light:'#f0fdf4' },
   [R.CG]:      { primary:'#d97706', light:'#fffbeb' },
   [R.GRP]:     { primary:'#0891b2', light:'#ecfeff' },
+  [R.ML]:      { primary:'#005599', light:'#e8f4fd' },
   [R.MEMBER]:  { primary:'#64748b', light:'#f8fafc' },
 };
 
@@ -115,6 +116,33 @@ export default function DashboardPage() {
   const canEvents    = hasPermission('events','read');
   const canServices  = hasPermission('services','read') && !isMinistryLeader;
   const isMember     = role === R.MEMBER;
+  const ACCESS_PAGES = {
+    [R.ML]: [
+      ['Ministry roster', '/ministry', 'Manage your assigned ministry'],
+      ['Events', '/events', 'Invite your ministry roster'],
+      ['Attendance', '/attendance', 'View scoped attendance'],
+      ['Inventory', '/inventory', 'Submit inventory requests'],
+      ['Archives', '/archives', 'Upload and download archives'],
+    ],
+    [R.CG]: [
+      ['Members', '/members', 'Manage assigned cell group members'],
+      ['Cell Groups', '/cell-groups', 'View assigned cell group'],
+      ['Attendance', '/attendance', 'View scoped attendance'],
+      ['Events', '/events', 'View events'],
+      ['Services', '/services', 'View services'],
+      ['Inventory', '/inventory', 'Submit inventory requests'],
+      ['Archives', '/archives', 'View archives'],
+    ],
+    [R.GRP]: [
+      ['Members', '/members', 'Manage assigned group members'],
+      ['Attendance', '/attendance', 'View scoped attendance'],
+      ['Events', '/events', 'View events'],
+      ['Services', '/services', 'View services'],
+      ['Inventory', '/inventory', 'Submit inventory requests'],
+      ['Archives', '/archives', 'View archives'],
+    ],
+  };
+  const accessPages = ACCESS_PAGES[role] || [];
 
   useEffect(() => {
     api.get('/dashboard/stats')
@@ -154,7 +182,7 @@ export default function DashboardPage() {
 
   const dateStr     = new Date().toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const displayName = user?.email?.split('@')[0] || 'there';
-  const roleIcon    = { [R.ADMIN]:'🛡️', [R.PASTOR]:'✝️', [R.REG]:'📋', [R.FINANCE]:'💼', [R.CG]:'🏘️', [R.GRP]:'👫' }[role] || '👤';
+  const roleIcon    = { [R.ADMIN]:'🛡️', [R.PASTOR]:'✝️', [R.REG]:'📋', [R.FINANCE]:'💼', [R.CG]:'🏘️', [R.GRP]:'👫', [R.ML]:'✨' }[role] || '👤';
 
   // ── Mobile layout ─────────────────────────────────────────
   if (isMobile) return (
@@ -182,6 +210,16 @@ export default function DashboardPage() {
           {statCards.map(card => (
             <MobileStatCard key={card.label} {...card} onClick={() => navigate(card.path)} />
           ))}
+        </div>
+      )}
+
+      {accessPages.length > 0 && (
+        <div style={{ marginBottom:20 }}>
+          <SectionCard title="Accessible Pages" icon=">" >
+            {accessPages.map(([label, path, sub]) => (
+              <ListRow key={path} left={label} sub={sub} right="Open" rightColor={accent} onClick={() => navigate(path)} />
+            ))}
+          </SectionCard>
         </div>
       )}
 
@@ -254,6 +292,18 @@ export default function DashboardPage() {
       {statCards.length > 0 && (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:14, marginBottom:24 }}>
           {statCards.map(card => <StatCard key={card.label} {...card} onClick={() => navigate(card.path)} />)}
+        </div>
+      )}
+
+      {accessPages.length > 0 && (
+        <div style={{ marginBottom:24 }}>
+          <SectionCard title="Accessible Pages" icon=">">
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}>
+              {accessPages.map(([label, path, sub]) => (
+                <ListRow key={path} left={label} sub={sub} right="Open" rightColor={accent} onClick={() => navigate(path)} />
+              ))}
+            </div>
+          </SectionCard>
         </div>
       )}
 

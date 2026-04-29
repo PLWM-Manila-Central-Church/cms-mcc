@@ -15,6 +15,16 @@ const ROLE_COLORS = {
   'Member':            { bg: '#f8fafc', color: '#64748b' },
 };
 
+const getLeaderAssignmentLabel = (u) => {
+  if (u.role?.role_name === 'Ministry Leader') return u.leadsMinistry?.name || null;
+  if (u.role?.role_name === 'Cell Group Leader') {
+    if (!u.leadsCellGroup) return null;
+    return `${u.leadsCellGroup.name}${u.leadsCellGroup.area ? ` (${u.leadsCellGroup.area})` : ''}`;
+  }
+  if (u.role?.role_name === 'Group Leader') return u.leadsGroup?.name || null;
+  return null;
+};
+
 export default function UsersPage() {
   const navigate = useNavigate();
   const { hasPermission, user: currentUser } = useAuth();
@@ -172,9 +182,9 @@ export default function UsersPage() {
                   <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>ID #{u.id}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: rc.bg, color: rc.color }}>{u.role?.role_name || '—'}</span>
-                    {u.leadsMinistry && (
+                    {getLeaderAssignmentLabel(u) && (
                       <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#fdf4ff', color: '#9333ea' }}>
-                        {u.leadsMinistry.name}
+                        {getLeaderAssignmentLabel(u)}
                       </span>
                     )}
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: u.is_active ? '#dcfce7' : '#f3f4f6', color: u.is_active ? '#16a34a' : '#6b7280' }}>{u.is_active ? 'Active' : 'Inactive'}</span>
@@ -212,7 +222,7 @@ export default function UsersPage() {
               </th>
               <th style={styles.th}>User</th>
               <th style={styles.th}>Role</th>
-              <th style={styles.th}>Ministry</th>
+              <th style={styles.th}>Leader Assignment</th>
               <th style={styles.th}>Linked Member</th>
               <th style={styles.th}>Last Login</th>
               <th style={styles.th}>Status</th>
@@ -254,8 +264,8 @@ export default function UsersPage() {
                   </span>
                 </td>
                 <td style={styles.td}>
-                  {u.leadsMinistry
-                    ? <span style={{ ...styles.badge, background: '#fdf4ff', color: '#9333ea' }}>{u.leadsMinistry.name}</span>
+                  {getLeaderAssignmentLabel(u)
+                    ? <span style={{ ...styles.badge, background: '#fdf4ff', color: '#9333ea' }}>{getLeaderAssignmentLabel(u)}</span>
                     : <span style={styles.noMember}>—</span>
                   }
                 </td>

@@ -43,6 +43,7 @@ module.exports = {
       { module: "finance", action: "delete", description: "Delete financial records", created_at: now, updated_at: now },
       // ── Events ──────────────────────────────────────────────
       { module: "events", action: "read", description: "View events", created_at: now, updated_at: now },
+      { module: "events", action: "invite", description: "Invite ministry members to events", created_at: now, updated_at: now },
       { module: "events", action: "create", description: "Create events", created_at: now, updated_at: now },
       { module: "events", action: "update", description: "Edit events", created_at: now, updated_at: now },
       { module: "events", action: "delete", description: "Delete events", created_at: now, updated_at: now },

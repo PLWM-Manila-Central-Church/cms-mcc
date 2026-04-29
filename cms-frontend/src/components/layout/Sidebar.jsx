@@ -18,17 +18,15 @@ function NavIcon({ name, size = 18 }) {
 export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
   const { user, hasPermission } = useAuth();
 
-  // Ministry Leader = user with role_name 'Ministry Leader' and leadsMinistryId.
-  // They manage members exclusively through the Ministry page (roster tab),
-  // so the Members nav item is hidden for them.
-  const isMinistryLeader = user?.roleName === 'Ministry Leader' && !!user?.leadsMinistryId;
-
-  // Ministry Leaders only see these 5 nav items
-  const MINISTRY_LEADER_PATHS = new Set(['/dashboard', '/ministry', '/events', '/archives', '/inventory']);
+  const ROLE_PATHS = {
+    'Ministry Leader': new Set(['/dashboard', '/ministry', '/events', '/attendance', '/archives', '/inventory']),
+    'Cell Group Leader': new Set(['/dashboard', '/members', '/cell-groups', '/attendance', '/events', '/services', '/archives', '/inventory']),
+    'Group Leader': new Set(['/dashboard', '/members', '/attendance', '/events', '/services', '/archives', '/inventory']),
+  };
+  const rolePaths = ROLE_PATHS[user?.roleName];
 
   const visibleItems = NAV_ITEMS.filter(item => {
-    // Ministry Leaders: restrict to their allowed pages only
-    if (isMinistryLeader) return MINISTRY_LEADER_PATHS.has(item.path);
+    if (rolePaths) return rolePaths.has(item.path);
     // Standard permission check for all other users
     return !item.permissions || hasPermission(item.permissions.module, item.permissions.action);
   });
