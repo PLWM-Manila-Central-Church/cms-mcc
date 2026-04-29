@@ -1,7 +1,7 @@
 "use strict";
 
 const bcrypt = require("bcrypt");
-const { User, Role, Member, MinistryRole, MinistryMembership } = require("../models");
+const { User, Role, Member, MinistryRole, MinistryMembership, CellGroup, MinistryGroup } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
@@ -11,7 +11,10 @@ const userIncludes = [
   {
     model: Member,
     as: "member",
-    attributes: ["id", "first_name", "last_name", "cell_group_id", "group_id"],
+    attributes: [
+      "id", "first_name", "last_name", "email", "phone", "gender",
+      "birthdate", "spiritual_birthday", "address", "cell_group_id", "group_id",
+    ],
     required: false,
     include: [
       {
@@ -28,7 +31,56 @@ const userIncludes = [
     attributes: ["id", "name"],
     required: false,
   },
+  {
+    model: CellGroup,
+    as: "leadsCellGroup",
+    attributes: ["id", "name", "area"],
+    required: false,
+  },
+  {
+    model: MinistryGroup,
+    as: "leadsGroup",
+    attributes: ["id", "name"],
+    required: false,
+  },
 ];
+
+const validateLeaderAssignment = async (role, data, existingUser = null) => {
+  const final = {
+    leads_cell_group_id: data.leads_cell_group_id !== undefined ? data.leads_cell_group_id : existingUser?.leads_cell_group_id,
+    leads_group_id:      data.leads_group_id      !== undefined ? data.leads_group_id      : existingUser?.leads_group_id,
+    leads_ministry_id:   data.leads_ministry_id   !== undefined ? data.leads_ministry_id   : existingUser?.leads_ministry_id,
+  };
+
+  if (role.role_name === "Cell Group Leader" && !final.leads_cell_group_id) {
+    throw { status: 400, message: "Cell Group Leader requires a leader cell group assignment" };
+  }
+  if (role.role_name === "Group Leader" && !final.leads_group_id) {
+    throw { status: 400, message: "Group Leader requires a leader group assignment" };
+  }
+  if (role.role_name === "Ministry Leader" && !final.leads_ministry_id) {
+    throw { status: 400, message: "Ministry Leader requires a leader ministry assignment" };
+  }
+
+  if (role.role_name === "Cell Group Leader" && final.leads_cell_group_id) {
+    const row = await CellGroup.findByPk(final.leads_cell_group_id);
+    if (!row) throw { status: 404, message: "Leader cell group not found" };
+  }
+  if (role.role_name === "Group Leader" && final.leads_group_id) {
+    const row = await MinistryGroup.findByPk(final.leads_group_id);
+    if (!row) throw { status: 404, message: "Leader group not found" };
+  }
+  if (role.role_name === "Ministry Leader" && final.leads_ministry_id) {
+    const row = await MinistryRole.findByPk(final.leads_ministry_id);
+    if (!row) throw { status: 404, message: "Leader ministry not found" };
+  }
+
+  return {
+    leads_cell_group_id: role.role_name === "Cell Group Leader" ? parseInt(final.leads_cell_group_id) : null,
+    leads_group_id:      role.role_name === "Group Leader"      ? parseInt(final.leads_group_id)      : null,
+    leads_ministry_id:   role.role_name === "Ministry Leader"   ? parseInt(final.leads_ministry_id)   : null,
+  };
+};
 
 // ── Get All Users ────────────────────────────────────────────
 exports.getAllUsers = async () => {
@@ -61,24 +113,17 @@ exports.createUser = async (data, createdBy) => {
     member_ministry_role_id,
   } = data;
 
-  // DEBUG: Log received data
-  console.log('[DEBUG createUser] Received data:', {
-    role_id, leads_ministry_id, leads_group_id, leads_cell_group_id
-  });
-
   const existing = await User.findOne({ where: { email, is_deleted: 0 } });
   if (existing) throw { status: 409, message: "Email already in use" };
 
   const role = await Role.findByPk(role_id);
   if (!role) throw { status: 404, message: "Role not found" };
 
-  // DEBUG: Log role info
-  console.log('[DEBUG createUser] Role:', { role_id: role.id, role_name: role.role_name });
-
-  // Validate: leads_ministry_id is only allowed for Ministry Leader role
-  if (leads_ministry_id && role.role_name !== 'Ministry Leader') {
-    throw { status: 400, message: "leads_ministry_id can only be set for Ministry Leader role" };
-  }
+  const leaderAssignment = await validateLeaderAssignment(role, {
+    leads_cell_group_id,
+    leads_group_id,
+    leads_ministry_id,
+  });
 
   // Validate: member_ministry_role_id is NOT allowed for Ministry Leader role
   if (member_ministry_role_id && role.role_name === 'Ministry Leader') {
@@ -112,20 +157,9 @@ exports.createUser = async (data, createdBy) => {
     role_id,
     member_id: resolvedMemberId || null,
     invited_member_id: invited_member_id || null,
-    leads_cell_group_id: leads_cell_group_id ? parseInt(leads_cell_group_id) : null,
-    leads_group_id: leads_group_id ? parseInt(leads_group_id) : null,
-    leads_ministry_id: leads_ministry_id ? parseInt(leads_ministry_id) : null,
+    ...leaderAssignment,
     is_active: 1,
     force_password_change: 1,
-  });
-
-  // DEBUG: Log what was saved
-  console.log('[DEBUG createUser] User created:', {
-    id: user.id,
-    role_id: user.role_id,
-    leads_ministry_id: user.leads_ministry_id,
-    leads_group_id: user.leads_group_id,
-    leads_cell_group_id: user.leads_cell_group_id
   });
 
   // If member_ministry_role_id is provided, add user to that ministry as a team member
@@ -166,9 +200,19 @@ exports.updateUser = async (id, data, updatedBy) => {
     if (existing) throw { status: 409, message: "Email already in use" };
   }
 
-  if (role_id) {
-    const role = await Role.findByPk(role_id);
-    if (!role) throw { status: 404, message: "Role not found" };
+  const role = role_id
+    ? await Role.findByPk(role_id)
+    : await Role.findByPk(user.role_id);
+  if (!role) throw { status: 404, message: "Role not found" };
+
+  const leaderAssignment = await validateLeaderAssignment(role, {
+    leads_cell_group_id,
+    leads_group_id,
+    leads_ministry_id,
+  }, user);
+
+  if (member_ministry_role_id && role.role_name === "Ministry Leader") {
+    throw { status: 400, message: "Use leads_ministry_id for Ministry Leader role, not member_ministry_role_id" };
   }
 
   await user.update({
@@ -177,18 +221,8 @@ exports.updateUser = async (id, data, updatedBy) => {
     ...(member_id !== undefined && { member_id }),
     ...(invited_member_id !== undefined && { invited_member_id }),
     ...(is_active !== undefined && { is_active }),
-    ...(leads_cell_group_id !== undefined && { leads_cell_group_id: leads_cell_group_id ? parseInt(leads_cell_group_id) : null }),
-    ...(leads_group_id !== undefined && { leads_group_id: leads_group_id ? parseInt(leads_group_id) : null }),
-    ...(leads_ministry_id !== undefined && { leads_ministry_id: leads_ministry_id ? parseInt(leads_ministry_id) : null }),
+    ...leaderAssignment,
   });
-
-  // Validate: member_ministry_role_id is NOT allowed for Ministry Leader role
-  if (member_ministry_role_id !== undefined) {
-    const role = await Role.findByPk(user.role_id);
-    if (role && role.role_name === 'Ministry Leader' && member_ministry_role_id) {
-      throw { status: 400, message: "Use leads_ministry_id for Ministry Leader role, not member_ministry_role_id" };
-    }
-  }
 
   // Update linked member ministry membership
   if (user.member_id && member_ministry_role_id !== undefined) {

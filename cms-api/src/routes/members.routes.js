@@ -11,6 +11,7 @@ router.get("/",    auth, authorize("members", "read"),   ctrl.getAllMembers);
 router.get("/:id", auth, authorize("members", "read"),   ctrl.getMemberById);
 router.post("/",   auth, authorize("members", "create"), validate(createMemberSchema), ctrl.createMember);  // Fix #1
 router.put("/:id", auth, authorize("members", "update"), validate(updateMemberSchema), ctrl.updateMember);  // Fix #1
+router.patch("/:id/unassign-scope", auth, authorize("members", "update"), ctrl.unassignMemberFromScope);
 router.delete("/:id", auth, authorize("members", "delete"), ctrl.deleteMember);
 
 module.exports = router;

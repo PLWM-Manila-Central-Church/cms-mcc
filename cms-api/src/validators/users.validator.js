@@ -33,7 +33,8 @@ exports.createUserSchema = Joi.object({
   // Leader assignment fields
   leads_cell_group_id: Joi.number().integer().positive().allow(null).optional(),
   leads_group_id:      Joi.number().integer().positive().allow(null).optional(),
-  ministry_role_id:    Joi.number().integer().positive().allow(null).optional(),
+  leads_ministry_id:   Joi.number().integer().positive().allow(null).optional(),
+  member_ministry_role_id: Joi.number().integer().positive().allow(null).optional(),
 });
 
 exports.updateUserSchema = Joi.object({
@@ -55,5 +56,6 @@ exports.updateUserSchema = Joi.object({
   // Leader assignment fields
   leads_cell_group_id: Joi.number().integer().positive().allow(null).optional(),
   leads_group_id:      Joi.number().integer().positive().allow(null).optional(),
-  ministry_role_id:    Joi.number().integer().positive().allow(null).optional(),
+  leads_ministry_id:   Joi.number().integer().positive().allow(null).optional(),
+  member_ministry_role_id: Joi.number().integer().positive().allow(null).optional(),
 }).min(1);
