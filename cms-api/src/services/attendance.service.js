@@ -2,6 +2,10 @@
 
 const { Attendance, Member, Service, ServiceAttendanceSummary, User } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
+const {
+  ensureMemberInScope,
+  getMemberScopeWhere,
+} = require("../helpers/scopedLeader.helper");
 
 const attendanceIncludes = [
   {
@@ -34,23 +38,30 @@ const syncSummary = async (serviceId) => {
 };
 
 // ── Get All Attendance Records ───────────────────────────────
-exports.getAllAttendance = async () => {
+exports.getAllAttendance = async (user = {}) => {
+  const memberScopeWhere = await getMemberScopeWhere(user);
   return await Attendance.findAll({
-    include: attendanceIncludes,
+    include: attendanceIncludes.map((include) => (
+      include.model === Member && memberScopeWhere
+        ? { ...include, where: memberScopeWhere, required: true }
+        : include
+    )),
     order: [["checked_in_at", "DESC"]],
   });
 };
 
 // ── Get Attendance By ID ─────────────────────────────────────
-exports.getAttendanceById = async (id) => {
+exports.getAttendanceById = async (id, user = {}) => {
   const record = await Attendance.findByPk(id, { include: attendanceIncludes });
   if (!record) throw { status: 404, message: "Attendance record not found" };
+  await ensureMemberInScope(record.member_id, user);
   return record;
 };
 
 // ── Create Attendance (Check-in) ─────────────────────────────
-exports.createAttendance = async (data, recordedBy) => {
+exports.createAttendance = async (data, recordedBy, user = {}) => {
   const { service_id, member_id, check_in_method, checked_in_at } = data;
+  await ensureMemberInScope(member_id, user);
 
   const service = await Service.findByPk(service_id);
   if (!service) throw { status: 404, message: "Service not found" };
@@ -78,7 +89,7 @@ exports.createAttendance = async (data, recordedBy) => {
     console.error("[Attendance] Failed to sync summary:", err.message);
   }
 
-  const created = await exports.getAttendanceById(record.id);
+  const created = await exports.getAttendanceById(record.id, user);
   auditLog.log({
     userId: recordedBy, action: "CHECK_IN",
     targetTable: "attendances", targetId: created.id,
@@ -88,9 +99,10 @@ exports.createAttendance = async (data, recordedBy) => {
 };
 
 // ── Update Attendance ────────────────────────────────────────
-exports.updateAttendance = async (id, data) => {
+exports.updateAttendance = async (id, data, user = {}) => {
   const record = await Attendance.findByPk(id);
   if (!record) throw { status: 404, message: "Attendance record not found" };
+  await ensureMemberInScope(record.member_id, user);
 
   const { check_in_method, checked_in_at } = data;
   await record.update({
@@ -98,13 +110,14 @@ exports.updateAttendance = async (id, data) => {
     ...(checked_in_at   && { checked_in_at }),
   });
 
-  return await exports.getAttendanceById(id);
+  return await exports.getAttendanceById(id, user);
 };
 
 // ── Delete Attendance ────────────────────────────────────────
-exports.deleteAttendance = async (id) => {
+exports.deleteAttendance = async (id, user = {}) => {
   const record = await Attendance.findByPk(id);
   if (!record) throw { status: 404, message: "Attendance record not found" };
+  await ensureMemberInScope(record.member_id, user);
 
   const serviceId = record.service_id;
   await record.destroy();

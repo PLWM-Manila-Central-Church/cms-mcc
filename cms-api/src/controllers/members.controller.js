@@ -13,7 +13,7 @@ exports.getAllMembers = async (req, res, next) => {
 
 exports.getMemberById = async (req, res, next) => {
   try {
-    const result = await membersService.getMemberById(req.params.id);
+    const result = await membersService.getMemberById(req.params.id, req.user);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -31,7 +31,7 @@ exports.createMember = async (req, res, next) => {
 
 exports.updateMember = async (req, res, next) => {
   try {
-    const result = await membersService.updateMember(req.params.id, req.body, req.user.userId);
+    const result = await membersService.updateMember(req.params.id, req.body, req.user.userId, req.user);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -43,6 +43,20 @@ exports.deleteMember = async (req, res, next) => {
     const result = await membersService.deleteMember(
       req.params.id,
       req.user.userId,
+      req.user,
+    );
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.unassignMemberFromScope = async (req, res, next) => {
+  try {
+    const result = await membersService.unassignMemberFromScope(
+      req.params.id,
+      req.user.userId,
+      req.user,
     );
     res.json({ success: true, data: result });
   } catch (err) {

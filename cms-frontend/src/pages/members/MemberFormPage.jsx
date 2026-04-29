@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
+import { useAuth } from '../../context/AuthContext';
 
 export default function MemberFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  const isScopedLeader = ['Cell Group Leader', 'Group Leader', 'Ministry Leader'].includes(user?.roleName);
 
   const [form, setForm] = useState({
     first_name: '', last_name: '', email: '', phone: '',
@@ -25,6 +28,7 @@ export default function MemberFormPage() {
   const [error, setError]           = useState('');
 
   useEffect(() => {
+    if (isScopedLeader) return;
     const loadDropdowns = async () => {
       try {
         const [cgRes, grRes, memRes, mrRes] = await Promise.all([
@@ -40,7 +44,11 @@ export default function MemberFormPage() {
       } catch {}
     };
     loadDropdowns();
-  }, []);
+  }, [isScopedLeader]);
+
+  useEffect(() => {
+    if (isScopedLeader && !isEdit) navigate('/members', { replace: true });
+  }, [isScopedLeader, isEdit, navigate]);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -83,9 +91,16 @@ export default function MemberFormPage() {
     setSaving(true);
     setError('');
 
-    const payload = Object.fromEntries(
+    let payload = Object.fromEntries(
       Object.entries(form).map(([k, v]) => [k, v === '' ? null : v])
     );
+    if (isScopedLeader) {
+      const allowed = [
+        'first_name', 'last_name', 'email', 'phone', 'birthdate',
+        'spiritual_birthday', 'address', 'gender',
+      ];
+      payload = Object.fromEntries(Object.entries(payload).filter(([key]) => allowed.includes(key)));
+    }
 
     try {
       if (isEdit) {
@@ -154,6 +169,8 @@ export default function MemberFormPage() {
               </select>
             </div>
 
+            {!isScopedLeader && (
+              <>
             <div style={styles.fieldWrap}>
               <label style={styles.label}>Status</label>
               <select name="status" value={form.status} onChange={handleChange} style={styles.select}>
@@ -208,6 +225,8 @@ export default function MemberFormPage() {
                   ))}
                 </select>
               </div>
+            )}
+              </>
             )}
           </div>
         </div>

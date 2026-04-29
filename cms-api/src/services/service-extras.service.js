@@ -139,9 +139,28 @@ const substituteIncludes = [
   },
 ];
 
-exports.getAllSubstituteRequests = async () => {
+const scopeSubstituteIncludes = (user = {}) => substituteIncludes.map((include) => {
+  if (include.as !== "assignment") return include;
+  if (user.roleName === "Ministry Leader") {
+    return {
+      ...include,
+      where: { ministry_role_id: user.leadsMinistryId || 0 },
+      required: true,
+    };
+  }
+  return include;
+});
+
+const ensureSubstituteInScope = (request, user = {}) => {
+  if (user.roleName !== "Ministry Leader") return;
+  if (request.assignment?.ministry_role_id !== user.leadsMinistryId) {
+    throw { status: 403, message: "This substitute request is outside your ministry" };
+  }
+};
+
+exports.getAllSubstituteRequests = async (user = {}) => {
   return await SubstituteRequest.findAll({
-    include: substituteIncludes,
+    include: scopeSubstituteIncludes(user),
     order: [["created_at", "DESC"]],
   });
 };
@@ -155,11 +174,12 @@ exports.getMySubstituteRequests = async (userId) => {
   });
 };
 
-exports.getSubstituteRequestById = async (id) => {
+exports.getSubstituteRequestById = async (id, user = {}) => {
   const request = await SubstituteRequest.findByPk(id, {
     include: substituteIncludes,
   });
   if (!request) throw { status: 404, message: "Substitute request not found" };
+  ensureSubstituteInScope(request, user);
   return request;
 };
 
@@ -210,11 +230,15 @@ exports.createSubstituteRequest = async (data, requestedBy) => {
   });
 };
 
-exports.resolveSubstituteRequest = async (id, status, resolvedBy) => {
+exports.resolveSubstituteRequest = async (id, status, resolvedBy, user = {}) => {
   const request = await SubstituteRequest.findByPk(id, {
-    include: [{ model: User, as: "proposedSubstituteUser", attributes: ["id", "member_id"], required: false }],
+    include: [
+      { model: MinistryAssignment, as: "assignment", attributes: ["id", "ministry_role_id"], required: true },
+      { model: User, as: "proposedSubstituteUser", attributes: ["id", "member_id"], required: false },
+    ],
   });
   if (!request) throw { status: 404, message: "Substitute request not found" };
+  ensureSubstituteInScope(request, user);
 
   if (request.status !== "pending")
     throw { status: 400, message: "Request has already been resolved" };
@@ -234,12 +258,15 @@ exports.resolveSubstituteRequest = async (id, status, resolvedBy) => {
   }
 
   await request.update({ status, resolved_by: resolvedBy });
-  return await exports.getSubstituteRequestById(id);
+  return await exports.getSubstituteRequestById(id, user);
 };
 
-exports.deleteSubstituteRequest = async (id) => {
-  const request = await SubstituteRequest.findByPk(id);
+exports.deleteSubstituteRequest = async (id, user = {}) => {
+  const request = await SubstituteRequest.findByPk(id, {
+    include: [{ model: MinistryAssignment, as: "assignment", attributes: ["id", "ministry_role_id"], required: true }],
+  });
   if (!request) throw { status: 404, message: "Substitute request not found" };
+  ensureSubstituteInScope(request, user);
 
   if (request.status !== "pending")
     throw { status: 400, message: "Only pending requests can be deleted" };

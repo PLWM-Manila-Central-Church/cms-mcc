@@ -160,6 +160,7 @@ MinistryAssignment.belongsTo(MinistryRole, {
 MinistryAssignment.hasMany(SubstituteRequest, { foreignKey: "assignment_id" });
 SubstituteRequest.belongsTo(MinistryAssignment, {
   foreignKey: "assignment_id",
+  as: "assignment",
 });
 SubstituteRequest.belongsTo(User, {
   foreignKey: "requested_by",
@@ -250,7 +251,7 @@ ArchiveRecord.belongsTo(User, {
 });
 
 // ── User leader associations ─────────────────────────────────
-User.belongsTo(MinistryRole, { foreignKey: "ministry_role_id",    as: "leadsMinistry"  });
+User.belongsTo(MinistryRole, { foreignKey: "leads_ministry_id",   as: "leadsMinistry"  });
 User.belongsTo(CellGroup,    { foreignKey: "leads_cell_group_id", as: "leadsCellGroup" });
 User.belongsTo(MinistryGroup, { foreignKey: "leads_group_id", as: "leadsGroup"   });
 
@@ -259,7 +260,7 @@ MinistryMembership.belongsTo(MinistryRole, { foreignKey: "ministry_role_id", as:
 MinistryMembership.belongsTo(Member,       { foreignKey: "member_id",        as: "member"        });
 MinistryMembership.belongsTo(User,         { foreignKey: "added_by",         as: "addedByUser"   });
 MinistryRole.hasMany(MinistryMembership,   { foreignKey: "ministry_role_id"                      });
-Member.hasMany(MinistryMembership,         { foreignKey: "member_id"                             });
+Member.hasMany(MinistryMembership,         { foreignKey: "member_id", as: "MinistryMemberships"  });
 
 // ── MinistryEventInvite ──────────────────────────────────────
 MinistryEventInvite.belongsTo(Event,        { foreignKey: "event_id"                                        });

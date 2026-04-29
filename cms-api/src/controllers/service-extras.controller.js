@@ -1,6 +1,10 @@
 "use strict";
 
 const serviceExtrasService = require("../services/service-extras.service");
+const {
+  ensureMemberInScope,
+  getMemberScopeWhere,
+} = require("../helpers/scopedLeader.helper");
 
 // ── Attendance Summary ───────────────────────────────────────
 exports.getSummaryByService = async (req, res, next) => {
@@ -58,7 +62,7 @@ exports.deleteResponse = async (req, res, next) => {
 // ── Substitute Requests ──────────────────────────────────────
 exports.getAllSubstituteRequests = async (req, res, next) => {
   try {
-    const data = await serviceExtrasService.getAllSubstituteRequests();
+    const data = await serviceExtrasService.getAllSubstituteRequests(req.user);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -77,7 +81,7 @@ exports.getMySubstituteRequests = async (req, res, next) => {
 
 exports.getSubstituteRequestById = async (req, res, next) => {
   try {
-    const data = await serviceExtrasService.getSubstituteRequestById(req.params.id);
+    const data = await serviceExtrasService.getSubstituteRequestById(req.params.id, req.user);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -96,7 +100,7 @@ exports.createSubstituteRequest = async (req, res, next) => {
 exports.resolveSubstituteRequest = async (req, res, next) => {
   try {
     const { status } = req.body;
-    const data = await serviceExtrasService.resolveSubstituteRequest(req.params.id, status, req.user.userId);
+    const data = await serviceExtrasService.resolveSubstituteRequest(req.params.id, status, req.user.userId, req.user);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -105,7 +109,7 @@ exports.resolveSubstituteRequest = async (req, res, next) => {
 
 exports.deleteSubstituteRequest = async (req, res, next) => {
   try {
-    const data = await serviceExtrasService.deleteSubstituteRequest(req.params.id);
+    const data = await serviceExtrasService.deleteSubstituteRequest(req.params.id, req.user);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -122,9 +126,17 @@ exports.getAttendanceByService = async (req, res, next) => {
     const service = await Service.findByPk(req.params.id);
     if (!service) return res.status(404).json({ success: false, message: "Service not found" });
 
+    const memberScopeWhere = await getMemberScopeWhere(req.user);
+    const memberInclude = {
+      model: Member,
+      attributes: ["id", "first_name", "last_name", "barcode"],
+      required: !!memberScopeWhere,
+      ...(memberScopeWhere && { where: memberScopeWhere }),
+    };
+
     const records = await Attendance.findAll({
       where: { service_id: req.params.id },
-      include: [{ model: Member, attributes: ["id", "first_name", "last_name", "barcode"], required: false }],
+      include: [memberInclude],
       order: [["checked_in_at", "DESC"]],
     });
 
@@ -137,7 +149,7 @@ exports.getAttendanceByService = async (req, res, next) => {
     const checkedInIds = new Set(records.map(r => r.member_id));
     const preRegs = await ServiceResponse.findAll({
       where: { service_id: req.params.id, attendance_status: "ATTENDING" },
-      include: [{ model: Member, attributes: ["id", "first_name", "last_name", "barcode"], required: false }],
+      include: [memberInclude],
     });
 
     const preRegRows = preRegs
@@ -158,9 +170,11 @@ exports.getAttendanceByService = async (req, res, next) => {
 
 exports.createAttendanceForService = async (req, res, next) => {
   try {
+    await ensureMemberInScope(req.body.member_id, req.user);
     const data = await attendanceService.createAttendance(
       { ...req.body, service_id: req.params.id },
       req.user.userId,
+      req.user,
     );
     res.status(201).json({ success: true, data });
   } catch (err) { next(err); }
@@ -174,9 +188,10 @@ exports.deleteAttendanceForService = async (req, res, next) => {
       where: { service_id: req.params.id, member_id: req.params.memberId },
     });
     if (!record) throw { status: 404, message: "Attendance record not found" };
+    await ensureMemberInScope(record.member_id, req.user);
     // FIX: route through the service layer so syncSummary fires and the
     // attendance bar decrements correctly when Undo is clicked.
-    await attendanceService.deleteAttendance(record.id);
+    await attendanceService.deleteAttendance(record.id, req.user);
     res.json({ success: true, message: "Attendance removed." });
   } catch (err) { next(err); }
 };

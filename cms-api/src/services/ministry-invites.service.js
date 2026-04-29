@@ -8,6 +8,7 @@ const {
   Event,
   Member,
   User,
+  MinistryMembership,
 } = require("../models");
 
 // ── Shared includes ──────────────────────────────────────────
@@ -55,7 +56,10 @@ exports.createInvites = async (
   eventId,
   { ministry_role_id, member_ids, response_deadline },
   invitedBy,
+  forcedMinistryRoleId = null,
 ) => {
+  if (forcedMinistryRoleId) ministry_role_id = forcedMinistryRoleId;
+
   const event = await Event.findByPk(eventId);
   if (!event) throw { status: 404, message: "Event not found" };
 
@@ -73,6 +77,16 @@ exports.createInvites = async (
       if (!member) {
         results.errors.push({ memberId, reason: "Member not found" });
         continue;
+      }
+
+      if (forcedMinistryRoleId) {
+        const membership = await MinistryMembership.findOne({
+          where: { ministry_role_id, member_id: memberId },
+        });
+        if (!membership) {
+          results.errors.push({ memberId, reason: "Member is outside your ministry roster" });
+          continue;
+        }
       }
 
       // Skip if invite already exists for this event + ministry + member
