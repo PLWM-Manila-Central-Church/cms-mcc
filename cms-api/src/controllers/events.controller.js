@@ -2,6 +2,15 @@
 
 const eventsService = require("../services/events.service");
 
+const forbidMinistryLeaderEventManage = (req, res) => {
+  if (req.user?.roleName !== "Ministry Leader") return false;
+  res.status(403).json({
+    success: false,
+    message: "Ministry Leaders can invite their ministry roster, not manage event records.",
+  });
+  return true;
+};
+
 // ── Events ───────────────────────────────────────────────────
 exports.getAllEvents = async (req, res, next) => {
   try {
@@ -19,6 +28,7 @@ exports.getEventById = async (req, res, next) => {
 
 exports.createEvent = async (req, res, next) => {
   try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
     const result = await eventsService.createEvent(req.body, req.user.userId);
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
@@ -26,6 +36,7 @@ exports.createEvent = async (req, res, next) => {
 
 exports.updateEvent = async (req, res, next) => {
   try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
     const result = await eventsService.updateEvent(req.params.id, req.body, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
@@ -33,6 +44,7 @@ exports.updateEvent = async (req, res, next) => {
 
 exports.updateEventStatus = async (req, res, next) => {
   try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
     const { status } = req.body;
     const result = await eventsService.updateEventStatus(req.params.id, status, req.user.userId);
     res.json({ success: true, data: result });
@@ -41,6 +53,7 @@ exports.updateEventStatus = async (req, res, next) => {
 
 exports.deleteEvent = async (req, res, next) => {
   try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
     const result = await eventsService.deleteEvent(req.params.id, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
@@ -63,6 +76,7 @@ exports.getCategoryById = async (req, res, next) => {
 
 exports.createCategory = async (req, res, next) => {
   try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
     const result = await eventsService.createCategory(req.body);
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
@@ -70,6 +84,7 @@ exports.createCategory = async (req, res, next) => {
 
 exports.updateCategory = async (req, res, next) => {
   try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
     const result = await eventsService.updateCategory(req.params.id, req.body);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
@@ -77,6 +92,7 @@ exports.updateCategory = async (req, res, next) => {
 
 exports.deleteCategory = async (req, res, next) => {
   try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
     const result = await eventsService.deleteCategory(req.params.id);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
@@ -93,6 +109,7 @@ exports.getEventRegistrations = async (req, res, next) => {
 // Self-register or admin register a specific member (member_id in body)
 exports.registerMember = async (req, res, next) => {
   try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
     const memberId = req.body.member_id || req.user.memberId;
     if (!memberId)
       return res.status(400).json({ success: false, message: "No member profile linked to this account" });
@@ -104,6 +121,7 @@ exports.registerMember = async (req, res, next) => {
 // Bulk register — body: { member_ids: [1, 2, 3] }
 exports.bulkRegisterMembers = async (req, res, next) => {
   try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
     const { member_ids } = req.body;
     if (!Array.isArray(member_ids) || member_ids.length === 0)
       return res.status(400).json({ success: false, message: "member_ids must be a non-empty array" });
@@ -115,6 +133,7 @@ exports.bulkRegisterMembers = async (req, res, next) => {
 // Self-unregister (no memberId in path)
 exports.unregisterMember = async (req, res, next) => {
   try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
     const memberId = req.body.member_id || req.user.memberId;
     if (!memberId)
       return res.status(400).json({ success: false, message: "No member profile linked to this account" });
@@ -126,6 +145,7 @@ exports.unregisterMember = async (req, res, next) => {
 // Admin remove specific member by memberId URL param
 exports.unregisterMemberById = async (req, res, next) => {
   try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
     const memberId = parseInt(req.params.memberId, 10);
     if (!memberId)
       return res.status(400).json({ success: false, message: "Invalid member ID" });

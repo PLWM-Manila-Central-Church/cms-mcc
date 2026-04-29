@@ -109,16 +109,28 @@ app.use("/api/member-portal", require("./routes/member-portal.routes"));
 const { CellGroup, MinistryGroup } = require("./models");
 const verifyToken = require("./middlewares/verifyToken");
 
+const assignedOnlyWhere = (req, roleName, fieldName) => {
+  if (req.user?.roleName !== roleName) return {};
+  const id = req.user?.[fieldName];
+  return id ? { id } : { id: null };
+};
+
 // Fix #3 — authenticated file serving (replaces public express.static)
 app.get("/uploads/archives/:filename",     verifyToken, serveUpload);
 app.get("/api/uploads/archives/:filename", verifyToken, serveUpload);
 
 app.get("/api/members/dropdowns/cell-groups", verifyToken, async (req, res) => {
-  const data = await CellGroup.findAll({ order: [["name", "ASC"]] });
+  const data = await CellGroup.findAll({
+    where: assignedOnlyWhere(req, "Cell Group Leader", "leadsCellGroupId"),
+    order: [["name", "ASC"]],
+  });
   res.json({ success: true, data });
 });
 app.get("/api/members/dropdowns/groups", verifyToken, async (req, res) => {
-  const data = await MinistryGroup.findAll({ order: [["name", "ASC"]] });
+  const data = await MinistryGroup.findAll({
+    where: assignedOnlyWhere(req, "Group Leader", "leadsGroupId"),
+    order: [["name", "ASC"]],
+  });
   res.json({ success: true, data });
 });
 

@@ -2,10 +2,33 @@
 
 const { CellGroup, CellGroupHistory, Member } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
+const { ensureMemberInScope, isScopedLeader } = require("../helpers/scopedLeader.helper");
+
+const getCellGroupWhereForUser = (user = {}) => {
+  if (user.roleName !== "Cell Group Leader") return {};
+  if (!user.leadsCellGroupId) return { id: null };
+  return { id: user.leadsCellGroupId };
+};
+
+const ensureCellGroupAccess = (id, user = {}) => {
+  if (user.roleName !== "Cell Group Leader") return;
+  if (!user.leadsCellGroupId || parseInt(id, 10) !== parseInt(user.leadsCellGroupId, 10)) {
+    throw { status: 403, message: "This cell group is outside your assignment" };
+  }
+};
+
+const forbidScopedCellGroupManage = (user = {}) => {
+  if (isScopedLeader(user)) {
+    throw { status: 403, message: "Leaders can view assigned cell groups, not manage cell group records" };
+  }
+};
 
 // ── Get All Cell Groups ──────────────────────────────────────
-exports.getAllCellGroups = async () => {
-  const groups = await CellGroup.findAll({ order: [["name", "ASC"]] });
+exports.getAllCellGroups = async (user = {}) => {
+  const groups = await CellGroup.findAll({
+    where: getCellGroupWhereForUser(user),
+    order: [["name", "ASC"]],
+  });
   // Attach member count to each group
   const withCounts = await Promise.all(
     groups.map(async (g) => {
@@ -20,14 +43,16 @@ exports.getAllCellGroups = async () => {
 };
 
 // ── Get Cell Group By ID ─────────────────────────────────────
-exports.getCellGroupById = async (id) => {
+exports.getCellGroupById = async (id, user = {}) => {
+  ensureCellGroupAccess(id, user);
   const cellGroup = await CellGroup.findByPk(id);
   if (!cellGroup) throw { status: 404, message: "Cell group not found" };
   return cellGroup;
 };
 
 // ── Create Cell Group ────────────────────────────────────────
-exports.createCellGroup = async (data, createdBy) => {
+exports.createCellGroup = async (data, createdBy, user = {}) => {
+  forbidScopedCellGroupManage(user);
   const { name, area } = data;
   const existing = await CellGroup.findOne({ where: { name } });
   if (existing)
@@ -38,7 +63,8 @@ exports.createCellGroup = async (data, createdBy) => {
 };
 
 // ── Update Cell Group ────────────────────────────────────────
-exports.updateCellGroup = async (id, data, updatedBy) => {
+exports.updateCellGroup = async (id, data, updatedBy, user = {}) => {
+  forbidScopedCellGroupManage(user);
   const cellGroup = await CellGroup.findByPk(id);
   if (!cellGroup) throw { status: 404, message: "Cell group not found" };
 
@@ -58,7 +84,8 @@ exports.updateCellGroup = async (id, data, updatedBy) => {
 };
 
 // ── Delete Cell Group ────────────────────────────────────────
-exports.deleteCellGroup = async (id, deletedBy) => {
+exports.deleteCellGroup = async (id, deletedBy, user = {}) => {
+  forbidScopedCellGroupManage(user);
   const cellGroup = await CellGroup.findByPk(id);
   if (!cellGroup) throw { status: 404, message: "Cell group not found" };
 
@@ -75,7 +102,8 @@ exports.deleteCellGroup = async (id, deletedBy) => {
 };
 
 // ── Get Cell Group History ───────────────────────────────────
-exports.getCellGroupHistory = async (memberId) => {
+exports.getCellGroupHistory = async (memberId, user = {}) => {
+  await ensureMemberInScope(memberId, user);
   const member = await Member.findByPk(memberId);
   if (!member) throw { status: 404, message: "Member not found" };
 
@@ -86,7 +114,10 @@ exports.getCellGroupHistory = async (memberId) => {
 };
 
 // ── Create Cell Group History ────────────────────────────────
-exports.createCellGroupHistory = async (data, changedBy) => {
+exports.createCellGroupHistory = async (data, changedBy, user = {}) => {
+  if (isScopedLeader(user)) {
+    throw { status: 403, message: "Leaders can remove members from their assignment, not move them between cell groups" };
+  }
   const { member_id, new_cell_group_id, reason } = data;
 
   const member = await Member.findByPk(member_id);

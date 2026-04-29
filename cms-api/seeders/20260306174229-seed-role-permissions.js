@@ -154,9 +154,9 @@ module.exports = {
       { role_name: "Ministry Leader", module: "ministry", action: "create" },
       { role_name: "Ministry Leader", module: "ministry", action: "update" },
       { role_name: "Ministry Leader", module: "ministry", action: "delete" },
-      // Events page - can read and create invites
+      // Events page - can read events and invite own ministry roster
       { role_name: "Ministry Leader", module: "events", action: "read" },
-      { role_name: "Ministry Leader", module: "events", action: "create" },
+      { role_name: "Ministry Leader", module: "events", action: "invite" },
       // Attendance page - can read for their ministry
       { role_name: "Ministry Leader", module: "attendance", action: "read" },
       // Services page - can read for scheduling

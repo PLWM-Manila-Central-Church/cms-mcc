@@ -20,6 +20,18 @@ function NavIcon({ name, size = 20 }) {
 const BP_TABLET = 1024;
 const BP_MOBILE = 768;
 
+const ROLE_PATHS = {
+  'Ministry Leader': new Set(['/dashboard', '/ministry', '/events', '/attendance', '/archives', '/inventory']),
+  'Cell Group Leader': new Set(['/dashboard', '/members', '/cell-groups', '/attendance', '/events', '/services', '/archives', '/inventory']),
+  'Group Leader': new Set(['/dashboard', '/members', '/attendance', '/events', '/services', '/archives', '/inventory']),
+};
+
+const visibleForRole = (item, user, hasPermission) => {
+  const rolePaths = ROLE_PATHS[user?.roleName];
+  if (rolePaths) return rolePaths.has(item.path);
+  return !item.permissions || hasPermission(item.permissions.module, item.permissions.action);
+};
+
 function useWindowWidth() {
   const [width, setWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : 1280
@@ -63,14 +75,20 @@ const ROLE_TAB_SETS = {
   'Cell Group Leader': [
     { label: 'Home',       path: '/dashboard',  icon: 'dashboard' },
     { label: 'Members',    path: '/members',    icon: 'members' },
-    { label: 'Events',     path: '/events',     icon: 'events' },
     { label: 'Cell Groups',path: '/cell-groups',icon: 'cellgroups' },
+    { label: 'Attendance', path: '/attendance', icon: 'attendance' },
   ],
   'Group Leader': [
     { label: 'Home',     path: '/dashboard',  icon: 'dashboard' },
     { label: 'Members',  path: '/members',    icon: 'members' },
     { label: 'Events',   path: '/events',     icon: 'events' },
-    { label: 'Ministry', path: '/ministry',   icon: 'ministry' },
+    { label: 'Attendance', path: '/attendance', icon: 'attendance' },
+  ],
+  'Ministry Leader': [
+    { label: 'Home',       path: '/dashboard',  icon: 'dashboard' },
+    { label: 'Ministry',   path: '/ministry',   icon: 'ministry' },
+    { label: 'Events',     path: '/events',     icon: 'events' },
+    { label: 'Attendance', path: '/attendance', icon: 'attendance' },
   ],
 };
 
@@ -84,10 +102,11 @@ const DEFAULT_TABS = [
 
 /* ── Mobile bottom tab bar ─────────────────────────────────── */
 function BottomTabBar({ onMoreOpen }) {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const location = useLocation();
 
-  const roleTabs = ROLE_TAB_SETS[user?.roleName] || DEFAULT_TABS;
+  const roleTabs = (ROLE_TAB_SETS[user?.roleName] || DEFAULT_TABS)
+    .filter(item => visibleForRole(item, user, hasPermission));
   // Always append More as 5th tab
   const tabs = [...roleTabs, { label: 'More', path: '__more__', icon: 'more' }];
 
@@ -163,9 +182,7 @@ function MobileMoreDrawer({ open, onClose }) {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  const visibleItems = NAV_ITEMS.filter(item =>
-    !item.permissions || hasPermission(item.permissions.module, item.permissions.action)
-  );
+  const visibleItems = NAV_ITEMS.filter(item => visibleForRole(item, user, hasPermission));
 
   if (!open) return null;
 
