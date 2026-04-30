@@ -6,7 +6,7 @@
 // change rarely and invalidateAll() is called on any change.
 //
 // Fix #8 NOTE: This Map-based cache works correctly on a single server
-// instance. If the app is ever scaled horizontally (e.g. multiple Railway
+// instance. If the app is ever scaled horizontally (e.g. multiple Render
 // replicas), each instance will have its own isolated cache. A permission
 // update on one instance will NOT invalidate the others.
 // To fix this for multi-instance deployments, replace this Map with a

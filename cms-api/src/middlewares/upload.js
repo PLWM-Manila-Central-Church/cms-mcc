@@ -10,7 +10,7 @@
  * Fix #6 — verifyMime checks the actual file content (magic bytes) after
  * multer saves it, so a renamed malicious file cannot bypass the ext filter.
  *
- * NOTE: Railway's filesystem is ephemeral — files are wiped on redeploy.
+ * NOTE: Hosted filesystems are often ephemeral, so files can be wiped on redeploy.
  * For persistent storage swap diskStorage for an S3/Cloudinary integration.
  */
 
