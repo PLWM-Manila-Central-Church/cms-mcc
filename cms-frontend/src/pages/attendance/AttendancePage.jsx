@@ -13,14 +13,18 @@ const STATUS_META = {
 export default function AttendancePage() {
   const { id: serviceId } = useParams();
   const navigate          = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
+  const isCellGroupLeader = user?.roleName === 'Cell Group Leader';
   const canRecord         = hasPermission('attendance', 'create');
+  const canUndo           = hasPermission('attendance', 'delete');
 
   const [service, setService]     = useState(null);
   const [records, setRecords]     = useState([]);
   const [, setSummary]     = useState(null);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
+  const [scopeMembers, setScopeMembers] = useState([]);
+  const [scopeMembersLoading, setScopeMembersLoading] = useState(false);
 
   // Check-in search
   const [search, setSearch]           = useState('');
@@ -49,6 +53,21 @@ export default function AttendancePage() {
   }, [serviceId]);
 
   useEffect(() => { fetchAttendance(); }, [fetchAttendance]);
+
+  const fetchScopeMembers = useCallback(async () => {
+    if (!isCellGroupLeader) return;
+    setScopeMembersLoading(true);
+    try {
+      const res = await axiosInstance.get('/members?limit=500&page=1');
+      setScopeMembers(res.data.data.members || []);
+    } catch (err) {
+      setCheckInError(err.response?.data?.message || 'Failed to load cell group members.');
+    } finally {
+      setScopeMembersLoading(false);
+    }
+  }, [isCellGroupLeader]);
+
+  useEffect(() => { fetchScopeMembers(); }, [fetchScopeMembers]);
 
   // Live member search as user types
   const handleSearchChange = (e) => {
@@ -100,6 +119,26 @@ export default function AttendancePage() {
     }
   };
 
+  const handleCellGroupToggle = async (member, checked) => {
+    setCheckingIn(member.id);
+    setCheckInError('');
+    setCheckInSuccess('');
+    try {
+      if (checked) {
+        await axiosInstance.delete(`/services/${serviceId}/attendance/${member.id}`);
+        setCheckInSuccess(`${member.first_name} ${member.last_name} marked absent.`);
+      } else {
+        await axiosInstance.post(`/services/${serviceId}/attendance`, { member_id: member.id });
+        setCheckInSuccess(`${member.first_name} ${member.last_name} marked present.`);
+      }
+      await fetchAttendance();
+    } catch (err) {
+      setCheckInError(err.response?.data?.message || 'Failed to update attendance.');
+    } finally {
+      setCheckingIn(null);
+    }
+  };
+
   const formatDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—';
   const formatTime = (t) => {
     if (!t) return '—';
@@ -120,7 +159,7 @@ export default function AttendancePage() {
   return (
     <div style={styles.page}>
       {/* Back */}
-      <button onClick={() => navigate('/services')} style={styles.backBtn}>← Back to Services</button>
+      <button onClick={() => navigate('/attendance')} style={styles.backBtn}>← Back to Attendance</button>
 
       {/* Service Header */}
       <div style={styles.serviceCard}>
@@ -162,7 +201,42 @@ export default function AttendancePage() {
       </div>
 
       {/* Check-in Panel (only for published services) */}
-      {canRecord && isPublished && (
+      {isCellGroupLeader && isPublished && (
+        <div style={styles.checkInCard}>
+          <h3 style={styles.checkInTitle}>Cell Group Attendance</h3>
+          <p style={styles.checkInHint}>Check each member who attended this service.</p>
+
+          {scopeMembersLoading ? (
+            <div style={styles.centerCell}>Loading members...</div>
+          ) : scopeMembers.length === 0 ? (
+            <div style={styles.centerCell}>No members are assigned to your cell group.</div>
+          ) : (
+            <div style={styles.checkboxGrid}>
+              {scopeMembers.map(member => {
+                const checked = records.some(r => Number(r.member_id) === Number(member.id) && !r.is_pre_reg);
+                return (
+                  <label key={member.id} style={{ ...styles.checkboxRow, opacity: checkingIn === member.id ? 0.7 : 1 }}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={checkingIn === member.id}
+                      onChange={() => handleCellGroupToggle(member, checked)}
+                      style={styles.checkbox}
+                    />
+                    <span style={styles.checkboxName}>{member.last_name}, {member.first_name}</span>
+                    <span style={styles.checkboxMeta}>{member.group?.name || 'No group'}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
+          {checkInSuccess && <div style={styles.successBox}>{checkInSuccess}</div>}
+          {checkInError   && <div style={styles.errorBox}>{checkInError}</div>}
+        </div>
+      )}
+
+      {canRecord && isPublished && !isCellGroupLeader && (
         <div style={styles.checkInCard}>
           <h3 style={styles.checkInTitle}>Manual Check-In</h3>
           <p style={styles.checkInHint}>Search by name, email, phone, or barcode</p>
@@ -241,12 +315,12 @@ export default function AttendancePage() {
               <th style={styles.th}>Barcode</th>
               <th style={styles.th}>Method</th>
               <th style={styles.th}>Time</th>
-              {canRecord && isPublished && <th style={styles.th}>Action</th>}
+              {canUndo && isPublished && <th style={styles.th}>Action</th>}
             </tr>
           </thead>
           <tbody>
             {records.length === 0 ? (
-              <tr><td colSpan={canRecord && isPublished ? 6 : 5} style={styles.centerCell}>No check-ins yet.</td></tr>
+              <tr><td colSpan={canUndo && isPublished ? 6 : 5} style={styles.centerCell}>No check-ins yet.</td></tr>
             ) : records.map((r, i) => (
               <tr key={r.id}
                 style={{ ...styles.row, background: r.is_pre_reg ? '#faf5ff' : (i % 2 === 0 ? '#fff' : '#f8fafc') }}
@@ -280,7 +354,7 @@ export default function AttendancePage() {
                 <td style={{ ...styles.td, color: '#64748b' }}>
                   {r.is_pre_reg ? <span style={{ color: '#a78bfa', fontSize: 12 }}>Pending check-in</span> : formatCheckedIn(r.checked_in_at)}
                 </td>
-                {canRecord && isPublished && (
+                {canUndo && isPublished && (
                   <td style={styles.td}>
                     {!r.is_pre_reg && (
                       <button
@@ -346,6 +420,11 @@ const styles = {
   dropdownMeta:  { fontSize: '12px', color: '#94a3b8', marginTop: '2px' },
   alreadyTag:    { color: '#16a34a', fontSize: '12px', fontWeight: '600' },
   checkInBtn:    { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', flexShrink: 0 },
+  checkboxGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '10px' },
+  checkboxRow:    { display: 'grid', gridTemplateColumns: '20px minmax(0, 1fr) auto', alignItems: 'center', gap: '10px', padding: '12px 14px', border: '1px solid #e2e8f0', borderRadius: '10px', background: '#fff', cursor: 'pointer' },
+  checkbox:       { width: '16px', height: '16px', accentColor: '#005599' },
+  checkboxName:   { fontSize: '14px', fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  checkboxMeta:   { fontSize: '12px', color: '#64748b', background: '#f1f5f9', borderRadius: '999px', padding: '3px 8px' },
   successBox:    { background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginTop: '12px' },
   errorBox:      { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginTop: '12px' },
   warningBox:    { background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '20px' },

@@ -20,7 +20,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
 
   const ROLE_PATHS = {
     'Ministry Leader': new Set(['/dashboard', '/ministry', '/events', '/attendance', '/archives', '/inventory']),
-    'Cell Group Leader': new Set(['/dashboard', '/members', '/cell-groups', '/attendance', '/events', '/services', '/archives', '/inventory']),
+    'Cell Group Leader': new Set(['/dashboard', '/cell-groups', '/attendance', '/events', '/archives', '/inventory']),
     'Group Leader': new Set(['/dashboard', '/members', '/attendance', '/events', '/services', '/archives', '/inventory']),
   };
   const rolePaths = ROLE_PATHS[user?.roleName];

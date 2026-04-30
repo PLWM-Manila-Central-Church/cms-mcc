@@ -27,8 +27,11 @@ export default function ForceChangePassword() {
       await axiosInstance.put('/auth/change-password', form);
       clearForcePasswordChange();
       const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const scopedRoles = ['Ministry Leader', 'Cell Group Leader', 'Group Leader'];
       if (storedUser.roleName === 'Member') {
         navigate('/portal');
+      } else if (scopedRoles.includes(storedUser.roleName)) {
+        navigate('/dashboard');
       } else if (storedUser.memberId) {
         navigate(`/members/${storedUser.memberId}/edit`);
       } else {

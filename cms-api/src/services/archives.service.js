@@ -50,11 +50,19 @@ const detailIncludes = [
 // restricted    → System Admin, Pastor, Finance Team, Registration Team
 // public        → all roles
 const ADMIN_PASTOR        = ["System Admin", "Pastor"];
-const ADMIN_PASTOR_FINANCE = ["System Admin", "Pastor", "Finance Team", "Registration Team"];
+const RESTRICTED_ALLOWED = [
+  "System Admin",
+  "Pastor",
+  "Finance Team",
+  "Registration Team",
+  "Ministry Leader",
+  "Cell Group Leader",
+  "Group Leader",
+];
 
 const visibilityFilter = (roleName) => {
   if (ADMIN_PASTOR.includes(roleName)) return null;         // sees everything
-  if (ADMIN_PASTOR_FINANCE.includes(roleName)) {
+  if (RESTRICTED_ALLOWED.includes(roleName)) {
     return { [require("sequelize").Op.ne]: "confidential" }; // no confidential
   }
   // All other roles: public only

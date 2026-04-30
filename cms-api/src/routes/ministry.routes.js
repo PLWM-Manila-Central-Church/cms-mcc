@@ -29,8 +29,8 @@ router.delete("/assignments/:id",              auth, authorize("ministry", "dele
 // /members/search MUST be before /members/:memberId to avoid Express matching it as a param
 router.get("/members/search",       auth, authorize("ministry", "read"),   ctrl.searchMembersForRoster);
 router.get("/members",              auth, authorize("ministry", "read"),   ctrl.getMyMinistryMembers);
-router.post("/members",             auth, authorize("ministry", "create"), ctrl.addMemberToMinistry);
-router.delete("/members/:memberId", auth, authorize("ministry", "delete"), ctrl.removeMemberFromMinistry);
+router.post("/members",             auth, authorize("scope_assignments", "manage"), ctrl.addMemberToMinistry);
+router.delete("/members/:memberId", auth, authorize("scope_assignments", "manage"), ctrl.removeMemberFromMinistry);
 
 // ── Ministry Leader: Substitute Requests ─────────────────────
 router.get(

@@ -27,6 +27,92 @@ const memberIncludes = [
   },
 ];
 
+const memberSearchAttributes = [
+  "id",
+  "first_name",
+  "last_name",
+  "email",
+  "phone",
+  "birthdate",
+  "spiritual_birthday",
+  "status",
+  "cell_group_id",
+  "group_id",
+  "barcode",
+];
+
+const calcAge = (dateValue) => {
+  if (!dateValue) return null;
+  const birth = new Date(dateValue);
+  if (Number.isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const monthDelta = now.getMonth() - birth.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < birth.getDate())) age -= 1;
+  return age >= 0 ? age : null;
+};
+
+const isYoungAdultsGroup = (name = "") => /(^|\b)(ya|young adult|young adults)(\b|$)/i.test(name);
+
+const dateOnly = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const youngAdultBirthdateRange = () => {
+  const today = new Date();
+  const latest = new Date(today);
+  latest.setFullYear(today.getFullYear() - 18);
+
+  const earliest = new Date(today);
+  earliest.setFullYear(today.getFullYear() - 30);
+  earliest.setDate(earliest.getDate() + 1);
+
+  return {
+    [Op.between]: [dateOnly(earliest), dateOnly(latest)],
+  };
+};
+
+const ensureScopeForAssignment = (user = {}) => {
+  const scope = getScope(user);
+  if (!scope) throw { status: 403, message: "This action is only for scoped leaders" };
+  if (!scope.id) throw { status: 403, message: "No leader assignment is set for your account" };
+  return scope;
+};
+
+const buildSearchWhere = (search = "") => {
+  const where = { is_deleted: 0 };
+  const trimmed = String(search || "").trim();
+  if (trimmed) {
+    const like = `%${trimmed}%`;
+    where[Op.or] = [
+      { first_name: { [Op.like]: like } },
+      { last_name:  { [Op.like]: like } },
+      { email:      { [Op.like]: like } },
+      { phone:      { [Op.like]: like } },
+      { barcode:    { [Op.like]: like } },
+    ];
+  }
+  return where;
+};
+
+const getGroupForScope = async (scope) => {
+  if (scope.type !== "group") return null;
+  const group = await MinistryGroup.findByPk(scope.id, { attributes: ["id", "name"] });
+  if (!group) throw { status: 404, message: "Assigned group not found" };
+  return group;
+};
+
+const assertGroupEligibility = (member, group) => {
+  if (!group || !isYoungAdultsGroup(group.name)) return;
+  const age = calcAge(member.birthdate);
+  if (age === null || age < 18 || age > 29) {
+    throw { status: 400, message: "YA members must be age 18 to 29 and unassigned to any group" };
+  }
+};
+
 // ── Get All Members (paginated) ──────────────────────────────
 exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_group_id, group_id } = {}, user = {}) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -278,6 +364,94 @@ exports.unassignMemberFromScope = async (id, updatedBy, user = {}) => {
     await member.update({ group_id: null });
     auditLog.log({ userId: updatedBy, action: "UNASSIGN_MEMBER_GROUP", targetTable: "members", targetId: id });
     return { message: "Member removed from your group." };
+  }
+
+  throw { status: 400, message: "Unsupported leader scope" };
+};
+
+exports.searchAssignableForScope = async ({ search = "", limit = 20 } = {}, user = {}) => {
+  const scope = ensureScopeForAssignment(user);
+  const where = buildSearchWhere(search);
+
+  if (scope.type === "ministry") {
+    const assigned = await MinistryMembership.findAll({
+      attributes: ["member_id"],
+      raw: true,
+    });
+    const assignedIds = assigned.map((row) => row.member_id);
+    if (assignedIds.length > 0) where.id = { [Op.notIn]: assignedIds };
+  }
+
+  if (scope.type === "cell_group") {
+    where.cell_group_id = null;
+  }
+
+  let group = null;
+  if (scope.type === "group") {
+    where.group_id = null;
+    group = await getGroupForScope(scope);
+    if (group && isYoungAdultsGroup(group.name)) {
+      where.birthdate = youngAdultBirthdateRange();
+    }
+  }
+
+  const candidates = await Member.findAll({
+    where,
+    attributes: memberSearchAttributes,
+    include: memberIncludes,
+    order: [["last_name", "ASC"], ["first_name", "ASC"]],
+    limit: parseInt(limit, 10) || 20,
+  });
+
+  if (scope.type === "group" && group && isYoungAdultsGroup(group.name)) {
+    return candidates.filter((member) => {
+      const age = calcAge(member.birthdate);
+      return age !== null && age >= 18 && age <= 29;
+    });
+  }
+
+  return candidates;
+};
+
+exports.assignMemberToScope = async (memberId, updatedBy, user = {}) => {
+  const scope = ensureScopeForAssignment(user);
+
+  const member = await Member.findOne({
+    where: { id: memberId, is_deleted: 0 },
+    include: memberIncludes,
+  });
+  if (!member) throw { status: 404, message: "Member not found" };
+
+  if (scope.type === "ministry") {
+    const anyMembership = await MinistryMembership.findOne({
+      where: { member_id: memberId },
+      attributes: ["id", "ministry_role_id"],
+    });
+    if (anyMembership) throw { status: 409, message: "Member is already assigned to a ministry" };
+
+    const row = await MinistryMembership.create({
+      ministry_role_id: scope.id,
+      member_id: memberId,
+      added_by: updatedBy,
+    });
+    auditLog.log({ userId: updatedBy, action: "ASSIGN_MEMBER_MINISTRY", targetTable: "ministry_memberships", targetId: memberId });
+    return row;
+  }
+
+  if (scope.type === "cell_group") {
+    if (member.cell_group_id) throw { status: 409, message: "Member already belongs to a cell group" };
+    await member.update({ cell_group_id: scope.id });
+    auditLog.log({ userId: updatedBy, action: "ASSIGN_MEMBER_CELL_GROUP", targetTable: "members", targetId: memberId });
+    return await exports.getMemberById(memberId, user);
+  }
+
+  if (scope.type === "group") {
+    if (member.group_id) throw { status: 409, message: "Member already belongs to a group" };
+    const group = await getGroupForScope(scope);
+    assertGroupEligibility(member, group);
+    await member.update({ group_id: scope.id });
+    auditLog.log({ userId: updatedBy, action: "ASSIGN_MEMBER_GROUP", targetTable: "members", targetId: memberId });
+    return await exports.getMemberById(memberId, user);
   }
 
   throw { status: 400, message: "Unsupported leader scope" };

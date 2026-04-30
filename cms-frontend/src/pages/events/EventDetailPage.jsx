@@ -14,8 +14,9 @@ export default function EventDetailPage() {
   const { id }   = useParams();
   const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
-  const canCreate    = hasPermission('events', 'create');
   const canDelete    = hasPermission('events', 'delete');
+  const canViewRegistrations = hasPermission('events', 'read') && user?.roleName !== 'Member';
+  const isCellGroupLeader = user?.roleName === 'Cell Group Leader';
   // Self-registration requires events:create; self-unregister requires events:delete
   const canSelfRegister   = hasPermission('events', 'create');
   const canSelfUnregister = hasPermission('events', 'delete');
@@ -29,6 +30,7 @@ export default function EventDetailPage() {
 
   const [removingId, setRemovingId] = useState(null);
   const [removeMsg, setRemoveMsg]   = useState('');
+  const [attendeeFilter, setAttendeeFilter] = useState('mine');
 
   // ── Ministry Invite Panel (Ministry Leaders only) ────────────
   const [invites,         setInvites]         = useState([]);
@@ -153,6 +155,10 @@ export default function EventDetailPage() {
   if (!event)  return null;
 
   const meta = STATUS_META[event.status] || STATUS_META.draft;
+  const registrations = event.EventRegistrations || [];
+  const visibleRegistrations = isCellGroupLeader && attendeeFilter === 'mine'
+    ? registrations.filter(r => Number(r.member?.cell_group_id) === Number(user?.leadsCellGroupId))
+    : registrations;
 
   return (
     <div style={s.page}>
@@ -254,14 +260,34 @@ export default function EventDetailPage() {
         )}
       </div>
 
-      {/* Admin registrations list */}
-      {canCreate && (
+      {/* Registrations list */}
+      {canViewRegistrations && (
         <div style={s.regSection}>
-          <h2 style={s.regTitle}>Registrations ({regCount})</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+            <h2 style={{ ...s.regTitle, margin: 0 }}>
+              Registrations ({isCellGroupLeader ? `${visibleRegistrations.length} of ${regCount}` : regCount})
+            </h2>
+            {isCellGroupLeader && (
+              <div style={s.filterTabs}>
+                <button
+                  onClick={() => setAttendeeFilter('mine')}
+                  style={{ ...s.filterTab, ...(attendeeFilter === 'mine' ? s.filterTabActive : {}) }}
+                >
+                  My CG
+                </button>
+                <button
+                  onClick={() => setAttendeeFilter('all')}
+                  style={{ ...s.filterTab, ...(attendeeFilter === 'all' ? s.filterTabActive : {}) }}
+                >
+                  Everyone
+                </button>
+              </div>
+            )}
+          </div>
 
           {removeMsg && <div style={s.successBox}>{removeMsg}</div>}
 
-          {event.EventRegistrations?.length === 0 ? (
+          {visibleRegistrations.length === 0 ? (
             <div style={s.emptyReg}>No registrations yet.</div>
           ) : (
             <div style={s.tableWrap}>
@@ -278,7 +304,7 @@ export default function EventDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {event.EventRegistrations.map((r, i) => (
+                  {visibleRegistrations.map((r, i) => (
                     <tr key={r.id} style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
                       <td style={{ ...s.td, color: '#94a3b8' }}>{i + 1}</td>
                       <td style={s.td}>
@@ -462,6 +488,9 @@ const s = {
   errorBox:     { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '12px' },
   regSection:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   regTitle:     { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 16px 0' },
+  filterTabs:   { display: 'inline-flex', background: '#f1f5f9', borderRadius: '10px', padding: 4, gap: 4 },
+  filterTab:    { border: 'none', background: 'transparent', color: '#64748b', borderRadius: '8px', padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
+  filterTabActive: { background: '#fff', color: '#005599', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' },
   emptyReg:     { padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   tableWrap:    { borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' },
   tableScroll:  { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },

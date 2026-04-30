@@ -35,7 +35,7 @@ exports.getRecordById = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Access forbidden" });
     }
     if (data.visibility === "restricted" &&
-        !["System Admin", "Pastor", "Finance Team", "Registration Team"].includes(roleName)) {
+        !["System Admin", "Pastor", "Finance Team", "Registration Team", "Ministry Leader", "Cell Group Leader", "Group Leader"].includes(roleName)) {
       return res.status(403).json({ success: false, message: "Access forbidden" });
     }
     res.json({ success: true, data });

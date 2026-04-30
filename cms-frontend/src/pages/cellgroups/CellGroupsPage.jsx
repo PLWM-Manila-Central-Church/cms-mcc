@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
+import { cellGroupPageTitle } from '../../utils/roleDisplay';
 
 const EMPTY_FORM = { name: '', area: '' };
 
@@ -22,6 +23,10 @@ export default function CellGroupsPage() {
   const [search,    setSearch]    = useState('');
   const [memberSearch, setMemberSearch] = useState('');
   const [memberAction, setMemberAction] = useState('');
+  const [assignSearch, setAssignSearch] = useState('');
+  const [assignResults, setAssignResults] = useState([]);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assigningId, setAssigningId] = useState(null);
 
   // Modal state
   const [modal,     setModal]     = useState(null); // null | 'add' | 'edit'
@@ -75,15 +80,55 @@ export default function CellGroupsPage() {
 
   const handleUnassignMember = async (member) => {
     const name = `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'this member';
-    if (!window.confirm(`Remove ${name} from your cell group?`)) return;
+    if (!window.confirm(`Unassign ${name} from your cell group?`)) return;
     setMemberAction('');
     try {
       await axiosInstance.patch(`/members/${member.id}/unassign-scope`);
-      showToast('Member removed from your cell group.');
+      showToast('Member unassigned from your cell group.');
       loadMembers();
       load();
     } catch (err) {
-      setMemberAction(err.response?.data?.message || 'Failed to remove member.');
+      setMemberAction(err.response?.data?.message || 'Failed to unassign member.');
+    }
+  };
+
+  useEffect(() => {
+    if (!isCellGroupLeader) return;
+    const q = assignSearch.trim();
+    setMemberAction('');
+    if (!q) {
+      setAssignResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setAssignLoading(true);
+      try {
+        const res = await axiosInstance.get(`/members/scope/search?search=${encodeURIComponent(q)}&limit=12`);
+        setAssignResults(res.data.data || []);
+      } catch (err) {
+        setAssignResults([]);
+        setMemberAction(err.response?.data?.message || 'Failed to search assignable members.');
+      } finally {
+        setAssignLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [assignSearch, isCellGroupLeader]);
+
+  const handleAssignMember = async (member) => {
+    setAssigningId(member.id);
+    setMemberAction('');
+    try {
+      await axiosInstance.post('/members/scope/assign', { member_id: member.id });
+      setAssignSearch('');
+      setAssignResults([]);
+      showToast('Member added to your cell group.');
+      loadMembers();
+      load();
+    } catch (err) {
+      setMemberAction(err.response?.data?.message || 'Failed to add member.');
+    } finally {
+      setAssigningId(null);
     }
   };
 
@@ -156,6 +201,127 @@ export default function CellGroupsPage() {
     `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase().includes(memberSearch.toLowerCase()) ||
     (m.email || '').toLowerCase().includes(memberSearch.toLowerCase())
   );
+
+  const cgTitle = cellGroupPageTitle(user?.leadsCellGroupName || groups[0]?.name);
+
+  if (isCellGroupLeader) {
+    return (
+      <div style={{ ...S.page, padding: isMobile ? '16px 12px' : '32px' }}>
+        <div style={S.pageHeader}>
+          <div>
+            <h1 style={S.pageTitle}>{cgTitle}</h1>
+            <p style={S.pageSubtitle}>Manage your assigned cell group roster</p>
+          </div>
+          <div style={S.statCard}>
+            <span style={S.statNum}>{members.length}</span>
+            <span style={S.statLabel}>Members</span>
+          </div>
+        </div>
+
+        <div style={{ ...S.tableWrap, padding: isMobile ? 16 : 20, marginBottom: 20, overflow: 'visible' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#005599', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            Add Member to Cell Group
+          </div>
+          <div style={{ position: 'relative' }}>
+            <input
+              value={assignSearch}
+              onChange={e => setAssignSearch(e.target.value)}
+              placeholder="Search unassigned members..."
+              style={{ ...S.search, paddingLeft: 14 }}
+            />
+          </div>
+          {assignLoading && <div style={{ marginTop: 8, fontSize: 13, color: '#64748b' }}>Searching...</div>}
+          {assignSearch.trim() && !assignLoading && assignResults.length === 0 && (
+            <div style={{ marginTop: 8, fontSize: 13, color: '#94a3b8' }}>No assignable members found.</div>
+          )}
+          {assignResults.length > 0 && (
+            <div style={{ marginTop: 12, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+              {assignResults.map((m, i) => (
+                <div
+                  key={m.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    padding: '11px 14px',
+                    background: i % 2 === 0 ? '#fff' : '#f8fafc',
+                    borderBottom: i < assignResults.length - 1 ? '1px solid #f1f5f9' : 'none',
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{m.last_name}, {m.first_name}</div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>{m.group?.name || 'No group'} {m.phone ? `- ${m.phone}` : ''}</div>
+                  </div>
+                  <button
+                    onClick={() => handleAssignMember(m)}
+                    disabled={assigningId === m.id}
+                    style={{ ...S.editBtn, opacity: assigningId === m.id ? 0.7 : 1 }}
+                  >
+                    {assigningId === m.id ? 'Adding...' : 'Add'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {memberAction && <div style={{ ...S.errorBox, margin: '12px 0 0' }}>{memberAction}</div>}
+        </div>
+
+        <div style={S.toolbar}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+            <input
+              value={memberSearch}
+              onChange={e => setMemberSearch(e.target.value)}
+              placeholder="Search cell group members..."
+              style={{ ...S.search, paddingLeft: 14 }}
+            />
+          </div>
+          <span style={S.resultCount}>{filteredMembers.length} of {members.length} members</span>
+        </div>
+
+        <div style={S.tableWrap}>
+          <div style={S.tableScroll}>
+            <table style={S.table}>
+              <thead>
+                <tr>
+                  <th style={S.th}>Name</th>
+                  <th style={S.th}>Email</th>
+                  <th style={S.th}>Phone</th>
+                  <th style={S.th}>Group</th>
+                  <th style={{ ...S.th, textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {memberLoading ? (
+                  <tr><td colSpan={5} style={S.centerCell}>Loading members...</td></tr>
+                ) : filteredMembers.length === 0 ? (
+                  <tr><td colSpan={5} style={S.centerCell}>No members found.</td></tr>
+                ) : filteredMembers.map(m => (
+                  <tr key={m.id} style={S.tr}>
+                    <td style={S.td}>
+                      <strong style={{ color: '#0f172a' }}>{m.last_name}, {m.first_name}</strong>
+                    </td>
+                    <td style={S.td}>{m.email || '-'}</td>
+                    <td style={S.td}>{m.phone || '-'}</td>
+                    <td style={S.td}>{m.group?.name || '-'}</td>
+                    <td style={{ ...S.td, textAlign: 'right' }}>
+                      <button onClick={() => handleUnassignMember(m)} style={S.deleteBtn}>Unassign</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {toast && (
+          <div style={{ ...S.toast, background: toast.type === 'error' ? '#dc2626' : '#005599' }}>
+            {toast.msg}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={{ ...S.page, padding: isMobile ? '16px 12px' : '32px' }}>

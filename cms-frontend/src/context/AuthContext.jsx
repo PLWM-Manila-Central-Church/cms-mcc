@@ -33,6 +33,9 @@ export const AuthProvider = ({ children }) => {
       leadsCellGroupId:   user.leadsCellGroupId || null,
       leadsGroupId:       user.leadsGroupId || null,
       leadsMinistryId:     user.leadsMinistryId || null,
+      leadsCellGroupName: user.leadsCellGroupName || null,
+      leadsGroupName:     user.leadsGroupName || null,
+      leadsMinistryName:  user.leadsMinistryName || null,
     };
 
     localStorage.setItem('accessToken',  accessToken);

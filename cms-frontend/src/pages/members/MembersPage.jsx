@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
+import { groupMembersTitle, isScopedLeaderRole } from '../../utils/roleDisplay';
 
 /* ── Status colours (admin view only) ─────────────────────────── */
 const STATUS_COLORS = {
@@ -86,7 +87,7 @@ function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMem
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
           <button onClick={() => onView(m.id)} style={actionBtnSm('#e8f4fd', '#0066b3')}>View</button>
           {canEdit && <button onClick={() => onEdit(m.id)} style={actionBtnSm('#f0fdf4', '#16a34a')}>Edit</button>}
-          {canUnassign && <button onClick={() => onUnassign(m)} style={actionBtnSm('#fef2f2', '#dc2626')}>Remove</button>}
+          {canUnassign && <button onClick={() => onUnassign(m)} style={actionBtnSm('#fef2f2', '#dc2626')}>Unassign</button>}
         </div>
       )}
     </div>
@@ -150,7 +151,7 @@ function TableRow({ m, idx, rowNum, canEdit, canUnassign, canSelect, selected, o
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={() => onView(m.id)} style={actionBtnSm('#e8f4fd', '#0066b3')}>View</button>
           {canEdit && <button onClick={() => onEdit(m.id)} style={actionBtnSm('#f0fdf4', '#16a34a')}>Edit</button>}
-          {canUnassign && <button onClick={() => onUnassign(m)} style={actionBtnSm('#fef2f2', '#dc2626')}>Remove</button>}
+          {canUnassign && <button onClick={() => onUnassign(m)} style={actionBtnSm('#fef2f2', '#dc2626')}>Unassign</button>}
         </div>
       </td>
     </tr>
@@ -166,11 +167,13 @@ export default function MembersPage() {
   const { hasPermission, user } = useAuth();
   const isMobile    = useIsMobile();
   const isMember    = user?.roleName === 'Member';
-  const isScopedLeader = ['Cell Group Leader', 'Group Leader', 'Ministry Leader'].includes(user?.roleName);
+  const isScopedLeader = isScopedLeaderRole(user?.roleName);
+  const isGroupLeader = user?.roleName === 'Group Leader';
   const canCreate   = hasPermission('members', 'create') && !isScopedLeader;
-  const canEdit     = hasPermission('members', 'update');
+  const canEdit     = hasPermission('members', 'update') && !isScopedLeader;
   const canBulkDelete = hasPermission('members', 'delete') && !isScopedLeader;
-  const canUnassign = canEdit && isScopedLeader;
+  const canUnassign = hasPermission('scope_assignments', 'manage') && isScopedLeader;
+  const canAssignScope = hasPermission('scope_assignments', 'manage') && isGroupLeader;
 
   const [members, setMembers]         = useState([]);
   const [total, setTotal]             = useState(0);
@@ -188,6 +191,11 @@ export default function MembersPage() {
   const [sorts, setSorts]             = useState([]);
   const [selected, setSelected]       = useState(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [assignSearch, setAssignSearch] = useState('');
+  const [assignResults, setAssignResults] = useState([]);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignError, setAssignError] = useState('');
+  const [assigningId, setAssigningId] = useState(null);
 
   const limit = isMobile ? 15 : 20;
 
@@ -210,17 +218,19 @@ export default function MembersPage() {
 
   // Load cell groups for filter dropdown
   useEffect(() => {
+    if (isScopedLeader) return;
     axiosInstance.get('/cellgroups')
       .then(res => setCellGroups(res.data.data || []))
       .catch(() => {});
-  }, []);
+  }, [isScopedLeader]);
 
   // Load groups for filter dropdown
   useEffect(() => {
+    if (isScopedLeader) return;
     axiosInstance.get('/members/dropdowns/groups')
       .then(res => setGroups(res.data.data || []))
       .catch(() => {});
-  }, []);
+  }, [isScopedLeader]);
 
   const handleSearch = () => { setPage(1); setSearch(searchInput); };
   const handleKey    = (e) => { if (e.key === 'Enter') handleSearch(); };
@@ -282,7 +292,7 @@ export default function MembersPage() {
 
   const handleUnassign = async (member) => {
     const name = `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'this member';
-    if (!window.confirm(`Remove ${name} from your assigned group?`)) return;
+    if (!window.confirm(`Unassign ${name} from your assigned group?`)) return;
     try {
       await axiosInstance.patch(`/members/${member.id}/unassign-scope`);
       setSelected(prev => {
@@ -292,7 +302,45 @@ export default function MembersPage() {
       });
       fetchMembers();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to remove member from your assignment.');
+      alert(err.response?.data?.message || 'Failed to unassign member from your assignment.');
+    }
+  };
+
+  useEffect(() => {
+    if (!canAssignScope) return;
+    const q = assignSearch.trim();
+    setAssignError('');
+    if (!q) {
+      setAssignResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setAssignLoading(true);
+      try {
+        const res = await axiosInstance.get(`/members/scope/search?search=${encodeURIComponent(q)}&limit=12`);
+        setAssignResults(res.data.data || []);
+      } catch (err) {
+        setAssignResults([]);
+        setAssignError(err.response?.data?.message || 'Failed to search assignable members.');
+      } finally {
+        setAssignLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [assignSearch, canAssignScope]);
+
+  const handleAssignToScope = async (member) => {
+    setAssigningId(member.id);
+    setAssignError('');
+    try {
+      await axiosInstance.post('/members/scope/assign', { member_id: member.id });
+      setAssignSearch('');
+      setAssignResults([]);
+      fetchMembers();
+    } catch (err) {
+      setAssignError(err.response?.data?.message || 'Failed to assign member.');
+    } finally {
+      setAssigningId(null);
     }
   };
 
@@ -403,13 +451,54 @@ export default function MembersPage() {
       {/* Page header */}
       <div className="cms-page-header">
         <div>
-          <h1 className="cms-page-title">Members</h1>
+          <h1 className="cms-page-title">{isGroupLeader ? groupMembersTitle(user) : 'Members'}</h1>
           <p className="cms-page-sub">{total} total members</p>
         </div>
         {canCreate && (
           <button onClick={() => navigate('/members/new')} className="cms-add-btn">+ Add Member</button>
         )}
       </div>
+
+      {canAssignScope && (
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18, marginBottom: 18, boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#005599', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 10 }}>
+            Add member to {groupMembersTitle(user)}
+          </div>
+          <input
+            value={assignSearch}
+            onChange={e => setAssignSearch(e.target.value)}
+            placeholder="Search unassigned YA members age 18-29..."
+            style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', fontSize: 14, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', fontFamily: 'inherit' }}
+          />
+          {assignLoading && <div style={{ marginTop: 8, fontSize: 13, color: '#94a3b8' }}>Searching...</div>}
+          {assignError && <div className="cms-error-box" style={{ marginTop: 10 }}>{assignError}</div>}
+          {assignSearch.trim() && !assignLoading && assignResults.length === 0 && !assignError && (
+            <div style={{ marginTop: 8, fontSize: 13, color: '#94a3b8' }}>No unassigned eligible members found.</div>
+          )}
+          {assignResults.length > 0 && (
+            <div style={{ marginTop: 12, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+              {assignResults.map((m, idx) => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: idx % 2 ? '#f8fafc' : '#fff', borderBottom: idx < assignResults.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+                    {m.first_name?.[0]}{m.last_name?.[0]}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{m.last_name}, {m.first_name}</div>
+                    <div style={{ color: '#64748b', fontSize: 12 }}>{m.email || m.phone || 'No contact info'}</div>
+                  </div>
+                  <button
+                    onClick={() => handleAssignToScope(m)}
+                    disabled={assigningId === m.id}
+                    style={{ background: '#005599', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: assigningId === m.id ? 'not-allowed' : 'pointer', opacity: assigningId === m.id ? 0.7 : 1 }}
+                  >
+                    {assigningId === m.id ? 'Adding...' : 'Add'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filter bar */}
       <div className="cms-filter-bar">
@@ -426,29 +515,33 @@ export default function MembersPage() {
           </button>
         </div>
 
-        {/* Cell group filter */}
-        <select
-          value={cgFilter}
-          onChange={e => { setPage(1); setCgFilter(e.target.value); }}
-          style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: cgFilter ? '#005599' : '#64748b', fontWeight: cgFilter ? 600 : 400, minHeight: 38 }}
-        >
-          <option value="">All Cell Groups</option>
-          {cellGroups.map(cg => (
-            <option key={cg.id} value={cg.id}>{cg.name}</option>
-          ))}
-        </select>
+        {!isScopedLeader && (
+          <>
+            {/* Cell group filter */}
+            <select
+              value={cgFilter}
+              onChange={e => { setPage(1); setCgFilter(e.target.value); }}
+              style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: cgFilter ? '#005599' : '#64748b', fontWeight: cgFilter ? 600 : 400, minHeight: 38 }}
+            >
+              <option value="">All Cell Groups</option>
+              {cellGroups.map(cg => (
+                <option key={cg.id} value={cg.id}>{cg.name}</option>
+              ))}
+            </select>
 
-        {/* Group filter */}
-        <select
-          value={groupFilter}
-          onChange={e => { setPage(1); setGroupFilter(e.target.value); }}
-          style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: groupFilter ? '#005599' : '#64748b', fontWeight: groupFilter ? 600 : 400, minHeight: 38 }}
-        >
-          <option value="">All Groups</option>
-          {groups.map(g => (
-            <option key={g.id} value={g.id}>{g.name}</option>
-          ))}
-        </select>
+            {/* Group filter */}
+            <select
+              value={groupFilter}
+              onChange={e => { setPage(1); setGroupFilter(e.target.value); }}
+              style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: groupFilter ? '#005599' : '#64748b', fontWeight: groupFilter ? 600 : 400, minHeight: 38 }}
+            >
+              <option value="">All Groups</option>
+              {groups.map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </>
+        )}
 
         {/* Status filter dropdown */}
         <select

@@ -63,3 +63,29 @@ exports.unassignMemberFromScope = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.searchAssignableForScope = async (req, res, next) => {
+  try {
+    const result = await membersService.searchAssignableForScope(req.query, req.user);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.assignMemberToScope = async (req, res, next) => {
+  try {
+    const { member_id } = req.body;
+    if (!member_id) {
+      return res.status(400).json({ success: false, message: "member_id is required" });
+    }
+    const result = await membersService.assignMemberToScope(
+      member_id,
+      req.user.userId,
+      req.user,
+    );
+    res.status(201).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};

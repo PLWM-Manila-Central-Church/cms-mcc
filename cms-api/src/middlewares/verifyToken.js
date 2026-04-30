@@ -1,7 +1,7 @@
 "use strict";
 
 const jwt = require("jsonwebtoken");
-const { User, Role, Member } = require("../models");
+const { User, Role, Member, MinistryRole, CellGroup, MinistryGroup } = require("../models");
 
 module.exports = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -17,6 +17,9 @@ module.exports = async (req, res, next) => {
       include: [
         { model: Role, as: "role", attributes: ["id", "role_name", "is_system"] },
         { model: Member, as: "member", attributes: ["id", "cell_group_id", "group_id"], required: false },
+        { model: MinistryRole, as: "leadsMinistry", attributes: ["id", "name"], required: false },
+        { model: CellGroup, as: "leadsCellGroup", attributes: ["id", "name"], required: false },
+        { model: MinistryGroup, as: "leadsGroup", attributes: ["id", "name"], required: false },
       ],
     });
 
@@ -36,6 +39,9 @@ module.exports = async (req, res, next) => {
       leadsCellGroupId:   user.leads_cell_group_id || null,
       leadsGroupId:       user.leads_group_id      || null,
       leadsMinistryId:    user.leads_ministry_id    || null,
+      leadsCellGroupName: user.leadsCellGroup?.name || null,
+      leadsGroupName:     user.leadsGroup?.name     || null,
+      leadsMinistryName:  user.leadsMinistry?.name  || null,
     };
 
     next();
