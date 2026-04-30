@@ -1,30 +1,13 @@
 require("dotenv").config();
 
+const { getDatabaseOptions } = require("./databaseOptions");
+
+const makeConfig = () => {
+  const { database, username, password, ...options } = getDatabaseOptions();
+  return { database, username, password, ...options };
+};
+
 module.exports = {
-  development: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT),
-    dialect: "mysql",
-    dialectOptions: {
-      ssl: {
-        rejectUnauthorized: false,
-      },
-    },
-  },
-  production: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    dialect: "mysql",
-    dialectOptions: {
-      ssl: {
-        rejectUnauthorized: false,
-      },
-    },
-  },
+  development: makeConfig(),
+  production: makeConfig(),
 };

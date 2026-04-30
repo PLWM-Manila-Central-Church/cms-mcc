@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: plwm-mcc-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: cms-api
+    buildCommand: npm ci
+    preDeployCommand: npm run db:migrate
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "4000"
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_EXPIRES_IN
+        value: 7d
+      - key: BCRYPT_ROUNDS
+        value: "10"
+      - key: FRONTEND_URL
+        value: https://cms-mcc.vercel.app
+      - key: ALLOWED_ORIGIN
+        value: https://cms-mcc.vercel.app
+      - key: BREVO_API_KEY
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: MAX_FILE_SIZE_MB
+        value: "25"

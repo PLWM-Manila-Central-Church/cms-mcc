@@ -32,10 +32,18 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev")); // 
 app.use(express.json({ limit: "10kb" })); // Fix #9
 app.use(express.urlencoded({ extended: true, limit: "10kb" })); // Fix #9
 
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "plwm-mcc-api",
+    uptime: process.uptime(),
+  });
+});
+
 // ── Authenticated file serving for archive uploads ───────────
 // Files require a valid JWT — unauthenticated requests get 401.
 // Both paths kept so the frontend works whether REACT_APP_API_URL
-// ends with /api (Vercel) or not (direct Railway URL).
+// ends with /api (Vercel) or not (direct service URL).
 const fs         = require("fs");
 const uploadsDir = path.join(__dirname, "../uploads");
 

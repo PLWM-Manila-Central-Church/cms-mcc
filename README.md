@@ -107,10 +107,13 @@ cms-mcc/
 
 | Component | Platform | URL |
 |-----------|----------|-----|
-| Backend API | Railway | `cms-mcc-production.up.railway.app` |
+| Backend API | Render | `plwm-mcc-api.onrender.com` |
 | Frontend | Vercel | `cms-mcc.vercel.app` |
+| Database | TiDB Cloud | MySQL-compatible TiDB cluster |
 
-**Deployment Trigger:** Push to `main` branch automatically deploys both frontend and backend.
+**Deployment Trigger:** Push to `main` branch deploys the Vercel frontend. The Render backend is managed by the root `render.yaml` Blueprint.
+
+See `RENDER_TIDB_MIGRATION.md` for the Railway to Render + TiDB cutover checklist.
 
 ---
 
@@ -148,7 +151,7 @@ The backend exposes a RESTful API at `/api`. Protected routes require a Bearer J
 ### Prerequisites
 
 - Node.js 18+
-- MySQL 8+
+- MySQL 8+ or TiDB Cloud
 - npm or yarn
 
 ### Local Development Setup
@@ -159,15 +162,15 @@ The backend exposes a RESTful API at `/api`. Protected routes require a Bearer J
 cd cms-api
 npm install
 cp .env.example .env  # Configure your environment variables
-npx sequelize-cli db:migrate
-npx sequelize-cli db:seed:all
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
 #### Frontend
 
 ```bash
-cd frontend
+cd cms-frontend
 npm install
 cp .env.example .env  # Configure your environment variables
 npm start
@@ -182,11 +185,14 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=church_cms
 DB_USER=root
-DB_PASS=your_password
+DB_PASSWORD=your_password
+DB_SSL=false
 JWT_SECRET=your_jwt_secret
-JWT_REFRESH_SECRET=your_refresh_secret
-RESEND_API_KEY=your_resend_key
-RESEND_FROM=noreply@yourdomain.com
+JWT_EXPIRES_IN=8h
+REFRESH_TOKEN_SECRET=your_refresh_secret
+REFRESH_TOKEN_EXPIRES_IN=7d
+BREVO_API_KEY=your_brevo_key
+SMTP_FROM="PLWM-MCC <noreply@yourdomain.com>"
 FRONTEND_URL=http://localhost:3000
 ALLOWED_ORIGIN=http://localhost:3000
 BCRYPT_ROUNDS=10
