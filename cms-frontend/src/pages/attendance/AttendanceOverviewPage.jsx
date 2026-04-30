@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AttendanceOverviewPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isCellGroupLeader = user?.roleName === 'Cell Group Leader';
 
   // ── Recent check-ins across all services ─────────────────
   const [services, setServices]         = useState([]);
@@ -102,12 +105,16 @@ export default function AttendanceOverviewPage() {
       <div style={s.pageHeader}>
         <div>
           <h1 style={s.title}>Attendance</h1>
-          <p style={s.subtitle}>Overview of recent services and member attendance history</p>
+          <p style={s.subtitle}>
+            {isCellGroupLeader
+              ? 'Open a service to mark attendance for your cell group'
+              : 'Overview of recent services and member attendance history'}
+          </p>
         </div>
       </div>
 
       {/* ── Member Attendance History Search ─────────────── */}
-      <div style={s.section}>
+      {!isCellGroupLeader && <div style={s.section}>
         <h2 style={s.sectionTitle}>🔍 Member Attendance History</h2>
         <p style={s.sectionSub}>Search a member to see which services they attended</p>
 
@@ -188,7 +195,7 @@ export default function AttendanceOverviewPage() {
             )}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Recent Services ───────────────────────────────── */}
       <div style={s.section}>

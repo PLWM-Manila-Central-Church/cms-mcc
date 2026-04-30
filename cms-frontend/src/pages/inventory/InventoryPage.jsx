@@ -74,15 +74,15 @@ export default function InventoryPage() {
     setLoadingItems(true); setItemError('');
     try {
       const params = new URLSearchParams({ page: itemPage, limit });
-      if (filterCat)  params.append('category_id', filterCat);
-      if (itemSearch) params.append('search', itemSearch);
+      if (!scopedRequestOnly && filterCat)  params.append('category_id', filterCat);
+      if (!scopedRequestOnly && itemSearch) params.append('search', itemSearch);
       const res = await axiosInstance.get(`/inventory/items?${params}`);
       const d   = res.data.data;
       setItems(d.items); setTotalItems(d.total);
       setItemPages(d.total_pages);
     } catch { setItemError('Failed to load items.'); }
     finally { setLoadingItems(false); }
-  }, [itemPage, filterCat, itemSearch]);
+  }, [itemPage, filterCat, itemSearch, scopedRequestOnly]);
 
   const fetchRequests = useCallback(async () => {
     setLoadingReqs(true); setReqError('');
@@ -254,14 +254,14 @@ export default function InventoryPage() {
           )}
 
           {/* Filters */}
-          <div style={s.filterBar}>
+          {!scopedRequestOnly && <div style={s.filterBar}>
             <input value={itemSearch} onChange={e => { setItemSearch(e.target.value); setItemPage(1); }}
               placeholder="Search items..." style={s.filterInput} />
             <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setItemPage(1); }} style={s.filterSelect}>
               <option value="">All Categories</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-          </div>
+          </div>}
 
           {itemError && <div style={s.errorBox}>{itemError}</div>}
 

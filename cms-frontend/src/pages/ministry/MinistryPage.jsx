@@ -4,6 +4,38 @@ import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
 
+function ageFromDate(dateValue) {
+  if (!dateValue) return null;
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const monthDelta = now.getMonth() - date.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < date.getDate())) age -= 1;
+  return age >= 0 ? age : null;
+}
+
+function fullName(member = {}) {
+  return `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'Member';
+}
+
+function ageLabel(dateValue) {
+  const age = ageFromDate(dateValue);
+  return age === null ? '-' : `${age}`;
+}
+
+function dateWithAge(dateValue) {
+  const age = ageFromDate(dateValue);
+  const date = dateValue ? fmtDate(dateValue) : '-';
+  return age === null ? date : `${age} yrs - ${date}`;
+}
+
+function ministryPageTitle(name = '') {
+  const value = String(name || '').trim();
+  if (!value || value.toLowerCase() === 'ministry') return 'Ministry';
+  return /ministry$/i.test(value) ? value : `${value} Ministry`;
+}
+
 function fmtDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -18,11 +50,15 @@ export default function MinistryPage() {
   // They see ONLY the roster — no tabs, no Assignments, Roles, or Substitutes.
   const isMinistryLeader = user?.roleName === 'Ministry Leader' && !!user?.leadsMinistryId;
 
-  // CHANGE 1: Fetch ministry name dynamically
-  const [ministryName, setMinistryName] = useState('Ministry');
+  const [ministryName, setMinistryName] = useState(user?.leadsMinistryName || 'Ministry');
 
   useEffect(() => {
-    if (isMinistryLeader && user?.leadsMinistryId) {
+    if (!isMinistryLeader) return;
+    if (user?.leadsMinistryName) {
+      setMinistryName(user.leadsMinistryName);
+      return;
+    }
+    if (user?.leadsMinistryId) {
       axiosInstance.get(`/ministry/roles/${user.leadsMinistryId}`)
         .then(res => {
           if (res.data?.data?.name) {
@@ -33,7 +69,7 @@ export default function MinistryPage() {
           // Silent fail - keep default "Ministry" if fetch fails
         });
     }
-  }, [isMinistryLeader, user?.leadsMinistryId]);
+  }, [isMinistryLeader, user?.leadsMinistryId, user?.leadsMinistryName]);
 
   const tabs = isMember
     ? [{ key: 'substitutes', label: '🔄 Substitute Requests' }]
@@ -51,7 +87,7 @@ export default function MinistryPage() {
       <div style={S.header}>
         <div>
           {/* CHANGE 1: Dynamic ministry name for ministry leaders */}
-          <h1 style={S.title}>{isMinistryLeader ? `${ministryName} Ministry` : 'Ministry'}</h1>
+          <h1 style={S.title}>{isMinistryLeader ? ministryPageTitle(ministryName) : 'Ministry'}</h1>
           <p style={S.subtitle}>
             {isMinistryLeader
               ? 'Manage your ministry roster and event invites'
@@ -77,7 +113,7 @@ export default function MinistryPage() {
         </div>
       )}
 
-      {isMinistryLeader && <RosterTab leadsMinistryId={user?.leadsMinistryId} />}
+      {isMinistryLeader && <ScopedRosterTab />}
       {!isMinistryLeader && tab === 'assignments' && <AssignmentsTab />}
       {!isMinistryLeader && tab === 'roles'       && <RolesTab />}
       {!isMinistryLeader && tab === 'substitutes' && <SubstituteRequestsTab />}
@@ -98,6 +134,297 @@ export default function MinistryPage() {
 /* ─────────────────────────────────────────────────────────────
    Roster Tab (Ministry Leader only)
 ───────────────────────────────────────────────────────────────── */
+function ScopedRosterTab() {
+  const isMobile = useIsMobile();
+  const [members, setMembers] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [addSearch, setAddSearch] = useState('');
+  const [addResults, setAddResults] = useState([]);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addingId, setAddingId] = useState(null);
+  const [actionErr, setActionErr] = useState('');
+  const [selectedId, setSelectedId] = useState(null);
+
+  const normalizeRows = (rows = []) => rows
+    .map(row => row.member ? { ...row.member, membership_id: row.id } : row)
+    .filter(member => member?.id);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [rosterRes, attendanceRes] = await Promise.allSettled([
+        axiosInstance.get('/ministry/members'),
+        axiosInstance.get('/attendance'),
+      ]);
+
+      if (rosterRes.status === 'rejected') {
+        throw rosterRes.reason;
+      }
+
+      const roster = normalizeRows(rosterRes.value.data.data || []);
+      setMembers(roster);
+      setAttendance(attendanceRes.status === 'fulfilled' ? (attendanceRes.value.data.data || []) : []);
+      setSelectedId(current => (current && roster.some(m => m.id === current)) ? current : (roster[0]?.id || null));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load ministry members.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const q = addSearch.trim();
+    setActionErr('');
+    if (!q) {
+      setAddResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setAddLoading(true);
+      try {
+        const res = await axiosInstance.get(`/ministry/members/search?q=${encodeURIComponent(q)}`);
+        setAddResults(res.data.data || []);
+      } catch (err) {
+        setAddResults([]);
+        setActionErr(err.response?.data?.message || 'Failed to search assignable members.');
+      } finally {
+        setAddLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [addSearch]);
+
+  const handleAdd = async (member) => {
+    setAddingId(member.id);
+    setActionErr('');
+    try {
+      await axiosInstance.post('/ministry/members', { member_id: member.id });
+      setAddSearch('');
+      setAddResults([]);
+      setSelectedId(member.id);
+      await load();
+    } catch (err) {
+      setActionErr(err.response?.data?.message || 'Failed to add member.');
+    } finally {
+      setAddingId(null);
+    }
+  };
+
+  const handleUnassign = async (member) => {
+    if (!window.confirm(`Unassign ${fullName(member)} from this ministry?`)) return;
+    setActionErr('');
+    try {
+      await axiosInstance.delete(`/ministry/members/${member.id}`);
+      await load();
+    } catch (err) {
+      setActionErr(err.response?.data?.message || 'Failed to unassign member.');
+    }
+  };
+
+  const filtered = members.filter(member => {
+    const needle = search.toLowerCase();
+    return fullName(member).toLowerCase().includes(needle) ||
+      (member.group?.name || '').toLowerCase().includes(needle) ||
+      (member.cellGroup?.name || '').toLowerCase().includes(needle);
+  });
+
+  const selected = filtered.find(member => member.id === selectedId) || filtered[0] || null;
+  const selectedAttendance = selected
+    ? attendance.filter(row => Number(row.member_id) === Number(selected.id) && !row.is_pre_reg)
+    : [];
+  const recentAttendance = selectedAttendance.slice(0, 6);
+
+  return (
+    <>
+      <div style={{ ...S.tableCard, padding: '20px 24px', marginBottom: 20, overflow: 'visible' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#005599', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+          Add Member to Ministry
+        </div>
+        <input
+          value={addSearch}
+          onChange={e => setAddSearch(e.target.value)}
+          placeholder="Search members with no ministry assignment..."
+          autoComplete="off"
+          style={S.searchInput}
+        />
+        {addLoading && <div style={{ marginTop: 8, fontSize: 13, color: '#64748b' }}>Searching...</div>}
+        {addSearch.trim() && !addLoading && addResults.length === 0 && (
+          <div style={{ marginTop: 8, fontSize: 13, color: '#94a3b8' }}>No assignable members found.</div>
+        )}
+        {addResults.length > 0 && (
+          <div style={{ marginTop: 12, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+            {addResults.map((member, index) => (
+              <div
+                key={member.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  padding: '11px 14px',
+                  background: index % 2 === 0 ? '#fff' : '#f8fafc',
+                  borderBottom: index < addResults.length - 1 ? '1px solid #f1f5f9' : 'none',
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{member.last_name}, {member.first_name}</div>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>
+                    {member.group?.name || 'No group'} - {member.cellGroup?.name || 'No cell group'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleAdd(member)}
+                  disabled={addingId === member.id}
+                  style={{ ...S.editBtn, opacity: addingId === member.id ? 0.7 : 1 }}
+                >
+                  {addingId === member.id ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {actionErr && <div style={{ marginTop: 10, color: '#dc2626', fontSize: 13 }}>{actionErr}</div>}
+      </div>
+
+      <div style={{ ...S.toolbar, justifyContent: 'space-between' }}>
+        <div style={S.searchWrap}>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search ministry members..."
+            style={S.searchInput}
+          />
+        </div>
+        <div style={S.countBadge}>{filtered.length} member{filtered.length !== 1 ? 's' : ''}</div>
+      </div>
+
+      {error && <div style={S.errBanner}><span>{error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
+
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.6fr) minmax(300px, 0.9fr)', gap: 20, alignItems: 'start' }}>
+        <div style={S.tableCard}>
+          {loading ? (
+            <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color: '#64748b', marginTop: 12 }}>Loading...</span></div>
+          ) : filtered.length === 0 ? (
+            <div style={S.centerMsg}>
+              <span style={S.emptyTitle}>{search ? 'No matches found' : 'No members in ministry yet'}</span>
+              <span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Use the search above to add members.'}</span>
+            </div>
+          ) : (
+            <div style={S.tableScroll}>
+              <table style={S.table}>
+                <thead>
+                  <tr style={S.thead}>
+                    <th style={S.th}>Name</th>
+                    <th style={S.th}>Flesh Age</th>
+                    <th style={S.th}>Spiritual Age</th>
+                    <th style={S.th}>Group</th>
+                    <th style={S.th}>Cell Group</th>
+                    <th style={{ ...S.th, textAlign: 'right' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(member => {
+                    const active = selected?.id === member.id;
+                    return (
+                      <tr
+                        key={member.id}
+                        onClick={() => setSelectedId(member.id)}
+                        style={{ ...S.row, cursor: 'pointer', background: active ? '#f0f6ff' : '#fff' }}
+                      >
+                        <td style={S.td}>
+                          <div style={S.nameCell}>
+                            <div style={S.avatar}>{fullName(member)[0]?.toUpperCase() || '?'}</div>
+                            <span style={S.nameTxt}>{fullName(member)}</span>
+                          </div>
+                        </td>
+                        <td style={S.td}>{ageLabel(member.birthdate)}</td>
+                        <td style={S.td}>{ageLabel(member.spiritual_birthday)}</td>
+                        <td style={S.td}>{member.group?.name || '-'}</td>
+                        <td style={S.td}>{member.cellGroup?.name || '-'}</td>
+                        <td style={{ ...S.td, textAlign: 'right' }}>
+                          <button
+                            onClick={e => { e.stopPropagation(); handleUnassign(member); }}
+                            style={S.deleteBtn}
+                          >
+                            Unassign
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div style={{ ...S.tableCard, padding: 22 }}>
+          {!selected ? (
+            <div style={S.centerMsg}>
+              <span style={S.emptyTitle}>No member selected</span>
+              <span style={S.emptyHint}>Select a member from the list.</span>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+                <div style={{ ...S.avatar, width: 44, height: 44, borderRadius: 12, fontSize: 16 }}>{fullName(selected)[0]?.toUpperCase() || '?'}</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>{fullName(selected)}</div>
+                  <div style={{ fontSize: 13, color: '#64748b' }}>{selected.phone || 'No contact number'}</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>
+                <ProfileLine label="Flesh Age / Birthday" value={dateWithAge(selected.birthdate)} />
+                <ProfileLine label="Spiritual Age / Birthday" value={dateWithAge(selected.spiritual_birthday)} />
+                <ProfileLine label="Group" value={selected.group?.name || '-'} />
+                <ProfileLine label="Cell Group" value={selected.cellGroup?.name || '-'} />
+                <ProfileLine label="Contact No." value={selected.phone || '-'} />
+              </div>
+
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>Attendance</div>
+                  <span style={S.countBadge}>{selectedAttendance.length} recorded</span>
+                </div>
+                {recentAttendance.length === 0 ? (
+                  <div style={{ color: '#94a3b8', fontSize: 13 }}>No attendance records found.</div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {recentAttendance.map(record => (
+                      <div key={record.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '9px 10px', background: '#f8fafc', borderRadius: 8 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{record.Service?.title || 'Service'}</div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>{record.checked_in_at ? fmtDate(record.checked_in_at) : '-'}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ProfileLine({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13 }}>
+      <span style={{ color: '#64748b', fontWeight: 600 }}>{label}</span>
+      <span style={{ color: '#0f172a', fontWeight: 700, textAlign: 'right' }}>{value}</span>
+    </div>
+  );
+}
+
+// Kept temporarily as a rollback fallback while the scoped roster view settles.
+// eslint-disable-next-line no-unused-vars
 function RosterTab({ leadsMinistryId }) {
   const navigate = useNavigate();
   const [members,      setMembers]      = useState([]);

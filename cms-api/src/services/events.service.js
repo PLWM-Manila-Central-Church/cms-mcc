@@ -9,6 +9,8 @@ const {
   EventRegistration,
   Member,
   User,
+  CellGroup,
+  Group,
 } = require("../models");
 
 // ── Shared includes ──────────────────────────────────────────
@@ -25,7 +27,11 @@ const registrationIncludes = [
   {
     model: Member,
     as: "member",
-    attributes: ["id", "first_name", "last_name", "email", "phone", "barcode"],
+    attributes: ["id", "first_name", "last_name", "email", "phone", "barcode", "cell_group_id", "group_id"],
+    include: [
+      { model: CellGroup, as: "cellGroup", attributes: ["id", "name"], required: false },
+      { model: Group, as: "group", attributes: ["id", "name"], required: false },
+    ],
     required: false,
   },
 ];

@@ -328,6 +328,13 @@ exports.resolveSubstitute = async (id, data, leadsMinistryId, userId) => {
 exports.searchMembersForRoster = async (search = "") => {
   const { Op } = require("sequelize");
   const where = { is_deleted: 0 };
+  const assigned = await MinistryMembership.findAll({
+    attributes: ["member_id"],
+    raw: true,
+  });
+  const assignedIds = assigned.map((row) => row.member_id);
+  if (assignedIds.length > 0) where.id = { [Op.notIn]: assignedIds };
+
   if (search.trim()) {
     const like = `%${search.trim()}%`;
     where[Op.or] = [
@@ -380,9 +387,9 @@ exports.addMemberToMinistry = async (ministryRoleId, memberId, addedBy) => {
   if (!member) throw { status: 404, message: "Member not found" };
 
   const existing = await MinistryMembership.findOne({
-    where: { ministry_role_id: ministryRoleId, member_id: memberId },
+    where: { member_id: memberId },
   });
-  if (existing) throw { status: 409, message: "Member is already in this ministry roster" };
+  if (existing) throw { status: 409, message: "Member is already assigned to a ministry" };
 
   return await MinistryMembership.create({
     ministry_role_id: ministryRoleId,

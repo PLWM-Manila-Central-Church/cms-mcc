@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const {
   User, Role, Member, PasswordResetToken,
   RefreshToken, UserSession, RolePermission, Permission,
+  MinistryRole, CellGroup, MinistryGroup,
 } = require("../models");
 const mailer   = require("../utils/mailer");
 const auditLog = require("../helpers/auditLog.helper");
@@ -51,6 +52,9 @@ exports.login = async (email, password, ip, device) => {
     include: [
       { model: Role,   as: "role" },
       { model: Member, as: "member", attributes: ["cell_group_id", "group_id"], required: false },
+      { model: MinistryRole,  as: "leadsMinistry",  attributes: ["id", "name"], required: false },
+      { model: CellGroup,     as: "leadsCellGroup", attributes: ["id", "name"], required: false },
+      { model: MinistryGroup, as: "leadsGroup",     attributes: ["id", "name"], required: false },
     ],
   });
 
@@ -100,6 +104,9 @@ exports.login = async (email, password, ip, device) => {
       leadsCellGroupId: user.leads_cell_group_id || null,
       leadsGroupId:    user.leads_group_id || null,
       leadsMinistryId: user.leads_ministry_id || null,
+      leadsCellGroupName: user.leadsCellGroup?.name || null,
+      leadsGroupName:     user.leadsGroup?.name || null,
+      leadsMinistryName:  user.leadsMinistry?.name || null,
     },
     permissions,
   };

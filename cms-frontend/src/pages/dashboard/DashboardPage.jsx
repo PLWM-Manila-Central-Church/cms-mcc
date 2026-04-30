@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
+import { greetingTarget } from '../../utils/roleDisplay';
 
 const R = { ADMIN:'System Admin', PASTOR:'Pastor', REG:'Registration Team', FINANCE:'Finance Team', CG:'Cell Group Leader', GRP:'Group Leader', ML:'Ministry Leader', MEMBER:'Member' };
 
@@ -114,7 +115,7 @@ export default function DashboardPage() {
   const canInventory = hasPermission('inventory','read');
   const canMembers   = hasPermission('members','read');
   const canEvents    = hasPermission('events','read');
-  const canServices  = hasPermission('services','read') && !isMinistryLeader;
+  const canServices  = hasPermission('services','read') && !isMinistryLeader && role !== R.CG;
   const isMember     = role === R.MEMBER;
   const ACCESS_PAGES = {
     [R.ML]: [
@@ -122,16 +123,14 @@ export default function DashboardPage() {
       ['Events', '/events', 'Invite your ministry roster'],
       ['Attendance', '/attendance', 'View scoped attendance'],
       ['Inventory', '/inventory', 'Submit inventory requests'],
-      ['Archives', '/archives', 'Upload and download archives'],
+      ['Archives', '/archives', 'View public and restricted archives'],
     ],
     [R.CG]: [
-      ['Members', '/members', 'Manage assigned cell group members'],
-      ['Cell Groups', '/cell-groups', 'View assigned cell group'],
-      ['Attendance', '/attendance', 'View scoped attendance'],
+      ['Cell Group', '/cell-groups', 'Manage assigned cell group members'],
+      ['Attendance', '/attendance', 'Record attendance for your cell group'],
       ['Events', '/events', 'View events'],
-      ['Services', '/services', 'View services'],
       ['Inventory', '/inventory', 'Submit inventory requests'],
-      ['Archives', '/archives', 'View archives'],
+      ['Archives', '/archives', 'View public and restricted archives'],
     ],
     [R.GRP]: [
       ['Members', '/members', 'Manage assigned group members'],
@@ -139,7 +138,7 @@ export default function DashboardPage() {
       ['Events', '/events', 'View events'],
       ['Services', '/services', 'View services'],
       ['Inventory', '/inventory', 'Submit inventory requests'],
-      ['Archives', '/archives', 'View archives'],
+      ['Archives', '/archives', 'View public and restricted archives'],
     ],
   };
   const accessPages = ACCESS_PAGES[role] || [];
@@ -181,7 +180,7 @@ export default function DashboardPage() {
   if (canServices) statCards.push({ icon:'⛪', label:'Upcoming Services', value:services.upcoming, sub:`${services.total} total`, accent:'#be185d', path:'/services' });
 
   const dateStr     = new Date().toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  const displayName = user?.email?.split('@')[0] || 'there';
+  const displayName = greetingTarget(user || {});
   const roleIcon    = { [R.ADMIN]:'🛡️', [R.PASTOR]:'✝️', [R.REG]:'📋', [R.FINANCE]:'💼', [R.CG]:'🏘️', [R.GRP]:'👫', [R.ML]:'✨' }[role] || '👤';
 
   // ── Mobile layout ─────────────────────────────────────────
