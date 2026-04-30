@@ -28,6 +28,8 @@ export default function EventsPage() {
   const navigate = useNavigate();
   const { hasPermission, user } = useAuth();
   const canCreate = hasPermission('events', 'create');
+  const canUpdate = hasPermission('events', 'update');
+  const canDelete = hasPermission('events', 'delete');
   const isMember  = user?.roleName === 'Member';
 
   const [events, setEvents]             = useState([]);
@@ -115,6 +117,11 @@ export default function EventsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setSaving(true); setFormError('');
+    if ((editEvent && !canUpdate) || (!editEvent && !canCreate)) {
+      setFormError('You only have read access to events.');
+      setSaving(false);
+      return;
+    }
 
     // Frontend date validation
     if (form.end_date && form.end_date < form.start_date) {
@@ -200,7 +207,7 @@ export default function EventsPage() {
       </div>
 
       {/* Create / Edit form */}
-      {showForm && !isMember && (
+      {showForm && !isMember && (canCreate || canUpdate) && (
         <div style={s.formCard}>
           <h3 style={s.formTitle}>{editEvent ? 'Edit Event' : 'Create New Event'}</h3>
           {formError && <div style={s.errorBox}>{formError}</div>}
@@ -366,7 +373,7 @@ export default function EventsPage() {
         <div style={s.grid}>
           {events.map(ev => {
             const meta         = STATUS_META[ev.status] || STATUS_META.draft;
-            const nextStatuses = (canCreate && !isMember) ? STATUS_FLOW[ev.status] : [];
+            const nextStatuses = (canUpdate && !isMember) ? STATUS_FLOW[ev.status] : [];
             const regCount     = ev.EventRegistrations?.length ?? 0;
 
             return (
@@ -410,9 +417,9 @@ export default function EventsPage() {
                   <button onClick={() => navigate(`/events/${ev.id}`)} style={s.viewBtn}>
                     View
                   </button>
-                  {canCreate && !isMember && (
+                  {!isMember && (canUpdate || canDelete) && (
                     <>
-                      <button onClick={() => openEdit(ev)} style={s.editBtn}>Edit</button>
+                      {canUpdate && <button onClick={() => openEdit(ev)} style={s.editBtn}>Edit</button>}
                       {nextStatuses.map(ns => (
                         <button
                           key={ns}
@@ -425,7 +432,7 @@ export default function EventsPage() {
                       ))}
                       {/* FIX BUG 4: was only 'draft'. Admins must also be able to
                           delete completed and cancelled events to clean up the list. */}
-                      {['draft', 'completed', 'cancelled'].includes(ev.status) && (
+                      {canDelete && ['draft', 'completed', 'cancelled'].includes(ev.status) && (
                         <button onClick={() => handleDelete(ev.id)} style={s.deleteBtn}>
                           Delete
                         </button>

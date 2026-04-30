@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { NAV_ITEMS, NAV_ICONS } from '../../utils/constants';
+import { isVisibleNavItem } from '../../utils/roleAccess';
 
 const LOGO = process.env.PUBLIC_URL + '/logo.jpg';
 
@@ -18,18 +19,7 @@ function NavIcon({ name, size = 18 }) {
 export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
   const { user, hasPermission } = useAuth();
 
-  const ROLE_PATHS = {
-    'Ministry Leader': new Set(['/dashboard', '/ministry', '/events', '/attendance', '/archives', '/inventory']),
-    'Cell Group Leader': new Set(['/dashboard', '/cell-groups', '/attendance', '/events', '/archives', '/inventory']),
-    'Group Leader': new Set(['/dashboard', '/members', '/attendance', '/events', '/services', '/archives', '/inventory']),
-  };
-  const rolePaths = ROLE_PATHS[user?.roleName];
-
-  const visibleItems = NAV_ITEMS.filter(item => {
-    if (rolePaths) return rolePaths.has(item.path);
-    // Standard permission check for all other users
-    return !item.permissions || hasPermission(item.permissions.module, item.permissions.action);
-  });
+  const visibleItems = NAV_ITEMS.filter(item => isVisibleNavItem(item, user, hasPermission));
 
   const showText = isMobile || !collapsed;
 

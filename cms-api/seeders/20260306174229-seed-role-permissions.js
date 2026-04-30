@@ -198,6 +198,24 @@ module.exports = {
     if (toInsert.length > 0) {
       await queryInterface.bulkInsert("role_permissions", toInsert);
     }
+
+    // Keep these roles read-only in their intended areas, even if older
+    // migrations granted broader access in an existing environment.
+    await queryInterface.sequelize.query(`
+      DELETE rp
+      FROM role_permissions rp
+      JOIN roles r ON r.id = rp.role_id
+      JOIN permissions p ON p.id = rp.permission_id
+      WHERE (
+        r.role_name = 'Finance Team'
+        AND p.module = 'ministry'
+        AND p.action = 'read'
+      ) OR (
+        r.role_name = 'Pastor'
+        AND p.module = 'events'
+        AND p.action IN ('create', 'update', 'delete')
+      )
+    `);
   },
 
   down: async (queryInterface) => {

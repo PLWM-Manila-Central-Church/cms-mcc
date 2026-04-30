@@ -5,6 +5,7 @@ import Header from './Header';
 import { useAuth } from '../../context/AuthContext';
 import { NAV_ITEMS, NAV_ICONS } from '../../utils/constants';
 import { LANGS, getLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
+import { DEFAULT_TABS, ROLE_TAB_SETS, isVisibleNavItem } from '../../utils/roleAccess';
 
 function NavIcon({ name, size = 20 }) {
   const MORE_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
@@ -20,16 +21,8 @@ function NavIcon({ name, size = 20 }) {
 const BP_TABLET = 1024;
 const BP_MOBILE = 768;
 
-const ROLE_PATHS = {
-  'Ministry Leader': new Set(['/dashboard', '/ministry', '/events', '/attendance', '/archives', '/inventory']),
-  'Cell Group Leader': new Set(['/dashboard', '/members', '/cell-groups', '/attendance', '/events', '/services', '/archives', '/inventory']),
-  'Group Leader': new Set(['/dashboard', '/members', '/attendance', '/events', '/services', '/archives', '/inventory']),
-};
-
 const visibleForRole = (item, user, hasPermission) => {
-  const rolePaths = ROLE_PATHS[user?.roleName];
-  if (rolePaths) return rolePaths.has(item.path);
-  return !item.permissions || hasPermission(item.permissions.module, item.permissions.action);
+  return isVisibleNavItem(item, user, hasPermission);
 };
 
 function useWindowWidth() {
@@ -47,59 +40,6 @@ function useWindowWidth() {
 // ── Role-specific bottom tab definitions ──────────────────────────────────
 // Each role gets 4 labelled tabs + the "More" tab is always appended 5th.
 // Tabs without a `permissions` key are always shown.
-const ROLE_TAB_SETS = {
-  'System Admin': [
-    { label: 'Home',    path: '/dashboard', icon: 'dashboard' },
-    { label: 'Members', path: '/members',   icon: 'members' },
-    { label: 'Events',  path: '/events',    icon: 'events' },
-    { label: 'Finance', path: '/finance',   icon: 'finance' },
-  ],
-  'Pastor': [
-    { label: 'Home',    path: '/dashboard', icon: 'dashboard' },
-    { label: 'Members', path: '/members',   icon: 'members' },
-    { label: 'Events',  path: '/events',    icon: 'events' },
-    { label: 'Finance', path: '/finance',   icon: 'finance' },
-  ],
-  'Registration Team': [
-    { label: 'Home',     path: '/dashboard',  icon: 'dashboard' },
-    { label: 'Members',  path: '/members',    icon: 'members' },
-    { label: 'Events',   path: '/events',     icon: 'events' },
-    { label: 'Ministry', path: '/ministry',   icon: 'ministry' },
-  ],
-  'Finance Team': [
-    { label: 'Home',     path: '/dashboard',  icon: 'dashboard' },
-    { label: 'Members',  path: '/members',    icon: 'members' },
-    { label: 'Finance',  path: '/finance',    icon: 'finance' },
-    { label: 'Ministry', path: '/ministry',   icon: 'ministry' },
-  ],
-  'Cell Group Leader': [
-    { label: 'Home',       path: '/dashboard',  icon: 'dashboard' },
-    { label: 'Members',    path: '/members',    icon: 'members' },
-    { label: 'Cell Groups',path: '/cell-groups',icon: 'cellgroups' },
-    { label: 'Attendance', path: '/attendance', icon: 'attendance' },
-  ],
-  'Group Leader': [
-    { label: 'Home',     path: '/dashboard',  icon: 'dashboard' },
-    { label: 'Members',  path: '/members',    icon: 'members' },
-    { label: 'Events',   path: '/events',     icon: 'events' },
-    { label: 'Attendance', path: '/attendance', icon: 'attendance' },
-  ],
-  'Ministry Leader': [
-    { label: 'Home',       path: '/dashboard',  icon: 'dashboard' },
-    { label: 'Ministry',   path: '/ministry',   icon: 'ministry' },
-    { label: 'Events',     path: '/events',     icon: 'events' },
-    { label: 'Attendance', path: '/attendance', icon: 'attendance' },
-  ],
-};
-
-// Fallback for unknown roles
-const DEFAULT_TABS = [
-  { label: 'Home',    path: '/dashboard', icon: 'dashboard' },
-  { label: 'Members', path: '/members',   icon: 'members' },
-  { label: 'Events',  path: '/events',    icon: 'events' },
-  { label: 'Finance', path: '/finance',   icon: 'finance' },
-];
-
 /* ── Mobile bottom tab bar ─────────────────────────────────── */
 function BottomTabBar({ onMoreOpen }) {
   const { user, hasPermission } = useAuth();

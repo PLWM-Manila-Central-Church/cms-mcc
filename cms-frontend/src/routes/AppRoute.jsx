@@ -113,15 +113,15 @@ const AppRoutes = () => {
       <Route path="/settings"   element={<ProtectedRoute module="settings" action="read"><MainLayout><SettingsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/my-settings" element={<ProtectedRoute><MainLayout><MySettingsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/audit-logs" element={<ProtectedRoute module="audit" action="read"><MainLayout><AuditLogPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/archives"   element={<ProtectedRoute><MainLayout><ArchivesPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/inventory"  element={<ProtectedRoute><MainLayout><InventoryPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/events"     element={<ProtectedRoute><MainLayout><EventsPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/events/:id" element={<ProtectedRoute><MainLayout><EventDetailPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/attendance" element={<ProtectedRoute><MainLayout><AttendanceOverviewPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/archives"   element={<ProtectedRoute module="archives" action="read"><MainLayout><ArchivesPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/inventory"  element={<ProtectedRoute module="inventory" action="read"><MainLayout><InventoryPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/events"     element={<ProtectedRoute module="events" action="read"><MainLayout><EventsPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/events/:id" element={<ProtectedRoute module="events" action="read"><MainLayout><EventDetailPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/attendance" element={<ProtectedRoute module="attendance" action="read"><MainLayout><AttendanceOverviewPage /></MainLayout></ProtectedRoute>} />
       <Route path="/finance"    element={<ProtectedRoute module="finance" action="read"><MainLayout><FinancePage /></MainLayout></ProtectedRoute>} />
       <Route path="/finance/my-giving" element={<ProtectedRoute><MainLayout><MyGivingPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/services"          element={<ProtectedRoute><MainLayout><ServicesPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/services/:id/attendance" element={<ProtectedRoute><MainLayout><AttendancePage /></MainLayout></ProtectedRoute>} />
+      <Route path="/services"          element={<ProtectedRoute module="services" action="read"><MainLayout><ServicesPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/services/:id/attendance" element={<ProtectedRoute module="attendance" action="read"><MainLayout><AttendancePage /></MainLayout></ProtectedRoute>} />
       <Route path="/users"      element={<ProtectedRoute module="users" action="read"><MainLayout><UsersPage /></MainLayout></ProtectedRoute>} />
       <Route path="/users/new"  element={<ProtectedRoute module="users" action="create"><MainLayout><UserFormPage /></MainLayout></ProtectedRoute>} />
       <Route path="/users/:id/edit" element={<ProtectedRoute module="users" action="update"><MainLayout><UserFormPage /></MainLayout></ProtectedRoute>} />
@@ -139,7 +139,7 @@ const AppRoutes = () => {
       <Route path="/members/:id/edit" element={<ProtectedRoute module="members" action="update"><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
 
       <Route path="/cell-groups" element={<ProtectedRoute module="cell_groups" action="read"><MainLayout><CellGroupsPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/ministry"    element={<ProtectedRoute><MainLayout><MinistryPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/ministry"    element={<ProtectedRoute module="ministry" action="read"><MainLayout><MinistryPage /></MainLayout></ProtectedRoute>} />
 
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
