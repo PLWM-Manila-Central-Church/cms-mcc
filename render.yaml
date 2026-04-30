@@ -6,7 +6,6 @@ services:
     region: singapore
     rootDir: cms-api
     buildCommand: npm ci
-    preDeployCommand: npm run db:migrate
     startCommand: npm start
     healthCheckPath: /health
     autoDeployTrigger: commit

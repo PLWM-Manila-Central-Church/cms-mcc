@@ -44,9 +44,10 @@ npm run db:migrate
    `https://dashboard.render.com/blueprint/new?repo=https://github.com/PLWM-Manila-Central-Church/cms-mcc`
 3. Fill the TiDB values for `DB_HOST`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
 4. Fill `BREVO_API_KEY` and `SMTP_FROM`.
-5. Apply the Blueprint. Render will build with `npm ci`, run `npm run db:migrate`, then start `npm start`.
+5. Apply the Blueprint. Render free tier does not support pre-deploy commands, so this Blueprint builds with `npm ci` and starts with `npm start`.
 6. Confirm `https://plwm-mcc-api.onrender.com/health` returns a healthy response. If Render assigns a different subdomain, use that actual service URL instead.
-7. Keep Railway running until staff confirms the Render API and TiDB data are correct in production workflows.
+7. Before any future deploy that includes new migrations, run `npm run db:migrate` locally against TiDB or temporarily use a paid Render instance that supports pre-deploy commands.
+8. Keep Railway running until staff confirms the Render API and TiDB data are correct in production workflows.
 
 ## Frontend Cutover
 
