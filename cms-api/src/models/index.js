@@ -20,6 +20,8 @@ const ServiceAttendanceSummary = require("./ServiceAttendanceSummary.model");
 const Attendance = require("./Attendance.model");
 const ServiceResponse = require("./ServiceResponse.model");
 const MinistryRole = require("./MinistryRole.model");
+const Ministry = require("./Ministry.model");
+const MinistryPosition = require("./MinistryPosition.model");
 const MinistryAssignment = require("./MinistryAssignment.model");
 const SubstituteRequest = require("./SubstituteRequest.model");
 const FinancialCategory = require("./FinancialCategory.model");
@@ -30,6 +32,7 @@ const EventRegistration = require("./EventRegistration.model");
 const InventoryCategory = require("./InventoryCategory.model");
 const InventoryItem = require("./InventoryItem.model");
 const InventoryUsage = require("./InventoryUsage.model");
+const InventoryTransaction = require("./InventoryTransaction.model");
 const InventoryRequest = require("./InventoryRequest.model");
 const ArchiveCategory = require("./ArchiveCategory.model");
 const ArchiveRecord = require("./ArchiveRecord.model");
@@ -40,6 +43,7 @@ const AuditLog = require("./AuditLog.model");
 const SystemSetting = require("./SystemSetting.model");
 const MinistryMembership  = require("./MinistryMembership.model");
 const MinistryEventInvite = require("./MinistryEventInvite.model");
+const UserLeaderAssignment = require("./UserLeaderAssignment.model");
 
 // ── Roles & Permissions ──────────────────────────────────────
 Role.belongsToMany(Permission, {
@@ -148,6 +152,23 @@ ServiceResponse.belongsTo(User, {
 });
 
 // ── MinistryAssignment ───────────────────────────────────────
+MinistryRole.hasOne(Ministry, {
+  foreignKey: "legacy_ministry_role_id",
+  as: "normalizedMinistry",
+});
+Ministry.belongsTo(MinistryRole, {
+  foreignKey: "legacy_ministry_role_id",
+  as: "legacyMinistryRole",
+});
+Ministry.hasMany(MinistryPosition, {
+  foreignKey: "ministry_id",
+  as: "positions",
+});
+MinistryPosition.belongsTo(Ministry, {
+  foreignKey: "ministry_id",
+  as: "ministry",
+});
+
 Service.hasMany(MinistryAssignment, { foreignKey: "service_id" });
 MinistryAssignment.belongsTo(Service, { foreignKey: "service_id" });
 Member.hasMany(MinistryAssignment, { foreignKey: "member_id" });
@@ -208,6 +229,18 @@ InventoryItem.belongsTo(InventoryCategory, {
 InventoryItem.hasMany(InventoryUsage, { foreignKey: "item_id" });
 InventoryUsage.belongsTo(InventoryItem, { foreignKey: "item_id", as: "item" });
 InventoryUsage.belongsTo(User, { foreignKey: "used_by", as: "usedByUser" });
+InventoryItem.hasMany(InventoryTransaction, {
+  foreignKey: "item_id",
+  as: "transactions",
+});
+InventoryTransaction.belongsTo(InventoryItem, {
+  foreignKey: "item_id",
+  as: "item",
+});
+InventoryTransaction.belongsTo(User, {
+  foreignKey: "recorded_by",
+  as: "recordedByUser",
+});
 InventoryItem.hasMany(InventoryRequest, { foreignKey: "item_id" });
 InventoryRequest.belongsTo(InventoryItem, { foreignKey: "item_id", as: "item" });
 InventoryRequest.belongsTo(User, {
@@ -225,8 +258,15 @@ ArchiveRecord.belongsTo(ArchiveCategory, {
   foreignKey: "category_id",
   as: "category",
 });
-ArchiveRecord.hasMany(ArchiveVersion, { foreignKey: "record_id" });
+ArchiveRecord.hasMany(ArchiveVersion, {
+  foreignKey: "record_id",
+  as: "ArchiveVersions",
+});
 ArchiveVersion.belongsTo(ArchiveRecord, { foreignKey: "record_id" });
+ArchiveRecord.belongsTo(ArchiveVersion, {
+  foreignKey: "current_version_id",
+  as: "currentVersion",
+});
 ArchiveVersion.belongsTo(User, {
   foreignKey: "uploaded_by",
   as: "uploadedByUser",
@@ -254,6 +294,18 @@ ArchiveRecord.belongsTo(User, {
 User.belongsTo(MinistryRole, { foreignKey: "leads_ministry_id",   as: "leadsMinistry"  });
 User.belongsTo(CellGroup,    { foreignKey: "leads_cell_group_id", as: "leadsCellGroup" });
 User.belongsTo(MinistryGroup, { foreignKey: "leads_group_id", as: "leadsGroup"   });
+User.hasMany(UserLeaderAssignment, {
+  foreignKey: "user_id",
+  as: "leaderAssignments",
+});
+UserLeaderAssignment.belongsTo(User, {
+  foreignKey: "user_id",
+  as: "user",
+});
+UserLeaderAssignment.belongsTo(User, {
+  foreignKey: "assigned_by",
+  as: "assignedByUser",
+});
 
 // ── MinistryMembership ───────────────────────────────────────
 MinistryMembership.belongsTo(MinistryRole, { foreignKey: "ministry_role_id", as: "ministryRole"  });
@@ -306,6 +358,8 @@ module.exports = {
   Attendance,
   ServiceResponse,
   MinistryRole,
+  Ministry,
+  MinistryPosition,
   MinistryAssignment,
   SubstituteRequest,
   FinancialCategory,
@@ -316,6 +370,7 @@ module.exports = {
   InventoryCategory,
   InventoryItem,
   InventoryUsage,
+  InventoryTransaction,
   InventoryRequest,
   ArchiveCategory,
   ArchiveRecord,
@@ -326,4 +381,5 @@ module.exports = {
   SystemSetting,
   MinistryMembership,
   MinistryEventInvite,
+  UserLeaderAssignment,
 };

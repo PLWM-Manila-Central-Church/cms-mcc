@@ -17,6 +17,7 @@ const ArchiveVersion = sequelize.define(
       type: DataTypes.ENUM("pdf", "docx", "xlsx", "jpg", "png", "mp4", "mp3"),
       allowNull: false,
     },
+    file_size: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     version_number: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
     uploaded_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   },

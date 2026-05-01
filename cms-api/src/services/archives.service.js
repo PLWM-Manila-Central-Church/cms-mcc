@@ -38,6 +38,7 @@ const detailIncludes = [
   { model: User,            as: "approvedByUser", attributes: ["id", "email"], required: false },
   {
     model: ArchiveVersion,
+    as: "ArchiveVersions",
     required: false,
     include: [
       { model: User, as: "uploadedByUser", attributes: ["id", "email"], required: false },
