@@ -2,6 +2,7 @@
 
 const { Op } = require("sequelize");
 const auditLog     = require("../helpers/auditLog.helper");
+const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
 const {
   Event,
