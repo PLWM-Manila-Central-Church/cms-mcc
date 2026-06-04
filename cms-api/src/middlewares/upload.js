@@ -81,9 +81,15 @@ const verifyMime = async (req, res, next) => {
 
     next();
   } catch (err) {
-    // If file-type package is unavailable, log and continue (fail open with warning)
-    console.warn("[Upload] MIME check failed — file-type package may not be installed:", err.message);
-    next();
+    // Fail open only if file-type package is missing (ERR_MODULE_NOT_FOUND).
+    // All other errors (read failures, corrupt files) should reject.
+    if (err.code === "ERR_MODULE_NOT_FOUND") {
+      logger.warn("file-type package not installed — skipping MIME check");
+      return next();
+    }
+    // For unexpected errors, delete the uploaded file and return 500
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
+    return res.status(500).json({ message: "File validation failed due to an internal error." });
   }
 };
 

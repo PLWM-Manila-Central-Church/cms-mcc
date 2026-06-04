@@ -125,7 +125,7 @@ exports.createInvites = async (
           });
         }
       } catch (err) {
-        console.error("[MinistryInvites] Notification failed for member", memberId, ":", err.message);
+        logger.error(err, "Notification failed for member", memberId, ":")
       }
     } catch (err) {
       results.errors.push({ memberId, reason: err.message });

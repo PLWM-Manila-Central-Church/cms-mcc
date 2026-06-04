@@ -8,9 +8,24 @@ const path    = require("path");
 const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
+const Sentry  = require("@sentry/node");
+const logger  = require("./helpers/logger");
+
 const errorHandler = require("./middlewares/errorHandler");
 
 const app = express();
+
+// ── Sentry (error tracking) ──────────────────────────────────
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "development",
+    tracesSampleRate: 0.1,
+  });
+  app.use(Sentry.Handlers.requestHandler());
+} else {
+  logger.info("Sentry DSN not configured — error tracking disabled");
+}
 app.set("trust proxy", 1);
 
 // ── Security & Logging ───────────────────────────────────────
@@ -50,6 +65,15 @@ const uploadsDir = path.join(__dirname, "../uploads");
 const serveUpload = (req, res) => {
   const safeName = path.basename(req.params.filename); // prevent path traversal
   const filePath = path.join(uploadsDir, "archives", safeName);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ message: "File not found" });
+  }
+  res.sendFile(path.resolve(filePath));
+};
+
+const serveReceipt = (req, res) => {
+  const safeName = path.basename(req.params.filename); // prevent path traversal
+  const filePath = path.join(uploadsDir, "receipts", safeName);
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ message: "File not found" });
   }
@@ -127,6 +151,21 @@ const assignedOnlyWhere = (req, roleName, fieldName) => {
 app.get("/uploads/archives/:filename",     verifyToken, serveUpload);
 app.get("/api/uploads/archives/:filename", verifyToken, serveUpload);
 
+app.get("/uploads/receipts/:filename",     verifyToken, serveReceipt);
+app.get("/api/uploads/receipts/:filename", verifyToken, serveReceipt);
+
+const serveProfile = (req, res) => {
+  const safeName = path.basename(req.params.filename);
+  const filePath = path.join(uploadsDir, "profiles", safeName);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ message: "File not found" });
+  }
+  res.sendFile(path.resolve(filePath));
+};
+
+app.get("/uploads/profiles/:filename",     verifyToken, serveProfile);
+app.get("/api/uploads/profiles/:filename", verifyToken, serveProfile);
+
 app.get("/api/members/dropdowns/cell-groups", verifyToken, async (req, res) => {
   const data = await CellGroup.findAll({
     where: assignedOnlyWhere(req, "Cell Group Leader", "leadsCellGroupId"),
@@ -141,6 +180,11 @@ app.get("/api/members/dropdowns/groups", verifyToken, async (req, res) => {
   });
   res.json({ success: true, data });
 });
+
+// ── Sentry error handler (must come before custom error handler) ──
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
 
 // ── Global Error Handler ─────────────────────────────────────
 app.use(errorHandler);

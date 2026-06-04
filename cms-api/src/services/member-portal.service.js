@@ -25,7 +25,7 @@ const syncAttendanceSummary = async (serviceId) => {
     const total_absent   = Math.max(0, total_expected - total_attended);
     await ServiceAttendanceSummary.upsert({ service_id: serviceId, total_attended, total_expected, total_absent });
   } catch (err) {
-    console.warn("[Portal] syncAttendanceSummary failed:", err.message);
+    logger.warn(err, "syncAttendanceSummary failed:")
   }
 };
 
@@ -342,7 +342,7 @@ exports.uploadProfilePhoto = async (memberId, filePath) => {
       const oldAbs = path.join(__dirname, "../../uploads", member.profile_photo_url);
       if (fs.existsSync(oldAbs)) fs.unlinkSync(oldAbs);
     } catch (err) {
-      console.warn("[Portal] Could not delete old profile photo:", err.message);
+      logger.warn(err, "Could not delete old profile photo:")
     }
   }
 

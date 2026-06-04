@@ -213,7 +213,7 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
         });
       }
     } catch (err) {
-      console.error("[Events] Publish notifications failed:", err.message);
+      logger.error(err, "Publish notifications failed:")
     }
   }
 
@@ -330,7 +330,7 @@ exports.registerMember = async (eventId, memberId, registeredBy) => {
       });
     }
   } catch (err) {
-    console.error("[Events] Register notification failed:", err.message);
+    logger.error(err, "Register notification failed:")
   }
 
   auditLog.log({
@@ -362,7 +362,7 @@ exports.unregisterMember = async (eventId, memberId, unregisteredBy) => {
       }
     }
   } catch (err) {
-    console.error("[Events] Unregister notification failed:", err.message);
+    logger.error(err, "Unregister notification failed:")
   }
 
   auditLog.log({

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PlaylistEmbed, VideoEmbed } from './PublicLayout';
+import PublicIcon from './PublicIcon';
 
 const C = { navy:'#0B2447', navyMid:'#14305E', blue:'#1565C0', gold:'#C9A84C', white:'#fff', off:'#F4F7FB', border:'#E2E8F0', text:'#0F1B33', sub:'#475569', muted:'#64748B', light:'#94A3B8' };
 
@@ -153,9 +154,14 @@ export function WorldMissionPage() {
             </div>
             <div>
               <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-                {[['🇵🇭','Manila Region','Metro Manila, Calabarzon, Cavite, Batangas'],['🏝️','Visayas','Cebu, Iloilo, Leyte, Samar, Bohol'],['🌴','Mindanao','CDO, Davao, Cotabato, Sultan Kudarat'],['🌊','Palawan & Islands','Palawan, Masbate, Catanduanes, Basilan']].map(([flag,name,places])=>(
+                {[
+                  ['pin', 'Manila Region', 'Metro Manila, Calabarzon, Cavite, Batangas'],
+                  ['island', 'Visayas', 'Cebu, Iloilo, Leyte, Samar, Bohol'],
+                  ['palm', 'Mindanao', 'CDO, Davao, Cotabato, Sultan Kudarat'],
+                  ['wave', 'Palawan & Islands', 'Palawan, Masbate, Catanduanes, Basilan'],
+                ].map(([icon,name,places])=>(
                   <div key={name} style={{ display:'flex', gap:14, alignItems:'flex-start', background:C.off, border:`1.5px solid ${C.border}`, borderRadius:10, padding:'14px 16px' }}>
-                    <span style={{ fontSize:22, flexShrink:0 }}>{flag}</span>
+                    <span style={{ fontSize:22, flexShrink:0 }}><PublicIcon name={icon} size={20} /></span>
                     <div>
                       <div style={{ fontWeight:700, color:C.text, fontSize:14, marginBottom:3 }}>{name}</div>
                       <div style={{ fontSize:12.5, color:C.muted }}>{places}</div>
@@ -255,13 +261,15 @@ export function MissionStatusPage() {
               className={`ms-tab ms-tab-churches${activeTab==='churches' ? ' ms-active' : ''}`}
               onClick={() => setActiveTab('churches')}
             >
-              🏛 Churches <span style={{ fontSize:12, marginLeft:4, opacity:0.65 }}>({CHURCHES.length})</span>
+              <PublicIcon name="church" size={14} style={{ marginRight:6 }} />
+              Churches <span style={{ fontSize:12, marginLeft:4, opacity:0.65 }}>({CHURCHES.length})</span>
             </button>
             <button
               className={`ms-tab ms-tab-branches${activeTab==='branches' ? ' ms-active' : ''}`}
               onClick={() => setActiveTab('branches')}
             >
-              🌿 Mission Branches <span style={{ fontSize:12, marginLeft:4, opacity:0.65 }}>({MISSION_BRANCHES.length})</span>
+              <PublicIcon name="leaf" size={14} style={{ marginRight:6 }} />
+              Mission Branches <span style={{ fontSize:12, marginLeft:4, opacity:0.65 }}>({MISSION_BRANCHES.length})</span>
             </button>
           </div>
 
@@ -316,13 +324,13 @@ export function IntroductionPage() {
               </div>
               <h2 style={{ fontFamily:"'Lora',serif", fontSize:'clamp(1.5rem,2.5vw,2rem)', fontWeight:700, color:C.text, marginBottom:20, lineHeight:1.3 }}>Three Core Commitments</h2>
               {[
-                { icon:'⚡', title:'Prove the existence of God', body:'You can meet the living God who created the heavens and the earth, governs the history of mankind, loves humanity, solidifies the foundation of righteousness, and judges the world with righteousness and holiness.' },
-                { icon:'📖', title:'Testify to the truthfulness of the Bible', body:"The Bible is written by the inspiration of God that contains the amazing grace of the living God, the destiny of mankind and the gospel of Jesus Christ. The beginning and the end of human history is written in the Bible. The Bible is not a mere religious book but God's history." },
-                { icon:'✝️', title:'Preach the Gospel of Jesus Christ', body:'Through Jesus Christ, a good gospel news of redemption is delivered to the people who are suffering from sins. Moreover, we help them to live a new life with the hope of heaven that has been attained from salvation.' },
+                { icon:'lightbulb', title:'Prove the existence of God', body:'You can meet the living God who created the heavens and the earth, governs the history of mankind, loves humanity, solidifies the foundation of righteousness, and judges the world with righteousness and holiness.' },
+                { icon:'book', title:"Testify to the truthfulness of the Bible", body:"The Bible is written by the inspiration of God that contains the amazing grace of the living God, the destiny of mankind and the gospel of Jesus Christ. The beginning and the end of human history is written in the Bible. The Bible is not a mere religious book but God's history." },
+                { icon:'cross', title:'Preach the Gospel of Jesus Christ', body:'Through Jesus Christ, a good gospel news of redemption is delivered to the people who are suffering from sins. Moreover, we help them to live a new life with the hope of heaven that has been attained from salvation.' },
               ].map((item,i)=>(
                 <div key={i} style={{ marginBottom:20 }}>
                   <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
-                    <div style={{ width:38, height:38, background:'rgba(21,101,192,0.10)', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, flexShrink:0, marginTop:2 }}>{item.icon}</div>
+                    <div style={{ width:38, height:38, background:'rgba(21,101,192,0.10)', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, flexShrink:0, marginTop:2 }}><PublicIcon name={item.icon} size={17} /></div>
                     <div>
                       <div style={{ fontFamily:"'Lora',serif", fontSize:'1rem', fontWeight:700, color:C.text, marginBottom:6 }}>{item.title}</div>
                       <div style={{ fontSize:14, color:C.sub, lineHeight:1.7 }}>{item.body}</div>
@@ -339,9 +347,13 @@ export function IntroductionPage() {
                   Manila Central Church is the mother church of the Philippine Life Word Mission (PLWM) — a Gospel-centered, Bible-based mission organization with churches and mission branches across all major islands of the Philippines.
                 </p>
                 <div style={{ borderTop:'1px solid rgba(255,255,255,0.12)', paddingTop:16, display:'flex', flexDirection:'column', gap:10 }}>
-                  {[['📍','Address','Lot 2 Block 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City'],['📅','Founded','Manila Central Church — PLWM Philippines'],['✝️','Mission','Prove God · Testify the Bible · Preach the Gospel']].map(([icon,label,val])=>(
+                  {[
+                    ['pin', 'Address', 'Lot 2 Block 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City'],
+                    ['calendar', 'Founded', 'Manila Central Church — PLWM Philippines'],
+                    ['cross', 'Mission', 'Prove God · Testify the Bible · Preach the Gospel'],
+                  ].map(([icon,label,val])=>(
                     <div key={label} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
-                      <div style={{ width:28, height:28, background:'rgba(255,255,255,0.07)', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}>{icon}</div>
+                      <div style={{ width:28, height:28, background:'rgba(255,255,255,0.07)', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}><PublicIcon name={icon} size={12} /></div>
                       <div>
                         <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.5px' }}>{label}</div>
                         <div style={{ fontSize:13, color:'rgba(255,255,255,0.75)' }}>{val}</div>
@@ -779,7 +791,11 @@ export function CIPage() {
                 Manila Central Church serves as the anchor and mother church of PLWM in the Philippines, coordinating missions, training evangelists, and supporting the planting of churches across every region.
               </p>
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                {[['🕊️','Life','The Gospel of Jesus Christ — the Word that gives eternal life'],['📖','Word','The Bible — God\'s complete and infallible revelation to mankind'],['🌏','Mission','The calling to go and declare the works of the LORD to all nations']].map(([icon,title,desc])=>(
+                {[
+                  [(<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>), 'Life', 'The Gospel of Jesus Christ — the Word that gives eternal life'],
+                  [(<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>), 'Word', "The Bible — God's complete and infallible revelation to mankind"],
+                  [(<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>), 'Mission', 'The calling to go and declare the works of the LORD to all nations']
+                ].map(([icon,title,desc])=>(
                   <div key={title} style={{ display:'flex', gap:12, alignItems:'flex-start', background:C.off, borderRadius:10, padding:'12px 14px', border:`1px solid ${C.border}` }}>
                     <span style={{ fontSize:18 }}>{icon}</span>
                     <div>

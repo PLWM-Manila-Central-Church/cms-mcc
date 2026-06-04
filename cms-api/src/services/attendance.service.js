@@ -86,7 +86,7 @@ exports.createAttendance = async (data, recordedBy, user = {}) => {
 
   // FIX BUG 2: sync summary so attendance bars reflect real data
   try { await syncSummary(service_id); } catch (err) {
-    console.error("[Attendance] Failed to sync summary:", err.message);
+    logger.error(err, "Failed to sync summary:")
   }
 
   const created = await exports.getAttendanceById(record.id, user);
@@ -124,7 +124,7 @@ exports.deleteAttendance = async (id, user = {}) => {
 
   // FIX BUG 2: sync summary after undo so the count decrements correctly
   try { await syncSummary(serviceId); } catch (err) {
-    console.error("[Attendance] Failed to sync summary on delete:", err.message);
+    logger.error(err, "Failed to sync summary on delete:")
   }
 
   return { message: "Attendance record deleted successfully." };

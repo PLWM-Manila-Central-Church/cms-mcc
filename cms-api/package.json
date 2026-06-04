@@ -9,6 +9,7 @@
     "db:migrate": "sequelize-cli db:migrate",
     "db:seed": "sequelize-cli db:seed:all",
     "db:validate:3nf": "node scripts/validate-3nf-compatibility.js",
+    "test:finance-validator": "node --test test/finance.validator.test.js",
     "demo:seed": "node scripts/demo-data.js seed",
     "demo:cleanup": "node scripts/demo-data.js cleanup"
   },
@@ -20,6 +21,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@sentry/node": "^10.56.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
@@ -34,7 +36,8 @@
     "nodemailer": "^8.0.2",
     "qrcode": "^1.5.4",
     "sequelize": "^6.37.8",
-    "sequelize-cli": "^6.6.5"
+    "sequelize-cli": "^6.6.5",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

@@ -1,6 +1,7 @@
   import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout from './PublicLayout';
+import PublicIcon from './PublicIcon';
 
 const C = { navy: '#0B2447', navyMid: '#14305E', navySoft: '#1A3D72', blue: '#1565C0', gold: '#C9A84C', goldL: '#E8C96A', white: '#fff', off: '#F4F7FB', border: '#E2E8F0', text: '#0F1B33', sub: '#475569', muted: '#64748B', light: '#94A3B8', green: '#2E7D32', greenBg: '#E8F5E9' };
 
@@ -133,9 +134,8 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const API = process.env.REACT_APP_API_URL || '';
-    const base = API.replace(/\/api$/, '');
-    fetch(`${base}/api/public/stats`)
+    const apiPrefix = (process.env.REACT_APP_API_URL || '/api').replace(/\/+$/, '');
+    fetch(`${apiPrefix}/public/stats`)
       .then(r => r.json())
       .then(d => {
         setCgCount(d.data?.cellGroups ?? 17);
@@ -197,7 +197,7 @@ export default function HomePage() {
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', animation: 'fadeUp 0.7s ease 0.35s both' }}>
             <Link to="/introduction">
               <button style={{ background: C.blue, color: '#fff', border: 'none', padding: '13px 26px', borderRadius: 8, fontSize: 14.5, fontWeight: 600, cursor: 'pointer', minWidth: 170, boxShadow: '0 4px 16px rgba(21,101,192,0.32)', fontFamily: 'inherit' }}>
-                ✦ Join Our Community
+                Join our community
               </button>
             </Link>
             <Link to="/sermon/latest">
@@ -239,57 +239,30 @@ export default function HomePage() {
             </div>
           </Reveal>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', gap: 28, alignItems: 'start' }}>
-            <div>
-              <div className="pub-2col" style={{ gap: 14 }}>
-                {[
-                  { icon: '🇵🇭', lang: 'Filipino Service', langColor: '#c62828', time: 'Sunday 9:30–11:10 AM', title: 'Filipino Sunday Sermon Service', pastor: 'Sr. Pastor Park Heung Soon', loc: 'Main Hall (3rd Floor)' },
-                  { icon: '🇰🇷', lang: 'Korean Service',   langColor: C.blue,    time: 'Sunday 2:00–4:00 PM', title: 'Korean Sunday Sermon Service', pastor: 'Sr. Pastor Park Heung Soon', loc: 'Medium Hall (2nd Floor)' },
-                  { icon: '📖', lang: 'Midweek Service',  langColor: '#5c35b5', time: 'Wednesday 7:00–9:00 PM', title: 'Wednesday Midweek Sermon', pastor: 'Pastor Jayson Rolusta', loc: 'Main Hall (3rd Floor)' },
-                  { icon: '🏘️', lang: 'Youth & Young Adults', langColor: '#c07b0a', time: 'Saturday 2:00 PM & 7:00 PM', title: 'HS & YAG Fellowships', pastor: 'Evg. Romnick Dadangue', loc: 'Medium Hall (2nd Floor)' },
-                ].map((s, i) => (
-                  <Reveal key={i} delay={i * 0.08}>
-                    <div style={{ background: C.off, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: 20, transition: 'all 0.22s', cursor: 'default' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = 'rgba(21,101,192,0.35)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(11,36,71,0.09)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = C.off; e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none'; }}>
-                      <div style={{ width: 34, height: 34, background: 'rgba(21,101,192,0.10)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, marginBottom: 12 }}>{s.icon}</div>
-                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: s.langColor, marginBottom: 4 }}>{s.lang}</div>
-                      <div style={{ fontSize: 11, color: C.blue, fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: 5 }}>{s.time}</div>
-                      <div style={{ fontFamily: "'Lora',serif", fontSize: '0.95rem', fontWeight: 600, color: C.text, marginBottom: 6, lineHeight: 1.35 }}>{s.title}</div>
-                      <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{s.pastor}</div>
-                      <div style={{ fontSize: 11.5, color: C.sub, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {s.loc}</div>
-                    </div>
-                  </Reveal>
-                ))}
-              </div>
-              <Reveal delay={0.3}>
-                <div style={{ marginTop: 16 }} />
-              </Reveal>
-            </div>
-
-            {/* Announcements sidebar */}
-            <Reveal>
-              <div style={{ background: C.off, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: C.text, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  Announcements
-                  <span style={{ flex: 1, height: 1, background: C.border, display: 'inline-block' }} />
-                </div>
-                {[
-                  { title: '2026 Summer Retreat — Batch 1', date: 'Apr 2–4 · Taal Galilee Retreat Center' },
-                  { title: '2026 Summer Retreat — Batch 2', date: 'Apr 9–11 · Taal Galilee Retreat Center' },
-                  { title: "Women's Group Fellowship", date: 'March 20 · 7PM–9PM · Medium Hall' },
-                  { title: 'Men\'s Group Fellowship', date: 'March 21 · 7PM–9PM · Small Hall' },
-                ].map((a, i) => (
-                  <div key={i} style={{ padding: '10px 0', borderBottom: i < 3 ? `1px solid ${C.border}` : 'none', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <div style={{ width: 7, height: 7, background: C.blue, borderRadius: '50%', marginTop: 6, flexShrink: 0 }} />
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 2 }}>{a.title}</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>{a.date}</div>
-                    </div>
+          <div className="pub-2col" style={{ gap: 14 }}>
+            {[
+              { tag: 'PH', lang: 'Filipino Service', langColor: '#c62828', time: 'Sunday 9:30–11:10 AM', title: 'Filipino Sunday Sermon Service', pastor: 'Sr. Pastor Park Heung Soon', loc: 'Main Hall (3rd Floor)' },
+              { tag: 'KR', lang: 'Korean Service',   langColor: C.blue,    time: 'Sunday 2:00–4:00 PM', title: 'Korean Sunday Sermon Service', pastor: 'Sr. Pastor Park Heung Soon', loc: 'Medium Hall (2nd Floor)' },
+              { icon: 'book', lang: 'Midweek Service',  langColor: '#5c35b5', time: 'Wednesday 7:00–9:00 PM', title: 'Wednesday Midweek Sermon', pastor: 'Pastor Jayson Rolusta', loc: 'Main Hall (3rd Floor)' },
+              { icon: 'house', lang: 'Youth & Young Adults', langColor: '#c07b0a', time: 'Saturday 2:00 PM & 7:00 PM', title: 'HS & YAG Fellowships', pastor: 'Evg. Romnick Dadangue', loc: 'Medium Hall (2nd Floor)' },
+            ].map((s, i) => (
+              <Reveal key={i} delay={i * 0.08}>
+                <div style={{ background: C.off, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: 20, transition: 'all 0.22s', cursor: 'default' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = 'rgba(21,101,192,0.35)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(11,36,71,0.09)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = C.off; e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none'; }}>
+                  <div style={{ width: 34, height: 34, background: 'rgba(21,101,192,0.10)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, marginBottom: 12 }}>
+                    {s.tag
+                      ? <span aria-hidden="true" style={{ color:C.text, fontSize:10, fontWeight:800, letterSpacing:'0.4px' }}>{s.tag}</span>
+                      : <PublicIcon name={s.icon} size={17} />}
                   </div>
-                ))}
-              </div>
-            </Reveal>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: s.langColor, marginBottom: 4 }}>{s.lang}</div>
+                  <div style={{ fontSize: 11, color: C.blue, fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: 5 }}>{s.time}</div>
+                  <div style={{ fontFamily: "'Lora',serif", fontSize: '0.95rem', fontWeight: 600, color: C.text, marginBottom: 6, lineHeight: 1.35 }}>{s.title}</div>
+                  <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{s.pastor}</div>
+                  <div style={{ fontSize: 11.5, color: C.sub, display: 'flex', alignItems: 'center', gap: 5 }}><PublicIcon name="pin" size={11} /> {s.loc}</div>
+                </div>
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>
@@ -300,9 +273,9 @@ export default function HomePage() {
           <Reveal>
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: C.blue }}>
-                <span style={{ width: 20, height: 2, background: C.blue, borderRadius: 2, display: 'inline-block' }} />Events & Retreats
+                <span style={{ width: 20, height: 2, background: C.blue, borderRadius: 2, display: 'inline-block' }} />Events & Announcements
               </div>
-              <h2 style={{ fontFamily: "'Lora',serif", fontSize: 'clamp(1.6rem,3vw,2.3rem)', fontWeight: 700, color: C.text, marginBottom: 8 }}>Upcoming Retreats / Events</h2>
+              <h2 style={{ fontFamily: "'Lora',serif", fontSize: 'clamp(1.6rem,3vw,2.3rem)', fontWeight: 700, color: C.text, marginBottom: 8 }}>Events / Announcements</h2>
             </div>
           </Reveal>
 
@@ -360,7 +333,7 @@ export default function HomePage() {
                   Are you looking for answers about life and eternal life?
                 </h2>
                 <p style={{ fontSize: 15, color: C.sub, lineHeight: 1.75, marginBottom: 24 }}>
-                  The Bible Seminar covers 7 sessions that share the Gospel message — exploring how the Bible is true and how God saved us through Jesus Christ.
+                  The Bible Seminar covers 5 sessions that share the Gospel message — exploring how the Bible is true and how God saved us through Jesus Christ.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
                   {BIBLE_SEMINAR_TOPICS.map(t => (
@@ -380,12 +353,37 @@ export default function HomePage() {
             <Reveal delay={0.2}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {[
-                  { icon: '📖', title: 'Prove the existence of God', desc: 'Meet the living God who created the heavens and earth and governs human history.' },
-                  { icon: '✝️', title: 'Testify to the truthfulness of the Bible', desc: 'The Bible is not a mere religious book — it is God\'s history, containing His amazing grace.' },
-                  { icon: '🕊️', title: 'Preach the Gospel of Jesus Christ', desc: 'Through Jesus Christ, the good news of redemption is delivered to all who are suffering from sin.' },
+                  {
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: C.text }}>
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                      </svg>
+                    ),
+                    title: 'Prove the existence of God',
+                    desc: 'Meet the living God who created the heavens and earth and governs human history.'
+                  },
+                  {
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: C.text }}>
+                        <path d="M12 2v20M8 8h8" />
+                      </svg>
+                    ),
+                    title: 'Testify to the truthfulness of the Bible',
+                    desc: 'The Bible is not a mere religious book — it is God\'s history, containing His amazing grace.'
+                  },
+                  {
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: C.text }}>
+                        <path d="M21 2c-3.26.1-6.42 1.63-8.8 4.2C9.82 3.63 6.66 2.1 3.4 2.2c.36 3.23 1.89 6.36 4.45 8.71C5.47 13.35 2.3 14.88 2 18.1c3.23.36 6.36-1.17 8.71-3.73C13.07 16.93 16.2 18.4 19.4 18c-.28-3.23-1.81-6.36-4.37-8.71C17.59 6.94 19.12 3.8 21 2z" />
+                      </svg>
+                    ),
+                    title: 'Preach the Gospel of Jesus Christ',
+                    desc: 'Through Jesus Christ, the good news of redemption is delivered to all who are suffering from sin.'
+                  },
                 ].map((item, i) => (
                   <div key={i} style={{ background: C.off, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '18px 20px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                    <div style={{ width: 38, height: 38, background: 'rgba(21,101,192,0.10)', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>{item.icon}</div>
+                    <div style={{ width: 38, height: 38, background: 'rgba(15,27,51,0.06)', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{item.icon}</div>
                     <div>
                       <div style={{ fontWeight: 700, color: C.text, fontSize: 14, marginBottom: 5 }}>{item.title}</div>
                       <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.6 }}>{item.desc}</div>
@@ -434,12 +432,12 @@ export default function HomePage() {
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>Philippine Life Word Mission · Parañaque City</div>
                 </div>
                 {[
-                  { role: 'Senior Pastor', name: 'Park Heung Soon', phone: '0915-807-6300', icon: '✝️' },
-                  { role: 'Pastor',        name: 'Jayson Rolusta',  phone: '0948-425-8472', icon: '📖' },
-                  { role: 'Evangelist',    name: 'Romnick Dadangue', phone: '0938-891-0092', icon: '🕊️' },
+                  { role: 'Senior Pastor', name: 'Park Heung Soon', phone: '0915-807-6300', icon: 'cross' },
+                  { role: 'Pastor',        name: 'Jayson Rolusta',  phone: '0948-425-8472', icon: 'book' },
+                  { role: 'Evangelist',    name: 'Romnick Dadangue', phone: '0938-891-0092', icon: 'dove' },
                 ].map(p => (
                   <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{p.icon}</div>
+                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}><PublicIcon name={p.icon} size={18} style={{ color:'rgba(255,255,255,0.8)' }} /></div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{p.name}</div>
                       <div style={{ fontSize: 11, color: C.gold, fontWeight: 600, marginTop: 1 }}>{p.role}</div>
@@ -449,12 +447,12 @@ export default function HomePage() {
                 ))}
                 <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Contact & Online</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>📞 (02) 7745-6212</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>📍 Lot 2 Blk 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', display:'flex', alignItems:'center', gap:6 }}><PublicIcon name="phone" size={12} /> (02) 7745-6212</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', display:'flex', alignItems:'flex-start', gap:6 }}><PublicIcon name="pin" size={12} style={{ flexShrink:0, marginTop:2 }} /> Lot 2 Blk 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City</div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-                    <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer" style={{ background: '#FF0000', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>▶ YouTube</a>
-                    <a href="https://www.facebook.com/groups/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ background: '#1877F2', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>📘 Facebook</a>
-                    <a href="https://www.jbch.org/en/" target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none' }}>🌐 Website</a>
+                    <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none', display:'inline-flex', alignItems:'center', gap:5 }}><PublicIcon name="play" size={11} /> YouTube</a>
+                    <a href="https://www.facebook.com/groups/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none', display:'inline-flex', alignItems:'center', gap:5 }}><PublicIcon name="facebook" size={11} /> Facebook</a>
+                    <a href="https://www.jbch.org/en/" target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, textDecoration: 'none', display:'inline-flex', alignItems:'center', gap:5 }}><PublicIcon name="globe" size={11} /> Website</a>
                   </div>
                 </div>
               </div>

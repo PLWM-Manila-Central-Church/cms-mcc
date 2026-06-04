@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser]               = useState(null);
   const [permissions, setPermissions] = useState([]);
+  const [permSet, setPermSet]         = useState(new Set());
   const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export const AuthProvider = ({ children }) => {
 
     setUser(userWithFlag);
     setPermissions(permissions);
+    setPermSet(new Set(permissions));
 
     return { forcePasswordChange };
   };
@@ -65,11 +67,12 @@ export const AuthProvider = ({ children }) => {
       localStorage.clear();
       setUser(null);
       setPermissions([]);
+      setPermSet(new Set());
     }
   };
 
   const hasPermission = (module, action) => {
-    return permissions.includes(`${module}:${action}`);
+    return permSet.has(`${module}:${action}`);
   };
 
   return (

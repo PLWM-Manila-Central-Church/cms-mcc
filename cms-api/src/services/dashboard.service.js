@@ -2,6 +2,7 @@
 
 const { Op, fn, col, literal } = require("sequelize");
 const sequelize = require("../config/db");
+const cache = require("../helpers/cache.helper");
 const {
   Member, FinancialRecord, FinancialCategory, Service, Event,
   InventoryItem, InventoryRequest, AuditLog, User,
@@ -96,46 +97,40 @@ const getRoleSummary = async ({
 };
 
 exports.getStats = async ({
-  userId,
-  memberId,
-  roleName,
-  leadsMinistryId,
-  leadsMinistryName,
-  leadsCellGroupId,
-  leadsCellGroupName,
-  leadsGroupId,
-  leadsGroupName,
+  userId, memberId, roleName, leadsMinistryId, leadsMinistryName,
+  leadsCellGroupId, leadsCellGroupName, leadsGroupId, leadsGroupName,
 } = {}) => {
   const now       = new Date();
   const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const isMember  = roleName === "Member";
 
-  // Finance where clause — scoped to member if role is Member
+  // Cache key includes role and scope — members get a unique key per memberId
+  const cacheKey = isMember
+    ? `dashboard:member:${memberId}`
+    : `dashboard:${roleName}:${leadsMinistryId || ""}:${leadsCellGroupId || ""}:${leadsGroupId || ""}`;
+
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+
   const financeWhere = { transaction_date: { [Op.gte]: thisMonth } };
   if (isMember && memberId) financeWhere.member_id = memberId;
 
-  // ── Fire all independent queries in parallel ───────────────
+  // Build member-appropriate aggregates: Members see scoped data, roles see global
+  const memberCounts = isMember
+    ? { total: 0, active: 0, newThisMonth: 0 }
+    : await Promise.all([
+        Member.count(),
+        Member.count({ where: { status: "Active" } }),
+        Member.count({ where: { created_at: { [Op.gte]: thisMonth } } }),
+      ]).then(([t, a, n]) => ({ total: t, active: a, newThisMonth: n }));
+
   const [
-    totalMembers,
-    activeMembers,
-    newThisMonth,
-    totalThisMonth,
-    recentRecords,
-    totalServices,
+    totalThisMonth, recentRecords,
     upcomingServices,
-    totalEvents,
     upcomingEvents,
-    totalItems,
-    pendingRequests,
-    lowStock,
-    recentActivity,
+    pendingRequests, lowStock, recentActivity,
   ] = await Promise.all([
-    Member.count(),
-    Member.count({ where: { status: "Active" } }),
-    Member.count({ where: { created_at: { [Op.gte]: thisMonth } } }),
-
     FinancialRecord.sum("amount", { where: financeWhere }).then(v => v || 0),
-
     FinancialRecord.findAll({
       order: [["transaction_date", "DESC"]],
       limit: 5,
@@ -145,53 +140,41 @@ exports.getStats = async ({
         { model: FinancialCategory, as: "category", attributes: ["id", "name"],   required: false },
       ],
     }),
-
-    Service.count(),
     Service.count({ where: { service_date: { [Op.gte]: now }, status: "published" } }),
-
-    Event.count(),
     Event.findAll({
       where: { start_date: { [Op.gte]: now }, status: "published" },
       order: [["start_date", "ASC"]],
       limit: 5,
     }),
-
-    InventoryItem.count(),
     InventoryRequest.count({ where: { status: "pending" } }),
-
-    // SQL-side low stock check — no JS filtering, no full table scan
     InventoryItem.count({
-      where: sequelize.literal(
-        "low_stock_threshold IS NOT NULL AND quantity <= low_stock_threshold"
-      ),
+      where: sequelize.literal("low_stock_threshold IS NOT NULL AND quantity <= low_stock_threshold"),
     }),
-
-    AuditLog.findAll({
-      order: [["created_at", "DESC"]],
-      limit: 10,
-      include: [{ model: User, attributes: ["id", "email"], required: false }],
-    }),
+    !isMember
+      ? AuditLog.findAll({
+          order: [["created_at", "DESC"]],
+          limit: 10,
+          include: [{ model: User, attributes: ["id", "email"], required: false }],
+        })
+      : Promise.resolve([]),
   ]);
 
   const roleSummary = await getRoleSummary({
-    userId,
-    roleName,
-    leadsMinistryId,
-    leadsMinistryName,
-    leadsCellGroupId,
-    leadsCellGroupName,
-    leadsGroupId,
-    leadsGroupName,
-    thisMonth,
+    userId, roleName, leadsMinistryId, leadsMinistryName,
+    leadsCellGroupId, leadsCellGroupName, leadsGroupId, leadsGroupName, thisMonth,
   });
 
-  return {
-    members:       { total: totalMembers, active: activeMembers, newThisMonth },
+  const result = {
+    members:       memberCounts,
     finance:       { totalThisMonth, recentRecords },
-    services:      { total: totalServices, upcoming: upcomingServices },
-    events:        { total: totalEvents, upcoming: upcomingEvents },
-    inventory:     { totalItems, pendingRequests, lowStock },
-    recentActivity,
+    services:      { upcoming: upcomingServices },
+    events:        { upcoming: upcomingEvents },
+    inventory:     { pendingRequests, lowStock },
+    ...(isMember ? {} : { recentActivity }),
     roleSummary,
   };
+
+  // Cache for 60 seconds (30 seconds for Member role to keep their data fresh)
+  cache.set(cacheKey, result, isMember ? 30000 : 60000);
+  return result;
 };

@@ -233,6 +233,18 @@ exports.deleteRecord = async (id, deletedBy) => {
   const record = await ArchiveRecord.findOne({ where: { id } });
   if (!record) throw { status: 404, message: "Archive record not found" };
 
+  // Delete the physical file from disk
+  const fs = require("fs");
+  const path = require("path");
+  const archivesDir = path.join(__dirname, "../..", "uploads", "archives");
+  const fileName = path.basename(record.file_url || "");
+  if (fileName) {
+    const filePath = path.join(archivesDir, fileName);
+    if (fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch (e) { logger.warn(e, "Could not delete archive file"); }
+    }
+  }
+
   await record.update({
     is_deleted: 1,
     deleted_at: new Date(),

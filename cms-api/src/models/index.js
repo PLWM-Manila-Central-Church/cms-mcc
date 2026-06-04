@@ -45,6 +45,14 @@ const MinistryMembership  = require("./MinistryMembership.model");
 const MinistryEventInvite = require("./MinistryEventInvite.model");
 const UserLeaderAssignment = require("./UserLeaderAssignment.model");
 
+// New Capstone Financial Models
+const Fund = require("./Fund.model");
+const Account = require("./Account.model");
+const ExpenseCategory = require("./ExpenseCategory.model");
+const PaymentMethod = require("./PaymentMethod.model");
+const Expense = require("./Expense.model");
+const Attachment = require("./Attachment.model");
+
 // ── Roles & Permissions ──────────────────────────────────────
 Role.belongsToMany(Permission, {
   through: RolePermission,
@@ -336,6 +344,34 @@ SystemSetting.belongsTo(User, {
   as: "updatedByUser",
 });
 
+// ── Capstone Financial Associations ──────────────────────────
+Fund.hasMany(Account, { foreignKey: "fund_id", onDelete: "CASCADE" });
+Account.belongsTo(Fund, { foreignKey: "fund_id", as: "fund" });
+
+Account.hasMany(ExpenseCategory, { foreignKey: "account_id", onDelete: "CASCADE" });
+ExpenseCategory.belongsTo(Account, { foreignKey: "account_id", as: "account" });
+
+Account.hasMany(Expense, { foreignKey: "account_id" });
+Expense.belongsTo(Account, { foreignKey: "account_id", as: "account" });
+
+ExpenseCategory.hasMany(Expense, { foreignKey: "category_id" });
+Expense.belongsTo(ExpenseCategory, { foreignKey: "category_id", as: "category" });
+
+PaymentMethod.hasMany(Expense, { foreignKey: "payment_method_id" });
+Expense.belongsTo(PaymentMethod, { foreignKey: "payment_method_id", as: "paymentMethod" });
+
+User.hasMany(Expense, { foreignKey: "created_by", as: "createdExpenses" });
+Expense.belongsTo(User, { foreignKey: "created_by", as: "creator" });
+
+FinancialRecord.hasMany(Attachment, { foreignKey: "income_id", as: "attachments" });
+Attachment.belongsTo(FinancialRecord, { foreignKey: "income_id", as: "incomeRecord" });
+
+Expense.hasMany(Attachment, { foreignKey: "expense_id", as: "attachments" });
+Attachment.belongsTo(Expense, { foreignKey: "expense_id", as: "expenseRecord" });
+
+User.hasMany(Attachment, { foreignKey: "uploaded_by", as: "uploadedAttachments" });
+Attachment.belongsTo(User, { foreignKey: "uploaded_by", as: "uploader" });
+
 module.exports = {
   User,
   Role,
@@ -382,4 +418,10 @@ module.exports = {
   MinistryMembership,
   MinistryEventInvite,
   UserLeaderAssignment,
+  Fund,
+  Account,
+  ExpenseCategory,
+  PaymentMethod,
+  Expense,
+  Attachment,
 };

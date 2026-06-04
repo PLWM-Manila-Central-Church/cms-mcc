@@ -1,7 +1,8 @@
 "use strict";
 const { AuditLog } = require("../models");
+const logger       = require("../helpers/logger");
 
-const log = async ({ userId, action, targetTable, targetId, oldValues, newValues, ipAddress }) => {
+const log = async ({ userId, action, targetTable, targetId, oldValues, newValues, ipAddress }, options = {}) => {
   try {
     await AuditLog.create({
       user_id:      userId,
@@ -11,9 +12,9 @@ const log = async ({ userId, action, targetTable, targetId, oldValues, newValues
       old_values:   oldValues   || null,
       new_values:   newValues   || null,
       ip_address:   ipAddress   || null,
-    });
+    }, { transaction: options.transaction });
   } catch (err) {
-    console.error("[AuditLog] Failed to write log:", err.message);
+    logger.error(err, "AuditLog failure");
   }
 };
 

@@ -13,11 +13,11 @@ const MemberStatusHistory = sequelize.define(
     },
     member_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
     old_status: {
-      type: DataTypes.ENUM("Active", "Inactive", "Visitor"),
+      type: DataTypes.ENUM("New", "Active", "Semi-Active", "Inactive", "Visitor"),
       allowNull: false,
     },
     new_status: {
-      type: DataTypes.ENUM("Active", "Inactive", "Visitor"),
+      type: DataTypes.ENUM("New", "Active", "Semi-Active", "Inactive", "Visitor"),
       allowNull: false,
     },
     changed_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },

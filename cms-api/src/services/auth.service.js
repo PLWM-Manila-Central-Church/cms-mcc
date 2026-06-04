@@ -175,7 +175,7 @@ exports.forgotPassword = async (email) => {
   const resetUrl    = `${frontendUrl}/reset-password?token=${rawToken}`;
 
   mailer.sendPasswordReset({ to: user.email, resetUrl }).catch((err) => {
-    console.error("[Auth] Failed to send password reset email:", err.message);
+    logger.error(err, "Failed to send password reset email:")
   });
 
   const isDev = process.env.NODE_ENV === "development";

@@ -223,7 +223,7 @@ exports.createAssignment = async (data, createdBy, user = {}) => {
       });
     }
   } catch (err) {
-    console.error("[Ministry] Notification failed:", err.message);
+    logger.error(err, "Notification failed:")
   }
 
   return created;

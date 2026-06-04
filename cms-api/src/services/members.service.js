@@ -234,7 +234,7 @@ exports.createMember = async (data, createdBy, user = {}) => {
         defaults: { ministry_role_id: enrollRoleId, member_id: member.id, added_by: createdBy },
       });
     } catch (err) {
-      console.error("[Members] Ministry auto-enroll failed:", err.message);
+      logger.error(err, "Ministry auto-enroll failed:")
     }
   }
 

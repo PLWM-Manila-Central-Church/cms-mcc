@@ -1,10 +1,9 @@
 "use strict";
 
+const logger = require("../helpers/logger");
+
 module.exports = (err, req, res, next) => {
-  console.error("ERR_NAME:", err.name);
-  console.error("ERR_MSG:", err.message);
-  if (err.original) console.error("ERR_SQL:", err.original.sqlMessage || err.original.message);
-  console.error(err.stack);
+  logger.error({ err, req: { method: req.method, url: req.url } }, "Unhandled error");
 
   // Sequelize validation errors
   if (err.name === "SequelizeValidationError") {

@@ -2,16 +2,17 @@
 
 const app = require("./app");
 const sequelize = require("./config/db");
+const logger = require("./helpers/logger");
 
 const PORT = process.env.PORT || 5000;
 
 (async () => {
   try {
     await sequelize.authenticate();
-    console.log("Database connected");
-    app.listen(PORT, () => console.log(`API running on port ${PORT}`));
+    logger.info("Database connected");
+    app.listen(PORT, () => logger.info("API running on port", { port: PORT }));
   } catch (err) {
-    console.error("Unable to connect to database:", err);
+    logger.error(err, "Unable to connect to database");
     process.exit(1);
   }
 })();

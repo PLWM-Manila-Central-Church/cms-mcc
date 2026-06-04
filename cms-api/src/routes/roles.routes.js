@@ -15,5 +15,6 @@ router.get("/:id", auth, authorize("roles", "read"),   ctrl.getRoleById);
 router.post("/",   auth, authorize("roles", "create"), validate(createRoleSchema), ctrl.createRole);
 router.put("/:id", auth, authorize("roles", "update"), validate(updateRoleSchema), ctrl.updateRole);
 router.delete("/:id", auth, authorize("roles", "delete"), ctrl.deleteRole);
+router.put("/:id/permissions", auth, authorize("roles", "update"), ctrl.syncPermissions);
 
 module.exports = router;

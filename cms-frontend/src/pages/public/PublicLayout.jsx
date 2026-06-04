@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LANGS, getLangCode, saveLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
+import PublicIcon from './PublicIcon';
 
 const C = {
   navy:'#0B2447', navyMid:'#14305E', navySoft:'#1A3D72',
@@ -374,9 +375,13 @@ export default function PublicLayout({ children }) {
               <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:'1.25rem', fontWeight:700, color:C.text, marginBottom:8 }}>Manila Central Church</div>
               <div style={{ fontSize:14, color:C.muted, lineHeight:1.75, marginBottom:20, maxWidth:280 }}>Mother Church of Philippine Life Word Mission (PLWM). Serving Manila and the Philippines through the Word of God.</div>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                {[['📍','Address','Lot 2 Block 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City'],['📞','Tel','(02) 7745-6212'],['📱','Senior Pastor','0915-807-6300']].map(([icon,label,value]) => (
+                {[
+                  ['pin', 'Address', 'Lot 2 Block 2 Filipinas Ave. UPS 5, Brgy. San Isidro, Parañaque City'],
+                  ['phone', 'Tel', '(02) 7745-6212'],
+                  ['mobile', 'Senior Pastor', '0915-807-6300'],
+                ].map(([icon,label,value]) => (
                   <div key={label} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
-                    <div style={{ width:28, height:28, background:'rgba(21,101,192,0.1)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}>{icon}</div>
+                    <div style={{ width:28, height:28, background:'rgba(21,101,192,0.1)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}><PublicIcon name={icon} size={13} /></div>
                     <div>
                       <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.5px' }}>{label}</div>
                       <div style={{ fontSize:13, color:C.sub }}>{value}</div>
@@ -384,7 +389,9 @@ export default function PublicLayout({ children }) {
                   </div>
                 ))}
                 <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
-                  <div style={{ width:28, height:28, background:'rgba(21,101,192,0.1)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}>🌐</div>
+                  <div style={{ width:28, height:28, background:'rgba(21,101,192,0.1)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <PublicIcon name="globe" size={13} />
+                  </div>
                   <div>
                     <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.5px' }}>Website</div>
                     <a href="https://www.jbch.org/en/" target="_blank" rel="noopener noreferrer"
@@ -405,19 +412,31 @@ export default function PublicLayout({ children }) {
                     onMouseEnter={e => e.currentTarget.style.color=C.blue}
                     onMouseLeave={e => e.currentTarget.style.color=C.muted}>{label}</Link>
                 ))}
-                <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none' }}
-                  onMouseEnter={e => e.currentTarget.style.color='#FF0000'}
-                  onMouseLeave={e => e.currentTarget.style.color=C.muted}>▶ YouTube Channel</a>
-                <a href="https://www.facebook.com/groups/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none' }}
-                  onMouseEnter={e => e.currentTarget.style.color='#1877F2'}
-                  onMouseLeave={e => e.currentTarget.style.color=C.muted}>📘 Facebook Group</a>
+                <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none', display:'inline-flex', alignItems:'center', gap:6 }}
+                  onMouseEnter={e => e.currentTarget.style.color=C.text}
+                  onMouseLeave={e => e.currentTarget.style.color=C.muted}>
+                  <PublicIcon name="play" size={13} /> YouTube Channel
+                </a>
+                <a href="https://www.facebook.com/groups/plwmmcc" target="_blank" rel="noopener noreferrer" style={{ fontSize:14, color:C.muted, transition:'color 0.18s', textDecoration:'none', display:'inline-flex', alignItems:'center', gap:6 }}
+                  onMouseEnter={e => e.currentTarget.style.color=C.text}
+                  onMouseLeave={e => e.currentTarget.style.color=C.muted}>
+                  <PublicIcon name="facebook" size={13} /> Facebook Group
+                </a>
               </div>
             </div>
             <div>
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:C.text, marginBottom:16 }}>Service Times</div>
               <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
-                {['☀️ Sunday 9:30–11:10 AM — Filipino Service (Main Hall)','☀️ Sunday 2:00–4:00 PM — Korean Service (Medium Hall)','📖 Wednesday 7:00–9:00 PM — Midweek Sermon (Main Hall)','🏘️ Saturday 2:00–4:00 PM — High School Fellowship','🏘️ Saturday 7:00–9:00 PM — Young Adult Fellowship'].map(s => (
-                  <span key={s} style={{ fontSize:13, color:C.muted, lineHeight:1.5 }}>{s}</span>
+                {[
+                  { icon: 'sun', text: 'Sunday 9:30–11:10 AM — Filipino Service (Main Hall)' },
+                  { icon: 'sun', text: 'Sunday 2:00–4:00 PM — Korean Service (Medium Hall)' },
+                  { icon: 'book', text: 'Wednesday 7:00–9:00 PM — Midweek Sermon (Main Hall)' },
+                  { icon: 'house', text: 'Saturday 2:00–4:00 PM — High School Fellowship' },
+                  { icon: 'house', text: 'Saturday 7:00–9:00 PM — Young Adult Fellowship' },
+                ].map(s => (
+                  <span key={s.text} style={{ fontSize:13, color:C.muted, lineHeight:1.5, display:'flex', alignItems:'baseline', gap:6 }}>
+                    <span style={{flexShrink:0, position:'relative', top:1}}><PublicIcon name={s.icon} size={12} /></span>{s.text}
+                  </span>
                 ))}
               </div>
             </div>
@@ -539,6 +558,7 @@ export default function PublicLayout({ children }) {
 
         /* ── Mission Status tab bar ── */
         .ms-tab {
+          display:inline-flex; align-items:center;
           padding:12px 20px; font-size:14px; font-weight:600;
           background:none; border:none; border-bottom:3px solid transparent;
           cursor:pointer; font-family:inherit; margin-bottom:-2px;

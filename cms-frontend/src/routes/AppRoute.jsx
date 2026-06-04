@@ -119,7 +119,7 @@ const AppRoutes = () => {
       <Route path="/events/:id" element={<ProtectedRoute module="events" action="read"><MainLayout><EventDetailPage /></MainLayout></ProtectedRoute>} />
       <Route path="/attendance" element={<ProtectedRoute module="attendance" action="read"><MainLayout><AttendanceOverviewPage /></MainLayout></ProtectedRoute>} />
       <Route path="/finance"    element={<ProtectedRoute module="finance" action="read"><MainLayout><FinancePage /></MainLayout></ProtectedRoute>} />
-      <Route path="/finance/my-giving" element={<ProtectedRoute><MainLayout><MyGivingPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/finance/my-giving" element={<ProtectedRoute module="finance" action="read"><MainLayout><MyGivingPage /></MainLayout></ProtectedRoute>} />
       <Route path="/services"          element={<ProtectedRoute module="services" action="read"><MainLayout><ServicesPage /></MainLayout></ProtectedRoute>} />
       <Route path="/services/:id/attendance" element={<ProtectedRoute module="attendance" action="read"><MainLayout><AttendancePage /></MainLayout></ProtectedRoute>} />
       <Route path="/users"      element={<ProtectedRoute module="users" action="read"><MainLayout><UsersPage /></MainLayout></ProtectedRoute>} />
@@ -135,7 +135,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       <Route path="/members/new"    element={<ProtectedRoute module="members" action="create"><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
-      <Route path="/members/:id"    element={<ProtectedRoute><MainLayout><MembersRoute><MemberProfilePage /></MembersRoute></MainLayout></ProtectedRoute>} />
+      <Route path="/members/:id"    element={<ProtectedRoute module="members" action="read"><MainLayout><MembersRoute><MemberProfilePage /></MembersRoute></MainLayout></ProtectedRoute>} />
       <Route path="/members/:id/edit" element={<ProtectedRoute module="members" action="update"><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
 
       <Route path="/cell-groups" element={<ProtectedRoute module="cell_groups" action="read"><MainLayout><CellGroupsPage /></MainLayout></ProtectedRoute>} />

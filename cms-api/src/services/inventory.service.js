@@ -251,7 +251,7 @@ exports.reviewRequest = async (id, status, reviewedBy) => {
       });
     }
   } catch (err) {
-    console.error("[Inventory] Review notification failed:", err.message);
+    logger.error(err, "Review notification failed:")
   }
 
   auditLog.log({

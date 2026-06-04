@@ -7,7 +7,7 @@ module.exports = {
     let existingNames = new Set();
     try {
       const existingGroups = await queryInterface.sequelize.query(
-        "SELECT name FROM `groups`",
+        "SELECT name FROM `ministry_groups`",
         { type: queryInterface.sequelize.QueryTypes.SELECT },
       );
       existingNames = new Set(existingGroups.map(g => g.name));
@@ -30,7 +30,7 @@ module.exports = {
 
     if (groupsToAdd.length > 0) {
       try {
-        await queryInterface.bulkInsert("groups", groupsToAdd);
+        await queryInterface.bulkInsert("ministry_groups", groupsToAdd);
       } catch (err) {
         if (err.message && err.message.includes("Duplicate")) {
           console.log("Groups already exist, skipping insert");
@@ -42,6 +42,6 @@ module.exports = {
   },
 
   down: async (queryInterface) => {
-    await queryInterface.bulkDelete("groups", null, {});
+    await queryInterface.bulkDelete("ministry_groups", null, {});
   },
 };

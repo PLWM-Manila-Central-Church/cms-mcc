@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useDashboardStats } from '../../hooks/useDashboardStats';
 import useIsMobile from '../../hooks/useIsMobile';
 import { greetingTarget } from '../../utils/roleDisplay';
 
@@ -310,35 +310,21 @@ export default function DashboardPage() {
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   const role = user?.roleName || '';
   const accent = ACCENTS[role] || ACCENTS[R.MEMBER];
   const displayName = greetingTarget(user || {});
 
-  useEffect(() => {
-    let mounted = true;
-    api.get('/dashboard/stats')
-      .then((res) => {
-        if (mounted) setStats(res.data.data);
-      })
-      .catch(() => {
-        if (mounted) setError('Failed to load dashboard data.');
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => { mounted = false; };
-  }, []);
+  const { data: stats, isLoading, error } = useDashboardStats();
+
+  const fetchError = error ? 'Failed to load dashboard data.' : '';
 
   const config = useMemo(() => {
     if (!stats) return null;
     return getDashboardConfig({ role, stats, hasPermission });
   }, [role, stats, hasPermission]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div style={S.state}>
         <div style={{ ...S.spinner, borderTopColor: accent }} />
@@ -347,8 +333,8 @@ export default function DashboardPage() {
     );
   }
 
-  if (error || !config) {
-    return <div style={S.state}>{error || 'Dashboard is unavailable.'}</div>;
+  if (fetchError || !config) {
+    return <div style={S.state}>{fetchError || 'Dashboard is unavailable.'}</div>;
   }
 
   const metrics = config.metrics.slice(0, 4);

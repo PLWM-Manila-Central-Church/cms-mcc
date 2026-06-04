@@ -177,7 +177,7 @@ exports.updateStatus = async (id, status, updatedBy) => {
         });
       }
     } catch (err) {
-      console.error("[Services] Publish notifications failed:", err.message);
+      logger.error(err, "Publish notifications failed:")
     }
   }
 

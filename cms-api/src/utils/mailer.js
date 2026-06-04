@@ -1,5 +1,7 @@
 "use strict";
 
+const logger = require("../helpers/logger");
+
 // ── Brevo HTTP API
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
@@ -22,17 +24,16 @@ async function sendViaBrevo(payload) {
     throw new Error(`[Mailer] Brevo API error: ${data?.message || response.statusText}`);
   }
 
-  console.log("[Mailer] Email sent successfully. ID:", data.messageId);
+  logger.info("Email sent", { messageId: data.messageId });
   return data;
 }
 
 // ── Verify on startup (non-fatal) ────────────────────────────
 (function verifyMailer() {
   if (!process.env.BREVO_API_KEY) {
-    console.warn("[Mailer] WARNING: BREVO_API_KEY is not set. Emails will fail.");
-  } else {
-    console.log("[Mailer] Brevo HTTP mailer ready.");
+    logger.warn("BREVO_API_KEY is not set. Emails will fail.");
   }
+  logger.info("Brevo HTTP mailer ready");
 })();
 
 // ── Send Password Reset Email ────────────────────────────────

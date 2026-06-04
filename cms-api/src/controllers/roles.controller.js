@@ -60,3 +60,13 @@ exports.deleteRole = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.syncPermissions = async (req, res, next) => {
+  try {
+    const { permission_ids } = req.body;
+    const result = await rolesService.syncRolePermissions(req.params.id, permission_ids || [], req.user.userId);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
