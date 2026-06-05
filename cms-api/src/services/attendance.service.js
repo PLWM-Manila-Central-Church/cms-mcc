@@ -74,13 +74,20 @@ exports.createAttendance = async (data, recordedBy, user = {}) => {
   if (!member) throw { status: 404, message: "Member not found" };
 
   const existing = await Attendance.findOne({ where: { service_id, member_id } });
-  if (existing)
+  if (existing) {
+    // Allow converting a pre-reg record to manual check-in (member physically arrived)
+    if (existing.check_in_method === "pre-reg") {
+      await existing.update({ check_in_method: "manual", recorded_by: recordedBy || null });
+      await syncSummary(service_id);
+      return await exports.getAttendanceById(existing.id, user);
+    }
     throw { status: 409, message: "Member already checked in to this service" };
+  }
 
   const record = await Attendance.create({
     service_id,
     member_id,
-    check_in_method,
+    check_in_method: check_in_method || "manual",
     checked_in_at: checked_in_at || new Date(),
     recorded_by:   recordedBy || null,
   });
