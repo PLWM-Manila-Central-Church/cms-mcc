@@ -120,33 +120,100 @@ function AttendanceTrendChart({ data, accent, onNavigate }) {
     return <div style={S.empty}>No attendance data yet.</div>;
   }
   const maxTotal = Math.max(...data.map(d => d.total), 1);
+  const chartHeight = 220;
+  const gridLines = [0.25, 0.5, 0.75, 1];
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 12, fontWeight: 600, flexWrap: 'wrap' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#16a34a' }} /> Active</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#0066b3' }} /> New</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#d97706' }} /> Semi-Active</span>
+      <div style={{ display: 'flex', gap: 16, marginBottom: 16, fontSize: 12, fontWeight: 600, flexWrap: 'wrap' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#16a34a' }} /> Active
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#0066b3' }} /> New
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#d97706' }} /> Semi-Active
+        </span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94a3b8' }}>
+          Max: {maxTotal}
+        </span>
       </div>
-      {data.map((item) => {
-        const pct = (v) => maxTotal > 0 ? (v / maxTotal) * 100 : 0;
-        return (
-          <button key={item.service_id} onClick={() => onNavigate(`/services/${item.service_id}/attendance`)}
-            style={{ display: 'block', width: '100%', border: 0, background: 'none', padding: '8px 0', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', borderBottom: '1px solid #f1f5f9' }}>
-            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
-              {item.title} — {new Date(item.service_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ flex: 1, height: 18, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
-                {item.active > 0 && <div style={{ width: `${pct(item.active)}%`, background: '#16a34a', transition: 'width 0.3s' }} />}
-                {item.new > 0 && <div style={{ width: `${pct(item.new)}%`, background: '#0066b3', transition: 'width 0.3s' }} />}
-                {item.semiActive > 0 && <div style={{ width: `${pct(item.semiActive)}%`, background: '#d97706', transition: 'width 0.3s' }} />}
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>{item.total}</span>
-            </div>
-          </button>
-        );
-      })}
+
+      <div style={{ position: 'relative', display: 'flex', gap: 0, height: chartHeight + 40 }}>
+        {/* Y-axis labels + grid */}
+        <div style={{ position: 'relative', width: 40, height: chartHeight, flexShrink: 0 }}>
+          {gridLines.map((pct) => (
+            <span key={pct} style={{
+              position: 'absolute', bottom: pct * chartHeight - 7, right: 6,
+              fontSize: 10, color: '#94a3b8', fontWeight: 500,
+            }}>
+              {Math.round(maxTotal * pct)}
+            </span>
+          ))}
+        </div>
+
+        {/* Chart area */}
+        <div style={{ flex: 1, position: 'relative', height: chartHeight }}>
+          {/* Grid lines */}
+          {gridLines.map((pct) => (
+            <div key={pct} style={{
+              position: 'absolute', bottom: pct * chartHeight, left: 0, right: 0,
+              height: 1, background: '#f1f5f9',
+            }} />
+          ))}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            height: 1, background: '#e2e8f0',
+          }} />
+
+          {/* Bars */}
+          <div style={{
+            display: 'flex', alignItems: 'flex-end', gap: data.length > 8 ? 2 : 6,
+            height: '100%', padding: '0 4px',
+          }}>
+            {data.map((item) => {
+              const barW = data.length > 8 ? 'calc(100% / ' + data.length + ' - 2px)' : `min(48px, calc(100% / ${data.length} - 6px))`;
+              const hActive = maxTotal > 0 ? (item.active / maxTotal) * chartHeight : 0;
+              const hNew = maxTotal > 0 ? (item.new / maxTotal) * chartHeight : 0;
+              const hSemi = maxTotal > 0 ? (item.semiActive / maxTotal) * chartHeight : 0;
+              return (
+                <button key={item.service_id}
+                  onClick={() => onNavigate(`/services/${item.service_id}/attendance`)}
+                  title={`${item.title} — ${item.total} total\nActive: ${item.active} | New: ${item.new} | Semi-Active: ${item.semiActive}`}
+                  style={{
+                    flex: '0 0 auto', width: barW, display: 'flex', flexDirection: 'column',
+                    alignItems: 'stretch', justifyContent: 'flex-end', gap: 0,
+                    border: 0, background: 'none', padding: 0, margin: 0, cursor: 'pointer',
+                    position: 'relative', fontFamily: 'inherit',
+                  }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: chartHeight }}>
+                    {hSemi > 0 && <div style={{ height: hSemi, background: '#d97706', borderRadius: '3px 3px 0 0', transition: 'height 0.3s' }} />}
+                    {hNew > 0 && <div style={{ height: hNew, background: '#0066b3', transition: 'height 0.3s' }} />}
+                    {hActive > 0 && <div style={{ height: hActive, background: '#16a34a', borderRadius: '0 0 3px 3px', transition: 'height 0.3s' }} />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* X-axis labels */}
+      <div style={{ display: 'flex', gap: data.length > 8 ? 2 : 6, marginLeft: 40, marginTop: 6 }}>
+        {data.map((item) => {
+          const barW = data.length > 8 ? 'calc(100% / ' + data.length + ' - 2px)' : `min(48px, calc(100% / ${data.length} - 6px))`;
+          const label = new Date(item.service_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+          return (
+            <span key={item.service_id} style={{
+              flex: '0 0 auto', width: barW, fontSize: 10, color: '#94a3b8',
+              textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {data.length > 8 ? label.split(' ')[1] : label}
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -193,17 +260,12 @@ function CellGroupAlertsPanel({ data, latestService }) {
 
   const latestDate = new Date(latestService.service_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
 
-  const thStyle = (key) => ({
+  const thStyle = (key, align = 'left') => ({
     ...S.reportTh,
     cursor: 'pointer',
     userSelect: 'none',
+    textAlign: align,
     color: sort.key === key ? '#0f172a' : '#64748b',
-  });
-
-  const tdStyle = (val, threshold) => ({
-    ...S.reportTd,
-    color: val > threshold ? '#dc2626' : '#0f172a',
-    fontWeight: val > threshold ? 700 : 500,
   });
 
   return (
@@ -220,12 +282,12 @@ function CellGroupAlertsPanel({ data, latestService }) {
           <table style={S.reportTable}>
             <thead>
               <tr>
-                <th style={{ ...S.reportTh, width: 32 }}>#</th>
+                <th style={{ ...S.reportTh, width: 36 }}>#</th>
                 <th style={thStyle('cellGroupName')} onClick={() => toggleSort('cellGroupName')}>Cell Group{sortIndicator('cellGroupName')}</th>
-                <th style={{ ...thStyle('totalMembers'), textAlign: 'right' }} onClick={() => toggleSort('totalMembers')}>Total{sortIndicator('totalMembers')}</th>
-                <th style={{ ...thStyle('attended'), textAlign: 'right' }} onClick={() => toggleSort('attended')}>Attended{sortIndicator('attended')}</th>
-                <th style={{ ...thStyle('absent'), textAlign: 'right' }} onClick={() => toggleSort('absent')}>Absent{sortIndicator('absent')}</th>
-                <th style={{ ...thStyle('rate'), textAlign: 'right' }} onClick={() => toggleSort('rate')}>Rate{sortIndicator('rate')}</th>
+                <th style={thStyle('totalMembers', 'right')} onClick={() => toggleSort('totalMembers')}>Total{sortIndicator('totalMembers')}</th>
+                <th style={thStyle('attended', 'right')} onClick={() => toggleSort('attended')}>Attended{sortIndicator('attended')}</th>
+                <th style={thStyle('absent', 'right')} onClick={() => toggleSort('absent')}>Absent{sortIndicator('absent')}</th>
+                <th style={thStyle('rate', 'right')} onClick={() => toggleSort('rate')}>Rate{sortIndicator('rate')}</th>
               </tr>
             </thead>
             <tbody>
@@ -237,7 +299,7 @@ function CellGroupAlertsPanel({ data, latestService }) {
                     <td style={{ ...S.reportTd, fontWeight: 700, color: '#0f172a' }}>{g.cellGroupName}</td>
                     <td style={{ ...S.reportTd, textAlign: 'right' }}>{g.totalMembers}</td>
                     <td style={{ ...S.reportTd, textAlign: 'right' }}>{g.attended}</td>
-                    <td style={tdStyle(g.absent, 10)}>{g.absent}</td>
+                    <td style={{ ...S.reportTd, textAlign: 'right', color: g.absent > 10 ? '#dc2626' : '#0f172a', fontWeight: g.absent > 10 ? 700 : 500 }}>{g.absent}</td>
                     <td style={{ ...S.reportTd, textAlign: 'right', color: rateColor(rate), fontWeight: 700 }}>{rate}%</td>
                   </tr>
                 );
@@ -256,25 +318,87 @@ function CellGroupAlertsPanel({ data, latestService }) {
           </table>
         </div>
       ) : (
+        /* Vertical bar graph */
         <div>
-          {sorted.map((g) => {
-            const rate = g.totalMembers > 0 ? Math.round((g.attended / g.totalMembers) * 100) : 0;
-            const barPct = g.totalMembers > 0 ? (g.absent / g.totalMembers) * 100 : 0;
-            const color = rateColor(rate);
+          {(() => {
+            const maxAbs = Math.max(...sorted.map(g => g.absent), 1);
+            const chartH = Math.min(sorted.length * 32 + 20, 400);
+            const barH = Math.max(18, Math.min(26, (chartH - 20) / sorted.length - 4));
+
             return (
-              <div key={g.cellGroupId} style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12, fontWeight: 600 }}>
-                  <span style={{ color: '#0f172a' }}>{g.cellGroupName}</span>
-                  <span style={{ color: '#64748b' }}>{g.absent} absent of {g.totalMembers} — {rate}% attended</span>
+              <div style={{ display: 'flex', gap: 0, height: chartH + 24 }}>
+                {/* Y-axis labels */}
+                <div style={{ position: 'relative', width: 50, height: chartH, flexShrink: 0 }}>
+                  {[0.25, 0.5, 0.75, 1].map(pct => (
+                    <span key={pct} style={{
+                      position: 'absolute', bottom: pct * chartH - 6, right: 6,
+                      fontSize: 10, color: '#94a3b8', fontWeight: 500,
+                    }}>
+                      {Math.round(maxAbs * pct)}
+                    </span>
+                  ))}
                 </div>
-                <div style={S.barTrack}>
-                  <div style={{ ...S.barFill, width: `${Math.min(barPct, 100)}%`, background: color }} />
+
+                {/* Chart area */}
+                <div style={{ flex: 1, position: 'relative', height: chartH }}>
+                  {[0.25, 0.5, 0.75, 1].map(pct => (
+                    <div key={pct} style={{
+                      position: 'absolute', bottom: pct * chartH, left: 0, right: 0,
+                      height: 1, background: '#f1f5f9',
+                    }} />
+                  ))}
+                  <div style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    height: 1, background: '#e2e8f0',
+                  }} />
+
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 3, height: '100%', padding: '0 4px' }}>
+                    {sorted.map((g) => {
+                      const rate = g.totalMembers > 0 ? Math.round((g.attended / g.totalMembers) * 100) : 0;
+                      const barW = maxAbs > 0 ? (g.absent / maxAbs) * 100 : 0;
+                      const color = rateColor(rate);
+                      return (
+                        <div key={g.cellGroupId} style={{ display: 'flex', alignItems: 'center', gap: 8, height: barH }}>
+                          <div style={{ flex: 1, height: barH, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                            <div style={{
+                              width: `${Math.min(barW, 100)}%`, height: '100%',
+                              background: color, borderRadius: 4,
+                              transition: 'width 0.4s ease',
+                            }} />
+                          </div>
+                          <div style={{ width: 44, flexShrink: 0, textAlign: 'right', fontSize: 11, fontWeight: 700, color }}>
+                            {g.absent}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             );
-          })}
-          <div style={{ marginTop: 16, padding: '10px 12px', background: '#f8fafc', borderRadius: 8, display: 'flex', gap: 20, fontSize: 12, color: '#64748b', fontWeight: 600, flexWrap: 'wrap' }}>
-            <span>Total: {totalAbsent} absent of {totalMembers}</span>
+          })()}
+
+          {/* X-axis: cell group names */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 4, marginLeft: 54 }}>
+            {sorted.map((g) => {
+              const rate = g.totalMembers > 0 ? Math.round((g.attended / g.totalMembers) * 100) : 0;
+              const color = rateColor(rate);
+              return (
+                <div key={g.cellGroupId} style={{
+                  fontSize: 11, color: '#64748b', height: Math.max(18, Math.min(26, 380 / sorted.length - 4)),
+                  display: 'flex', alignItems: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {g.cellGroupName}
+                  <span style={{ marginLeft: 6, fontSize: 10, color: '#94a3b8' }}>
+                    ({g.attended}/{g.totalMembers})
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ marginTop: 14, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, display: 'flex', gap: 20, fontSize: 12, color: '#64748b', fontWeight: 600, flexWrap: 'wrap' }}>
+            <span>Total: {totalAbsent} absent of {totalMembers} members</span>
             <span>Avg Rate: <span style={{ color: rateColor(avgRate) }}>{avgRate}%</span></span>
           </div>
         </div>
