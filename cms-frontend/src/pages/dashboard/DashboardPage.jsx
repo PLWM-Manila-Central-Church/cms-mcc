@@ -382,7 +382,6 @@ function CellGroupAlertsPanel({ data, latestService }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 4, marginLeft: 54 }}>
             {sorted.map((g) => {
               const rate = g.totalMembers > 0 ? Math.round((g.attended / g.totalMembers) * 100) : 0;
-              const color = rateColor(rate);
               return (
                 <div key={g.cellGroupId} style={{
                   fontSize: 11, color: '#64748b', height: Math.max(18, Math.min(26, 380 / sorted.length - 4)),
