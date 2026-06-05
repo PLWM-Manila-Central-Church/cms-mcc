@@ -21,6 +21,15 @@ const EVENT_STATUS = {
   CANCELLED: "Cancelled",
 };
 
+const LEGACY_STATUS_MAP = {
+  draft: "Upcoming",
+  published: "Upcoming",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+const normalizeStatus = (status) => LEGACY_STATUS_MAP[status] || status;
+
 const REGISTRATION_OPEN_STATUSES = [EVENT_STATUS.UPCOMING, EVENT_STATUS.ONGOING];
 
 // ── Shared includes ──────────────────────────────────────────
@@ -150,7 +159,8 @@ exports.updateEvent = async (id, data, updatedBy) => {
   const event = await Event.findOne({ where: { id, is_deleted: 0 } });
   if (!event) throw { status: 404, message: "Event not found" };
 
-  if (event.status === EVENT_STATUS.COMPLETED || event.status === EVENT_STATUS.CANCELLED)
+  const currentStatus = normalizeStatus(event.status);
+  if (currentStatus === EVENT_STATUS.COMPLETED || currentStatus === EVENT_STATUS.CANCELLED)
     throw { status: 400, message: "Cannot update a completed or cancelled event" };
 
   const {
@@ -190,6 +200,7 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
   const event = await Event.findOne({ where: { id } });
   if (!event) throw { status: 404, message: "Event not found" };
 
+  const currentStatus = normalizeStatus(event.status);
   const validTransitions = {
     Upcoming:  [EVENT_STATUS.ONGOING, EVENT_STATUS.COMPLETED, EVENT_STATUS.CANCELLED],
     Ongoing:   [EVENT_STATUS.COMPLETED, EVENT_STATUS.CANCELLED],
@@ -197,11 +208,15 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
     Cancelled: [],
   };
 
-  if (!validTransitions[event.status]?.includes(newStatus))
+  if (!validTransitions[currentStatus]?.includes(newStatus)) {
+    if (currentStatus !== event.status) {
+      logger.warn(`Legacy status "${event.status}" normalized to "${currentStatus}" for event ${id}`);
+    }
     throw {
       status: 400,
       message: `Cannot transition from "${event.status}" to "${newStatus}"`,
     };
+  }
 
   await event.update({ status: newStatus });
 
