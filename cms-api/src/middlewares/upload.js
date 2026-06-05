@@ -18,6 +18,7 @@ const multer = require("multer");
 const path   = require("path");
 const crypto = require("crypto");
 const fs     = require("fs");
+const logger = require("../helpers/logger");
 
 const UPLOADS_DIR = path.join(__dirname, "../../uploads/archives");
 const ALLOWED_EXT = [".pdf", ".docx", ".xlsx", ".jpg", ".jpeg", ".png", ".mp4", ".mp3"];
