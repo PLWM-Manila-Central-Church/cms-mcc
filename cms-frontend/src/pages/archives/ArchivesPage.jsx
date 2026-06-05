@@ -152,6 +152,45 @@ export default function ArchivesPage() {
     } catch (err) { setError(err.response?.data?.message || 'Failed to delete.'); }
   };
 
+  const handleDownload = async (record) => {
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const fileUrl = `${apiUrl}${record.file_url}`;
+    try {
+      const res = await axiosInstance.get(fileUrl, { responseType: 'blob' });
+      const blob = new Blob([res.data]);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = record.title || record.file_url.split('/').pop();
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch {
+      // Fallback: open in new tab
+      window.open(fileUrl, '_blank');
+    }
+  };
+
+  const handleDownloadFile = async (fileUrl, fileName) => {
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const fullUrl = `${apiUrl}${fileUrl}`;
+    try {
+      const res = await axiosInstance.get(fullUrl, { responseType: 'blob' });
+      const blob = new Blob([res.data]);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || fileUrl.split('/').pop();
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch {
+      window.open(fullUrl, '_blank');
+    }
+  };
+
   const openDetail = async (record) => {
     try {
       const res = await axiosInstance.get(`/archives/${record.id}`);
@@ -215,10 +254,9 @@ export default function ArchivesPage() {
           <div style={s.detailDesc}>{detailRecord.description}</div>
         )}
 
-        <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${detailRecord.file_url}`}
-          target="_blank" rel="noreferrer" style={s.downloadBtn}>
+        <button onClick={() => handleDownload(detailRecord)} style={s.downloadBtn}>
           <MonoIcon name="download" size={15} /> Download File
-        </a>
+        </button>
 
         {detailRecord.ArchiveVersions?.length > 0 && (
           <div style={s.versionsSection}>
@@ -227,8 +265,7 @@ export default function ArchivesPage() {
               <div key={v.id} style={s.versionRow}>
                 <span style={s.versionNum}>v{v.version_number}</span>
                 <span style={s.versionMeta}>{v.file_type?.toUpperCase()} · {v.uploadedByUser?.email}</span>
-                <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${v.file_url}`}
-                  target="_blank" rel="noreferrer" style={s.versionLink}>Download</a>
+                <button onClick={() => handleDownloadFile(v.file_url, `v${v.version_number}_${detailRecord.title}`)} style={s.versionLink}>Download</button>
               </div>
             ))}
           </div>
@@ -298,8 +335,7 @@ export default function ArchivesPage() {
                   </div>
                   <div style={s.field}>
                     <label style={s.label}>Category *</label>
-                    <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} required style={s.select}
-                      disabled={isFinance}>
+                    <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} required style={s.select}>
                       <option value="">— Select —</option>
                       {filteredCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
@@ -508,13 +544,13 @@ const s = {
   detailLabel:    { fontSize: '12px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' },
   detailValue:    { fontSize: '13px', color: '#0f172a', fontWeight: '500' },
   detailDesc:     { fontSize: '13px', color: '#475569', lineHeight: '1.5', background: '#f8fafc', borderRadius: '8px', padding: '10px' },
-  downloadBtn:    { display: 'block', textAlign: 'center', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', borderRadius: '8px', padding: '12px', fontSize: '14px', fontWeight: '600', textDecoration: 'none', marginTop: '4px' },
+  downloadBtn:    { display: 'block', width: '100%', textAlign: 'center', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px', fontSize: '14px', fontWeight: '600', textDecoration: 'none', marginTop: '4px', cursor: 'pointer', fontFamily: 'inherit' },
   versionsSection:{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', marginTop: '4px' },
   sectionTitle:   { fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' },
   versionRow:     { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '1px solid #f8fafc' },
   versionNum:     { fontSize: '12px', fontWeight: '700', color: '#0066b3', minWidth: '24px' },
   versionMeta:    { fontSize: '12px', color: '#64748b', flex: 1 },
-  versionLink:    { fontSize: '12px', color: '#0066b3', textDecoration: 'none', fontWeight: '600' },
+  versionLink:    { fontSize: '12px', color: '#0066b3', textDecoration: 'none', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 },
   detailActions:  { display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '4px' },
   editBtn:        { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   deleteBtn:      { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
