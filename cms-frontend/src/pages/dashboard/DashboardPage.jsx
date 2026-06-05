@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
@@ -151,28 +151,133 @@ function AttendanceTrendChart({ data, accent, onNavigate }) {
   );
 }
 
+function rateColor(pct) {
+  if (pct >= 85) return '#16a34a';
+  if (pct >= 70) return '#d97706';
+  return '#dc2626';
+}
+
 function CellGroupAlertsPanel({ data, latestService }) {
+  const [view, setView] = useState('table');
+  const [sort, setSort] = useState({ key: 'absent', dir: 'desc' });
+
   if (!latestService) return <div style={S.empty}>No recent service found.</div>;
   const items = (data || []).filter(g => g.absent > 0);
+  if (items.length === 0) return <div style={S.empty}>All cell groups had full attendance. No alerts.</div>;
+
+  const sorted = [...items].sort((a, b) => {
+    const av = a[sort.key] ?? 0, bv = b[sort.key] ?? 0;
+    if (sort.key === 'cellGroupName') return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sort.dir === 'asc' ? av - bv : bv - av;
+  });
+
+  const toggleSort = (key) => {
+    setSort(prev => {
+      if (prev.key === key) {
+        if (prev.dir === 'desc') return { key, dir: 'asc' };
+        return { key: 'absent', dir: 'desc' };
+      }
+      return { key, dir: key === 'cellGroupName' ? 'asc' : 'desc' };
+    });
+  };
+
+  const sortIndicator = (key) => {
+    if (sort.key !== key) return ' ↕';
+    return sort.dir === 'asc' ? ' ↑' : ' ↓';
+  };
+
+  const totalMembers = sorted.reduce((s, g) => s + g.totalMembers, 0);
+  const totalAttended = sorted.reduce((s, g) => s + g.attended, 0);
+  const totalAbsent = sorted.reduce((s, g) => s + g.absent, 0);
+  const avgRate = totalMembers > 0 ? Math.round((totalAttended / totalMembers) * 100) : 0;
+
+  const latestDate = new Date(latestService.service_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const thStyle = (key) => ({
+    ...S.reportTh,
+    cursor: 'pointer',
+    userSelect: 'none',
+    color: sort.key === key ? '#0f172a' : '#64748b',
+  });
+
+  const tdStyle = (val, threshold) => ({
+    ...S.reportTd,
+    color: val > threshold ? '#dc2626' : '#0f172a',
+    fontWeight: val > threshold ? 700 : 500,
+  });
+
   return (
     <div>
-      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12, fontWeight: 600 }}>
-        Latest: {latestService.title} — {new Date(latestService.service_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, fontSize: 13, color: '#64748b', fontWeight: 600, flexWrap: 'wrap', gap: 8 }}>
+        <span>Latest: {latestService.title} — {latestDate}</span>
+        <button type="button" onClick={() => setView(v => v === 'table' ? 'graph' : 'table')} style={S.viewToggle}>
+          {view === 'table' ? '📊 Show Graph' : '📋 Show Table'}
+        </button>
       </div>
-      {items.length === 0 ? (
-        <div style={S.empty}>All cell groups had full attendance. No alerts.</div>
+
+      {view === 'table' ? (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={S.reportTable}>
+            <thead>
+              <tr>
+                <th style={{ ...S.reportTh, width: 32 }}>#</th>
+                <th style={thStyle('cellGroupName')} onClick={() => toggleSort('cellGroupName')}>Cell Group{sortIndicator('cellGroupName')}</th>
+                <th style={{ ...thStyle('totalMembers'), textAlign: 'right' }} onClick={() => toggleSort('totalMembers')}>Total{sortIndicator('totalMembers')}</th>
+                <th style={{ ...thStyle('attended'), textAlign: 'right' }} onClick={() => toggleSort('attended')}>Attended{sortIndicator('attended')}</th>
+                <th style={{ ...thStyle('absent'), textAlign: 'right' }} onClick={() => toggleSort('absent')}>Absent{sortIndicator('absent')}</th>
+                <th style={{ ...thStyle('rate'), textAlign: 'right' }} onClick={() => toggleSort('rate')}>Rate{sortIndicator('rate')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((g, i) => {
+                const rate = g.totalMembers > 0 ? Math.round((g.attended / g.totalMembers) * 100) : 0;
+                return (
+                  <tr key={g.cellGroupId} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                    <td style={S.reportTd}>{i + 1}</td>
+                    <td style={{ ...S.reportTd, fontWeight: 700, color: '#0f172a' }}>{g.cellGroupName}</td>
+                    <td style={{ ...S.reportTd, textAlign: 'right' }}>{g.totalMembers}</td>
+                    <td style={{ ...S.reportTd, textAlign: 'right' }}>{g.attended}</td>
+                    <td style={tdStyle(g.absent, 10)}>{g.absent}</td>
+                    <td style={{ ...S.reportTd, textAlign: 'right', color: rateColor(rate), fontWeight: 700 }}>{rate}%</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ ...S.reportTotalRow, borderTop: '2px solid #e2e8f0' }}>
+                <td style={S.reportTd}></td>
+                <td style={{ ...S.reportTd, fontWeight: 800, color: '#0f172a' }}>TOTAL</td>
+                <td style={{ ...S.reportTd, textAlign: 'right', fontWeight: 800 }}>{totalMembers}</td>
+                <td style={{ ...S.reportTd, textAlign: 'right', fontWeight: 800 }}>{totalAttended}</td>
+                <td style={{ ...S.reportTd, textAlign: 'right', fontWeight: 800, color: totalAbsent > 0 ? '#dc2626' : '#0f172a' }}>{totalAbsent}</td>
+                <td style={{ ...S.reportTd, textAlign: 'right', fontWeight: 800, color: rateColor(avgRate) }}>{avgRate}%</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       ) : (
-        items.map((g) => (
-          <div key={g.cellGroupId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{g.cellGroupName}</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>{g.totalMembers} members · {g.attended} attended</div>
-            </div>
-            <span style={{ padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: g.absent > 10 ? '#fef2f2' : '#fffbeb', color: g.absent > 10 ? '#dc2626' : '#d97706' }}>
-              {g.absent} absent
-            </span>
+        <div>
+          {sorted.map((g) => {
+            const rate = g.totalMembers > 0 ? Math.round((g.attended / g.totalMembers) * 100) : 0;
+            const barPct = g.totalMembers > 0 ? (g.absent / g.totalMembers) * 100 : 0;
+            const color = rateColor(rate);
+            return (
+              <div key={g.cellGroupId} style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12, fontWeight: 600 }}>
+                  <span style={{ color: '#0f172a' }}>{g.cellGroupName}</span>
+                  <span style={{ color: '#64748b' }}>{g.absent} absent of {g.totalMembers} — {rate}% attended</span>
+                </div>
+                <div style={S.barTrack}>
+                  <div style={{ ...S.barFill, width: `${Math.min(barPct, 100)}%`, background: color }} />
+                </div>
+              </div>
+            );
+          })}
+          <div style={{ marginTop: 16, padding: '10px 12px', background: '#f8fafc', borderRadius: 8, display: 'flex', gap: 20, fontSize: 12, color: '#64748b', fontWeight: 600, flexWrap: 'wrap' }}>
+            <span>Total: {totalAbsent} absent of {totalMembers}</span>
+            <span>Avg Rate: <span style={{ color: rateColor(avgRate) }}>{avgRate}%</span></span>
           </div>
-        ))
+        </div>
       )}
     </div>
   );
@@ -647,5 +752,52 @@ const S = {
     border: '3px solid #dbe6f2',
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
+  },
+  viewToggle: {
+    border: '1px solid #dbe6f2',
+    background: '#f8fafc',
+    color: '#334155',
+    borderRadius: 8,
+    padding: '6px 12px',
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+  },
+  reportTable: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    fontSize: 13,
+  },
+  reportTh: {
+    padding: '8px 10px',
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    color: '#64748b',
+    borderBottom: '2px solid #e2e8f0',
+    textAlign: 'left',
+    whiteSpace: 'nowrap',
+  },
+  reportTd: {
+    padding: '8px 10px',
+    borderBottom: '1px solid #f1f5f9',
+    fontSize: 13,
+    whiteSpace: 'nowrap',
+  },
+  reportTotalRow: {
+    background: '#f8fafc',
+  },
+  barTrack: {
+    height: 22,
+    background: '#f1f5f9',
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: 6,
+    transition: 'width 0.4s ease',
   },
 };
