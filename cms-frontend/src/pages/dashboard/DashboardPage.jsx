@@ -301,7 +301,7 @@ function getDashboardConfig({ role, stats, hasPermission }) {
     row(
       record.Member ? `${record.Member.first_name} ${record.Member.last_name}` : 'Member record',
       `${record.category?.name || 'Uncategorized'} - ${fmtDate(record.transaction_date)}`,
-      null,
+      '/finance',
       fmtMoney(record.amount),
     )
   );
