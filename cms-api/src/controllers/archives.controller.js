@@ -48,6 +48,14 @@ exports.createRecord = async (req, res, next) => {
     if (!req.file) {
       return res.status(400).json({ success: false, message: "A file is required." });
     }
+    // Finance Team can only upload to "Financial Records" category
+    if (req.user?.roleName === "Finance Team") {
+      const { ArchiveCategory } = require("../models");
+      const cat = await ArchiveCategory.findByPk(req.body.category_id);
+      if (!cat || cat.name !== "Financial Records") {
+        return res.status(403).json({ success: false, message: "Finance Team can only upload to the Financial Records category." });
+      }
+    }
     const payload = { ...req.body, ...extractFileFields(req.file) };
     const data    = await archivesService.createRecord(payload, req.user.userId);
     res.status(201).json({ success: true, data });
@@ -56,6 +64,14 @@ exports.createRecord = async (req, res, next) => {
 
 exports.updateRecord = async (req, res, next) => {
   try {
+    // Finance Team can only upload to "Financial Records" category
+    if (req.user?.roleName === "Finance Team" && req.body.category_id) {
+      const { ArchiveCategory } = require("../models");
+      const cat = await ArchiveCategory.findByPk(req.body.category_id);
+      if (!cat || cat.name !== "Financial Records") {
+        return res.status(403).json({ success: false, message: "Finance Team can only upload to the Financial Records category." });
+      }
+    }
     // FIX BUG 1: merge file fields if a new file was uploaded; otherwise keep existing file
     const payload = { ...req.body, ...extractFileFields(req.file) };
     const data    = await archivesService.updateRecord(req.params.id, payload, req.user.userId);

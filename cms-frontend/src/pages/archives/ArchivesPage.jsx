@@ -27,6 +27,8 @@ export default function ArchivesPage() {
   const canApprove = hasPermission('archives', 'update');
   const isApprover = canApprove;
   const isAdmin    = user?.roleName === 'System Admin';
+  const isFinance  = user?.roleName === 'Finance Team';
+  const canUploadFinance = isFinance || canUpload;
 
   const [records, setRecords]       = useState([]);
   const [total, setTotal]           = useState(0);
@@ -90,9 +92,15 @@ export default function ArchivesPage() {
   }, [isMobile, detailRecord]);
 
   const resetForm = () => {
-    setForm({ category_id: '', title: '', description: '', document_date: '', visibility: 'public' });
+    const financeCat = isFinance ? (categories.find(c => c.name === 'Financial Records')?.id || '') : '';
+    setForm({ category_id: financeCat, title: '', description: '', document_date: '', visibility: 'public' });
     setSelectedFile(null); setEditRecord(null); setFormError('');
   };
+
+  // Finance Team can only upload to "Financial Records" category
+  const filteredCategories = isFinance
+    ? categories.filter(c => c.name === 'Financial Records')
+    : categories;
 
   const openEdit = (record) => {
     setEditRecord(record);
@@ -269,7 +277,7 @@ export default function ArchivesPage() {
               <h1 style={s.title}>Archives</h1>
               <p style={s.subtitle}>{total} records</p>
             </div>
-            {canUpload && (
+            {canUploadFinance && (
               <button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} style={s.addBtn}>
                 {showForm ? <><MonoIcon name="close" size={14} /> Cancel</> : '+ Upload'}
               </button>
@@ -290,9 +298,10 @@ export default function ArchivesPage() {
                   </div>
                   <div style={s.field}>
                     <label style={s.label}>Category *</label>
-                    <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} required style={s.select}>
+                    <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} required style={s.select}
+                      disabled={isFinance}>
                       <option value="">— Select —</option>
-                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {filteredCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                 </div>
