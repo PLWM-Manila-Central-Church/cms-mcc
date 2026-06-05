@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const STATUS_COLORS = {
   New:         { bg: '#eff6ff', color: '#3b82f6' },
@@ -122,7 +123,7 @@ export default function MemberProfilePage() {
               {member.status}
             </span>
             {member.barcode && (
-              <span style={styles.barcode}>🔖 {member.barcode}</span>
+              <span style={styles.barcode}><MonoIcon name="label" size={14} /> {member.barcode}</span>
             )}
           </div>
         </div>
@@ -235,7 +236,7 @@ export default function MemberProfilePage() {
                         onClick={() => handleEcDelete(c.id)}
                         style={styles.ecDeleteBtn}
                       >
-                        ✕
+                        <MonoIcon name="close" size={13} />
                       </button>
                     )}
                   </div>

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { LANGS, saveLangCode } from '../../utils/langUtils';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
 const API_IMG = (process.env.REACT_APP_API_URL || '').replace(/\/api$/, '');
@@ -171,7 +172,7 @@ export default function MemberPortalSettings() {
   const inp      = {width:'100%',padding:'11px 14px',fontSize:16,border:`1.5px solid ${c.border}`,borderRadius:8,outline:'none',fontFamily:'inherit',color:c.t1,background:c.surfaceAlt,boxSizing:'border-box',minHeight:44};
 
   const ChipBtn = ({active,onClick,children}) => (
-    <button onClick={onClick} style={{padding:'9px 16px',borderRadius:8,fontSize:13,fontWeight:active?700:500,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${active?'#005599':c.border}`,background:active?c.accentL:'transparent',color:active?c.accentT:c.t2,transition:'all 0.15s',minHeight:40}}>
+    <button onClick={onClick} style={{padding:'9px 16px',borderRadius:8,fontSize:13,fontWeight:active?700:500,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${active?'#005599':c.border}`,background:active?c.accentL:'transparent',color:active?c.accentT:c.t2,transition:'all 0.15s',minHeight:40,display:'inline-flex',alignItems:'center',gap:6}}>
       {children}
     </button>
   );
@@ -211,7 +212,7 @@ export default function MemberPortalSettings() {
                   border:`1px solid ${c.border}`,fontFamily:'inherit',
                   minHeight:44,display:'flex',alignItems:'center',justifyContent:'center',gap:8,
                 }}>
-                {photoUploading?'Uploading…':'📷 Choose Photo'}
+                {photoUploading ? 'Uploading…' : <><MonoIcon name="camera" size={15} /> Choose Photo</>}
               </button>
               <div style={{fontSize:11,color:c.t3,marginTop:6}}>Max 2MB · JPG, PNG, or WebP</div>
               {photoMsg&&<div style={{fontSize:12,color:c.danger,marginTop:6}}>{photoMsg}</div>}
@@ -228,8 +229,8 @@ export default function MemberPortalSettings() {
           <div style={{marginBottom:20}}>
             <label style={lbl}>Theme</label>
             <div style={{display:'flex',gap:10}}>
-              <ChipBtn active={!prefs.theme||prefs.theme==='light'} onClick={()=>updatePref('theme','light')}>☀️ Light</ChipBtn>
-              <ChipBtn active={prefs.theme==='dark'} onClick={()=>updatePref('theme','dark')}>🌙 Dark</ChipBtn>
+              <ChipBtn active={!prefs.theme||prefs.theme==='light'} onClick={()=>updatePref('theme','light')}><MonoIcon name="sun" size={15} /> Light</ChipBtn>
+              <ChipBtn active={prefs.theme==='dark'} onClick={()=>updatePref('theme','dark')}><MonoIcon name="moon" size={15} /> Dark</ChipBtn>
             </div>
           </div>
 
@@ -274,7 +275,7 @@ export default function MemberPortalSettings() {
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               {LANGS.map(lang=>(
                 <ChipBtn key={lang.code} active={(localStorage.getItem('plwm_lang')||prefs.language||'en')===lang.code} onClick={()=>updatePref('language',lang.code)}>
-                  {lang.flag} {lang.label}
+                  <span style={{ fontWeight: 800, fontSize: 11, letterSpacing: '0.04em' }}>{lang.code.toUpperCase()}</span> {lang.label}
                 </ChipBtn>
               ))}
             </div>
@@ -323,7 +324,7 @@ export default function MemberPortalSettings() {
 
       {toast&&(
         <div style={{position:'fixed',bottom:isMobile?24:28,right:isMobile?12:28,left:isMobile?12:'auto',background:toast.type==='success'?'#16a34a':'#dc2626',color:'#fff',padding:'12px 18px',borderRadius:12,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',zIndex:9999,display:'flex',alignItems:'center',gap:10,fontSize:14,fontWeight:500,animation:'slideUp 0.3s ease'}}>
-          <span>{toast.type==='success'?'✓':'✕'}</span>{toast.msg}
+          <span style={{display:'inline-flex'}}><MonoIcon name={toast.type==='success'?'check':'close'} size={15}/></span>{toast.msg}
         </div>
       )}
     </div>

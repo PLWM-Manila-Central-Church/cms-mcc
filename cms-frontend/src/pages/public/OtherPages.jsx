@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout, { PlaylistEmbed, VideoEmbed } from './PublicLayout';
 import PublicIcon from './PublicIcon';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const C = { navy:'#0B2447', navyMid:'#14305E', blue:'#1565C0', gold:'#C9A84C', white:'#fff', off:'#F4F7FB', border:'#E2E8F0', text:'#0F1B33', sub:'#475569', muted:'#64748B', light:'#94A3B8' };
 
@@ -23,9 +24,9 @@ const PageHero = ({ breadcrumbs, title, sub }) => (
 // ── SERMON INDEX ──────────────────────────────────────────────
 export function SermonPage() {
   const items = [
-    { path: '/sermon/latest', icon: '🔴', title: 'Latest Sermon', desc: 'Watch the most recent message from Manila Central Church, updated weekly.' },
-    { path: '/sermon/sunday', icon: '☀️', title: 'Sunday Sermon', desc: 'Full archive of Sunday morning and afternoon messages from our services.' },
-    { path: '/sermon/christian-life', icon: '🕊️', title: 'Christian Life Seminar', desc: 'A series of teachings on living a godly, Spirit-filled Christian life.' },
+    { path: '/sermon/latest', icon: 'play', title: 'Latest Sermon', desc: 'Watch the most recent message from Manila Central Church, updated weekly.' },
+    { path: '/sermon/sunday', icon: 'sun', title: 'Sunday Sermon', desc: 'Full archive of Sunday morning and afternoon messages from our services.' },
+    { path: '/sermon/christian-life', icon: 'dove', title: 'Christian Life Seminar', desc: 'A series of teachings on living a godly, Spirit-filled Christian life.' },
   ];
   return (
     <PublicLayout>
@@ -37,7 +38,7 @@ export function SermonPage() {
               <Link key={item.path} to={item.path} style={{ display:'flex', gap:20, alignItems:'center', background:C.off, border:`1.5px solid ${C.border}`, borderRadius:14, padding:'24px 28px', transition:'all 0.22s' }}
                 onMouseEnter={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.borderColor='rgba(21,101,192,0.35)'; e.currentTarget.style.boxShadow='0 4px 20px rgba(11,36,71,0.09)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background=C.off; e.currentTarget.style.borderColor=C.border; e.currentTarget.style.boxShadow='none'; }}>
-                <div style={{ width:54, height:54, background:'rgba(21,101,192,0.10)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, flexShrink:0 }}>{item.icon}</div>
+                <div style={{ width:54, height:54, background:'rgba(21,101,192,0.10)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:C.text }}><MonoIcon name={item.icon} size={24} /></div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontFamily:"'Lora',serif", fontSize:'1.1rem', fontWeight:700, color:C.text, marginBottom:5 }}>{item.title}</div>
                   <div style={{ fontSize:14, color:C.sub, lineHeight:1.55 }}>{item.desc}</div>

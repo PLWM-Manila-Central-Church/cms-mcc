@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const LOGO = process.env.PUBLIC_URL + '/logo.jpg';
 
@@ -94,7 +95,7 @@ export default function LoginPage() {
 
             {error && (
               <div style={S.errorBox}>
-                <span style={S.errorIcon}>⚠</span>
+                <MonoIcon name="warning" size={16} style={S.errorIcon} />
                 {error}
               </div>
             )}
@@ -104,7 +105,7 @@ export default function LoginPage() {
               <div style={S.field}>
                 <label style={S.label}>Email Address</label>
                 <div style={{ position: 'relative' }}>
-                  <span style={S.fieldIcon}>✉</span>
+                  <span style={S.fieldIcon}><MonoIcon name="mail" size={17} /></span>
                   <input
                     type="email"
                     name="email"
@@ -128,7 +129,7 @@ export default function LoginPage() {
               <div style={S.field}>
                 <label style={S.label}>Password</label>
                 <div style={{ position: 'relative' }}>
-                  <span style={S.fieldIcon}>🔒</span>
+                  <span style={S.fieldIcon}><MonoIcon name="lock" size={17} /></span>
                   <input
                     type={showPass ? 'text' : 'password'}
                     name="password"
@@ -153,7 +154,7 @@ export default function LoginPage() {
                     tabIndex={-1}
                     aria-label={showPass ? 'Hide password' : 'Show password'}
                   >
-                    {showPass ? '🙈' : '👁️'}
+                    <MonoIcon name={showPass ? 'eyeOff' : 'eye'} size={17} />
                   </button>
                 </div>
               </div>

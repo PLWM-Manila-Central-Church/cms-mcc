@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
+import MonoIcon from '../../components/common/MonoIcon';
 
 function ageFromDate(dateValue) {
   if (!dateValue) return null;
@@ -72,11 +73,11 @@ export default function MinistryPage() {
   }, [isMinistryLeader, user?.leadsMinistryId, user?.leadsMinistryName]);
 
   const tabs = isMember
-    ? [{ key: 'substitutes', label: '🔄 Substitute Requests' }]
+    ? [{ key: 'substitutes', label: 'Substitute Requests' }]
     : [
-        { key: 'assignments', label: '📋 Assignments' },
-        { key: 'roles',       label: '🎭 Roles' },
-        { key: 'substitutes', label: '🔄 Substitute Requests' },
+        { key: 'assignments', label: 'Assignments' },
+        { key: 'roles',       label: 'Roles' },
+        { key: 'substitutes', label: 'Substitute Requests' },
       ];
 
   const defaultTab = isMember ? 'substitutes' : 'assignments';
@@ -572,7 +573,7 @@ function RosterTab({ leadsMinistryId }) {
         </div>
         <div ref={dropRef} style={{ position: 'relative' }}>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', opacity: 0.4, pointerEvents: 'none' }}>🔍</span>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.45, pointerEvents: 'none', color: '#64748b', display: 'inline-flex' }}><MonoIcon name="search" size={15} /></span>
             <input
               ref={addInputRef}
               value={addSearch}
@@ -594,7 +595,7 @@ function RosterTab({ leadsMinistryId }) {
               <button
                 onMouseDown={e => { e.preventDefault(); setAddSearch(''); setAddResults([]); setAddDropOpen(false); addInputRef.current?.focus(); }}
                 style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#94a3b8', padding: '2px 4px' }}
-              >✕</button>
+              ><MonoIcon name="close" size={14} /></button>
             )}
           </div>
           {addDropOpen && addResults.length > 0 && (
@@ -628,16 +629,16 @@ function RosterTab({ leadsMinistryId }) {
             <div style={{ marginTop: '6px', fontSize: '13px', color: '#94a3b8', padding: '0 2px' }}>No members found matching "{addSearch}"</div>
           )}
         </div>
-        {actionErr && <div style={{ marginTop: 8, color: '#dc2626', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>⚠ {actionErr}</div>}
+        {actionErr && <div style={{ marginTop: 8, color: '#dc2626', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}><MonoIcon name="warning" size={14} /> {actionErr}</div>}
       </div>
 
       {/* ── Toolbar ──────────────────────────────────────────── */}
       <div style={{ ...S.toolbar, justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
           <div style={S.searchWrap}>
-            <span style={S.searchIcon}>🔍</span>
+            <span style={S.searchIcon}><MonoIcon name="search" size={15} /></span>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search ministry members…" style={S.searchInput} />
-            {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
+            {search && <button style={S.clearBtn} onClick={() => setSearch('')}><MonoIcon name="close" size={14} /></button>}
           </div>
           
           {/* CHANGE 3: Filter dropdowns for Cell Group and Group */}
@@ -671,12 +672,12 @@ function RosterTab({ leadsMinistryId }) {
             onClick={() => setConfirmBulk(true)}
             style={{ background: 'linear-gradient(135deg,#dc2626,#ef4444)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
           >
-            🗑 Remove {selected.size} selected
+            <MonoIcon name="delete" size={15} /> Remove {selected.size} selected
           </button>
         )}
       </div>
 
-      {error && <div style={S.errBanner}><span>⚠ {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
+      {error && <div style={S.errBanner}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><MonoIcon name="warning" size={15} /> {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
 
       {/* ── Bulk Remove Confirm Modal ─────────────────────────── */}
       {confirmBulk && (
@@ -684,7 +685,7 @@ function RosterTab({ leadsMinistryId }) {
           <div style={S.modalBox}>
             <div style={S.modalAccent} />
             <div style={S.modalBody}>
-              <div style={S.delIcon}>🗑️</div>
+              <div style={S.delIcon}><MonoIcon name="delete" size={28} /></div>
               <div style={S.modalTitle}>Remove {selected.size} Member{selected.size !== 1 ? 's' : ''}?</div>
               <div style={S.modalSub}>
                 This will remove the selected {selected.size === 1 ? 'member' : `${selected.size} members`} from the ministry. This action cannot be undone.
@@ -710,7 +711,7 @@ function RosterTab({ leadsMinistryId }) {
           <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color: '#64748b', marginTop: '12px' }}>Loading…</span></div>
         ) : filtered.length === 0 ? (
           <div style={S.centerMsg}>
-            <span style={S.emptyIcon}>👥</span>
+            <span style={S.emptyIcon}><MonoIcon name="members" size={36} /></span>
             <span style={S.emptyTitle}>{search ? 'No matches found' : 'No members in ministry yet'}</span>
             <span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Use the search above to add members.'}</span>
           </div>
@@ -882,19 +883,19 @@ function AssignmentsTab() {
     <>
       <div style={S.toolbar}>
         <div style={S.searchWrap}>
-          <span style={S.searchIcon}>🔍</span>
+          <span style={S.searchIcon}><MonoIcon name="search" size={15} /></span>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search member, role, or service…" style={S.searchInput} />
-          {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
+          {search && <button style={S.clearBtn} onClick={() => setSearch('')}><MonoIcon name="close" size={14} /></button>}
         </div>
         <div style={S.countBadge}>{filtered.length} assignment{filtered.length !== 1 ? 's' : ''}</div>
         {canAdd && <button style={S.addBtn} onClick={openAdd}>+ New Assignment</button>}
       </div>
-      {error && <div style={S.errBanner}><span>⚠ {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
+      {error && <div style={S.errBanner}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><MonoIcon name="warning" size={15} /> {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
       <div style={S.tableCard}>
         {loading ? (
           <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color:'#64748b', marginTop:'12px' }}>Loading…</span></div>
         ) : filtered.length === 0 ? (
-          <div style={S.centerMsg}><span style={S.emptyIcon}>📋</span><span style={S.emptyTitle}>{search ? 'No matches found' : 'No assignments yet'}</span><span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Assignment" to get started.'}</span></div>
+          <div style={S.centerMsg}><span style={S.emptyIcon}><MonoIcon name="clipboard" size={36} /></span><span style={S.emptyTitle}>{search ? 'No matches found' : 'No assignments yet'}</span><span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Assignment" to get started.'}</span></div>
         ) : (
           <div style={S.tableScroll}><table style={S.table}>
             <thead><tr style={S.thead}><th style={S.th}>#</th><th style={S.th}>Member</th><th style={S.th}>Ministry Role</th><th style={S.th}>Service</th><th style={S.th}>Date</th><th style={S.th}>Status</th><th style={{ ...S.th, textAlign:'right' }}>Actions</th></tr></thead>
@@ -924,7 +925,7 @@ function AssignmentsTab() {
             <div style={S.modalBody}>
               <h3 style={S.modalTitle}>{modal === 'add' ? '+ New Assignment' : 'Edit Assignment'}</h3>
               <p style={S.modalSub}>{modal === 'add' ? 'Assign a member to a ministry role for a service.' : 'Update role or confirmation status.'}</p>
-              {formErr && <div style={S.formErr}>⚠ {formErr}</div>}
+              {formErr && <div style={S.formErr}><MonoIcon name="warning" size={14} /> {formErr}</div>}
               {modal === 'add' && (<>
                 <div style={S.fieldGroup}><label style={S.label}>Service <span style={{ color:'#ef4444' }}>*</span></label><select value={form.service_id} onChange={e => { setForm({ ...form, service_id: e.target.value }); setFormErr(''); }} style={S.select}><option value="">— Select a service —</option>{services.map(s => <option key={s.id} value={s.id}>{s.title} ({fmtDate(s.service_date)})</option>)}</select></div>
                 <div style={S.fieldGroup}><label style={S.label}>Member <span style={{ color:'#ef4444' }}>*</span></label><select value={form.member_id} onChange={e => { setForm({ ...form, member_id: e.target.value }); setFormErr(''); }} style={S.select}><option value="">— Select a member —</option>{members.map(m => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}</select></div>
@@ -944,10 +945,10 @@ function AssignmentsTab() {
           <div style={{ ...S.modalBox, maxWidth:'420px' }} onClick={e => e.stopPropagation()}>
             <div style={{ ...S.modalAccent, background:'#ef4444' }} />
             <div style={S.modalBody}>
-              <div style={S.delIcon}>🗑️</div>
+              <div style={S.delIcon}><MonoIcon name="delete" size={28} /></div>
               <h3 style={S.modalTitle}>Remove Assignment?</h3>
               <p style={S.modalSub}>Remove <strong>{delTarget.Member?.first_name} {delTarget.Member?.last_name}</strong> as <strong>{delTarget.ministryRole?.name}</strong> from <strong>{delTarget.Service?.title}</strong>?</p>
-              {delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}>⚠ {delErr}</div>}
+              {delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}><MonoIcon name="warning" size={14} /> {delErr}</div>}
               <div style={S.modalActions}>
                 <button style={S.cancelBtn} onClick={() => setDelTarget(null)} disabled={deleting}>Cancel</button>
                 <button style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }} onClick={handleDelete} disabled={deleting}>{deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Removing…</span> : 'Yes, Remove'}</button>
@@ -1018,19 +1019,19 @@ function RolesTab() {
     <>
       <div style={S.toolbar}>
         <div style={S.searchWrap}>
-          <span style={S.searchIcon}>🔍</span>
+          <span style={S.searchIcon}><MonoIcon name="search" size={15} /></span>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search roles…" style={S.searchInput} />
-          {search && <button style={S.clearBtn} onClick={() => setSearch('')}>✕</button>}
+          {search && <button style={S.clearBtn} onClick={() => setSearch('')}><MonoIcon name="close" size={14} /></button>}
         </div>
         <div style={S.countBadge}>{filtered.length} role{filtered.length !== 1 ? 's' : ''}</div>
         {canAdd && <button style={S.addBtn} onClick={openAdd}>+ New Role</button>}
       </div>
-      {error && <div style={S.errBanner}><span>⚠ {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
+      {error && <div style={S.errBanner}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><MonoIcon name="warning" size={15} /> {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
       <div style={S.tableCard}>
         {loading
           ? <div style={S.centerMsg}><div style={S.spinner} /></div>
           : filtered.length === 0
-            ? <div style={S.centerMsg}><span style={S.emptyIcon}>🎭</span><span style={S.emptyTitle}>{search ? 'No matches found' : 'No roles yet'}</span><span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Role" to create the first ministry role.'}</span></div>
+            ? <div style={S.centerMsg}><span style={S.emptyIcon}><MonoIcon name="ministry" size={36} /></span><span style={S.emptyTitle}>{search ? 'No matches found' : 'No roles yet'}</span><span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Role" to create the first ministry role.'}</span></div>
             : <div style={S.tableScroll}><table style={S.table}>
                 <thead>
                   <tr style={S.thead}>
@@ -1059,7 +1060,7 @@ function RolesTab() {
                           fontSize: '12px', fontWeight: '700',
                           padding: '3px 10px', borderRadius: '20px',
                         }}>
-                          👥 {r.member_count || 0}
+                          <MonoIcon name="members" size={13} /> {r.member_count || 0}
                         </span>
                       </td>
                       <td style={{ ...S.td, textAlign:'right' }}>
@@ -1072,8 +1073,8 @@ function RolesTab() {
               </table></div>
         }
       </div>
-      {modal && (<div style={S.backdrop} onClick={closeModal}><div style={{ ...S.modalBox, maxWidth:'440px' }} onClick={e => e.stopPropagation()}><div style={S.modalAccent} /><div style={S.modalBody}><h3 style={S.modalTitle}>{modal === 'add' ? '+ New Ministry Role' : 'Edit Role'}</h3><p style={S.modalSub}>{modal === 'add' ? 'Add a new ministry team (e.g. Choir, Media Team, Ushers…)' : `Editing: ${editing?.name}`}</p>{formErr && <div style={S.formErr}>⚠ {formErr}</div>}<div style={S.fieldGroup}><label style={S.label}>Role Name <span style={{ color:'#ef4444' }}>*</span></label><input value={name} onChange={e => { setName(e.target.value); setFormErr(''); }} placeholder="e.g. Worship Leader" autoFocus style={S.input} /></div><div style={S.modalActions}><button style={S.cancelBtn} onClick={closeModal} disabled={saving}>Cancel</button><button style={{ ...S.saveBtn, opacity: saving ? 0.8 : 1 }} onClick={handleSave} disabled={saving}>{saving ? <span style={S.loadRow}><span style={S.miniSpinner} />{modal === 'add' ? 'Creating…' : 'Saving…'}</span> : modal === 'add' ? 'Create Role' : 'Save Changes'}</button></div></div></div></div>)}
-      {delTarget && (<div style={S.backdrop} onClick={() => setDelTarget(null)}><div style={{ ...S.modalBox, maxWidth:'420px' }} onClick={e => e.stopPropagation()}><div style={{ ...S.modalAccent, background:'#ef4444' }} /><div style={S.modalBody}><div style={S.delIcon}>🗑️</div><h3 style={S.modalTitle}>Delete Role?</h3><p style={S.modalSub}>Delete <strong>"{delTarget.name}"</strong>? This cannot be undone. Roles with active assignments or roster members cannot be deleted.</p>{delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}>⚠ {delErr}</div>}<div style={S.modalActions}><button style={S.cancelBtn} onClick={() => setDelTarget(null)} disabled={deleting}>Cancel</button><button style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }} onClick={handleDelete} disabled={deleting}>{deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Deleting…</span> : 'Yes, Delete'}</button></div></div></div></div>)}
+      {modal && (<div style={S.backdrop} onClick={closeModal}><div style={{ ...S.modalBox, maxWidth:'440px' }} onClick={e => e.stopPropagation()}><div style={S.modalAccent} /><div style={S.modalBody}><h3 style={S.modalTitle}>{modal === 'add' ? '+ New Ministry Role' : 'Edit Role'}</h3><p style={S.modalSub}>{modal === 'add' ? 'Add a new ministry team (e.g. Choir, Media Team, Ushers…)' : `Editing: ${editing?.name}`}</p>{formErr && <div style={S.formErr}><MonoIcon name="warning" size={14} /> {formErr}</div>}<div style={S.fieldGroup}><label style={S.label}>Role Name <span style={{ color:'#ef4444' }}>*</span></label><input value={name} onChange={e => { setName(e.target.value); setFormErr(''); }} placeholder="e.g. Worship Leader" autoFocus style={S.input} /></div><div style={S.modalActions}><button style={S.cancelBtn} onClick={closeModal} disabled={saving}>Cancel</button><button style={{ ...S.saveBtn, opacity: saving ? 0.8 : 1 }} onClick={handleSave} disabled={saving}>{saving ? <span style={S.loadRow}><span style={S.miniSpinner} />{modal === 'add' ? 'Creating…' : 'Saving…'}</span> : modal === 'add' ? 'Create Role' : 'Save Changes'}</button></div></div></div></div>)}
+      {delTarget && (<div style={S.backdrop} onClick={() => setDelTarget(null)}><div style={{ ...S.modalBox, maxWidth:'420px' }} onClick={e => e.stopPropagation()}><div style={{ ...S.modalAccent, background:'#ef4444' }} /><div style={S.modalBody}><div style={S.delIcon}><MonoIcon name="delete" size={28} /></div><h3 style={S.modalTitle}>Delete Role?</h3><p style={S.modalSub}>Delete <strong>"{delTarget.name}"</strong>? This cannot be undone. Roles with active assignments or roster members cannot be deleted.</p>{delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}><MonoIcon name="warning" size={14} /> {delErr}</div>}<div style={S.modalActions}><button style={S.cancelBtn} onClick={() => setDelTarget(null)} disabled={deleting}>Cancel</button><button style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }} onClick={handleDelete} disabled={deleting}>{deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Deleting…</span> : 'Yes, Delete'}</button></div></div></div></div>)}
     </>
   );
 }
@@ -1140,7 +1141,7 @@ function SubstituteRequestsTab() {
 
   return (
     <>
-      <div style={S.toolbar}><button onClick={() => { setShowForm(!showForm); setFormError(''); }} style={S.addBtn}>{showForm ? '✕ Cancel' : '+ New Request'}</button></div>
+      <div style={S.toolbar}><button onClick={() => { setShowForm(!showForm); setFormError(''); }} style={S.addBtn}>{showForm ? <><MonoIcon name="close" size={14} /> Cancel</> : '+ New Request'}</button></div>
       {showForm && (
         <div style={{ ...S.tableCard, padding: '24px', marginBottom: '20px' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px' }}>Submit Substitute Request</h3>
@@ -1158,7 +1159,7 @@ function SubstituteRequestsTab() {
                   </div>
                 )}
               </div>
-              {form.proposed_member_id && <p style={{ fontSize: '12px', color: '#16a34a', margin: '4px 0 0' }}>✓ Replacement selected</p>}
+              {form.proposed_member_id && <p style={{ fontSize: '12px', color: '#16a34a', margin: '4px 0 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}><MonoIcon name="check" size={13} /> Replacement selected</p>}
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}><button type="button" onClick={() => setShowForm(false)} style={S.cancelBtn}>Cancel</button><button type="submit" disabled={saving} style={{ ...S.saveBtn, opacity: saving ? 0.7 : 1 }}>{saving ? 'Submitting...' : 'Submit Request'}</button></div>
           </form>
@@ -1166,7 +1167,7 @@ function SubstituteRequestsTab() {
       )}
       {error && <div style={S.errBanner}>{error}</div>}
       {loading ? <div style={S.centerMsg}><div style={S.spinner} /></div>
-      : requests.length === 0 ? <div style={S.centerMsg}><div style={S.emptyIcon}>🔄</div><div style={S.emptyTitle}>No substitute requests yet</div><div style={S.emptyHint}>Click "+ New Request" to submit one.</div></div>
+      : requests.length === 0 ? <div style={S.centerMsg}><div style={S.emptyIcon}><MonoIcon name="refresh" size={36} /></div><div style={S.emptyTitle}>No substitute requests yet</div><div style={S.emptyHint}>Click "+ New Request" to submit one.</div></div>
       : <div style={S.tableCard}><div style={S.tableScroll}><table style={S.table}><thead><tr style={S.thead}><th style={S.th}>Service</th><th style={S.th}>Reason</th><th style={S.th}>Proposed Replacement</th><th style={S.th}>Status</th><th style={S.th}>Submitted</th></tr></thead><tbody>{requests.map(r => { const meta = STATUS_META[r.status] || STATUS_META.pending; const serviceTitle = r.assignment?.Service?.title || `Service #${r.assignment?.service_id || '—'}`; const proposed = r.proposedSubstituteUser?.member; return (<tr key={r.id} style={S.row}><td style={{ ...S.td, fontWeight: '600', color: '#0f172a' }}>{serviceTitle}</td><td style={{ ...S.td, maxWidth: '220px', color: '#374151' }}>{r.reason}</td><td style={S.td}>{proposed ? `${proposed.last_name}, ${proposed.first_name}` : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>None</span>}</td><td style={S.td}><span style={{ ...S.pill, background: meta.bg, color: meta.color }}>{meta.label}</span></td><td style={{ ...S.td, color: '#64748b' }}>{fmtDate(r.created_at)}</td></tr>); })}</tbody></table></div></div>}
     </>
   );
@@ -1182,9 +1183,9 @@ const S = {
   tabActive:  { background:'#fff', color:'#005599', boxShadow:'0 1px 4px rgba(0,0,0,0.1)' },
   toolbar:    { display:'flex', alignItems:'center', gap:'12px', marginBottom:'20px', flexWrap:'wrap' },
   searchWrap: { position:'relative', flex:1, minWidth: 0 },
-  searchIcon: { position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', fontSize:'14px', opacity:0.45, pointerEvents:'none' },
+  searchIcon: { position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', opacity:0.45, pointerEvents:'none', display:'inline-flex', color:'#64748b' },
   searchInput:{ width:'100%', padding:'10px 36px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'14px', outline:'none', boxSizing:'border-box', background:'#fff', color:'#0f172a' },
-  clearBtn:   { position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:'12px', color:'#94a3b8', padding:'2px 4px' },
+  clearBtn:   { position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#94a3b8', padding:'2px 4px', display:'inline-flex', alignItems:'center', justifyContent:'center' },
   countBadge: { fontSize:'13px', color:'#64748b', fontWeight:'600', background:'#f1f5f9', padding:'6px 14px', borderRadius:'20px' },
   addBtn:     { background:'linear-gradient(135deg,#003d70,#005599)', color:'#fff', border:'none', borderRadius:'10px', padding:'11px 20px', fontSize:'14px', fontWeight:'700', cursor:'pointer', whiteSpace:'nowrap' },
   errBanner:  { background:'#fef2f2', border:'1px solid #fecaca', color:'#dc2626', borderRadius:'10px', padding:'12px 16px', fontSize:'13px', marginBottom:'16px', display:'flex', justifyContent:'space-between', alignItems:'center' },
@@ -1218,7 +1219,7 @@ const S = {
   modalBody:  { padding:'32px 36px 28px' },
   modalTitle: { fontSize:'20px', fontWeight:'800', color:'#0f172a', margin:'0 0 6px', letterSpacing:'-0.2px' },
   modalSub:   { fontSize:'13px', color:'#64748b', margin:'0 0 24px', lineHeight:'1.5' },
-  formErr:    { background:'#fef2f2', border:'1px solid #fecaca', color:'#dc2626', borderRadius:'8px', padding:'10px 14px', fontSize:'13px', marginBottom:'20px' },
+  formErr:    { background:'#fef2f2', border:'1px solid #fecaca', color:'#dc2626', borderRadius:'8px', padding:'10px 14px', fontSize:'13px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'6px' },
   fieldGroup: { display:'flex', flexDirection:'column', gap:'6px', marginBottom:'20px' },
   label:      { fontSize:'12px', fontWeight:'700', color:'#374151', textTransform:'uppercase', letterSpacing:'0.4px' },
   input:      { padding:'11px 14px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'14px', outline:'none', color:'#0f172a', background:'#fafbfc' },
@@ -1229,5 +1230,5 @@ const S = {
   saveBtn:    { background:'linear-gradient(135deg,#003d70,#005599)', color:'#fff', border:'none', borderRadius:'10px', padding:'11px 22px', fontSize:'14px', fontWeight:'700', cursor:'pointer' },
   loadRow:    { display:'flex', alignItems:'center', gap:'8px' },
   miniSpinner:{ display:'inline-block', width:'14px', height:'14px', border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid #fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' },
-  delIcon:    { fontSize:'36px', marginBottom:'12px' },
+  delIcon:    { fontSize:'36px', marginBottom:'12px', display:'inline-flex', color:'#ef4444' },
 };

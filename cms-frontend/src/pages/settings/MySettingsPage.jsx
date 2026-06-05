@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { LANGS, saveLangCode } from '../../utils/langUtils';
+import MonoIcon from '../../components/common/MonoIcon';
 
 // ── Constants ─────────────────────────────────────────────────
 const FONTS = [
@@ -173,7 +174,7 @@ export default function MySettingsPage() {
       border: `1.5px solid ${active ? '#005599' : '#e2e8f0'}`,
       background: active ? '#e8f4fd' : 'transparent',
       color: active ? '#005599' : '#374151',
-      transition: 'all 0.15s', minHeight: 38,
+      transition: 'all 0.15s', minHeight: 38, display: 'inline-flex', alignItems: 'center', gap: 6,
     }}>
       {children}
     </button>
@@ -219,9 +220,9 @@ export default function MySettingsPage() {
                 <button
                   onClick={() => fileRef.current?.click()}
                   disabled={photoUploading}
-                  style={{ padding: '10px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: '#e8f4fd', color: '#005599', border: '1px solid #e2e8f0', fontFamily: 'inherit', minHeight: 40 }}
+                  style={{ padding: '10px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: '#e8f4fd', color: '#005599', border: '1px solid #e2e8f0', fontFamily: 'inherit', minHeight: 40, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
-                  {photoUploading ? 'Uploading…' : '📷 Choose Photo'}
+                  {photoUploading ? 'Uploading…' : <><MonoIcon name="camera" size={15} /> Choose Photo</>}
                 </button>
                 {photoMsg && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 6 }}>{photoMsg}</div>}
               </div>
@@ -288,7 +289,7 @@ export default function MySettingsPage() {
                   active={(localStorage.getItem('plwm_lang') || prefs.language || 'en') === lang.code}
                   onClick={() => updatePref('language', lang.code)}
                 >
-                  {lang.flag} {lang.label}
+                  <span style={{ fontWeight: 800, fontSize: 11, letterSpacing: '0.04em' }}>{lang.code.toUpperCase()}</span> {lang.label}
                 </ChipBtn>
               ))}
             </div>
@@ -346,7 +347,7 @@ export default function MySettingsPage() {
       {/* Toast */}
       {toast && (
         <div style={{ position: 'fixed', bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', right: 16, left: 16, background: toast.type === 'success' ? '#16a34a' : '#dc2626', color: '#fff', padding: '12px 16px', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.2)', zIndex: 9999, display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 500, animation: 'slideUp 0.3s ease' }}>
-          <span>{toast.type === 'success' ? '✓' : '✕'}</span>{toast.msg}
+          <span style={{ display: 'inline-flex' }}><MonoIcon name={toast.type === 'success' ? 'check' : 'close'} size={15} /></span>{toast.msg}
         </div>
       )}
     </div>

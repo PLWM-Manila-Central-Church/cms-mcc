@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { LANGS, getLangCode, saveLangCode, loadGTScript, applyGTLang } from '../../utils/langUtils';
+import MonoIcon from '../../components/common/MonoIcon';
 
 // ── Constants ─────────────────────────────────────────────────
 const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
@@ -44,10 +45,11 @@ const RSVP_META = {
 
 const GOOGLE_FONTS = ['Inter','Open Sans','Lato','Roboto','DM Sans','Space Grotesk','Figtree','Work Sans'];
 const FONTSHARE    = ['Satoshi'];
+const TAB_ICON_NAMES = ['home', 'calendar', 'attendance', 'finance'];
 
 const LBL = {
-  en:{tabs:['Overview','Events','Attendance','Tithes'],tabIcons:['🏠','📅','✅','💰'],portal:'Member Portal',welcome:'Welcome',settings:'Settings',logout:'Logout',attendanceRate:'Attendance Rate',last2mo:'Last month',totalOfferings:'Total Tithes & Offerings',thisYear:'This year',memberSince:'Member Since',myProfile:'My Profile',editProfile:'Edit Profile',save:'Save',cancel:'Cancel',memberId:'Member ID',memberName:'Member Name',spiritual:'Spiritual Birthday',cellGroup:'Cell Group',address:'Address',joinDate:'Join Date',group:'Group',contact:'Contact No',birthdate:'Flesh Birthday',status:'Status',ministry:'Ministry Assignments',services:'Upcoming Services',confirm:'Confirm',confirmed:'Confirmed ✓',noMinistry:'No ministry assignments.',noServices:'No upcoming services.',noEvents:'No upcoming events at this time.',registerNow:'Register Now',cancelReg:'Cancel Registration',closedReg:'Registration Closed',viewDetails:'View Details',myRegs:'My Registrations',regDeadline:'Deadline',of:'of',registered:'registered',attendanceHistory:'My Attendance History',noAttendance:'No attendance records found.',date:'Date',service:'Service',checkin:'Check-in',statusL:'Status',present:'Present',absent:'Absent',offeringsHistory:'My Tithes and Offering History',noOfferings:'No giving records.',type:'Type',amount:'Amount',totalYtd:'Total Year-to-Date',verse:'"God loves a cheerful giver." — 2 Corinthians 9:7',excellent:'Excellent',good:'Good',improve:'Needs Improvement',willAttend:'I will attend',wontAttend:'Cannot attend',undecided:'Undecided',rsvp:'RSVP',closePanel:'Close',serviceDetails:'Service Details',eventDetails:'Event Details',attending:'Attending',notAttending:'Not attending',capacity:'Capacity',responseBy:'Response by',yourRsvp:'Your RSVP'},
-  tl:{tabs:['Pangkalahatang-tanaw','Mga Kaganapan','Pagdalo','Mga Handog'],tabIcons:['🏠','📅','✅','💰'],portal:'Portal ng Miyembro',welcome:'Maligayang pagdating',settings:'Mga Setting',logout:'Mag-logout',attendanceRate:'Rate ng Pagdalo',last2mo:'Nakaraang buwan',totalOfferings:'Kabuuang Ikapu at Handog',thisYear:'Ngayong taon',memberSince:'Miyembro Mula',myProfile:'Aking Profile',editProfile:'I-edit',save:'I-save',cancel:'Kanselahin',memberId:'Member ID',memberName:'Pangalan',spiritual:'Espirituwal na Kaarawan',cellGroup:'Cell Group',address:'Tirahan',joinDate:'Petsa ng Pagsali',group:'Grupo',contact:'Numero',birthdate:'Kaarawan',status:'Katayuan',ministry:'Mga Takdang Gawain',services:'Mga Paparating na Serbisyo',confirm:'Kumpirmahin',confirmed:'Nakumpirma ✓',noMinistry:'Walang mga takdang gawain.',noServices:'Walang paparating na serbisyo.',noEvents:'Walang mga kaganapan.',registerNow:'Mag-register Na',cancelReg:'Kanselahin',closedReg:'Sarado na',viewDetails:'Tingnan',myRegs:'Aking mga Pagpaparehistro',regDeadline:'Deadline',of:'sa',registered:'nakapag-register',attendanceHistory:'Kasaysayan ng Pagdalo',noAttendance:'Walang rekord ng pagdalo.',date:'Petsa',service:'Serbisyo',checkin:'Check-in',statusL:'Katayuan',present:'Naroroon',absent:'Wala',offeringsHistory:'Kasaysayan ng Ikapu at Handog',noOfferings:'Walang rekord ng pagbibigay.',type:'Uri',amount:'Halaga',totalYtd:'Kabuuang Ikapu at Handog sa Taon',verse:'"Ang nagbibigay nang masaya ay mahal ng Diyos." — 2 Mga Taga-Corinto 9:7',excellent:'Kahusayan',good:'Mabuti',improve:'Kailangan ng Pagpabuti',willAttend:'Darating ako',wontAttend:'Hindi ako makakarating',undecided:'Hindi pa sigurado',rsvp:'RSVP',closePanel:'Isara',serviceDetails:'Detalye ng Serbisyo',eventDetails:'Detalye ng Kaganapan',attending:'Darating',notAttending:'Hindi darating',capacity:'Kapasidad',responseBy:'Sagot bago ang',yourRsvp:'Iyong RSVP'},
+  en:{tabs:['Overview','Events','Attendance','Tithes'],portal:'Member Portal',welcome:'Welcome',settings:'Settings',logout:'Logout',attendanceRate:'Attendance Rate',last2mo:'Last month',totalOfferings:'Total Tithes & Offerings',thisYear:'This year',memberSince:'Member Since',myProfile:'My Profile',editProfile:'Edit Profile',save:'Save',cancel:'Cancel',memberId:'Member ID',memberName:'Member Name',spiritual:'Spiritual Birthday',cellGroup:'Cell Group',address:'Address',joinDate:'Join Date',group:'Group',contact:'Contact No',birthdate:'Flesh Birthday',status:'Status',ministry:'Ministry Assignments',services:'Upcoming Services',confirm:'Confirm',confirmed:'Confirmed',noMinistry:'No ministry assignments.',noServices:'No upcoming services.',noEvents:'No upcoming events at this time.',registerNow:'Register Now',cancelReg:'Cancel Registration',closedReg:'Registration Closed',viewDetails:'View Details',myRegs:'My Registrations',regDeadline:'Deadline',of:'of',registered:'registered',attendanceHistory:'My Attendance History',noAttendance:'No attendance records found.',date:'Date',service:'Service',checkin:'Check-in',statusL:'Status',present:'Present',absent:'Absent',offeringsHistory:'My Tithes and Offering History',noOfferings:'No giving records.',type:'Type',amount:'Amount',totalYtd:'Total Year-to-Date',verse:'"God loves a cheerful giver." — 2 Corinthians 9:7',excellent:'Excellent',good:'Good',improve:'Needs Improvement',willAttend:'I will attend',wontAttend:'Cannot attend',undecided:'Undecided',rsvp:'RSVP',closePanel:'Close',serviceDetails:'Service Details',eventDetails:'Event Details',attending:'Attending',notAttending:'Not attending',capacity:'Capacity',responseBy:'Response by',yourRsvp:'Your RSVP'},
+  tl:{tabs:['Pangkalahatang-tanaw','Mga Kaganapan','Pagdalo','Mga Handog'],portal:'Portal ng Miyembro',welcome:'Maligayang pagdating',settings:'Mga Setting',logout:'Mag-logout',attendanceRate:'Rate ng Pagdalo',last2mo:'Nakaraang buwan',totalOfferings:'Kabuuang Ikapu at Handog',thisYear:'Ngayong taon',memberSince:'Miyembro Mula',myProfile:'Aking Profile',editProfile:'I-edit',save:'I-save',cancel:'Kanselahin',memberId:'Member ID',memberName:'Pangalan',spiritual:'Espirituwal na Kaarawan',cellGroup:'Cell Group',address:'Tirahan',joinDate:'Petsa ng Pagsali',group:'Grupo',contact:'Numero',birthdate:'Kaarawan',status:'Katayuan',ministry:'Mga Takdang Gawain',services:'Mga Paparating na Serbisyo',confirm:'Kumpirmahin',confirmed:'Nakumpirma',noMinistry:'Walang mga takdang gawain.',noServices:'Walang paparating na serbisyo.',noEvents:'Walang mga kaganapan.',registerNow:'Mag-register Na',cancelReg:'Kanselahin',closedReg:'Sarado na',viewDetails:'Tingnan',myRegs:'Aking mga Pagpaparehistro',regDeadline:'Deadline',of:'sa',registered:'nakapag-register',attendanceHistory:'Kasaysayan ng Pagdalo',noAttendance:'Walang rekord ng pagdalo.',date:'Petsa',service:'Serbisyo',checkin:'Check-in',statusL:'Katayuan',present:'Naroroon',absent:'Wala',offeringsHistory:'Kasaysayan ng Ikapu at Handog',noOfferings:'Walang rekord ng pagbibigay.',type:'Uri',amount:'Halaga',totalYtd:'Kabuuang Ikapu at Handog sa Taon',verse:'"Ang nagbibigay nang masaya ay mahal ng Diyos." — 2 Mga Taga-Corinto 9:7',excellent:'Kahusayan',good:'Mabuti',improve:'Kailangan ng Pagpabuti',willAttend:'Darating ako',wontAttend:'Hindi ako makakarating',undecided:'Hindi pa sigurado',rsvp:'RSVP',closePanel:'Isara',serviceDetails:'Detalye ng Serbisyo',eventDetails:'Detalye ng Kaganapan',attending:'Darating',notAttending:'Hindi darating',capacity:'Kapasidad',responseBy:'Sagot bago ang',yourRsvp:'Iyong RSVP'},
 };
 
 // ── Mobile detection hook ─────────────────────────────────────
@@ -114,14 +116,14 @@ function ServiceModal({svc,onClose,onRespond,responding,c,f,t,isMobile}) {
       <div style={{padding:'20px 20px 8px'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
           <div style={{fontSize:f?.lg||18,fontWeight:800,color:'#0f172a'}}>{t?.serviceDetails||'Service Details'}</div>
-          <button onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:32,height:32,fontSize:18,cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1}}>✕</button>
+          <button onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:32,height:32,cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1}}><MonoIcon name="close" size={16} /></button>
         </div>
 
         <div style={{background:'linear-gradient(135deg,#003d70,#005599)',borderRadius:12,padding:'16px',color:'#fff',marginBottom:16}}>
           <div style={{fontSize:f?.md||15,fontWeight:800,marginBottom:6,textTransform:'uppercase',letterSpacing:'0.3px'}}>{svc.title}</div>
-          <div style={{fontSize:f?.sm||13,opacity:0.85}}>📅 {fmtDate(svc.service_date)}</div>
-          <div style={{fontSize:f?.sm||13,opacity:0.85}}>🕐 {fmtSvcT(svc.service_time)}</div>
-          {svc.capacity&&<div style={{fontSize:f?.sm||13,opacity:0.85}}>👥 {svc.attending_count||0} / {svc.capacity}</div>}
+          <div style={{fontSize:f?.sm||13,opacity:0.85,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="calendar" size={14} /> {fmtDate(svc.service_date)}</div>
+          <div style={{fontSize:f?.sm||13,opacity:0.85,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="clock" size={14} /> {fmtSvcT(svc.service_time)}</div>
+          {svc.capacity&&<div style={{fontSize:f?.sm||13,opacity:0.85,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="members" size={14} /> {svc.attending_count||0} / {svc.capacity}</div>}
           {svc.response_deadline&&<div style={{fontSize:f?.sm||13,opacity:0.75,marginTop:4}}>{t?.responseBy||'Response by'}: {fmtDate(svc.response_deadline)}</div>}
         </div>
 
@@ -134,18 +136,18 @@ function ServiceModal({svc,onClose,onRespond,responding,c,f,t,isMobile}) {
         <div style={{fontSize:f?.xs||11,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:10}}>{t?.rsvp||'RSVP'}</div>
         <div style={{display:'flex',flexDirection:'column',gap:10,paddingBottom:8}}>
           {[
-            {status:'ATTENDING',    label:t?.willAttend||'I will attend',    emoji:'✓'},
-            {status:'NOT_ATTENDING',label:t?.wontAttend||'Cannot attend',    emoji:'✕'},
-            {status:'UNDECIDED',    label:t?.undecided||'Undecided',         emoji:'?'},
-          ].map(({status,label,emoji})=>{
+            {status:'ATTENDING',    label:t?.willAttend||'I will attend',    icon:'check'},
+            {status:'NOT_ATTENDING',label:t?.wontAttend||'Cannot attend',    icon:'close'},
+            {status:'UNDECIDED',    label:t?.undecided||'Undecided',         icon:'clock'},
+          ].map(({status,label,icon})=>{
             const isActive = current===status;
             const meta = RSVP_META[status];
             return (
               <button key={status} onClick={()=>onRespond(status)} disabled={responding}
                 style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderRadius:10,border:`2px solid ${isActive?meta.color:'#e2e8f0'}`,background:isActive?meta.bg:'transparent',cursor:responding?'not-allowed':'pointer',fontFamily:'inherit',opacity:responding?0.7:1,textAlign:'left',transition:'all 0.15s',minHeight:52}}>
-                <span style={{width:32,height:32,borderRadius:'50%',background:isActive?meta.color:'#f1f5f9',color:isActive?'#fff':meta.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,flexShrink:0}}>{emoji}</span>
+                <span style={{width:32,height:32,borderRadius:'50%',background:isActive?meta.color:'#f1f5f9',color:isActive?'#fff':meta.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,flexShrink:0}}><MonoIcon name={icon} size={15} /></span>
                 <span style={{fontSize:f?.base||14,fontWeight:isActive?700:500,color:isActive?meta.color:'#374151'}}>{label}</span>
-                {isActive&&<span style={{marginLeft:'auto',fontSize:f?.xs||11,fontWeight:700,color:meta.color}}>✓</span>}
+                {isActive&&<span style={{marginLeft:'auto',fontWeight:700,color:meta.color,display:'inline-flex'}}><MonoIcon name="check" size={14} /></span>}
               </button>
             );
           })}
@@ -163,15 +165,15 @@ function EventModal({evt,onClose,onRegister,onCancel,evtLoading,c,f,t,isMobile})
       <div style={{padding:'20px 20px 8px'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
           <div style={{fontSize:f?.lg||18,fontWeight:800,color:'#0f172a'}}>{t?.eventDetails||'Event Details'}</div>
-          <button onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:32,height:32,fontSize:18,cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1}}>✕</button>
+          <button onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:32,height:32,cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1}}><MonoIcon name="close" size={16} /></button>
         </div>
 
         <div style={{background:evt.is_registered?'linear-gradient(135deg,#14532d,#16a34a)':'linear-gradient(135deg,#003d70,#005599)',borderRadius:12,padding:'16px',color:'#fff',marginBottom:16}}>
           <div style={{fontSize:f?.md||15,fontWeight:800,marginBottom:6,textTransform:'uppercase',letterSpacing:'0.3px'}}>{evt.title}</div>
-          {evt.is_registered&&<div style={{fontSize:f?.xs||11,fontWeight:700,letterSpacing:'0.5px',marginBottom:6,opacity:0.9}}>✓ YOU ARE REGISTERED</div>}
-          <div style={{fontSize:f?.sm||13,opacity:0.85}}>📅 {fmtDate(evt.start_date)}{evt.end_date&&evt.end_date!==evt.start_date?` – ${fmtDate(evt.end_date)}`:''}</div>
-          {evt.location&&<div style={{fontSize:f?.sm||13,opacity:0.85}}>📍 {evt.location}</div>}
-          <div style={{fontSize:f?.sm||13,opacity:0.85}}>👥 {evt.registration_count} {t?.registered||'registered'}{evt.capacity?` ${t?.of||'of'} ${evt.capacity}`:''}</div>
+          {evt.is_registered&&<div style={{fontSize:f?.xs||11,fontWeight:700,letterSpacing:'0.5px',marginBottom:6,opacity:0.9,display:'flex',alignItems:'center',gap:5}}><MonoIcon name="check" size={13} /> YOU ARE REGISTERED</div>}
+          <div style={{fontSize:f?.sm||13,opacity:0.85,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="calendar" size={14} /> {fmtDate(evt.start_date)}{evt.end_date&&evt.end_date!==evt.start_date?` – ${fmtDate(evt.end_date)}`:''}</div>
+          {evt.location&&<div style={{fontSize:f?.sm||13,opacity:0.85,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="location" size={14} /> {evt.location}</div>}
+          <div style={{fontSize:f?.sm||13,opacity:0.85,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="members" size={14} /> {evt.registration_count} {t?.registered||'registered'}{evt.capacity?` ${t?.of||'of'} ${evt.capacity}`:''}</div>
           {evt.registration_deadline&&<div style={{fontSize:f?.sm||13,opacity:0.75,marginTop:4}}>{t?.regDeadline||'Deadline'}: {fmtDate(evt.registration_deadline)}</div>}
         </div>
 
@@ -311,7 +313,7 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
   const InviteCards = () => pendingInvites.length === 0 ? null : (
     <div style={{...card,overflow:'hidden',marginBottom:12}}>
       <div style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',gap:8}}>
-        <span style={{fontSize:f.base,fontWeight:700,color:c.t1}}>⚡ Ministry Event Invites</span>
+        <span style={{fontSize:f.base,fontWeight:700,color:c.t1,display:'inline-flex',alignItems:'center',gap:6}}><MonoIcon name="ministry" size={15} /> Ministry Event Invites</span>
         <span style={{background:'#7c3aed',color:'#fff',borderRadius:20,fontSize:f.xs,fontWeight:800,padding:'2px 8px'}}>{pendingInvites.length}</span>
       </div>
       {pendingInvites.map(inv => (
@@ -319,34 +321,34 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
           <div style={{fontSize:f.sm,fontWeight:800,color:c.t1,marginBottom:2,textTransform:'uppercase',letterSpacing:'0.2px'}}>
             {inv.Event?.title || '—'}
           </div>
-          <div style={{fontSize:f.xs,color:c.t2,marginBottom:2}}>
-            📅 {fmtDate(inv.Event?.start_date)}
-            {inv.Event?.location ? ` · 📍 ${inv.Event.location}` : ''}
+          <div style={{fontSize:f.xs,color:c.t2,marginBottom:2,display:'flex',alignItems:'center',gap:5,flexWrap:'wrap'}}>
+            <MonoIcon name="calendar" size={13} /> {fmtDate(inv.Event?.start_date)}
+            {inv.Event?.location ? <><span> · </span><MonoIcon name="location" size={13} /> {inv.Event.location}</> : null}
           </div>
           {inv.ministryRole && (
-            <div style={{fontSize:f.xs,color:'#7c3aed',fontWeight:600,marginBottom:6}}>
-              ⚡ {inv.ministryRole.name} ministry
+            <div style={{fontSize:f.xs,color:'#7c3aed',fontWeight:600,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
+              <MonoIcon name="ministry" size={13} /> {inv.ministryRole.name} ministry
             </div>
           )}
           {inv.response_deadline && (
-            <div style={{fontSize:f.xs,color:c.amber,marginBottom:8}}>
-              🕐 Respond by: {fmtDate(inv.response_deadline)}
+            <div style={{fontSize:f.xs,color:c.amber,marginBottom:8,display:'flex',alignItems:'center',gap:5}}>
+              <MonoIcon name="clock" size={13} /> Respond by: {fmtDate(inv.response_deadline)}
             </div>
           )}
           <div style={{display:'flex',gap:8}}>
             <button
               onClick={() => onInviteRespond(inv.id, 'attending')}
               disabled={inviteResponding === inv.id}
-              style={{flex:1,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:700,cursor:'pointer',background:'#dcfce7',border:'1.5px solid #bbf7d0',color:'#16a34a',fontFamily:'inherit',opacity:inviteResponding===inv.id?0.6:1,minHeight:36}}
+              style={{flex:1,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:700,cursor:'pointer',background:'#dcfce7',border:'1.5px solid #bbf7d0',color:'#16a34a',fontFamily:'inherit',opacity:inviteResponding===inv.id?0.6:1,minHeight:36,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5}}
             >
-              {inviteResponding === inv.id ? '…' : '✅ Attending'}
+              {inviteResponding === inv.id ? '…' : <><MonoIcon name="check" size={13} /> Attending</>}
             </button>
             <button
               onClick={() => onInviteRespond(inv.id, 'not_attending')}
               disabled={inviteResponding === inv.id}
-              style={{flex:1,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:700,cursor:'pointer',background:'#fef2f2',border:'1.5px solid #fecaca',color:'#dc2626',fontFamily:'inherit',opacity:inviteResponding===inv.id?0.6:1,minHeight:36}}
+              style={{flex:1,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:700,cursor:'pointer',background:'#fef2f2',border:'1.5px solid #fecaca',color:'#dc2626',fontFamily:'inherit',opacity:inviteResponding===inv.id?0.6:1,minHeight:36,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5}}
             >
-              {inviteResponding === inv.id ? '…' : '❌ Not Attending'}
+              {inviteResponding === inv.id ? '…' : <><MonoIcon name="close" size={13} /> Not Attending</>}
             </button>
           </div>
         </div>
@@ -370,7 +372,7 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
                 style={{padding:'12px 16px',borderBottom:i<services.length-1?`1px solid ${c.borderL}`:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,minHeight:56}}>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:f.sm,fontWeight:700,color:c.t1,marginBottom:2}}>{s.title}</div>
-                  <div style={{fontSize:f.xs,color:c.t3}}>📅 {fmtShort(s.service_date)}{s.service_time?` · 🕐 ${fmtSvcT(s.service_time)}`:''}</div>
+                  <div style={{fontSize:f.xs,color:c.t3,display:'flex',alignItems:'center',gap:5,flexWrap:'wrap'}}><MonoIcon name="calendar" size={13} /> {fmtShort(s.service_date)}{s.service_time?<><span> · </span><MonoIcon name="clock" size={13} /> {fmtSvcT(s.service_time)}</>:null}</div>
                 </div>
                 <span style={{...bdg(c.accentL,c.accentT,`1px solid ${c.border}`),whiteSpace:'nowrap',flexShrink:0}}>RSVP →</span>
               </div>
@@ -413,9 +415,9 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
             : events.map((e,i)=>(
               <div key={e.id} style={{padding:'14px 16px',borderBottom:i<events.length-1?`1px solid ${c.borderL}`:'none',borderLeft:`3px solid ${e.is_registered?c.success:c.border}`}}>
                 <div style={{fontSize:f.sm,fontWeight:800,color:c.t1,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.2px'}}>{e.title}</div>
-                <div style={{fontSize:f.xs,color:c.t2,marginBottom:2}}>📅 {fmtDate(e.start_date)}</div>
-                {e.location&&<div style={{fontSize:f.xs,color:c.t2,marginBottom:2}}>📍 {e.location}</div>}
-                {e.registration_deadline&&<div style={{fontSize:f.xs,color:c.amber,marginBottom:6}}>🕐 Deadline: {fmtDate(e.registration_deadline)}</div>}
+                <div style={{fontSize:f.xs,color:c.t2,marginBottom:2,display:'flex',alignItems:'center',gap:5}}><MonoIcon name="calendar" size={13} /> {fmtDate(e.start_date)}</div>
+                {e.location&&<div style={{fontSize:f.xs,color:c.t2,marginBottom:2,display:'flex',alignItems:'center',gap:5}}><MonoIcon name="location" size={13} /> {e.location}</div>}
+                {e.registration_deadline&&<div style={{fontSize:f.xs,color:c.amber,marginBottom:6,display:'flex',alignItems:'center',gap:5}}><MonoIcon name="clock" size={13} /> Deadline: {fmtDate(e.registration_deadline)}</div>}
                 <div style={{display:'flex',gap:8,marginTop:8}}>
                   {e.is_registered?(
                     <>
@@ -455,7 +457,7 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
                   <div style={{fontSize:f.sm,fontWeight:700,color:c.t1}}>{e.title}</div>
                   <div style={{fontSize:f.xs,color:c.t3,marginTop:2}}>{fmtShort(e.start_date)}{e.location?` · ${e.location}`:''}</div>
                 </div>
-                <span style={bdg(c.successL,c.success,`1px solid ${c.successB}`)}>✓</span>
+                <span style={{...bdg(c.successL,c.success,`1px solid ${c.successB}`),display:'inline-flex',alignItems:'center'}}><MonoIcon name="check" size={13} /></span>
               </div>
             ))}
           </div>
@@ -520,10 +522,10 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
                   <div style={{fontSize:f.md,fontWeight:800,color:c.t1,marginBottom:3,textTransform:'uppercase',letterSpacing:'0.3px'}}>{e.title}</div>
                   {e.description&&<div style={{fontSize:f.sm,color:c.t2,marginBottom:8,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{e.description}</div>}
                   <div style={{display:'flex',flexDirection:'column',gap:2,marginBottom:12}}>
-                    <span style={{fontSize:f.sm,color:c.t2}}>📅 {fmtDate(e.start_date)}{e.end_date&&e.end_date!==e.start_date?` – ${fmtDate(e.end_date)}`:''}</span>
-                    {e.location&&<span style={{fontSize:f.sm,color:c.t2}}>📍 {e.location}</span>}
-                    {e.registration_deadline&&<span style={{fontSize:f.sm,color:c.amber}}>🕐 {t.regDeadline}: {fmtDate(e.registration_deadline)}</span>}
-                    <span style={{fontSize:f.sm,color:c.t3}}>👥 {e.registration_count} {t.registered}{e.capacity?` ${t.of} ${e.capacity}`:''}</span>
+                    <span style={{fontSize:f.sm,color:c.t2,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="calendar" size={14} /> {fmtDate(e.start_date)}{e.end_date&&e.end_date!==e.start_date?` – ${fmtDate(e.end_date)}`:''}</span>
+                    {e.location&&<span style={{fontSize:f.sm,color:c.t2,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="location" size={14} /> {e.location}</span>}
+                    {e.registration_deadline&&<span style={{fontSize:f.sm,color:c.amber,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="clock" size={14} /> {t.regDeadline}: {fmtDate(e.registration_deadline)}</span>}
+                    <span style={{fontSize:f.sm,color:c.t3,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="members" size={14} /> {e.registration_count} {t.registered}{e.capacity?` ${t.of} ${e.capacity}`:''}</span>
                   </div>
                   <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                     {e.is_registered?(
@@ -571,8 +573,8 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
                   <div style={{fontSize:f.sm,fontWeight:700,color:c.t1,flex:1}}>{s.title}</div>
                   <span style={{padding:'2px 8px',borderRadius:20,fontSize:f.xs,fontWeight:700,background:c.accentL,color:c.accentT,border:`1px solid ${c.border}`,whiteSpace:'nowrap',flexShrink:0}}>{s.status}</span>
                 </div>
-                <div style={{fontSize:f.xs,color:c.t3}}>📅 {fmtShort(s.service_date)}</div>
-                {s.service_time&&<div style={{fontSize:f.xs,color:c.t3}}>🕐 {fmtSvcT(s.service_time)}</div>}
+                <div style={{fontSize:f.xs,color:c.t3,display:'flex',alignItems:'center',gap:5}}><MonoIcon name="calendar" size={13} /> {fmtShort(s.service_date)}</div>
+                {s.service_time&&<div style={{fontSize:f.xs,color:c.t3,display:'flex',alignItems:'center',gap:5}}><MonoIcon name="clock" size={13} /> {fmtSvcT(s.service_time)}</div>}
                 <div style={{fontSize:f.xs,color:c.accentT,marginTop:4,fontWeight:500}}>Tap to RSVP →</div>
               </div>
             ))}
@@ -972,7 +974,7 @@ export default function MemberPortal() {
   const Header = () => (
     <div style={{background:BRAND,padding:isMobile?'10px 16px':'12px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:200}}>
       <div style={{display:'flex',alignItems:'center',gap:isMobile?10:14}}>
-        <div style={{width:isMobile?32:38,height:isMobile?32:38,borderRadius:10,background:'rgba(255,255,255,0.18)',display:'flex',alignItems:'center',justifyContent:'center',border:'1.5px solid rgba(255,255,255,0.28)',fontSize:isMobile?13:16,color:'#fff',flexShrink:0}}>✝</div>
+        <div style={{width:isMobile?32:38,height:isMobile?32:38,borderRadius:10,background:'rgba(255,255,255,0.18)',display:'flex',alignItems:'center',justifyContent:'center',border:'1.5px solid rgba(255,255,255,0.28)',color:'#fff',flexShrink:0}}><MonoIcon name="cross" size={isMobile?17:20} /></div>
         <div>
           <div style={{color:'#fff',fontWeight:800,fontSize:isMobile?f.base:f.md,lineHeight:1.1}}>{t.portal}</div>
           {!isMobile&&<div style={{color:'rgba(255,255,255,0.75)',fontSize:f.xs,marginTop:1}}>{t.welcome}, {greeting}</div>}
@@ -988,11 +990,11 @@ export default function MemberPortal() {
         </div>
         {/* Settings — icon only on mobile */}
         <button onClick={()=>navigate('/portal/settings')} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',color:'#fff',borderRadius:8,padding:isMobile?'6px 10px':'6px 14px',fontSize:isMobile?16:f.sm,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:36,minWidth:36,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          {isMobile?'⚙️':t.settings}
+          {isMobile ? <MonoIcon name="settings" size={17} /> : t.settings}
         </button>
         {/* Logout — icon only on mobile */}
         <button onClick={handleLogout} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',color:'#fff',borderRadius:8,padding:isMobile?'6px 10px':'6px 14px',fontSize:isMobile?16:f.sm,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:36,minWidth:36,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          {isMobile?'↩':t.logout}
+          {isMobile ? <MonoIcon name="logout" size={17} /> : t.logout}
         </button>
       </div>
     </div>
@@ -1024,7 +1026,7 @@ export default function MemberPortal() {
           color:tab===i?c.tabActive:c.t3,fontFamily:'inherit',position:'relative',
         }}>
           {tab===i&&<span style={{position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',width:32,height:3,background:c.tabActive,borderRadius:'0 0 3px 3px'}}/>}
-          <span style={{fontSize:18,lineHeight:1}}>{t.tabIcons[i]}</span>
+          <MonoIcon name={TAB_ICON_NAMES[i]} size={19} />
           <span style={{fontSize:10,fontWeight:tab===i?700:600,letterSpacing:'0.2px'}}>{tb}</span>
         </button>
       ))}
@@ -1068,8 +1070,8 @@ export default function MemberPortal() {
       }}>
         {/* Mobile: show tab title */}
         {isMobile&&(
-          <div style={{fontSize:f.lg,fontWeight:800,color:c.t1,marginBottom:14,paddingBottom:10,borderBottom:`1px solid ${c.border}`}}>
-            {t.tabIcons[tab]} {t.tabs[tab]}
+          <div style={{fontSize:f.lg,fontWeight:800,color:c.t1,marginBottom:14,paddingBottom:10,borderBottom:`1px solid ${c.border}`,display:'flex',alignItems:'center',gap:8}}>
+            <MonoIcon name={TAB_ICON_NAMES[tab]} size={20} /> {t.tabs[tab]}
           </div>
         )}
 
@@ -1104,7 +1106,7 @@ export default function MemberPortal() {
       {/* Toast — above bottom tab bar on mobile */}
       {toast&&(
         <div style={{position:'fixed',bottom:isMobile?`calc(72px + env(safe-area-inset-bottom,0px))`:28,right:isMobile?12:28,left:isMobile?12:'auto',background:toast.type==='success'?c.success:c.danger,color:'#fff',padding:'12px 18px',borderRadius:12,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',zIndex:9999,display:'flex',alignItems:'center',gap:10,fontSize:f.base,fontWeight:500,animation:'slideUp 0.3s ease'}}>
-          <span style={{fontSize:15}}>{toast.type==='success'?'✓':'✕'}</span>{toast.msg}
+          <span style={{display:'inline-flex'}}><MonoIcon name={toast.type==='success'?'check':'close'} size={15} /></span>{toast.msg}
         </div>
       )}
     </div>

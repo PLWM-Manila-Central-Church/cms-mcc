@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const PAYMENT_LABELS = {
   cash:          'Cash',
@@ -64,20 +65,20 @@ export default function MyGivingPage() {
 
       {/* Info box for digital payments */}
       <div style={s.infoCard}>
-        <div style={s.infoTitle}>💳 Digital Payment Details</div>
+        <div style={s.infoTitle}><MonoIcon name="finance" size={16} /> Digital Payment Details</div>
         <p style={s.infoText}>
           For GCash and bank transfers, please send your giving to the following and confirm with the church office personally.
         </p>
         <div style={s.paymentDetails}>
           <div style={s.paymentRow}>
-            <span style={s.paymentIcon}>📱</span>
+            <span style={s.paymentIcon}><MonoIcon name="phone" size={20} /></span>
             <div>
               <div style={s.paymentName}>GCash</div>
               <div style={s.paymentValue}>09XX XXX XXXX — PLWM-MCC</div>
             </div>
           </div>
           <div style={s.paymentRow}>
-            <span style={s.paymentIcon}>🏦</span>
+            <span style={s.paymentIcon}><MonoIcon name="bank" size={20} /></span>
             <div>
               <div style={s.paymentName}>Bank Transfer (BDO)</div>
               <div style={s.paymentValue}>Account No: XXXX-XXXX-XX — PLWM-MCC Church</div>
@@ -97,7 +98,7 @@ export default function MyGivingPage() {
           onChange={e => { setFilterDateTo(e.target.value); setPage(1); }}
           style={s.filterInput} />
         {(filterDateFrom || filterDateTo) && (
-          <button onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); setPage(1); }} style={s.clearBtn}>✕ Clear</button>
+          <button onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); setPage(1); }} style={s.clearBtn}><MonoIcon name="close" size={14} /> Clear</button>
         )}
       </div>
 
@@ -164,17 +165,17 @@ const s = {
   totalNum:       { fontSize: '40px', fontWeight: '800', letterSpacing: '-1px' },
   totalSub:       { fontSize: '13px', opacity: 0.7, marginTop: '6px' },
   infoCard:       { background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '20px 24px', marginBottom: '24px' },
-  infoTitle:      { fontSize: '15px', fontWeight: '700', color: '#92400e', marginBottom: '8px' },
+  infoTitle:      { fontSize: '15px', fontWeight: '700', color: '#92400e', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' },
   infoText:       { fontSize: '14px', color: '#78350f', margin: '0 0 16px 0', lineHeight: '1.5' },
   paymentDetails: { display: 'flex', flexDirection: 'column', gap: '12px' },
   paymentRow:     { display: 'flex', alignItems: 'flex-start', gap: '12px' },
-  paymentIcon:    { fontSize: '20px' },
+  paymentIcon:    { display: 'inline-flex', color: '#111827' },
   paymentName:    { fontSize: '13px', fontWeight: '700', color: '#78350f' },
   paymentValue:   { fontSize: '14px', color: '#92400e', marginTop: '2px', fontFamily: 'monospace' },
   filterBar:      { display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
   filterLabel:    { fontSize: '14px', color: '#374151', fontWeight: '500' },
   filterInput:    { padding: '8px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none' },
-  clearBtn:       { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
+  clearBtn:       { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' },
   errorBox:       { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
   tableWrap:      { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   tableScroll:    { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },

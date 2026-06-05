@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import MonoIcon from '../../components/common/MonoIcon';
+import { normalizeEventStatus } from '../../utils/eventStatus';
 
 const STATUS_META = {
   Upcoming:  { bg: '#dcfce7', color: '#16a34a', label: 'Upcoming' },
@@ -60,7 +62,7 @@ export default function EventsPage() {
   const fetchCategories = async () => {
     try {
       const res = await axiosInstance.get('/events/categories');
-      setCategories(res.data.data);
+      setCategories(Array.isArray(res.data.data) ? res.data.data : []);
     } catch {}
   };
 
@@ -73,8 +75,15 @@ export default function EventsPage() {
       if (categoryFilter) params.append('category_id', categoryFilter);
       const res = await axiosInstance.get(`/events?${params}`);
       const d   = res.data.data;
-      setEvents(d.events); setTotal(d.total); setTotalPages(d.total_pages);
-    } catch { setError('Failed to load events.'); }
+      if (!d || !Array.isArray(d.events)) {
+        setEvents([]); setTotal(0); setTotalPages(1);
+        setError('Failed to load events.');
+        return;
+      }
+      setEvents(d.events);
+      setTotal(Number(d.total) || d.events.length);
+      setTotalPages(Number(d.total_pages) || 1);
+    } catch { setEvents([]); setError('Failed to load events.'); }
     finally { setLoading(false); }
   }, [page, statusFilter, search, categoryFilter]);
 
@@ -109,7 +118,7 @@ export default function EventsPage() {
       capacity:              ev.capacity || '',
       registration_deadline: ev.registration_deadline
         ? ev.registration_deadline.slice(0, 16) : '',
-      status: ev.status || 'Upcoming',
+      status: normalizeEventStatus(ev.status),
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -201,7 +210,7 @@ export default function EventsPage() {
             onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }}
             style={s.addBtn}
           >
-            {showForm ? '✕ Cancel' : '+ New Event'}
+            {showForm ? <><MonoIcon name="close" size={15} /> Cancel</> : '+ New Event'}
           </button>
         )}
       </div>
@@ -374,8 +383,9 @@ export default function EventsPage() {
       ) : (
         <div style={s.grid}>
           {events.map(ev => {
-            const meta         = STATUS_META[ev.status] || STATUS_META.Upcoming;
-            const nextStatuses = (canUpdate && !isMember) ? STATUS_FLOW[ev.status] : [];
+            const status       = normalizeEventStatus(ev.status);
+            const meta         = STATUS_META[status] || STATUS_META.Upcoming;
+            const nextStatuses = (canUpdate && !isMember) ? (STATUS_FLOW[status] ?? []) : [];
             const regCount     = ev.EventRegistrations?.length ?? 0;
 
             return (
@@ -395,13 +405,13 @@ export default function EventsPage() {
                   </div>
                 )}
                 <div style={s.cardMeta}>
-                  📅 {formatDate(ev.start_date)}{formatTime(ev.start_time)}
+                  <MonoIcon name="calendar" size={14} /> {formatDate(ev.start_date)}{formatTime(ev.start_time)}
                   {ev.end_date && ev.end_date !== ev.start_date
                     && ` – ${formatDate(ev.end_date)}`}
                 </div>
-                {ev.location && <div style={s.cardMeta}>📍 {ev.location}</div>}
+                {ev.location && <div style={s.cardMeta}><MonoIcon name="location" size={14} /> {ev.location}</div>}
                 <div style={s.cardMeta}>
-                  👥 {regCount} registered{ev.capacity ? ` / ${ev.capacity}` : ''}
+                  <MonoIcon name="members" size={14} /> {regCount} registered{ev.capacity ? ` / ${ev.capacity}` : ''}
                 </div>
                 {ev.registration_deadline && (
                   <div style={{
@@ -409,7 +419,7 @@ export default function EventsPage() {
                     color: new Date() > new Date(ev.registration_deadline)
                       ? '#dc2626' : '#64748b',
                   }}>
-                    ⏰ Deadline: {new Date(ev.registration_deadline).toLocaleDateString(
+                    <MonoIcon name="clock" size={14} /> Deadline: {new Date(ev.registration_deadline).toLocaleDateString(
                       'en-PH', { month: 'short', day: 'numeric', year: 'numeric' }
                     )}
                   </div>
@@ -432,7 +442,7 @@ export default function EventsPage() {
                           {STATUS_ACTION_LABEL[ns]}
                         </button>
                       ))}
-                      {canDelete && ['Completed', 'Cancelled'].includes(ev.status) && (
+                      {canDelete && ['Completed', 'Cancelled'].includes(status) && (
                         <button onClick={() => handleDelete(ev.id)} style={s.deleteBtn}>
                           Delete
                         </button>
@@ -472,7 +482,7 @@ const s = {
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
   title:       { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   subtitle:    { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
-  addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
   formCard:    { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
   formTitle:   { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px 0' },
   form:        { display: 'flex', flexDirection: 'column', gap: '16px' },

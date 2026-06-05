@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
+import MonoIcon from '../../components/common/MonoIcon';
 
 // Convert snake_case / camelCase keys to "Title Case With Spaces"
 const prettifyKey = (key) =>
@@ -43,14 +44,18 @@ const guessType = (key, value) => {
 };
 
 const GROUP_ICONS = {
-  'General':         '🏛️',
-  'Finance':         '💰',
-  'Members':         '👥',
-  'Services':        '⛪',
-  'Events':          '📅',
-  'Notifications':   '🔔',
-  'Files & Storage': '📁',
+  'General':         'building',
+  'Finance':         'finance',
+  'Members':         'members',
+  'Services':        'church',
+  'Events':          'calendar',
+  'Notifications':   'bell',
+  'Files & Storage': 'folder',
 };
+
+const groupIcon = (group, size = 18) => (
+  <MonoIcon name={GROUP_ICONS[group] || 'settings'} size={size} />
+);
 
 export default function SettingsPage() {
   const isMobile = useIsMobile();
@@ -225,7 +230,7 @@ export default function SettingsPage() {
           <p style={s.subtitle}>System configuration — Admin only</p>
         </div>
         <div style={s.headerRight}>
-          {saved && <span style={s.savedBadge}>✓ Saved</span>}
+          {saved && <span style={s.savedBadge}><MonoIcon name="check" size={13} /> Saved</span>}
           <button
             onClick={handleSave}
             disabled={!hasChanges || saving}
@@ -239,7 +244,7 @@ export default function SettingsPage() {
       {error && <div style={s.errorBox}>{error}</div>}
       {hasChanges && (
         <div style={s.changesBanner}>
-          ✏️ You have <strong>{Object.keys(changes).length}</strong> unsaved change{Object.keys(changes).length !== 1 ? 's' : ''}.
+          <MonoIcon name="edit" size={15} /> You have <strong>{Object.keys(changes).length}</strong> unsaved change{Object.keys(changes).length !== 1 ? 's' : ''}.
         </div>
       )}
 
@@ -251,8 +256,8 @@ export default function SettingsPage() {
               onClick={() => setMobileNavOpen(o => !o)}
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, fontSize: 14, fontWeight: 700, color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit' }}
             >
-              <span>{GROUP_ICONS[activeGroup] || '⚙️'} {activeGroup || 'Select Category'}</span>
-              <span style={{ fontSize: 11, color: '#94a3b8' }}>{mobileNavOpen ? '▲' : '▼'}</span>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:8 }}>{groupIcon(activeGroup, 16)} {activeGroup || 'Select Category'}</span>
+              <MonoIcon name="chevronDown" size={13} style={{ color:'#94a3b8', transform: mobileNavOpen ? 'rotate(180deg)' : 'none' }} />
             </button>
             {mobileNavOpen && (
               <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, marginTop: 4, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
@@ -262,7 +267,7 @@ export default function SettingsPage() {
                   return (
                     <button key={group} onClick={() => { setActiveGroup(group); setMobileNavOpen(false); }}
                       style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: isActive ? '#e8f4fd' : '#fff', border: 'none', borderBottom: '1px solid #f1f5f9', fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? '#005599' : '#374151', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                      <span style={{ fontSize: 18 }}>{GROUP_ICONS[group] || '⚙️'}</span>
+                      <span style={{ display:'inline-flex', color:'currentColor' }}>{groupIcon(group, 18)}</span>
                       <span style={{ flex: 1 }}>{group}</span>
                       <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: isActive ? '#bde3f5' : '#f3f4f6', color: isActive ? '#005599' : '#6b7280' }}>{count}</span>
                     </button>
@@ -282,7 +287,7 @@ export default function SettingsPage() {
                 onClick={() => setActiveGroup(group)}
                 style={{ ...s.navItem, ...(isActive ? s.navItemActive : {}) }}
               >
-                <span style={s.navIcon}>{GROUP_ICONS[group] || '⚙️'}</span>
+                <span style={s.navIcon}>{groupIcon(group, 18)}</span>
                 <span style={s.navLabel}>{group}</span>
                 <span style={{ ...s.navCount, background: isActive ? '#bde3f5' : '#f3f4f6', color: isActive ? '#005599' : '#6b7280' }}>
                   {count}
@@ -298,7 +303,7 @@ export default function SettingsPage() {
           {activeGroup && (
             <>
               <div style={s.panelHeader}>
-                <span style={s.panelIcon}>{GROUP_ICONS[activeGroup] || '⚙️'}</span>
+                <span style={s.panelIcon}>{groupIcon(activeGroup, 20)}</span>
                 <div>
                   <h2 style={s.panelTitle}>{activeGroup}</h2>
                   <p style={s.panelSub}>{visibleKeys.length} setting{visibleKeys.length !== 1 ? 's' : ''}</p>

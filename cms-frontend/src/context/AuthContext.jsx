@@ -1,13 +1,22 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import axiosInstance from '../api/axiosInstance';
 
 const AuthContext = createContext(null);
 
+const parseStoredPermissions = (value) => {
+  try {
+    const parsed = JSON.parse(value || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser]               = useState(null);
   const [permissions, setPermissions] = useState([]);
-  const [permSet, setPermSet]         = useState(new Set());
   const [loading, setLoading]         = useState(true);
+  const permSet = useMemo(() => new Set(permissions), [permissions]);
 
   useEffect(() => {
     const storedUser        = localStorage.getItem('user');
@@ -16,7 +25,7 @@ export const AuthProvider = ({ children }) => {
 
     if (storedUser && accessToken) {
       setUser(JSON.parse(storedUser));
-      setPermissions(JSON.parse(storedPermissions || '[]'));
+      setPermissions(parseStoredPermissions(storedPermissions));
     }
     setLoading(false);
   }, []);
@@ -46,7 +55,6 @@ export const AuthProvider = ({ children }) => {
 
     setUser(userWithFlag);
     setPermissions(permissions);
-    setPermSet(new Set(permissions));
 
     return { forcePasswordChange };
   };
@@ -67,7 +75,6 @@ export const AuthProvider = ({ children }) => {
       localStorage.clear();
       setUser(null);
       setPermissions([]);
-      setPermSet(new Set());
     }
   };
 

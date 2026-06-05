@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const LOGO   = process.env.PUBLIC_URL + '/logo.jpg';
 const BG_URL = process.env.PUBLIC_URL + '/smr.jpg';
@@ -106,7 +107,7 @@ export default function ResetPasswordPage() {
 
                 {error && (
                   <div style={S.errorBox}>
-                    <span style={S.errorIcon}>⚠</span>
+                    <MonoIcon name="warning" size={16} style={S.errorIcon} />
                     {error}
                   </div>
                 )}
@@ -116,7 +117,7 @@ export default function ResetPasswordPage() {
                   <div style={S.field}>
                     <label style={S.label}>New Password</label>
                     <div style={{ position: 'relative' }}>
-                      <span style={S.fieldIcon}>🔒</span>
+                      <span style={S.fieldIcon}><MonoIcon name="lock" size={17} /></span>
                       <input
                         type={showPass ? 'text' : 'password'}
                         value={form.password}
@@ -139,7 +140,7 @@ export default function ResetPasswordPage() {
                         style={S.eyeBtn}
                         tabIndex={-1}
                       >
-                        {showPass ? '🙈' : '👁️'}
+                        <MonoIcon name={showPass ? 'eyeOff' : 'eye'} size={17} />
                       </button>
                     </div>
 
@@ -169,7 +170,7 @@ export default function ResetPasswordPage() {
                         {rules.map(r => (
                           <div key={r.label} style={S.ruleItem}>
                             <span style={{ ...S.ruleDot, color: r.test(form.password) ? '#22c55e' : '#cbd5e1' }}>
-                              {r.test(form.password) ? '✓' : '○'}
+                              {r.test(form.password) ? <MonoIcon name="check" size={12} /> : ''}
                             </span>
                             <span style={{ ...S.ruleText, color: r.test(form.password) ? '#374151' : '#94a3b8' }}>
                               {r.label}
@@ -184,7 +185,7 @@ export default function ResetPasswordPage() {
                   <div style={S.field}>
                     <label style={S.label}>Confirm Password</label>
                     <div style={{ position: 'relative' }}>
-                      <span style={S.fieldIcon}>🔒</span>
+                      <span style={S.fieldIcon}><MonoIcon name="lock" size={17} /></span>
                       <input
                         type={showPass ? 'text' : 'password'}
                         value={form.confirm}
@@ -207,7 +208,7 @@ export default function ResetPasswordPage() {
                       />
                       {form.confirm.length > 0 && (
                         <span style={S.matchIcon}>
-                          {form.confirm === form.password ? '✓' : '✗'}
+                          <MonoIcon name={form.confirm === form.password ? 'check' : 'close'} size={14} />
                         </span>
                       )}
                     </div>
@@ -230,7 +231,7 @@ export default function ResetPasswordPage() {
             ) : (
               /* ── Success state ── */
               <div style={S.successBox}>
-                <div style={S.successIcon}>✓</div>
+                <div style={S.successIcon}><MonoIcon name="check" size={24} /></div>
                 <h3 style={S.successTitle}>Password updated!</h3>
                 <p style={S.successText}>
                   Your password has been changed successfully.<br />

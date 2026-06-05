@@ -4,6 +4,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import { groupMembersTitle, isScopedLeaderRole } from '../../utils/roleDisplay';
+import MonoIcon from '../../components/common/MonoIcon';
 
 /* ── Status colours (admin view only) ─────────────────────────── */
 const STATUS_COLORS = {
@@ -74,15 +75,15 @@ function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMem
           {m.email || ''}
         </div>
         {m.cellGroup?.name && (
-          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>
-            📍 {m.cellGroup.name}
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3, display:'flex', alignItems:'center', gap:4 }}>
+            <MonoIcon name="location" size={12} /> {m.cellGroup.name}
           </div>
         )}
       </div>
 
       {/* Chevron / actions */}
       {isMember ? (
-        <div style={{ color: '#cbd5e1', fontSize: 20, flexShrink: 0 }}>›</div>
+        <MonoIcon name="chevronDown" size={18} style={{ color: '#cbd5e1', flexShrink: 0, transform:'rotate(-90deg)' }} />
       ) : (
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
           <button onClick={() => onView(m.id)} style={actionBtnSm('#e8f4fd', '#0066b3')}>View</button>
@@ -356,7 +357,7 @@ export default function MembersPage() {
 
         {/* Clean search — no separate button, inline icon feel */}
         <div style={{ position: 'relative', marginBottom: 20 }}>
-          <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 15, color: '#94a3b8', pointerEvents: 'none', userSelect: 'none' }}>🔍</span>
+          <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none', userSelect: 'none' }}><MonoIcon name="search" size={15} /></span>
           <input
             className="dir-search"
             value={searchInput}
@@ -375,7 +376,7 @@ export default function MembersPage() {
           {searchInput && (
             <button onClick={clearFilters}
               style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 15, padding: 4, lineHeight: 1 }}>
-              ✕
+              <MonoIcon name="close" size={13} />
             </button>
           )}
         </div>
@@ -385,12 +386,12 @@ export default function MembersPage() {
         {/* Result list */}
         {loading ? (
           <div style={{ padding: '56px 24px', textAlign: 'center', color: '#94a3b8' }}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}>👥</div>
+            <div style={{ color:'#94a3b8', marginBottom: 10 }}><MonoIcon name="members" size={32} /></div>
             <div style={{ fontSize: 14 }}>Loading members…</div>
           </div>
         ) : members.length === 0 ? (
           <div style={{ padding: '56px 24px', textAlign: 'center', background: '#fff', borderRadius: 16, border: '1.5px solid #e8edf2' }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>🔍</div>
+            <div style={{ color:'#94a3b8', marginBottom: 12 }}><MonoIcon name="search" size={36} /></div>
             <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>No members found</div>
             <div style={{ fontSize: 14, color: '#94a3b8' }}>Try a different search term</div>
           </div>
@@ -527,7 +528,7 @@ export default function MembersPage() {
         </select>
 
         {(search || statusFilter || cgFilter || groupFilter) && (
-          <button onClick={clearFilters} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 9, padding: '7px 14px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', minHeight: 38 }}>✕ Clear</button>
+          <button onClick={clearFilters} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 9, padding: '7px 14px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', minHeight: 38, display:'inline-flex', alignItems:'center', gap:6 }}><MonoIcon name="close" size={13} /> Clear</button>
         )}
       </div>
 
@@ -556,7 +557,7 @@ export default function MembersPage() {
             <span style={{ fontSize:13, color:'#dc2626', fontWeight:600 }}>{selected.size} member{selected.size>1?'s':''} selected</span>
             <button onClick={handleBulkDelete} disabled={bulkDeleting}
               style={{ background:'#dc2626', color:'#fff', border:'none', borderRadius:8, padding:'6px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity:bulkDeleting?0.6:1 }}>
-              {bulkDeleting ? 'Deleting…' : '🗑 Delete Selected'}
+              {bulkDeleting ? 'Deleting…' : <><MonoIcon name="delete" size={14} /> Delete Selected</>}
             </button>
             <button onClick={() => setSelected(new Set())}
               style={{ background:'none', border:'1px solid #e2e8f0', borderRadius:8, padding:'6px 12px', fontSize:13, color:'#94a3b8', cursor:'pointer', fontFamily:'inherit' }}>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LANGS, getLangCode, saveLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
 import PublicIcon from './PublicIcon';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const C = {
   navy:'#0B2447', navyMid:'#14305E', navySoft:'#1A3D72',
@@ -17,7 +18,6 @@ const NAV = [
   { label:'Bible Seminar', path:'/bible-seminar', children:[
     { label:'Bible Seminar Introduction', path:'/bible-seminar' },
     { label:'For Adults',                 path:'/bible-seminar/adults' },
-    { label:'Bible Seminar Schedule',     path:'/bible-seminar/schedule' },
   ]},
   { label:'Sermon', path:'/sermon', children:[
     { label:'Latest Sermon',          path:'/sermon/latest' },
@@ -193,7 +193,7 @@ export default function PublicLayout({ children }) {
     ? (scrolled ? 'rgba(11,36,71,0.97)' : 'rgba(11,36,71,0.18)')
     : 'rgba(11,36,71,0.97)';
 
-  const currentFlag = LANGS.find(l => l.label === currentLang)?.flag || '🌐';
+  const currentLangCode = LANGS.find(l => l.label === currentLang)?.code.toUpperCase() || 'EN';
 
   return (
     <div style={{ fontFamily:"'Inter',system-ui,sans-serif", color:C.text, minHeight:'100vh', display:'flex', flexDirection:'column' }}>
@@ -239,7 +239,7 @@ export default function PublicLayout({ children }) {
                       transition:'color 0.18s, border-color 0.18s', whiteSpace:'nowrap',
                     }}>
                     {item.label}
-                    <span style={{ fontSize:8, opacity:0.55, display:'inline-block', transition:'transform 0.2s', transform: openNav === item.label ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+                    <MonoIcon name="chevronDown" size={11} strokeWidth={2} style={{ opacity:0.55, transition:'transform 0.2s', transform: openNav === item.label ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                   </button>
                   {openNav === item.label && (
                     <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, background:'#fff', border:`1.5px solid ${C.border}`, borderRadius:12, boxShadow:'0 8px 32px rgba(11,36,71,0.14)', minWidth:220, zIndex:999, padding:'6px 0', animation:'fadeDown 0.16s ease' }}>
@@ -264,8 +264,8 @@ export default function PublicLayout({ children }) {
               <div ref={langRef} style={{ position:'relative' }} className="desktop-nav">
                 <button onClick={() => setLangOpen(o => !o)}
                   style={{ display:'flex', alignItems:'center', gap:5, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.16)', color:'rgba(255,255,255,0.82)', fontSize:12, fontWeight:600, padding:'5px 10px', borderRadius:20, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                  <span>{currentFlag}</span>
-                  <span style={{ fontSize:10, opacity:0.6 }}>▼</span>
+                  <span>{currentLangCode}</span>
+                  <MonoIcon name="chevronDown" size={10} strokeWidth={2} style={{ opacity:0.6 }} />
                 </button>
                 {langOpen && (
                   <div style={{ position:'absolute', top:'calc(100% + 6px)', right:0, background:'#fff', border:`1.5px solid ${C.border}`, borderRadius:12, boxShadow:'0 8px 32px rgba(11,36,71,0.14)', minWidth:210, zIndex:2000, overflow:'hidden' }}>
@@ -275,7 +275,7 @@ export default function PublicLayout({ children }) {
                         {group.langs.map(lang => (
                           <button key={lang.code} onClick={() => switchLang(lang)}
                             style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', fontSize:13, fontWeight:currentLang===lang.label ? 700 : 400, color:currentLang===lang.label ? C.blue : C.text, background:currentLang===lang.label ? C.blueGlow : '#fff', border:'none', width:'100%', cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
-                            <span style={{ fontSize:16 }}>{lang.flag}</span>
+                            <span style={{ fontSize:11, fontWeight:800, minWidth:30, color:C.muted }}>{lang.code.toUpperCase()}</span>
                             <span style={{ flex:1 }}>{lang.label}</span>
                             <span style={{ fontSize:11, color:C.muted }}>{lang.native}</span>
                           </button>
@@ -316,7 +316,7 @@ export default function PublicLayout({ children }) {
             </div>
             <button onClick={() => setMobileOpen(false)}
               style={{ background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', borderRadius:8, width:36, height:36, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              ✕
+              <MonoIcon name="close" size={18} />
             </button>
           </div>
 
@@ -351,7 +351,7 @@ export default function PublicLayout({ children }) {
               {LANGS.map(lang => (
                 <button key={lang.code} onClick={() => switchLang(lang)}
                   style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px', borderRadius:10, border:`1.5px solid ${currentLang===lang.label ? C.gold : 'rgba(255,255,255,0.12)'}`, background: currentLang===lang.label ? 'rgba(201,168,76,0.18)' : 'rgba(255,255,255,0.05)', color: currentLang===lang.label ? C.gold : 'rgba(255,255,255,0.72)', cursor:'pointer', fontFamily:'inherit', fontSize:13, fontWeight: currentLang===lang.label ? 700 : 400 }}>
-                  <span style={{ fontSize:17 }}>{lang.flag}</span>
+                  <span style={{ fontSize:11, fontWeight:800, minWidth:30 }}>{lang.code.toUpperCase()}</span>
                   <span>{lang.label}</span>
                 </button>
               ))}
@@ -546,14 +546,6 @@ export default function PublicLayout({ children }) {
           .pub-vid-col { grid-template-columns:1fr !important; gap:20px !important; }
           .pub-ci-col  { grid-template-columns:1fr !important; gap:24px !important; }
           .pub-stat-grid { grid-template-columns:1fr 1fr !important; gap:12px !important; }
-        }
-
-        /* ── Schedule event rows ── */
-        .pub-schedule-row { display:flex; gap:20px; align-items:flex-start; }
-        .pub-schedule-row .pub-schedule-date { min-width:140px; flex-shrink:0; }
-        @media(max-width:600px) {
-          .pub-schedule-row { flex-direction:column; gap:6px; }
-          .pub-schedule-row .pub-schedule-date { min-width:unset; }
         }
 
         /* ── Mission Status tab bar ── */

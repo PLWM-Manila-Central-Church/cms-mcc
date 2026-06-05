@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import MonoIcon from '../../components/common/MonoIcon';
+import { normalizeEventStatus } from '../../utils/eventStatus';
 
 const STATUS_META = {
   Upcoming:  { bg: '#dcfce7', color: '#16a34a', label: 'Upcoming' },
@@ -78,7 +80,8 @@ export default function EventDetailPage() {
   const regCount       = event?.EventRegistrations?.length ?? 0;
   const isFull         = event?.capacity && regCount >= event.capacity;
   const deadlinePassed = event?.registration_deadline && new Date() > new Date(event.registration_deadline);
-  const registrationOpen = ['Upcoming', 'Ongoing'].includes(event?.status);
+  const eventStatus = normalizeEventStatus(event?.status);
+  const registrationOpen = ['Upcoming', 'Ongoing'].includes(eventStatus);
   const canRegister    = registrationOpen && !deadlinePassed && !isFull;
 
   const handleRegister = async () => {
@@ -155,7 +158,8 @@ export default function EventDetailPage() {
   if (error)   return <div style={s.errorBox}>{error}</div>;
   if (!event)  return null;
 
-  const meta = STATUS_META[event.status] || STATUS_META.Upcoming;
+  const status = normalizeEventStatus(event.status);
+  const meta = STATUS_META[status] || STATUS_META.Upcoming;
   const registrations = event.EventRegistrations || [];
   const visibleRegistrations = isCellGroupLeader && attendeeFilter === 'mine'
     ? registrations.filter(r => Number(r.member?.cell_group_id) === Number(user?.leadsCellGroupId))
@@ -178,7 +182,7 @@ export default function EventDetailPage() {
 
         <div style={s.detailsRow}>
           <div style={s.detailItem}>
-            <span style={s.detailIcon}>📅</span>
+            <span style={s.detailIcon}><MonoIcon name="calendar" size={18} /></span>
             <div>
               <div style={s.detailLabel}>Date</div>
               <div style={s.detailValue}>
@@ -190,7 +194,7 @@ export default function EventDetailPage() {
           </div>
           {event.start_time && (
             <div style={s.detailItem}>
-              <span style={s.detailIcon}>🕐</span>
+              <span style={s.detailIcon}><MonoIcon name="clock" size={18} /></span>
               <div>
                 <div style={s.detailLabel}>Time</div>
                 <div style={s.detailValue}>{formatTime(event.start_time)}</div>
@@ -199,7 +203,7 @@ export default function EventDetailPage() {
           )}
           {event.location && (
             <div style={s.detailItem}>
-              <span style={s.detailIcon}>📍</span>
+              <span style={s.detailIcon}><MonoIcon name="location" size={18} /></span>
               <div>
                 <div style={s.detailLabel}>Location</div>
                 <div style={s.detailValue}>{event.location}</div>
@@ -207,7 +211,7 @@ export default function EventDetailPage() {
             </div>
           )}
           <div style={s.detailItem}>
-            <span style={s.detailIcon}>👥</span>
+            <span style={s.detailIcon}><MonoIcon name="members" size={18} /></span>
             <div>
               <div style={s.detailLabel}>Registered</div>
               <div style={s.detailValue}>{regCount}{event.capacity ? ` / ${event.capacity}` : ''}</div>
@@ -239,7 +243,7 @@ export default function EventDetailPage() {
 
             {isRegistered ? (
               <div style={s.regRow}>
-                <span style={s.regConfirmed}>✅ You are registered for this event</span>
+                <span style={s.regConfirmed}><MonoIcon name="check" size={14} /> You are registered for this event</span>
                 {canSelfUnregister && (
                   <button onClick={handleRegister} disabled={regLoading} style={s.cancelRegBtn}>
                     {regLoading ? '...' : 'Cancel Registration'}
@@ -254,7 +258,7 @@ export default function EventDetailPage() {
               <div style={s.closedBox}>Registration available — contact the office to register.</div>
             ) : (
               <div style={s.closedBox}>
-                {isFull ? '⚠️ This event is full.' : deadlinePassed ? '⚠️ Registration is closed.' : ''}
+                {isFull ? 'This event is full.' : deadlinePassed ? 'Registration is closed.' : ''}
               </div>
             )}
           </div>
@@ -359,7 +363,7 @@ export default function EventDetailPage() {
       {/* ── Ministry Invite Panel (Ministry Leaders only) ── */}
       {user?.leadsMinistryId && (
         <div style={{ ...s.regSection, marginTop: 24 }}>
-          <h2 style={s.regTitle}>⚡ Ministry Invites</h2>
+          <h2 style={s.regTitle}><MonoIcon name="ministry" size={18} /> Ministry Invites</h2>
           <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px 0' }}>
             Invite members of your ministry to participate in this event.
           </p>
@@ -425,8 +429,8 @@ export default function EventDetailPage() {
                           color:      existing.response_status === 'attending'     ? '#16a34a' :
                                       existing.response_status === 'not_attending' ? '#dc2626' : '#64748b',
                         }}>
-                          {existing.response_status === 'attending'     ? '✅ Attending' :
-                           existing.response_status === 'not_attending' ? '❌ Not Attending' : '⏳ Pending'}
+                          {existing.response_status === 'attending'     ? 'Attending' :
+                           existing.response_status === 'not_attending' ? 'Not Attending' : 'Pending'}
                         </span>
                       )}
                     </div>

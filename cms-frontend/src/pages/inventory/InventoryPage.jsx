@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const CONDITION_STYLE = {
   'Good':         { bg: '#f0fdf4', color: '#16a34a' },
@@ -175,12 +176,12 @@ export default function InventoryPage() {
         <div style={s.headerActions}>
           {tab === 'items' && canManage && (
             <button onClick={() => { setShowItemForm(!showItemForm); if (showItemForm) resetItemForm(); }} style={s.addBtn}>
-              {showItemForm ? '✕ Cancel' : '+ Add Item'}
+              {showItemForm ? <><MonoIcon name="close" size={14} /> Cancel</> : '+ Add Item'}
             </button>
           )}
           {tab === 'requests' && canRequest && (
             <button onClick={() => setShowReqForm(!showReqForm)} style={s.addBtn}>
-              {showReqForm ? '✕ Cancel' : '+ Request Item'}
+              {showReqForm ? <><MonoIcon name="close" size={14} /> Cancel</> : '+ Request Item'}
             </button>
           )}
         </div>
@@ -191,7 +192,7 @@ export default function InventoryPage() {
         {['items', 'requests'].map(t => (
           <button key={t} onClick={() => setTab(t)}
             style={{ ...s.tab, background: tab === t ? '#005599' : '#f1f5f9', color: tab === t ? '#fff' : '#475569' }}>
-            {t === 'items' ? '📦 Items' : '📋 Requests'}
+            <MonoIcon name={t === 'items' ? 'inventory' : 'clipboard'} size={15} /> {t === 'items' ? 'Items' : 'Requests'}
           </button>
         ))}
       </div>
@@ -295,7 +296,7 @@ export default function InventoryPage() {
                     >
                       <td style={s.td}>
                         <span style={{ fontWeight: '600', color: '#0f172a' }}>{item.name}</span>
-                        {lowStock && <span style={s.lowStockTag}> ⚠ Low</span>}
+                        {lowStock && <span style={s.lowStockTag}><MonoIcon name="warning" size={12} /> Low</span>}
                       </td>
                       <td style={s.td}>{item.category?.name || '—'}</td>
                       <td style={{ ...s.td, fontWeight: '700', color: lowStock ? '#dc2626' : '#0f172a', fontSize: '16px' }}>{item.quantity}</td>
@@ -477,9 +478,9 @@ const s = {
   title:        { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   subtitle:     { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
   headerActions:{ display: 'flex', gap: '10px' },
-  addBtn:       { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  addBtn:       { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
   tabBar:       { display: 'flex', gap: '8px', marginBottom: '24px' },
-  tab:          { border: 'none', borderRadius: '20px', padding: '8px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  tab:          { border: 'none', borderRadius: '20px', padding: '8px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
   formCard:     { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
   formTitle:    { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 16px 0' },
   form:         { display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -505,7 +506,7 @@ const s = {
   td:           { padding: '14px 16px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
   centerCell:   { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   badge:        { padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' },
-  lowStockTag:  { color: '#dc2626', fontSize: '11px', fontWeight: '700', marginLeft: '4px' },
+  lowStockTag:  { color: '#dc2626', fontSize: '11px', fontWeight: '700', marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' },
   actions:      { display: 'flex', gap: '6px' },
   editBtn:      { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   approveBtn:   { background: '#f0fdf4', color: '#16a34a', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },

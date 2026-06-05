@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import PublicLayout from './PublicLayout';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const C = { navy:'#0B2447', blue:'#1565C0', gold:'#C9A84C', white:'#fff', off:'#F4F7FB', border:'#E2E8F0', text:'#0F1B33', sub:'#475569', muted:'#64748B' };
 
@@ -8,9 +9,7 @@ const TOPICS = [
   { n:2, title:'Creation and Historical Events in the Bible',               verse:'Isaiah 46:9', body:'Only the Almighty One who dwells in the eternal realm can declare the great events of human history exactly as they are. The Bible proves God authored history.' },
   { n:3, title:"What Is God's Purpose in Choosing Israel?",                  verse:'Isaiah 43:10', body:'As God\'s chosen people, Israel was set apart to testify about Him — a nation with a miraculous history of rise and fall, a witness to the living God even today.' },
   { n:4, title:'Our History and the Future Through the Bible',               verse:'Matthew 24:3', body:'God predetermined the timeline of history. Once His plans are fulfilled, history will come to an end. Jesus Christ will return, marking the conclusion of the age of salvation.' },
-  { n:5, title:'Human Sin and Its Consequences',                             verse:'Hebrews 9:27', body:'Death is not the end. After death comes judgment. Each of us will one day stand before God and face His righteous judgment for the lives we have lived.' },
-  { n:6, title:'Eternal Atonement, Perfect Salvation',                       verse:'Hebrews 9:12', body:'Through His own blood, Jesus Christ obtained eternal redemption — washing away the sins of all mankind from Adam to the last person ever born.' },
-  { n:7, title:"God's Love Revealed in the Gospel",                          verse:'2 Corinthians 5:14', body:'Since all became sinners in Adam, the righteous One — Jesus Christ — bore the penalty of sin by dying in our place. This is the heart of the Gospel.' },
+  { n:5, title:"What Is the End of Human History and God's Kingdom?",        verse:'Revelation 20:4', body:'The Bible reveals the end of human history and the eternal kingdom prepared by God for those who receive salvation through Jesus Christ.' },
 ];
 
 export default function BibleSeminarPage() {
@@ -34,21 +33,21 @@ export default function BibleSeminarPage() {
                 <span style={{ width: 20, height: 2, background: C.blue, borderRadius: 2, display: 'inline-block' }} />What is the Bible Seminar?
               </div>
               <h2 style={{ fontFamily:"'Lora',serif", fontSize:'clamp(1.5rem,2.5vw,2rem)', fontWeight:700, color:C.text, marginBottom:16, lineHeight:1.3 }}>
-                The Gospel shared through 7 powerful sermons
+                The Gospel shared through 5 powerful sermons
               </h2>
               <p className="prose" style={{ marginBottom: 20 }}>
-                A Bible Seminar is a seminar that shares the gospel message — primarily composed of seven sermons that summarize and explain how the Bible is true and how God saved us from sin through Jesus Christ.
+                A Bible Seminar is a seminar that shares the gospel message — primarily composed of five sermons that summarize and explain how the Bible is true and how God saved us from sin through Jesus Christ.
               </p>
               <p className="prose" style={{ marginBottom: 24 }}>
                 The seminar covers history in the Bible and world history, wisdom in the Bible and modern science, prophecies in the Bible and their relevance to the present and future.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[['📖', 'Prove the existence of God', 'Meet the living God who created the heavens and earth.'],
-                  ['✝️', "Testify to the Bible's truth", "The Bible is not mere religion — it is God's history."],
-                  ['🕊️', 'Preach the Gospel of Jesus Christ', 'The good news of redemption delivered to all people.']
+                {[['book', 'Prove the existence of God', 'Meet the living God who created the heavens and earth.'],
+                  ['cross', "Testify to the Bible's truth", "The Bible is not mere religion — it is God's history."],
+                  ['dove', 'Preach the Gospel of Jesus Christ', 'The good news of redemption delivered to all people.']
                 ].map(([icon, t, d]) => (
                   <div key={t} style={{ display:'flex', gap:12, alignItems:'flex-start', background:C.off, border:`1.5px solid ${C.border}`, borderRadius:10, padding:'14px 16px' }}>
-                    <span style={{ fontSize:18, flexShrink:0, marginTop:1 }}>{icon}</span>
+                    <span style={{ flexShrink:0, marginTop:1, color:C.text }}><MonoIcon name={icon} size={18} /></span>
                     <div>
                       <div style={{ fontSize:13.5, fontWeight:700, color:C.text, marginBottom:3 }}>{t}</div>
                       <div style={{ fontSize:13, color:C.muted }}>{d}</div>
@@ -75,8 +74,7 @@ export default function BibleSeminarPage() {
 
           {/* Sub-nav */}
           <div style={{ display:'flex', gap:12, marginBottom:48, flexWrap:'wrap' }}>
-            {[['For Adults (Video Series)', '/bible-seminar/adults', C.blue, '#fff'],
-              ['Bible Seminar Schedule',   '/bible-seminar/schedule', C.off, C.text]].map(([label, path, bg, color]) => (
+            {[['For Adults (Video Series)', '/bible-seminar/adults', C.blue, '#fff']].map(([label, path, bg, color]) => (
               <Link key={path} to={path}>
                 <button style={{ background:bg, color, border:`1.5px solid ${bg === C.off ? C.border : bg}`, padding:'11px 22px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                   {label} →
@@ -85,9 +83,9 @@ export default function BibleSeminarPage() {
             ))}
           </div>
 
-          {/* 7 Topics */}
+          {/* 5 Topics */}
           <div>
-            <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.5rem', fontWeight:700, color:C.text, marginBottom:24 }}>The 7 Seminar Topics</h3>
+            <h3 style={{ fontFamily:"'Lora',serif", fontSize:'1.5rem', fontWeight:700, color:C.text, marginBottom:24 }}>The 5 Seminar Topics</h3>
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               {TOPICS.map(t => (
                 <div key={t.n} style={{ display:'flex', gap:16, alignItems:'flex-start', background:C.off, border:`1.5px solid ${C.border}`, borderRadius:12, padding:'20px 22px', transition:'all 0.2s' }}

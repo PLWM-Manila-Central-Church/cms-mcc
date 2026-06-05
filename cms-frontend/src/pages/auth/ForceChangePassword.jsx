@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
+import MonoIcon from '../../components/common/MonoIcon';
 
 export default function ForceChangePassword() {
   const { logout, clearForcePasswordChange } = useAuth();
@@ -47,7 +48,7 @@ export default function ForceChangePassword() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <div style={styles.iconWrap}>🔐</div>
+        <div style={styles.iconWrap}><MonoIcon name="lock" size={30} /></div>
         <h2 style={styles.title}>Change Your Password</h2>
         <p style={styles.subtitle}>
           You must set a new password before continuing.

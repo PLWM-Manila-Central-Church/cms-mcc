@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const STATUS_META = {
   draft:     { bg: '#f1f5f9', color: '#475569', label: 'Draft' },
@@ -98,7 +99,7 @@ export default function AttendancePage() {
     setCheckInSuccess('');
     try {
       await axiosInstance.post(`/services/${serviceId}/attendance`, { member_id: member.id });
-      setCheckInSuccess(`✅ ${member.first_name} ${member.last_name} checked in successfully.`);
+      setCheckInSuccess(`${member.first_name} ${member.last_name} checked in successfully.`);
       setSearch('');
       setSearchResults([]);
       fetchAttendance();
@@ -166,7 +167,7 @@ export default function AttendancePage() {
         <div style={styles.serviceInfo}>
           <div style={styles.serviceTitle}>{service?.title}</div>
           <div style={styles.serviceMeta}>
-            📅 {formatDate(service?.service_date)} &nbsp;·&nbsp; 🕐 {formatTime(service?.service_time)}
+            <MonoIcon name="calendar" size={14} /> {formatDate(service?.service_date)} &nbsp;·&nbsp; <MonoIcon name="clock" size={14} /> {formatTime(service?.service_time)}
           </div>
         </div>
         <span style={{ ...styles.badge, background: meta.bg, color: meta.color }}>{meta.label}</span>
@@ -267,10 +268,10 @@ export default function AttendancePage() {
                       <div style={styles.dropdownInfo}>
                         <div style={styles.dropdownName}>
                           {m.last_name}, {m.first_name}
-                          {checked && <span style={styles.alreadyTag}> ✓ Checked In</span>}
+                          {checked && <span style={styles.alreadyTag}> <MonoIcon name="check" size={12} /> Checked In</span>}
                         </div>
                         <div style={styles.dropdownMeta}>
-                          {m.barcode && <span>🏷 {m.barcode}</span>}
+                          {m.barcode && <span><MonoIcon name="label" size={12} /> {m.barcode}</span>}
                           {m.email && <span> · {m.email}</span>}
                         </div>
                       </div>
@@ -289,14 +290,14 @@ export default function AttendancePage() {
             )}
           </div>
 
-          {checkInSuccess && <div style={styles.successBox}>{checkInSuccess}</div>}
+          {checkInSuccess && <div style={styles.successBox}><MonoIcon name="check" size={14} /> {checkInSuccess}</div>}
           {checkInError   && <div style={styles.errorBox}>{checkInError}</div>}
         </div>
       )}
 
       {!isPublished && (
         <div style={styles.warningBox}>
-          ⚠️ Check-in is only available for <strong>Published</strong> services.
+          <MonoIcon name="warning" size={15} /> Check-in is only available for <strong>Published</strong> services.
         </div>
       )}
 

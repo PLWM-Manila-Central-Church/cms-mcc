@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { LANGS, getLangCode, saveLangCode } from '../../utils/langUtils';
+import MonoIcon from '../common/MonoIcon';
 
 const POLL_INTERVAL = 30000;
 
@@ -15,10 +16,10 @@ function timeAgo(dateStr) {
 }
 
 const TYPE_ICON = {
-  info:    { icon: 'ℹ️', bg: '#eff6ff', dot: '#3b82f6' },
-  warning: { icon: '⚠️', bg: '#fffbeb', dot: '#f59e0b' },
-  success: { icon: '✅', bg: '#f0fdf4', dot: '#22c55e' },
-  error:   { icon: '❌', bg: '#fef2f2', dot: '#ef4444' },
+  info:    { icon: 'file', bg: '#eff6ff', dot: '#3b82f6' },
+  warning: { icon: 'warning', bg: '#fffbeb', dot: '#f59e0b' },
+  success: { icon: 'check', bg: '#f0fdf4', dot: '#22c55e' },
+  error:   { icon: 'error', bg: '#fef2f2', dot: '#ef4444' },
 };
 const defaultType = TYPE_ICON.info;
 
@@ -214,7 +215,7 @@ export default function Header({ sidebarWidth, isMobile = false }) {
             style={{ background: langOpen ? '#e8f4fd' : 'transparent', border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', color: '#374151', fontFamily: 'inherit', fontWeight: 500 }}
             title="Change language"
           >
-            <span style={{ fontSize: 15 }}>{LANGS.find(l => l.label === currentLang)?.flag || '🌐'}</span>
+            <span style={{ fontSize: 11, fontWeight: 800 }}>{LANGS.find(l => l.label === currentLang)?.code.toUpperCase() || 'EN'}</span>
             {!isMobile && <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{currentLang === 'English' ? 'EN' : currentLang.slice(0, 2).toUpperCase()}</span>}
           </button>
 
@@ -230,9 +231,9 @@ export default function Header({ sidebarWidth, isMobile = false }) {
                       onMouseEnter={e => e.currentTarget.style.background = currentLang === lang.label ? '#eff6ff' : '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = currentLang === lang.label ? '#eff6ff' : 'transparent'}
                     >
-                      <span style={{ fontSize: 16 }}>{lang.flag}</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, minWidth: 28, color: '#64748b' }}>{lang.code.toUpperCase()}</span>
                       <span>{lang.label}</span>
-                      {currentLang === lang.label && <span style={{ marginLeft: 'auto', color: '#005599', fontSize: 12 }}>✓</span>}
+                      {currentLang === lang.label && <MonoIcon name="check" size={12} style={{ marginLeft: 'auto', color: '#005599' }} />}
                     </button>
                   ))}
                 </div>
@@ -251,7 +252,7 @@ export default function Header({ sidebarWidth, isMobile = false }) {
             onClick={() => setPanelOpen(p => !p)}
             title="Notifications"
           >
-            <span style={S.bellIcon}>🔔</span>
+            <MonoIcon name="bell" size={17} style={S.bellIcon} />
             {unread > 0 && <span style={S.badge}>{unread > 99 ? '99+' : unread}</span>}
           </button>
 
@@ -271,7 +272,7 @@ export default function Header({ sidebarWidth, isMobile = false }) {
               <div style={S.panelList}>
                 {notifs.length === 0 ? (
                   <div style={S.emptyPanel}>
-                    <span style={S.emptyBell}>🔕</span>
+                    <span style={S.emptyBell}><MonoIcon name="bellOff" size={22} /></span>
                     <span style={S.emptyText}>You&apos;re all caught up!</span>
                     <span style={S.emptyHint}>No notifications yet.</span>
                   </div>
@@ -284,13 +285,13 @@ export default function Header({ sidebarWidth, isMobile = false }) {
                         onClick={() => handleNotifClick(n)}
                       >
                         <div style={{ ...S.notifIconWrap, background: t.bg }}>
-                          <span style={S.notifIcon}>{t.icon}</span>
+                          <MonoIcon name={t.icon} size={15} style={S.notifIcon} />
                         </div>
                         <div style={S.notifContent}>
                           <p style={S.notifMsg}>{n.message}</p>
                           <span style={S.notifTime}>{timeAgo(n.created_at)}</span>
                         </div>
-                        <button style={S.deleteNotif} onClick={(e) => deleteOne(e, n.id)} title="Dismiss">✕</button>
+                        <button style={S.deleteNotif} onClick={(e) => deleteOne(e, n.id)} title="Dismiss"><MonoIcon name="close" size={12} /></button>
                       </div>
                     );
                   })

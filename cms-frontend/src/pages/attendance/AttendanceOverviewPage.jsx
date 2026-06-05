@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import MonoIcon from '../../components/common/MonoIcon';
 
 export default function AttendanceOverviewPage() {
   const navigate = useNavigate();
@@ -115,7 +116,7 @@ export default function AttendanceOverviewPage() {
 
       {/* ── Member Attendance History Search ─────────────── */}
       {!isCellGroupLeader && <div style={s.section}>
-        <h2 style={s.sectionTitle}>🔍 Member Attendance History</h2>
+        <h2 style={s.sectionTitle}><MonoIcon name="search" size={18} /> Member Attendance History</h2>
         <p style={s.sectionSub}>Search a member to see which services they attended</p>
 
         <div style={{ position: 'relative', maxWidth: '500px', width: '100%' }}>
@@ -177,7 +178,7 @@ export default function AttendanceOverviewPage() {
                       <div style={s.historyItemLeft}>
                         <div style={s.historyServiceTitle}>{svc.title}</div>
                         <div style={s.historyServiceMeta}>
-                          📅 {formatDate(svc.service_date)} · 🕐 {formatTime(svc.service_time)}
+                          <MonoIcon name="calendar" size={13} /> {formatDate(svc.service_date)} · <MonoIcon name="clock" size={13} /> {formatTime(svc.service_time)}
                         </div>
                       </div>
                       <div style={s.historyItemRight}>
@@ -199,7 +200,7 @@ export default function AttendanceOverviewPage() {
 
       {/* ── Recent Services ───────────────────────────────── */}
       <div style={s.section}>
-        <h2 style={s.sectionTitle}>📋 Recent Services</h2>
+        <h2 style={s.sectionTitle}><MonoIcon name="clipboard" size={18} /> Recent Services</h2>
         <p style={s.sectionSub}>Click a service to view its full attendance sheet</p>
 
         {loadingServices ? (
@@ -231,7 +232,7 @@ export default function AttendanceOverviewPage() {
                     </span>
                   </div>
                   <div style={s.serviceCardMeta}>
-                    📅 {formatDate(svc.service_date)} · 🕐 {formatTime(svc.service_time)}
+                    <MonoIcon name="calendar" size={13} /> {formatDate(svc.service_date)} · <MonoIcon name="clock" size={13} /> {formatTime(svc.service_time)}
                   </div>
 
                   {/* Attendance bar */}

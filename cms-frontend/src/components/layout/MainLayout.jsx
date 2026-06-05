@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { NAV_ITEMS, NAV_ICONS } from '../../utils/constants';
 import { LANGS, getLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
 import { DEFAULT_TABS, ROLE_TAB_SETS, isVisibleNavItem } from '../../utils/roleAccess';
+import MonoIcon from '../common/MonoIcon';
 
 function NavIcon({ name, size = 20 }) {
   const MORE_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
@@ -169,7 +170,6 @@ function MobileMoreDrawer({ open, onClose }) {
             </div>
             <div style={{ fontSize: 12, color: '#94a3b8' }}>{user?.roleName}</div>
           </div>
-          {/* ⚙️ My Settings button in drawer header */}
           <button
             onClick={() => { onClose(); navigate('/my-settings'); }}
             style={{
@@ -180,7 +180,7 @@ function MobileMoreDrawer({ open, onClose }) {
               flexShrink: 0,
             }}
           >
-            ⚙️ Settings
+            <MonoIcon name="settings" size={14} /> Settings
           </button>
         </div>
 
@@ -220,9 +220,10 @@ function MobileMoreDrawer({ open, onClose }) {
               border: '1.5px solid #fecaca', background: '#fef2f2',
               color: '#dc2626', fontWeight: 700, fontSize: 14,
               cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
-            🚪 Sign Out
+            <MonoIcon name="logout" size={16} /> Sign Out
           </button>
         </div>
       </div>

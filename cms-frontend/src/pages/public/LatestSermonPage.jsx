@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import PublicLayout, { PlaylistEmbed } from './PublicLayout';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const C = { navy:'#0B2447', blue:'#1565C0', gold:'#C9A84C', white:'#fff', off:'#F4F7FB', border:'#E2E8F0', text:'#0F1B33', sub:'#475569', muted:'#64748B' };
 
@@ -32,13 +33,13 @@ export default function LatestSermonPage() {
 
           <div className="pub-2col" style={{ gap: 20, marginBottom: 40 }}>
             {[
-              { icon: '🏛️', title: 'Sunday Filipino Service',  time: 'Sunday 9:30 AM', pastor: 'Pastor Park HS' },
-              { icon: '✝️', title: 'Sunday Korean Service',     time: 'Sunday 2:00 PM', pastor: 'Pastor Park HS' },
-              { icon: '📖', title: 'Wednesday Midweek Sermon', time: 'Wednesday 7:00 PM', pastor: 'Various Pastors' },
-              { icon: '🎓', title: 'Special Seminars',         time: 'As scheduled',     pastor: 'PLWM Evangelists' },
+              { icon: 'building', title: 'Sunday Filipino Service',  time: 'Sunday 9:30 AM', pastor: 'Pastor Park HS' },
+              { icon: 'cross', title: 'Sunday Korean Service',     time: 'Sunday 2:00 PM', pastor: 'Pastor Park HS' },
+              { icon: 'book', title: 'Wednesday Midweek Sermon', time: 'Wednesday 7:00 PM', pastor: 'Various Pastors' },
+              { icon: 'graduation', title: 'Special Seminars',         time: 'As scheduled',     pastor: 'PLWM Evangelists' },
             ].map((s, i) => (
               <div key={i} style={{ background: C.off, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <span style={{ fontSize: 20, flexShrink: 0 }}>{s.icon}</span>
+                <span style={{ color: C.text, flexShrink: 0 }}><MonoIcon name={s.icon} size={20} /></span>
                 <div>
                   <div style={{ fontWeight: 700, color: C.text, fontSize: 14, marginBottom: 3 }}>{s.title}</div>
                   <div style={{ fontSize: 12, color: C.blue, fontWeight: 600 }}>{s.time}</div>
@@ -66,9 +67,9 @@ export default function LatestSermonPage() {
 
           <div style={{ marginTop: 24, textAlign: 'center' }}>
             <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer">
-              <button style={{ background: '#FF0000', color: '#fff', border: 'none', padding: '11px 24px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                ▶ View Full Channel on YouTube
-              </button>
+                <button style={{ background: '#FF0000', color: '#fff', border: 'none', padding: '11px 24px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <MonoIcon name="play" size={14} /> View Full Channel on YouTube
+                </button>
             </a>
           </div>
         </div>

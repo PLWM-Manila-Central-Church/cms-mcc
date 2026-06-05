@@ -4,6 +4,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import { cellGroupPageTitle } from '../../utils/roleDisplay';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const EMPTY_FORM = { name: '', area: '' };
 
@@ -354,7 +355,7 @@ export default function CellGroupsPage() {
       {/* ── Search ── */}
       <div style={S.toolbar}>
         <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
-          <span style={S.searchIcon}>🔍</span>
+          <span style={S.searchIcon}><MonoIcon name="search" size={15} /></span>
           <input
             type="text"
             placeholder="Search by name or area…"
@@ -363,7 +364,7 @@ export default function CellGroupsPage() {
             style={S.search}
           />
           {search && (
-            <button onClick={() => setSearch('')} style={S.clearSearch}>✕</button>
+            <button onClick={() => setSearch('')} style={S.clearSearch}><MonoIcon name="close" size={13} /></button>
           )}
         </div>
         <span style={S.resultCount}>
@@ -382,7 +383,7 @@ export default function CellGroupsPage() {
       ) : filtered.length === 0 ? (
         <div style={S.tableWrap}>
           <div style={S.empty}>
-            <div style={S.emptyIcon}>🏘️</div>
+            <div style={S.emptyIcon}><MonoIcon name="home" size={32} /></div>
             <p style={S.emptyTitle}>{search ? 'No results found' : 'No cell groups yet'}</p>
             <p style={S.emptyHint}>
               {search ? 'Try a different search term.' : canCreate ? 'Click "+ New Cell Group" to add the first one.' : 'No cell groups have been created.'}
@@ -422,12 +423,12 @@ export default function CellGroupsPage() {
                 <div style={{ display: 'flex', gap: 8, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
                   {canUpdate && (
                     <button onClick={() => openEdit(g)} style={{ ...S.editBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                      ✏️ Edit
+                      <MonoIcon name="edit" size={14} /> Edit
                     </button>
                   )}
                   {canDelete && (
                     <button onClick={() => { setDelTarget(g); setDelError(''); }} style={{ ...S.deleteBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                      🗑 Delete
+                      <MonoIcon name="delete" size={14} /> Delete
                     </button>
                   )}
                 </div>
@@ -469,8 +470,8 @@ export default function CellGroupsPage() {
                   {(canUpdate || canDelete) && (
                     <td style={{ ...S.td, textAlign: 'right' }}>
                       <div style={S.actionsRow}>
-                        {canUpdate && <button onClick={() => openEdit(g)} style={S.editBtn}>✏️ Edit</button>}
-                        {canDelete && <button onClick={() => { setDelTarget(g); setDelError(''); }} style={S.deleteBtn}>🗑 Delete</button>}
+                        {canUpdate && <button onClick={() => openEdit(g)} style={S.editBtn}><MonoIcon name="edit" size={14} /> Edit</button>}
+                        {canDelete && <button onClick={() => { setDelTarget(g); setDelError(''); }} style={S.deleteBtn}><MonoIcon name="delete" size={14} /> Delete</button>}
                       </div>
                     </td>
                   )}
@@ -544,11 +545,11 @@ export default function CellGroupsPage() {
               <h2 style={S.modalTitle}>
                 {modal === 'add' ? '+ New Cell Group' : 'Edit Cell Group'}
               </h2>
-              <button onClick={closeModal} style={S.closeBtn}>✕</button>
+              <button onClick={closeModal} style={S.closeBtn}><MonoIcon name="close" size={14} /></button>
             </div>
 
             {formError && (
-              <div style={S.errorBox}>⚠ {formError}</div>
+              <div style={S.errorBox}><MonoIcon name="warning" size={14} /> {formError}</div>
             )}
 
             <form onSubmit={handleSubmit} style={S.modalForm}>
@@ -598,18 +599,18 @@ export default function CellGroupsPage() {
           <div style={{ ...S.modal, maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
             <div style={S.modalHeader}>
               <h2 style={{ ...S.modalTitle, color: '#dc2626' }}>Delete Cell Group</h2>
-              <button onClick={() => setDelTarget(null)} style={S.closeBtn} disabled={deleting}>✕</button>
+              <button onClick={() => setDelTarget(null)} style={S.closeBtn} disabled={deleting}><MonoIcon name="close" size={14} /></button>
             </div>
 
             <div style={S.delBody}>
-              <div style={S.delIcon}>🗑</div>
+              <div style={S.delIcon}><MonoIcon name="delete" size={30} /></div>
               <p style={S.delText}>
                 Are you sure you want to delete <strong>"{delTarget.name}"</strong>?
               </p>
               <p style={S.delHint}>
                 This cannot be undone. Groups with assigned members cannot be deleted.
               </p>
-              {delError && <div style={S.errorBox}>⚠ {delError}</div>}
+              {delError && <div style={S.errorBox}><MonoIcon name="warning" size={14} /> {delError}</div>}
             </div>
 
             <div style={S.modalFooter}>
@@ -627,7 +628,7 @@ export default function CellGroupsPage() {
       {/* ── Toast ── */}
       {toast && (
         <div style={{ ...S.toast, background: toast.type === 'error' ? '#dc2626' : '#005599' }}>
-          {toast.type === 'error' ? '⚠' : '✓'} {toast.msg}
+          <MonoIcon name={toast.type === 'error' ? 'warning' : 'check'} size={14} /> {toast.msg}
         </div>
       )}
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const PAYMENT_LABELS = { cash: 'Cash', gcash: 'GCash', bank_transfer: 'Bank Transfer' };
 const PAYMENT_STYLE = {
@@ -551,8 +552,8 @@ export default function FinancePage() {
               </select>
             </div>
             {canCreate && (
-              <button onClick={() => setShowIncForm(!showIncForm)} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                {showIncForm ? '✕ Close Form' : '+ Record Giving'}
+              <button onClick={() => setShowIncForm(!showIncForm)} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                {showIncForm ? <><MonoIcon name="close" size={14} /> Close Form</> : '+ Record Giving'}
               </button>
             )}
           </div>
@@ -689,8 +690,8 @@ export default function FinancePage() {
               </select>
             </div>
             {canCreate && (
-              <button onClick={() => setShowExpForm(!showExpForm)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                {showExpForm ? '✕ Close Form' : '+ Record Expenditure'}
+              <button onClick={() => setShowExpForm(!showExpForm)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                {showExpForm ? <><MonoIcon name="close" size={14} /> Close Form</> : '+ Record Expenditure'}
               </button>
             )}
           </div>
@@ -790,8 +791,8 @@ export default function FinancePage() {
                     <td style={{ padding: 12 }}>{formatDate(r.date)}</td>
                     <td style={{ padding: 12 }}>
                       {r.attachments && r.attachments.length > 0 ? (
-                        <button onClick={() => setPreviewImage(getAttachmentUrl(r.attachments[0].file_path))} style={{ background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: 4, padding: '3px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                          👁 View Receipt
+                        <button onClick={() => setPreviewImage(getAttachmentUrl(r.attachments[0].file_path))} style={{ background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: 4, padding: '3px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <MonoIcon name="eye" size={13} /> View Receipt
                         </button>
                       ) : <span style={{ fontSize: 12, color: '#94a3b8' }}>No receipt</span>}
                     </td>

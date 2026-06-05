@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const ACTION_COLORS = {
   CREATE:  { bg: '#f0fdf4', color: '#16a34a' },
@@ -13,14 +14,14 @@ const ACTION_COLORS = {
 };
 
 const TABLE_LABELS = {
-  members:           '👤 Members',
-  users:             '🔑 Users',
-  events:            '📅 Events',
-  services:          '⛪ Services',
-  financial_records: '💰 Finance',
-  inventory_items:   '📦 Inventory',
-  archive_records:   '🗂 Archives',
-  attendance:        '✅ Attendance',
+  members:           'Members',
+  users:             'Users',
+  events:            'Events',
+  services:          'Services',
+  financial_records: 'Finance',
+  inventory_items:   'Inventory',
+  archive_records:   'Archives',
+  attendance:        'Attendance',
 };
 
 const getActionColor = (action = '') => {
@@ -117,7 +118,7 @@ export default function AuditLogPage() {
             <input type="date" value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setPage(1); }} style={s.filterInput} />
           </div>
           {hasFilters && (
-            <button onClick={clearFilters} style={s.clearBtn}>✕ Clear</button>
+            <button onClick={clearFilters} style={s.clearBtn}><MonoIcon name="close" size={13} /> Clear</button>
           )}
         </div>
       </div>

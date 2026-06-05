@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const STATUS_META = {
   pending:  { bg: '#fffbeb', color: '#d97706', label: 'Pending' },
@@ -16,7 +17,7 @@ const VISIBILITY_META = {
 };
 
 const FILE_ICONS = {
-  pdf: '📄', docx: '📝', xlsx: '📊', jpg: '🖼️', png: '🖼️', mp4: '🎬', mp3: '🎵'
+  pdf: 'file', docx: 'document', xlsx: 'sheet', jpg: 'image', jpeg: 'image', png: 'image', mp4: 'video', mp3: 'music'
 };
 
 export default function ArchivesPage() {
@@ -163,8 +164,8 @@ export default function ArchivesPage() {
   const DetailContent = () => (
     <>
       <div style={s.detailHeader}>
-        <h2 style={s.detailTitle}>{FILE_ICONS[detailRecord.file_type]} {detailRecord.title}</h2>
-        <button onClick={() => setDetailRecord(null)} style={s.closeBtn}>✕</button>
+        <h2 style={s.detailTitle}><MonoIcon name={FILE_ICONS[detailRecord.file_type] || 'file'} size={18} /> {detailRecord.title}</h2>
+        <button onClick={() => setDetailRecord(null)} style={s.closeBtn}><MonoIcon name="close" size={14} /></button>
       </div>
 
       <div style={s.detailBody}>
@@ -208,7 +209,7 @@ export default function ArchivesPage() {
 
         <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${detailRecord.file_url}`}
           target="_blank" rel="noreferrer" style={s.downloadBtn}>
-          ⬇ Download File
+          <MonoIcon name="download" size={15} /> Download File
         </a>
 
         {detailRecord.ArchiveVersions?.length > 0 && (
@@ -231,7 +232,7 @@ export default function ArchivesPage() {
             <button onClick={() => openEdit(detailRecord)} style={s.editBtn}>Edit</button>
           )}
           {detailRecord.status === 'pending' && canApprove && (
-            <button onClick={() => handleApprove(detailRecord.id)} style={s.approveBtn}>✓ Approve</button>
+            <button onClick={() => handleApprove(detailRecord.id)} style={s.approveBtn}><MonoIcon name="check" size={14} /> Approve</button>
           )}
           {isAdmin && (
             <button onClick={() => handleDelete(detailRecord.id)} style={s.deleteBtn}>Delete</button>
@@ -270,7 +271,7 @@ export default function ArchivesPage() {
             </div>
             {canUpload && (
               <button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} style={s.addBtn}>
-                {showForm ? '✕ Cancel' : '+ Upload'}
+                {showForm ? <><MonoIcon name="close" size={14} /> Cancel</> : '+ Upload'}
               </button>
             )}
           </div>
@@ -318,7 +319,7 @@ export default function ArchivesPage() {
                   <label style={s.label}>File {editRecord ? '(leave blank to keep current)' : '*'}</label>
                   <input type="file" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png,.mp4,.mp3"
                     onChange={e => setSelectedFile(e.target.files[0])} style={s.fileInput} />
-                  {selectedFile && <span style={s.fileName}>📎 {selectedFile.name}</span>}
+                  {selectedFile && <span style={s.fileName}><MonoIcon name="paperclip" size={14} /> {selectedFile.name}</span>}
                 </div>
                 <div style={s.formActions}>
                   <button type="button" onClick={() => { setShowForm(false); resetForm(); }} style={s.cancelBtn}>Cancel</button>
@@ -365,7 +366,7 @@ export default function ArchivesPage() {
               {records.map(record => {
                 const stMeta  = STATUS_META[record.status]     || STATUS_META.pending;
                 const visMeta = VISIBILITY_META[record.visibility] || VISIBILITY_META.public;
-                const icon    = FILE_ICONS[record.file_type] || '📄';
+                const icon    = FILE_ICONS[record.file_type] || 'file';
                 const isSelected = !isMobile && detailRecord?.id === record.id;
 
                 return (
@@ -373,7 +374,7 @@ export default function ArchivesPage() {
                     onClick={() => openDetail(record)}
                     style={{ ...s.recordCard, background: isSelected ? '#e8f4fd' : '#fff', borderColor: isSelected ? '#0066b3' : '#e2e8f0', cursor: 'pointer' }}>
                     <div style={s.recordTop}>
-                      <span style={s.fileIcon}>{icon}</span>
+                      <span style={s.fileIcon}><MonoIcon name={icon} size={24} /></span>
                       <div style={s.recordMeta}>
                         <span style={{ ...s.badge, background: stMeta.bg, color: stMeta.color }}>{stMeta.label}</span>
                         <span style={{ ...s.badge, background: visMeta.bg, color: visMeta.color }}>{visMeta.label}</span>
@@ -385,8 +386,8 @@ export default function ArchivesPage() {
 
                     {record.status === 'pending' && isApprover && (
                       <div style={s.pendingActions} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => handleApprove(record.id)} style={s.approveBtn}>✓ Approve</button>
-                        {isAdmin && <button onClick={() => handleDelete(record.id)} style={s.rejectBtn}>✕ Delete</button>}
+                        <button onClick={() => handleApprove(record.id)} style={s.approveBtn}><MonoIcon name="check" size={14} /> Approve</button>
+                        {isAdmin && <button onClick={() => handleDelete(record.id)} style={s.rejectBtn}><MonoIcon name="close" size={14} /> Delete</button>}
                       </div>
                     )}
                   </div>

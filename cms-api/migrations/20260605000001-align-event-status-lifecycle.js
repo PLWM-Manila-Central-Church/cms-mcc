@@ -10,9 +10,16 @@ const changeStatusColumn = (queryInterface, Sequelize, values, defaultValue) =>
     defaultValue,
   });
 
+const changeStatusColumnToString = (queryInterface, Sequelize, defaultValue) =>
+  queryInterface.changeColumn("events", "status", {
+    type: Sequelize.STRING(32),
+    allowNull: false,
+    defaultValue,
+  });
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await changeStatusColumn(queryInterface, Sequelize, [...oldStatuses, ...newStatuses], "Upcoming");
+    await changeStatusColumnToString(queryInterface, Sequelize, "Upcoming");
 
     await queryInterface.sequelize.query(`
       UPDATE events
@@ -29,7 +36,7 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await changeStatusColumn(queryInterface, Sequelize, [...oldStatuses, ...newStatuses], "draft");
+    await changeStatusColumnToString(queryInterface, Sequelize, "draft");
 
     await queryInterface.sequelize.query(`
       UPDATE events

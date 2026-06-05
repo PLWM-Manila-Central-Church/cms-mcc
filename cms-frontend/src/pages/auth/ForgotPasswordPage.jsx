@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const LOGO   = process.env.PUBLIC_URL + '/logo.jpg';
 const BG_URL = process.env.PUBLIC_URL + '/smr.jpg';
@@ -81,7 +82,7 @@ export default function ForgotPasswordPage() {
 
                 {error && (
                   <div style={S.errorBox}>
-                    <span style={S.errorIcon}>⚠</span>
+                    <MonoIcon name="warning" size={16} style={S.errorIcon} />
                     {error}
                   </div>
                 )}
@@ -90,7 +91,7 @@ export default function ForgotPasswordPage() {
                   <div style={S.field}>
                     <label style={S.label}>Email Address</label>
                     <div style={{ position: 'relative' }}>
-                      <span style={S.fieldIcon}>✉</span>
+                      <span style={S.fieldIcon}><MonoIcon name="mail" size={17} /></span>
                       <input
                         type="email"
                         value={email}
@@ -127,7 +128,7 @@ export default function ForgotPasswordPage() {
             ) : (
               /* ── Success state ── */
               <div style={S.successBox}>
-                <div style={S.successIcon}>✓</div>
+                <div style={S.successIcon}><MonoIcon name="check" size={24} /></div>
                 <h3 style={S.successTitle}>Check your email</h3>
                 <p style={S.successText}>
                   If <strong>{email}</strong> is registered, you'll receive a

@@ -65,19 +65,6 @@ export default function BibleSeminarAdultsPage() {
               </div>
             ))}
           </div>
-
-          {/* CTA */}
-          <div style={{ marginTop: 48, background: C.navy, borderRadius: 14, padding: '28px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontFamily:"'Lora',serif", fontSize:'1.1rem', color:'#fff', fontWeight:700, marginBottom:6 }}>Want to attend a live Bible Seminar?</div>
-              <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>Check our schedule and join an upcoming session near you.</p>
-            </div>
-            <Link to="/bible-seminar/schedule">
-              <button style={{ background: C.gold, color: C.navy, border: 'none', padding: '12px 24px', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-                View Schedule →
-              </button>
-            </Link>
-          </div>
         </div>
       </section>
     </PublicLayout>

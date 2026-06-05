@@ -37,7 +37,6 @@ import DashboardPage     from '../pages/dashboard/DashboardPage';
 import HomePage                 from '../pages/public/HomePage';
 import BibleSeminarPage         from '../pages/public/BibleSeminarPage';
 import BibleSeminarAdultsPage   from '../pages/public/BibleSeminarAdultsPage';
-import BibleSeminarSchedulePage from '../pages/public/BibleSeminarSchedulePage';
 import LatestSermonPage         from '../pages/public/LatestSermonPage';
 import {
   SermonPage, SundaySermonPage, ChristianLifePage,
@@ -87,7 +86,6 @@ const AppRoutes = () => {
       <Route path="/"                         element={<HomePage />} />
       <Route path="/bible-seminar"            element={<BibleSeminarPage />} />
       <Route path="/bible-seminar/adults"     element={<BibleSeminarAdultsPage />} />
-      <Route path="/bible-seminar/schedule"   element={<BibleSeminarSchedulePage />} />
       <Route path="/sermon"                   element={<SermonPage />} />
       <Route path="/sermon/latest"            element={<LatestSermonPage />} />
       <Route path="/sermon/sunday"            element={<SundaySermonPage />} />

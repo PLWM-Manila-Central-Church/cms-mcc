@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const ROLE_COLORS = {
   'System Admin':      { bg: '#fef2f2', color: '#dc2626' },
@@ -146,7 +147,7 @@ export default function UsersPage() {
         />
         {search && (
           <button onClick={() => setSearch('')} style={{ background: '#f1f5f9', border: 'none', borderRadius: 9, padding: '10px 14px', fontSize: 13, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
-            ✕ Clear
+            <MonoIcon name="close" size={13} /> Clear
           </button>
         )}
       </div>
@@ -156,7 +157,7 @@ export default function UsersPage() {
           <span style={{ fontSize:13, color:'#dc2626', fontWeight:600 }}>{selected.size} user{selected.size > 1 ? 's' : ''} selected</span>
           <button onClick={handleBulkDelete} disabled={bulkDeleting}
             style={{ background:'#dc2626', color:'#fff', border:'none', borderRadius:8, padding:'6px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity:bulkDeleting ? 0.6 : 1 }}>
-            {bulkDeleting ? 'Deleting…' : '🗑 Delete Selected'}
+            {bulkDeleting ? 'Deleting…' : <><MonoIcon name="delete" size={14} /> Delete Selected</>}
           </button>
           <button onClick={() => setSelected(new Set())}
             style={{ background:'none', border:'1px solid #e2e8f0', borderRadius:8, padding:'6px 12px', fontSize:13, color:'#94a3b8', cursor:'pointer', fontFamily:'inherit' }}>
@@ -189,7 +190,7 @@ export default function UsersPage() {
                     )}
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: u.is_active ? '#dcfce7' : '#f3f4f6', color: u.is_active ? '#16a34a' : '#6b7280' }}>{u.is_active ? 'Active' : 'Inactive'}</span>
                   </div>
-                  {u.member && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>👤 {u.member.first_name} {u.member.last_name}</div>}
+                  {u.member && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, display:'flex', alignItems:'center', gap:4 }}><MonoIcon name="users" size={12} /> {u.member.first_name} {u.member.last_name}</div>}
                   <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                     {hasPermission('users', 'update') && (
                       <button onClick={() => navigate(`/users/${u.id}/edit`)} style={{ background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
@@ -340,7 +341,7 @@ export default function UsersPage() {
       {deleteTarget && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
-            <div style={styles.modalIcon}>🗑️</div>
+            <div style={styles.modalIcon}><MonoIcon name="delete" size={34} /></div>
             <h3 style={styles.modalTitle}>Permanently Delete User?</h3>
             <p style={styles.modalBody}>
               You are about to permanently delete{' '}

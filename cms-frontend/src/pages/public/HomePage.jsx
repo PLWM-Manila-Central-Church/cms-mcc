@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import PublicLayout from './PublicLayout';
 import PublicIcon from './PublicIcon';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const C = { navy: '#0B2447', navyMid: '#14305E', navySoft: '#1A3D72', blue: '#1565C0', gold: '#C9A84C', goldL: '#E8C96A', white: '#fff', off: '#F4F7FB', border: '#E2E8F0', text: '#0F1B33', sub: '#475569', muted: '#64748B', light: '#94A3B8', green: '#2E7D32', greenBg: '#E8F5E9' };
 
@@ -281,7 +282,7 @@ export default function HomePage() {
 
           <Reveal delay={0.1}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: C.greenBg, border: '1px solid rgba(46,125,50,0.25)', borderRadius: 10, padding: '10px 16px', marginBottom: 28, fontSize: 13, color: C.green }}>
-              ✅ <strong>Live from Church System</strong> — Events below are posted by our Registration Team and Admins in real time.
+              <MonoIcon name="check" size={15} /> <strong>Live from Church System</strong> — Events below are posted by our Registration Team and Admins in real time.
             </div>
           </Reveal>
 
@@ -309,8 +310,8 @@ export default function HomePage() {
                   </div>
                   <div style={{ padding: 16 }}>
                     <div style={{ fontFamily: "'Lora',serif", fontSize: '0.92rem', fontWeight: 600, color: C.text, lineHeight: 1.4, marginBottom: 6 }}>{ev.title}</div>
-                    {ev.location && <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}>📍 {ev.location}</div>}
-                    <a href="/bible-seminar/schedule" style={{ display: 'block', background: C.blue, color: '#fff', border: 'none', borderRadius: 7, padding: '8px 0', width: '100%', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', textDecoration: 'none' }}>Learn More</a>
+                    {ev.location && <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}><MonoIcon name="location" size={13} /> {ev.location}</div>}
+                    <a href="/bible-seminar" style={{ display: 'block', background: C.blue, color: '#fff', border: 'none', borderRadius: 7, padding: '8px 0', width: '100%', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', textDecoration: 'none' }}>Learn More</a>
                   </div>
                 </div>
               );

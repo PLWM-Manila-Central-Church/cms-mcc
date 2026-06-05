@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import MonoIcon from '../../components/common/MonoIcon';
 
 const STATUS_META = {
   draft:     { bg: '#f1f5f9', color: '#475569', label: 'Draft' },
@@ -18,8 +19,8 @@ const STATUS_FLOW = {
 };
 
 const RESPONSE_META = {
-  attending:     { bg: '#dcfce7', color: '#16a34a', label: '✓ Attending' },
-  not_attending: { bg: '#fef2f2', color: '#dc2626', label: '✗ Not Attending' },
+  attending:     { bg: '#dcfce7', color: '#16a34a', label: 'Attending' },
+  not_attending: { bg: '#fef2f2', color: '#dc2626', label: 'Not Attending' },
   undecided:     { bg: '#fffbeb', color: '#d97706', label: '? Undecided' },
 };
 
@@ -195,19 +196,19 @@ export default function ServicesPage() {
         </div>
         {canCreate && !isMember && (
           <button onClick={() => setShowForm(!showForm)} style={styles.addBtn}>
-            {showForm ? '✕ Cancel' : '+ New Service'}
+            {showForm ? <><MonoIcon name="close" size={15} /> Cancel</> : '+ New Service'}
           </button>
         )}
       </div>
 
       {isMember && !user?.memberId && (
-        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '12px 18px', marginBottom: '16px', fontSize: '14px', color: '#9a3412' }}>
-          ⚠️ Your account is not linked to a member profile. Contact your admin to enable service pre-registration.
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '12px 18px', marginBottom: '16px', fontSize: '14px', color: '#9a3412', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <MonoIcon name="warning" size={16} /> Your account is not linked to a member profile. Contact your admin to enable service pre-registration.
         </div>
       )}
       {isMember && (
         <div style={styles.memberHint}>
-          ⛪ Click <strong>Pre-Register</strong> on any published service to set your attendance.
+          <MonoIcon name="church" size={16} /> Click <strong>Pre-Register</strong> on any published service to set your attendance.
         </div>
       )}
 
@@ -369,7 +370,7 @@ export default function ServicesPage() {
                       {/* Member: Pre-register button */}
                       {canPreReg && (
                         <button onClick={() => openPreReg(s)} style={styles.preRegBtn}>
-                          {myResponse ? '✏️ Update RSVP' : '📋 Pre-Register'}
+                          {myResponse ? <><MonoIcon name="edit" size={14} /> Update RSVP</> : <><MonoIcon name="clipboard" size={14} /> Pre-Register</>}
                         </button>
                       )}
                       {/* Show existing response badge for member */}
@@ -404,7 +405,7 @@ export default function ServicesPage() {
       {preRegTarget && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
-            <h3 style={styles.modalTitle}>⛪ Pre-Register for Service</h3>
+            <h3 style={styles.modalTitle}><MonoIcon name="church" size={20} /> Pre-Register for Service</h3>
             <p style={styles.modalService}>{preRegTarget.title}</p>
             <p style={styles.modalDate}>
               {formatDate(preRegTarget.service_date)} at {formatTime(preRegTarget.service_time)}
@@ -420,8 +421,8 @@ export default function ServicesPage() {
                   <label style={styles.label}>Attendance *</label>
                   <div style={styles.radioGroup}>
                     {[
-                      { value: 'attending',     label: '✓ Attending',     color: '#16a34a', bg: '#dcfce7' },
-                      { value: 'not_attending', label: '✗ Not Attending', color: '#dc2626', bg: '#fef2f2' },
+                      { value: 'attending',     label: 'Attending',     color: '#16a34a', bg: '#dcfce7' },
+                      { value: 'not_attending', label: 'Not Attending', color: '#dc2626', bg: '#fef2f2' },
                       { value: 'undecided',     label: '? Undecided',     color: '#d97706', bg: '#fffbeb' },
                     ].map(opt => (
                       <label key={opt.value} style={{
@@ -500,8 +501,8 @@ const styles = {
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
   title:       { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
   subtitle:    { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
-  addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  memberHint:  { background: '#e8f4fd', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', fontSize: '14px', color: '#0066b3' },
+  addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+  memberHint:  { background: '#e8f4fd', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', fontSize: '14px', color: '#0066b3', display: 'flex', alignItems: 'center', gap: '8px' },
   formCard:    { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
   formTitle:   { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px 0' },
   form:        { display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -529,14 +530,14 @@ const styles = {
   actions:     { display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' },
   viewBtn:     { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   statusBtn:   { border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
-  preRegBtn:   { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+  preRegBtn:   { background: 'linear-gradient(135deg, #005599,#13B5EA)', color: '#fff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' },
   pagination:  { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px' },
   pageBtn:     { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', cursor: 'pointer', fontWeight: '500' },
   pageInfo:    { fontSize: '14px', color: '#64748b' },
   // Modal
   overlay:     { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modal:       { background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '480px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
-  modalTitle:  { fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: '0 0 6px' },
+  modalTitle:  { fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '8px' },
   modalService:{ fontSize: '16px', fontWeight: '600', color: '#0066b3', margin: '0 0 4px' },
   modalDate:   { fontSize: '13px', color: '#64748b', margin: '0 0 20px' },
   preRegForm:  { display: 'flex', flexDirection: 'column', gap: '16px' },
