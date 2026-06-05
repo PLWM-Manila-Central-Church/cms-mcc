@@ -12,6 +12,32 @@ const PAYMENT_STYLE = {
   bank_transfer: { bg: '#e8f4fd', color: '#0066b3' }
 };
 
+const TYPE_BADGE = {
+  Tithes:    { bg: '#ecfdf5', color: '#059669' },
+  Offering:  { bg: '#eff6ff', color: '#2563eb' },
+  Pledge:    { bg: '#fef3c7', color: '#d97706' },
+  Missions:  { bg: '#fce7f3', color: '#db2777' },
+  Others:    { bg: '#f3e8ff', color: '#7c3aed' },
+  default:   { bg: '#f1f5f9', color: '#475569' },
+};
+
+const PAYMENT_ICON = {
+  cash: '💵',
+  gcash: '💜',
+  bank_transfer: '🏦',
+};
+
+function getInitials(name = '') {
+  return name.split(', ').map(n => n.trim().charAt(0)).join('').toUpperCase().slice(0, 2);
+}
+
+function getAvatarColor(name = '') {
+  const colors = ['#059669', '#2563eb', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#4f46e5'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
 export default function FinancePage() {
   const { hasPermission, user } = useAuth();
   const navigate = useNavigate();
@@ -57,15 +83,16 @@ export default function FinancePage() {
   const [incomeLoading, setIncomeLoading] = useState(false);
   const [incomeError, setIncomeError] = useState('');
   const [incomeCategories, setIncomeCategories] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [incomeSummary, setIncomeSummary] = useState([]);
+  const [allTimeSummary, setAllTimeSummary] = useState([]);
 
   // Income Filters
   const [incFilterCategory, setIncFilterCategory] = useState('');
   const [incFilterPayment, setIncFilterPayment] = useState('');
-  // eslint-disable-next-line no-unused-vars
   const [incFilterDateFrom, setIncFilterDateFrom] = useState('');
-  // eslint-disable-next-line no-unused-vars
   const [incFilterDateTo, setIncFilterDateTo] = useState('');
+  const [incFilterSearch, setIncFilterSearch] = useState('');
 
   // Income Form
   const [showIncForm, setShowIncForm] = useState(false);
@@ -102,6 +129,13 @@ export default function FinancePage() {
       setIncomeSummary(res.data.data);
     } catch {}
   }, [incFilterCategory, incFilterPayment, incFilterDateFrom, incFilterDateTo]);
+
+  const fetchAllTimeSummary = useCallback(async () => {
+    try {
+      const res = await axiosInstance.get('/finance/summary');
+      setAllTimeSummary(res.data.data);
+    } catch {}
+  }, []);
 
   const fetchIncomeRecords = useCallback(async () => {
     setIncomeLoading(true); setIncomeError('');
@@ -455,7 +489,8 @@ export default function FinancePage() {
   useEffect(() => {
     fetchIncomeCategories();
     fetchSettingsData();
-  }, []);
+    fetchAllTimeSummary();
+  }, [fetchAllTimeSummary]);
 
   useEffect(() => {
     if (activeTab === 'income') {
@@ -521,46 +556,126 @@ export default function FinancePage() {
           ───────────────────────────────────────────────────────────── */}
       {activeTab === 'income' && (
         <div>
-          {/* Summary Cards */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 20px', flex: 1, minWidth: isMobile ? '100%' : 180 }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#10b981' }}>
-                {formatAmount(incomeSummary.reduce((sum, s) => sum + parseFloat(s.total_amount || 0), 0))}
-              </div>
-              <div style={{ fontSize: 13, color: '#64748b', marginTop: 3, fontWeight: 600 }}>Total Giving Collected</div>
+          {/* Page Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+            <div>
+              <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', margin: 0 }}>Finance Records</h1>
+              <p style={{ fontSize: 14, color: '#64748b', margin: '4px 0 0' }}>Record and monitor offerings, tithes, donations, and other church income in one place.</p>
             </div>
-            {incomeSummary.map(row => (
-              <div key={row.category_id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 20px', flex: 1, minWidth: isMobile ? 'calc(50% - 6px)' : 150 }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>{formatAmount(row.total_amount)}</div>
-                <div style={{ fontSize: 13, color: '#64748b', marginTop: 3, fontWeight: 500 }}>{row.category?.name || '—'}</div>
-                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{row.count} logs</div>
-              </div>
-            ))}
+            {canCreate && (
+              <button onClick={() => setShowIncForm(!showIncForm)} style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 8px rgba(5,150,105,0.3)' }}>
+                <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> {showIncForm ? 'Close Form' : 'Add Financial Record'}
+              </button>
+            )}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <select value={incFilterCategory} onChange={e => { setIncFilterCategory(e.target.value); setIncomePage(1); }} style={F.select}>
-                <option value="">All Categories</option>
+          {/* Summary Cards */}
+          {(() => {
+            const totalAll = allTimeSummary.reduce((sum, s) => sum + s.total_amount, 0);
+            const tithesAll = allTimeSummary.find(s => s.category?.name === 'Tithes')?.total_amount || 0;
+            const offeringsAll = allTimeSummary.find(s => s.category?.name === 'Offering')?.total_amount || 0;
+            const otherAll = totalAll - tithesAll - offeringsAll;
+
+            const cards = [
+              { label: 'Total Collected', value: totalAll, icon: '🏛️', bg: '#f0fdf4', iconBg: '#dcfce7' },
+              { label: 'Tithes', value: tithesAll, icon: '💚', bg: '#f0fdf4', iconBg: '#dcfce7' },
+              { label: 'Offerings', value: offeringsAll, icon: '👤', bg: '#f0fdf4', iconBg: '#dcfce7' },
+              { label: 'Other Giving', value: otherAll, icon: '🎁', bg: '#f0fdf4', iconBg: '#dcfce7' },
+            ];
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+                {cards.map((card, i) => (
+                  <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ width: 56, height: 56, borderRadius: 16, background: card.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
+                      {card.icon}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>{card.label}</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: '#059669', marginTop: 2 }}>{formatAmount(card.value)}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>All time total</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Filter Bar */}
+          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {/* Search */}
+            <div style={{ flex: '1 1 220px', position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 15 }}>🔍</span>
+              <input
+                type="text"
+                placeholder="Search name or reference..."
+                value={incFilterSearch}
+                onChange={e => setIncFilterSearch(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px 10px 36px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', background: '#f8fafc' }}
+              />
+            </div>
+
+            {/* Type Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
+              <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>🏷️ Type</span>
+              <select
+                value={incFilterCategory}
+                onChange={e => { setIncFilterCategory(e.target.value); setIncomePage(1); }}
+                style={{ padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', background: '#fff', fontFamily: 'inherit', minWidth: 130, cursor: 'pointer' }}
+              >
+                <option value="">All Types</option>
                 {incomeCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-              <select value={incFilterPayment} onChange={e => { setIncFilterPayment(e.target.value); setIncomePage(1); }} style={F.select}>
-                <option value="">All Payment Methods</option>
+            </div>
+
+            {/* Payment Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
+              <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>💳 Payment</span>
+              <select
+                value={incFilterPayment}
+                onChange={e => { setIncFilterPayment(e.target.value); setIncomePage(1); }}
+                style={{ padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', background: '#fff', fontFamily: 'inherit', minWidth: 140, cursor: 'pointer' }}
+              >
+                <option value="">All Payments</option>
                 <option value="cash">Cash</option>
                 <option value="gcash">GCash</option>
                 <option value="bank_transfer">Bank Transfer</option>
               </select>
             </div>
-            {canCreate && (
-              <button onClick={() => setShowIncForm(!showIncForm)} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                {showIncForm ? <><MonoIcon name="close" size={14} /> Close Form</> : '+ Record Giving'}
+
+            {/* Date Range */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
+              <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>📅 Date Range</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="date"
+                  value={incFilterDateFrom}
+                  onChange={e => { setIncFilterDateFrom(e.target.value); setIncomePage(1); }}
+                  style={{ padding: '10px 10px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+                />
+                <span style={{ color: '#94a3b8', fontSize: 13 }}>–</span>
+                <input
+                  type="date"
+                  value={incFilterDateTo}
+                  onChange={e => { setIncFilterDateTo(e.target.value); setIncomePage(1); }}
+                  style={{ padding: '10px 10px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+                />
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            {(incFilterCategory || incFilterPayment || incFilterDateFrom || incFilterDateTo || incFilterSearch) && (
+              <button
+                onClick={() => { setIncFilterCategory(''); setIncFilterPayment(''); setIncFilterDateFrom(''); setIncFilterDateTo(''); setIncFilterSearch(''); setIncomePage(1); }}
+                style={{ background: 'none', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
+              >
+                ↺ Clear Filters
               </button>
             )}
           </div>
 
           {showIncForm && (
             <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 20, marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <h3 style={{ margin: '0 0 16px', fontSize: 16, color: '#10b981' }}>{editIncRecord ? 'Edit Giving Log' : 'New Tithe / Giving Record'}</h3>
+              <h3 style={{ margin: '0 0 16px', fontSize: 16, color: '#059669' }}>{editIncRecord ? 'Edit Giving Log' : 'New Tithe / Giving Record'}</h3>
               {incFormError && <div className="cms-error-box">{incFormError}</div>}
               <form onSubmit={handleIncSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
@@ -605,7 +720,7 @@ export default function FinancePage() {
                 </div>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                   <button type="button" onClick={resetIncForm} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>Reset</button>
-                  <button type="submit" style={{ background: '#10b981', color: '#fff', padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>
+                  <button type="submit" style={{ background: '#059669', color: '#fff', padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>
                     {incSaving ? 'Saving...' : 'Save Record'}
                   </button>
                 </div>
@@ -615,44 +730,144 @@ export default function FinancePage() {
 
           {incomeError && <div className="cms-error-box">{incomeError}</div>}
 
-          {/* Income Table */}
-          <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          {/* Recent Records */}
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+            <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid #f1f5f9' }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#0f172a' }}>Recent Records</h2>
+            </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: '#f8fafc' }}>
+              <thead>
                 <tr>
-                  {['Member', 'Category', 'Amount', 'Method', 'Date', 'Recorded By', 'Actions'].map(h => (
-                    <th key={h} style={{ padding: 12, textAlign: 'left', fontSize: 12, color: '#64748b', borderBottom: '1px solid #e2e8f0' }}>{h}</th>
+                  {['Name / Reference', 'Type', 'Amount', 'Payment', 'Date', 'Encoded By', 'Actions'].map(h => (
+                    <th key={h} style={{ padding: '12px 22px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#64748b', borderBottom: '1px solid #e2e8f0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {incomeLoading ? (
-                  <tr><td colSpan={7} style={{ padding: 30, textAlign: 'center', color: '#94a3b8' }}>Loading income...</td></tr>
+                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Loading records...</td></tr>
                 ) : incomeRecords.length === 0 ? (
-                  <tr><td colSpan={7} style={{ padding: 30, textAlign: 'center', color: '#94a3b8' }}>No logs registered.</td></tr>
-                ) : incomeRecords.map((r, i) => (
-                  <tr key={r.id} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: 12, fontWeight: 600 }}>{r.Member?.last_name}, {r.Member?.first_name}</td>
-                    <td style={{ padding: 12 }}>{r.category?.name}</td>
-                    <td style={{ padding: 12, fontWeight: 700, color: '#16a34a' }}>{formatAmount(r.amount)}</td>
-                    <td style={{ padding: 12 }}>
-                      <span style={{ background: (PAYMENT_STYLE[r.payment_method] || PAYMENT_STYLE.cash).bg, color: (PAYMENT_STYLE[r.payment_method] || PAYMENT_STYLE.cash).color, padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
-                        {PAYMENT_LABELS[r.payment_method] || r.payment_method}
-                      </span>
-                    </td>
-                    <td style={{ padding: 12 }}>{formatDate(r.transaction_date)}</td>
-                    <td style={{ padding: 12, fontSize: 12, color: '#64748b' }}>{r.recorder?.email || '—'}</td>
-                    <td style={{ padding: 12 }}>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {canUpdate && <button onClick={() => { setEditIncRecord(r); setIncForm({ member_id: r.member_id, member_label: `${r.Member?.last_name}, ${r.Member?.first_name}`, category_id: r.category_id, amount: r.amount, payment_method: r.payment_method, transaction_date: r.transaction_date, notes: r.notes || '' }); setIncMemberSearch(`${r.Member?.last_name}, ${r.Member?.first_name}`); setShowIncForm(true); }} style={{ background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: 4, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}>Edit</button>}
-                        {canDelete && <button onClick={() => handleIncDelete(r.id)} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 4, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}>Delete</button>}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No records found.</td></tr>
+                ) : (() => {
+                  // Client-side search filtering
+                  const searchLower = incFilterSearch.toLowerCase();
+                  const filtered = incFilterSearch
+                    ? incomeRecords.filter(r => {
+                        const name = `${r.Member?.last_name || ''} ${r.Member?.first_name || ''}`.toLowerCase();
+                        const receipt = (r.receipt_number || '').toLowerCase();
+                        const cat = (r.category?.name || '').toLowerCase();
+                        return name.includes(searchLower) || receipt.includes(searchLower) || cat.includes(searchLower);
+                      })
+                    : incomeRecords;
+
+                  if (filtered.length === 0) {
+                    return <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No records match your search.</td></tr>;
+                  }
+
+                  return filtered.map((r, i) => {
+                    const memberName = `${r.Member?.last_name || ''}, ${r.Member?.first_name || ''}`;
+                    const badge = TYPE_BADGE[r.category?.name] || TYPE_BADGE.default;
+                    const payStyle = PAYMENT_STYLE[r.payment_method] || PAYMENT_STYLE.cash;
+                    return (
+                      <tr key={r.id} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '14px 22px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 38, height: 38, borderRadius: 10, background: getAvatarColor(memberName), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                              {getInitials(memberName)}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>{memberName}</div>
+                              {r.receipt_number && <div style={{ fontSize: 12, color: '#94a3b8' }}>Ref: {r.receipt_number}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px 22px' }}>
+                          <span style={{ background: badge.bg, color: badge.color, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                            {r.category?.name || '—'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 22px', fontWeight: 700, color: '#059669', fontSize: 15 }}>{formatAmount(r.amount)}</td>
+                        <td style={{ padding: '14px 22px' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: payStyle.bg, color: payStyle.color, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                            <span>{PAYMENT_ICON[r.payment_method] || '💵'}</span>
+                            {PAYMENT_LABELS[r.payment_method] || r.payment_method}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 22px', fontSize: 14, color: '#475569' }}>{formatDate(r.transaction_date)}</td>
+                        <td style={{ padding: '14px 22px', fontSize: 13, color: '#64748b' }}>{r.recorder?.email || '—'}</td>
+                        <td style={{ padding: '14px 22px' }}>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            {canUpdate && (
+                              <button
+                                onClick={() => { setEditIncRecord(r); setIncForm({ member_id: r.member_id, member_label: memberName, category_id: r.category_id, amount: r.amount, payment_method: r.payment_method, transaction_date: r.transaction_date, notes: r.notes || '' }); setIncMemberSearch(memberName); setShowIncForm(true); }}
+                                style={{ background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                              >
+                                ✏️ Edit
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button onClick={() => handleIncDelete(r.id)} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                                🗑️ Delete
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {incomeTotal > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, padding: '0 4px' }}>
+              <span style={{ fontSize: 13, color: '#64748b' }}>
+                Showing {((incomePage - 1) * 15) + 1} to {Math.min(incomePage * 15, incomeTotal)} of {incomeTotal} records
+              </span>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <button
+                  disabled={incomePage <= 1}
+                  onClick={() => setIncomePage(p => p - 1)}
+                  style={{ width: 34, height: 34, borderRadius: 8, border: '1.5px solid #e2e8f0', background: incomePage <= 1 ? '#f8fafc' : '#fff', color: incomePage <= 1 ? '#cbd5e1' : '#475569', cursor: incomePage <= 1 ? 'default' : 'pointer', fontSize: 14, fontWeight: 600 }}
+                >
+                  ‹
+                </button>
+                {(() => {
+                  const totalPages = Math.ceil(incomeTotal / 15);
+                  const pages = [];
+                  for (let i = 1; i <= totalPages; i++) {
+                    if (i === 1 || i === totalPages || Math.abs(i - incomePage) <= 1) {
+                      pages.push(i);
+                    } else if (pages[pages.length - 1] !== '...') {
+                      pages.push('...');
+                    }
+                  }
+                  return pages.map((p, idx) => (
+                    typeof p === 'number' ? (
+                      <button
+                        key={idx}
+                        onClick={() => setIncomePage(p)}
+                        style={{ width: 34, height: 34, borderRadius: 8, border: 'none', background: p === incomePage ? '#059669' : 'transparent', color: p === incomePage ? '#fff' : '#475569', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                      >
+                        {p}
+                      </button>
+                    ) : (
+                      <span key={idx} style={{ color: '#94a3b8', fontSize: 13, padding: '0 4px' }}>...</span>
+                    )
+                  ));
+                })()}
+                <button
+                  disabled={incomePage >= Math.ceil(incomeTotal / 15)}
+                  onClick={() => setIncomePage(p => p + 1)}
+                  style={{ width: 34, height: 34, borderRadius: 8, border: '1.5px solid #e2e8f0', background: incomePage >= Math.ceil(incomeTotal / 15) ? '#f8fafc' : '#fff', color: incomePage >= Math.ceil(incomeTotal / 15) ? '#cbd5e1' : '#475569', cursor: incomePage >= Math.ceil(incomeTotal / 15) ? 'default' : 'pointer', fontSize: 14, fontWeight: 600 }}
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
