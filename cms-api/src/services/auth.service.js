@@ -3,6 +3,7 @@
 const bcrypt = require("bcrypt");
 const jwt    = require("jsonwebtoken");
 const crypto = require("crypto");
+const logger = require("../helpers/logger");
 const {
   User, Role, Member, PasswordResetToken,
   RefreshToken, UserSession, RolePermission, Permission,

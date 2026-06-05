@@ -3,13 +3,13 @@
 const Joi = require("joi");
 
 exports.createAttendanceSchema = Joi.object({
-  service_id:   Joi.number().integer().positive().required(),
-  member_id:    Joi.number().integer().positive().allow(null).optional(),
-  attended:     Joi.boolean().required(),
-  remarks:      Joi.string().max(500).allow(null, "").optional(),
+  service_id:      Joi.number().integer().positive().optional(),
+  member_id:       Joi.number().integer().positive().required(),
+  check_in_method: Joi.string().valid("barcode", "manual", "pre-reg").optional(),
+  checked_in_at:   Joi.date().optional(),
 });
 
 exports.updateAttendanceSchema = Joi.object({
-  attended: Joi.boolean().optional(),
-  remarks:  Joi.string().max(500).allow(null, "").optional(),
+  check_in_method: Joi.string().valid("barcode", "manual", "pre-reg").optional(),
+  checked_in_at:   Joi.date().optional(),
 }).min(1);

@@ -208,6 +208,7 @@ exports.createOrUpdateResponseAlias = async (req, res, next) => {
   try {
     const member_id = req.body.member_id || req.user.memberId;
     if (!member_id) return res.status(400).json({ success: false, message: "No member profile linked to this account" });
+    await ensureMemberInScope(member_id, req.user);
     const { member_id: _m, ...responseData } = req.body;
     const data = await serviceExtrasService.createOrUpdateResponse(
       req.params.id, member_id, responseData, req.user.userId,

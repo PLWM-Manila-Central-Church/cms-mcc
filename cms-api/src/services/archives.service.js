@@ -1,7 +1,8 @@
 "use strict";
 
-const { Op } = require("sequelize");
-const auditLog = require("../helpers/auditLog.helper");
+const { Op }    = require("sequelize");
+const auditLog  = require("../helpers/auditLog.helper");
+const logger    = require("../helpers/logger");
 const {
   ArchiveRecord,
   ArchiveCategory,

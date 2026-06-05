@@ -1,6 +1,7 @@
 "use strict";
 
 const {
+  Attendance,
   ServiceAttendanceSummary,
   ServiceResponse,
   SubstituteRequest,
@@ -9,6 +10,22 @@ const {
   Member,
   User,
 } = require("../models");
+const logger = require("../helpers/logger");
+
+// ── Helpers ──────────────────────────────────────────────────
+const syncSummary = async (serviceId) => {
+  try {
+    const total_attended = await Attendance.count({ where: { service_id: serviceId } });
+    const service = await Service.findByPk(serviceId, { attributes: ["capacity"] });
+    const total_expected = service?.capacity || 0;
+    const total_absent   = Math.max(0, total_expected - total_attended);
+    await ServiceAttendanceSummary.upsert({
+      service_id: serviceId, total_attended, total_expected, total_absent,
+    });
+  } catch (err) {
+    logger.error(err, "syncSummary failed:");
+  }
+};
 
 // ── Service Attendance Summary ───────────────────────────────
 exports.getSummaryByService = async (serviceId) => {
@@ -85,18 +102,42 @@ exports.createOrUpdateResponse = async (
         override_reason: override_reason || null,
       }),
     });
-    return existing;
+  } else {
+    await ServiceResponse.create({
+      service_id: serviceId,
+      member_id: memberId,
+      attendance_status,
+      seat_number: seat_number || null,
+      parking_slot: parking_slot || null,
+      override_by: overrideBy || null,
+      override_reason: override_reason || null,
+    });
   }
 
-  return await ServiceResponse.create({
-    service_id: serviceId,
-    member_id: memberId,
-    attendance_status,
-    seat_number: seat_number || null,
-    parking_slot: parking_slot || null,
-    override_by: overrideBy || null,
-    override_reason: override_reason || null,
-  });
+  // Sync companion Attendance row + summary
+  if (attendance_status === "ATTENDING") {
+    const existingAttendance = await Attendance.findOne({
+      where: { service_id: serviceId, member_id: memberId },
+    });
+    if (!existingAttendance) {
+      await Attendance.create({
+        service_id: serviceId,
+        member_id: memberId,
+        check_in_method: "pre-reg",
+        checked_in_at: new Date(),
+        recorded_by: overrideBy || null,
+      });
+    }
+  } else {
+    await Attendance.destroy({
+      where: { service_id: serviceId, member_id: memberId, check_in_method: "pre-reg" },
+    });
+  }
+  await syncSummary(serviceId);
+
+  return existing || (await ServiceResponse.findOne({
+    where: { service_id: serviceId, member_id: memberId },
+  }));
 };
 
 exports.deleteResponse = async (id) => {

@@ -2,8 +2,9 @@
 
 const { Op }       = require("sequelize");
 const auditLog     = require("../helpers/auditLog.helper");
+const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
-const { Service, ServiceAttendanceSummary, ServiceResponse, User } = require("../models");
+const { Service, ServiceAttendanceSummary, ServiceResponse, Attendance, User } = require("../models");
 
 // ── Get All Services (paginated) ─────────────────────────────
 exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
@@ -121,6 +122,19 @@ exports.updateService = async (id, data, updatedBy) => {
     ...(response_deadline   !== undefined && { response_deadline:   response_deadline   || null }),
     ...(status              && { status }),
   });
+
+  // Re-sync summary if capacity changed
+  if (capacity !== undefined) {
+    try {
+      const total_attended = await Attendance.count({ where: { service_id: id } });
+      const total_absent   = Math.max(0, capacity - total_attended);
+      await ServiceAttendanceSummary.upsert({
+        service_id: id, total_attended, total_expected: capacity, total_absent,
+      });
+    } catch (err) {
+      logger.error(err, "Failed to sync summary after capacity change:");
+    }
+  }
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_SERVICE", targetTable: "services", targetId: id });
   return service;

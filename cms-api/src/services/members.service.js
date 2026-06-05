@@ -4,6 +4,7 @@ const { Op } = require("sequelize");
 const { Member, CellGroup, MinistryGroup, EmergencyContact, User,
   MinistryMembership } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
+const logger   = require("../helpers/logger");
 const {
   applyMemberScope,
   ensureMemberInScope,

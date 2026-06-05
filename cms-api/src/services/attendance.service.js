@@ -2,6 +2,7 @@
 
 const { Attendance, Member, Service, ServiceAttendanceSummary, User } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
+const logger   = require("../helpers/logger");
 const {
   ensureMemberInScope,
   getMemberScopeWhere,

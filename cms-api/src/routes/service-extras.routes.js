@@ -4,6 +4,8 @@ const router = require("express").Router();
 const ctrl = require("../controllers/service-extras.controller");
 const auth = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
+const validate = require("../middlewares/validate");
+const { createAttendanceSchema } = require("../validators/attendance.validator");
 
 // ── Attendance Summary ───────────────────────────────────────
 router.get("/summary/:serviceId", auth, authorize("services", "read"),   ctrl.getSummaryByService);
@@ -20,7 +22,7 @@ router.post("/:id/responses", auth, authorize("services", "create"), ctrl.create
 
 // ── Attendance by Service (frontend uses /:id/attendance) ───
 router.get("/:id/attendance",              auth, authorize("attendance", "read"),   ctrl.getAttendanceByService);
-router.post("/:id/attendance",             auth, authorize("attendance", "create"), ctrl.createAttendanceForService);
+router.post("/:id/attendance", auth, authorize("attendance", "create"), validate(createAttendanceSchema), ctrl.createAttendanceForService);
 router.delete("/:id/attendance/:memberId", auth, authorize("attendance", "delete"), ctrl.deleteAttendanceForService);
 
 // ── Substitute Requests ──────────────────────────────────────

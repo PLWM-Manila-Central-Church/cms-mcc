@@ -5,6 +5,7 @@ const { Op }   = require("sequelize");
 const sequelize = require("../config/db");
 const path     = require("path");
 const fs       = require("fs");
+const logger   = require("../helpers/logger");
 const {
   Member, CellGroup, Group, EmergencyContact,
   Attendance, Service, ServiceResponse, ServiceAttendanceSummary,
@@ -141,11 +142,12 @@ exports.getMyAttendance = async (memberId) => {
 
   return {
     records: records.map((r) => ({
-      id:            r.id,
-      date:          r.Service?.service_date   || null,
-      service_title: r.Service?.title          || "—",
-      check_in_time: r.checked_in_at           || null,
-      status:        "Present",
+      id:              r.id,
+      date:            r.Service?.service_date   || null,
+      service_title:   r.Service?.title          || "—",
+      check_in_time:   r.checked_in_at           || null,
+      check_in_method: r.check_in_method         || null,
+      status:          r.check_in_method === "pre-reg" ? "Pre-registered" : "Present",
     })),
     attendanceRate,
     totalServices,
@@ -399,9 +401,9 @@ exports.submitServiceResponse = async (memberId, serviceId, attendanceStatus) =>
 
   // Sync Attendance pre-reg record
   if (attendanceStatus === "ATTENDING") {
-    // Create a pre-reg Attendance record if one doesn't exist
+    // Create a pre-reg Attendance record only if NO attendance exists for this service+member
     const existingAttendance = await Attendance.findOne({
-      where: { service_id: serviceId, member_id: memberId, check_in_method: "pre-reg" },
+      where: { service_id: serviceId, member_id: memberId },
     });
     if (!existingAttendance) {
       await Attendance.create({
