@@ -7,9 +7,18 @@ const {
   Member, FinancialRecord, FinancialCategory, Service, Event,
   InventoryItem, InventoryRequest, AuditLog, User,
   ArchiveRecord, InvitedMember, MinistryMembership, MinistryEventInvite,
+  Attendance, CellGroup,
 } = require("../models");
 
 const dateOnly = (date) => date.toISOString().slice(0, 10);
+
+const todayRange = () => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+};
 
 const youngAdultCandidateWhere = () => {
   const today = new Date();
@@ -54,11 +63,23 @@ const getRoleSummary = async ({
       return { scopeName: "Church overview", pendingArchives, upcomingServices };
     }
     case "Registration Team": {
-      const [pendingInvites, newMembers] = await Promise.all([
+      const { start: todayStart, end: todayEnd } = todayRange();
+      const [pendingInvites, newMembers, todayAttendance, activeCount, newCount, semiActiveCount, inactiveCount] = await Promise.all([
         InvitedMember.count({ where: { status: "pending" } }),
         Member.count({ where: { created_at: { [Op.gte]: thisMonth } } }),
+        Attendance.count({ where: { checked_in_at: { [Op.between]: [todayStart, todayEnd] } } }),
+        Member.count({ where: { status: "Active" } }),
+        Member.count({ where: { status: "New" } }),
+        Member.count({ where: { status: "Semi-Active" } }),
+        Member.count({ where: { status: "Inactive" } }),
       ]);
-      return { scopeName: "Member operations", pendingInvites, newMembers };
+      return {
+        scopeName: "Member operations",
+        pendingInvites,
+        newMembers,
+        todayAttendance,
+        memberStatusCounts: { active: activeCount, new: newCount, semiActive: semiActiveCount, inactive: inactiveCount },
+      };
     }
     case "Finance Team": {
       const [recordsThisMonth, pendingArchives] = await Promise.all([
@@ -164,6 +185,87 @@ exports.getStats = async ({
     leadsCellGroupId, leadsCellGroupName, leadsGroupId, leadsGroupName, thisMonth,
   });
 
+  // ── Registration Team extras: attendance trend + cell group absences ──
+  let attendanceTrend = [];
+  let cellGroupAbsences = [];
+  let latestServiceInfo = null;
+  if (roleName === "Registration Team") {
+    // Last 10 completed services with attendance broken down by member status
+    const recentServices = await Service.findAll({
+      where: { status: "completed" },
+      order: [["service_date", "DESC"]],
+      limit: 10,
+      attributes: ["id", "title", "service_date"],
+    });
+
+    if (recentServices.length > 0) {
+      attendanceTrend = await Promise.all(
+        recentServices.map(async (svc) => {
+          const [active, newC, semiActive] = await Promise.all([
+            Attendance.count({
+              include: [{ model: Member, where: { status: "Active" }, required: true, attributes: [] }],
+              where: { service_id: svc.id },
+            }),
+            Attendance.count({
+              include: [{ model: Member, where: { status: "New" }, required: true, attributes: [] }],
+              where: { service_id: svc.id },
+            }),
+            Attendance.count({
+              include: [{ model: Member, where: { status: "Semi-Active" }, required: true, attributes: [] }],
+              where: { service_id: svc.id },
+            }),
+          ]);
+          return {
+            service_id: svc.id,
+            title: svc.title,
+            service_date: svc.service_date,
+            active, new: newC, semiActive,
+            total: active + newC + semiActive,
+          };
+        })
+      );
+    }
+
+    // Per-cell-group attendance at latest service
+    const latestService = await Service.findOne({
+      where: { status: { [Op.in]: ["completed", "published"] } },
+      order: [["service_date", "DESC"]],
+      attributes: ["id", "title", "service_date"],
+    });
+
+    if (latestService) {
+      latestServiceInfo = { id: latestService.id, title: latestService.title, service_date: latestService.service_date };
+
+      const cellGroups = await CellGroup.findAll({
+        attributes: ["id", "name"],
+      });
+
+      cellGroupAbsences = await Promise.all(
+        cellGroups.map(async (cg) => {
+          const totalMembers = await Member.count({ where: { cell_group_id: cg.id } });
+          const attended = await Attendance.count({
+            include: [{
+              model: Member,
+              where: { cell_group_id: cg.id },
+              required: true,
+              attributes: [],
+            }],
+            where: { service_id: latestService.id },
+          });
+          return {
+            cellGroupId: cg.id,
+            cellGroupName: cg.name,
+            totalMembers,
+            attended,
+            absent: Math.max(0, totalMembers - attended),
+          };
+        })
+      );
+      // Sort by absent descending
+      cellGroupAbsences.sort((a, b) => b.absent - a.absent);
+    }
+  }
+
   const result = {
     members:       memberCounts,
     finance:       { totalThisMonth, recentRecords },
@@ -172,6 +274,63 @@ exports.getStats = async ({
     inventory:     { pendingRequests, lowStock },
     ...(isMember ? {} : { recentActivity }),
     roleSummary,
+    ...(roleName === "Registration Team" ? { attendanceTrend, cellGroupAbsences, latestService: latestServiceInfo } : {}),
+  };
+        })
+      );
+    }
+
+    // Per-cell-group attendance at latest service
+    const latestService = await Service.findOne({
+      where: { status: { [Op.in]: ["completed", "published"] } },
+      order: [["service_date", "DESC"]],
+      attributes: ["id", "title", "service_date"],
+    });
+
+    if (latestService) {
+      const cellGroups = await CellGroup.findAll({
+        attributes: ["id", "name"],
+      });
+
+      cellGroupAbsences = await Promise.all(
+        cellGroups.map(async (cg) => {
+          const totalMembers = await Member.count({ where: { cell_group_id: cg.id } });
+          const attended = await Attendance.count({
+            include: [{
+              model: Member,
+              where: { cell_group_id: cg.id },
+              required: true,
+              attributes: [],
+            }],
+            where: { service_id: latestService.id },
+          });
+          return {
+            cellGroupId: cg.id,
+            cellGroupName: cg.name,
+            totalMembers,
+            attended,
+            absent: Math.max(0, totalMembers - attended),
+          };
+        })
+      );
+      // Sort by absent descending
+      cellGroupAbsences.sort((a, b) => b.absent - a.absent);
+    }
+  }
+
+  const result = {
+    members:       memberCounts,
+    finance:       { totalThisMonth, recentRecords },
+    services:      { upcoming: upcomingServices },
+    events:        { upcoming: upcomingEvents },
+    inventory:     { pendingRequests, lowStock },
+    ...(isMember ? {} : { recentActivity }),
+    roleSummary,
+    ...(roleName === "Registration Team" ? {
+      attendanceTrend,
+      cellGroupAbsences,
+      latestService: latestService ? { id: latestService.id, title: latestService.title, service_date: latestService.service_date } : null,
+    } : {}),
   };
 
   // Cache for 60 seconds (30 seconds for Member role to keep their data fresh)

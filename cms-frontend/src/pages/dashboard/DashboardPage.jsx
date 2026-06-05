@@ -115,6 +115,69 @@ function RowList({ rows, accent, empty = 'No items to show.' }) {
   ));
 }
 
+function AttendanceTrendChart({ data, accent, onNavigate }) {
+  if (!data || data.length === 0) {
+    return <div style={S.empty}>No attendance data yet.</div>;
+  }
+  const maxTotal = Math.max(...data.map(d => d.total), 1);
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 12, fontWeight: 600, flexWrap: 'wrap' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#16a34a' }} /> Active</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#0066b3' }} /> New</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#d97706' }} /> Semi-Active</span>
+      </div>
+      {data.map((item) => {
+        const pct = (v) => maxTotal > 0 ? (v / maxTotal) * 100 : 0;
+        return (
+          <button key={item.service_id} onClick={() => onNavigate(`/services/${item.service_id}/attendance`)}
+            style={{ display: 'block', width: '100%', border: 0, background: 'none', padding: '8px 0', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', borderBottom: '1px solid #f1f5f9' }}>
+            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+              {item.title} — {new Date(item.service_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ flex: 1, height: 18, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
+                {item.active > 0 && <div style={{ width: `${pct(item.active)}%`, background: '#16a34a', transition: 'width 0.3s' }} />}
+                {item.new > 0 && <div style={{ width: `${pct(item.new)}%`, background: '#0066b3', transition: 'width 0.3s' }} />}
+                {item.semiActive > 0 && <div style={{ width: `${pct(item.semiActive)}%`, background: '#d97706', transition: 'width 0.3s' }} />}
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>{item.total}</span>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CellGroupAlertsPanel({ data, latestService }) {
+  if (!latestService) return <div style={S.empty}>No recent service found.</div>;
+  const items = (data || []).filter(g => g.absent > 0);
+  return (
+    <div>
+      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12, fontWeight: 600 }}>
+        Latest: {latestService.title} — {new Date(latestService.service_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })}
+      </div>
+      {items.length === 0 ? (
+        <div style={S.empty}>All cell groups had full attendance. No alerts.</div>
+      ) : (
+        items.map((g) => (
+          <div key={g.cellGroupId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{g.cellGroupName}</div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>{g.totalMembers} members · {g.attended} attended</div>
+            </div>
+            <span style={{ padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: g.absent > 10 ? '#fef2f2' : '#fffbeb', color: g.absent > 10 ? '#dc2626' : '#d97706' }}>
+              {g.absent} absent
+            </span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 function getDashboardConfig({ role, stats, hasPermission }) {
   const summary = stats.roleSummary || {};
   const canMembers = hasPermission('members', 'read');
@@ -186,23 +249,16 @@ function getDashboardConfig({ role, stats, hasPermission }) {
     case R.REG:
       return {
         metrics: [
-          metric('New members', fmtNumber(summary.newMembers), 'Added this month', '/members'),
-          metric('Pending invites', fmtNumber(summary.pendingInvites), 'Awaiting acceptance', '/users'),
-          metric('Upcoming services', fmtNumber(stats.services.upcoming), 'Published services', '/services'),
-          metric('Upcoming events', fmtNumber(stats.events.upcoming.length), 'Scheduled events', '/events'),
+          metric('Total Members', fmtNumber(stats.members.total), 'All member records', '/members'),
+          metric('Active Members', fmtNumber(stats.members.active), 'Active status members', '/members'),
+          metric("Today's Attendance", fmtNumber(summary.todayAttendance), 'Checked in today', '/attendance'),
+          metric('New Members', fmtNumber(stats.members.newThisMonth), 'Added this month', '/members'),
         ],
-        primary: [
-          row('Members', 'Register and update member records.', '/members'),
-          row('Services', 'Create service schedules and attendance flows.', '/services'),
-          row('Events', 'Create and update church events.', '/events'),
-        ],
-        watch: [
-          row('Archives', 'Upload public and restricted documents.', '/archives'),
-          row('Users', 'Create accounts and send invitations.', '/users'),
-          row('Attendance', 'Record service attendance.', '/attendance'),
-        ],
-        secondaryTitle: 'Upcoming Events',
-        secondaryRows: commonEvents,
+        primary: [],
+        watch: [],
+        secondaryTitle: 'Cell Group Attendance Alerts',
+        secondaryRows: [],
+        renderCustom: true,
       };
     case R.FINANCE:
       return {
@@ -362,37 +418,54 @@ export default function DashboardPage() {
         ))}
       </section>
 
-      <section style={{ ...S.grid, gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr' }}>
-        <Panel title="Primary Work">
-          <RowList rows={config.primary} accent={accent} />
-        </Panel>
-        <Panel title="Watch List">
-          <RowList rows={config.watch} accent={accent} />
-        </Panel>
-      </section>
+      {role === R.REG ? (
+        <>
+          <section>
+            <Panel title="Attendance Trends">
+              <AttendanceTrendChart data={stats.attendanceTrend || []} accent={accent} onNavigate={navigate} />
+            </Panel>
+          </section>
+          <section>
+            <Panel title="Cell Group Attendance Alerts">
+              <CellGroupAlertsPanel data={stats.cellGroupAbsences || []} latestService={stats.latestService || null} />
+            </Panel>
+          </section>
+        </>
+      ) : (
+        <>
+          <section style={{ ...S.grid, gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr' }}>
+            <Panel title="Primary Work">
+              <RowList rows={config.primary} accent={accent} />
+            </Panel>
+            <Panel title="Watch List">
+              <RowList rows={config.watch} accent={accent} />
+            </Panel>
+          </section>
 
-      <section style={{ ...S.grid, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
-        <Panel
-          title={config.secondaryTitle}
-          action={config.secondaryRows.length ? 'Open' : null}
-          onAction={() => {
-            const firstPath = config.secondaryRows.find((item) => item.path)?.path;
-            if (firstPath) navigate(firstPath.startsWith('/events/') ? '/events' : firstPath);
-          }}
-        >
-          <RowList rows={config.secondaryRows} accent={accent} empty="Nothing needs attention right now." />
-        </Panel>
-        <Panel title="Access Summary">
-          <RowList
-            rows={[
-              row('Read access', 'Pages shown in the sidebar are available to this role.', null, 'Active'),
-              row('Write controls', 'Buttons appear only when the role has the matching permission.', null, 'Guarded'),
-              row('Current session', 'Log out and back in after permission changes.', null, 'Fresh login'),
-            ]}
-            accent={accent}
-          />
-        </Panel>
-      </section>
+          <section style={{ ...S.grid, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
+            <Panel
+              title={config.secondaryTitle}
+              action={config.secondaryRows.length ? 'Open' : null}
+              onAction={() => {
+                const firstPath = config.secondaryRows.find((item) => item.path)?.path;
+                if (firstPath) navigate(firstPath.startsWith('/events/') ? '/events' : firstPath);
+              }}
+            >
+              <RowList rows={config.secondaryRows} accent={accent} empty="Nothing needs attention right now." />
+            </Panel>
+            <Panel title="Access Summary">
+              <RowList
+                rows={[
+                  row('Read access', 'Pages shown in the sidebar are available to this role.', null, 'Active'),
+                  row('Write controls', 'Buttons appear only when the role has the matching permission.', null, 'Guarded'),
+                  row('Current session', 'Log out and back in after permission changes.', null, 'Fresh login'),
+                ]}
+                accent={accent}
+              />
+            </Panel>
+          </section>
+        </>
+      )}
     </div>
   );
 }
