@@ -222,7 +222,7 @@ function getDashboardConfig({ role, stats, hasPermission }) {
         ],
         secondaryTitle: 'Recent Activity',
         secondaryRows: canAudit ? (stats.recentActivity || []).slice(0, 6).map((log) =>
-          row(log.action?.replace(/_/g, ' ') || 'Activity', log.User?.email || 'System activity', null, 'View')
+          row(log.action?.replace(/_/g, ' ') || 'Activity', log.User?.email || 'System activity', '/audit-logs', 'View')
         ) : [],
       };
     case R.PASTOR:
