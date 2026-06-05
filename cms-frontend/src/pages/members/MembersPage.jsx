@@ -94,26 +94,10 @@ function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMem
   );
 }
 
-/* ── Age / date helpers ──────────────────────────────────────────── */
-const calcAge = (d) => {
-  if (!d) return null;
-  const b = new Date(d), n = new Date();
-  let a = n.getFullYear() - b.getFullYear();
-  if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--;
-  return a >= 0 ? a : null;
-};
-const fmtBday = (d) => {
-  if (!d) return '—';
-  const dt = new Date(d);
-  return dt.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-};
-
 /* ── Admin Table Row  (masterfile / spreadsheet style) ──────────── */
-function TableRow({ m, idx, rowNum, canEdit, canUnassign, canSelect, selected, onToggleSelect, onView, onEdit, onUnassign }) {
+function TableRow({ m, idx, canEdit, canUnassign, canSelect, selected, onToggleSelect, onView, onEdit, onUnassign }) {
   const [hov, setHov] = useState(false);
   const sc = STATUS_COLORS[m.status] || { bg: '#f3f4f6', color: '#6b7280' };
-  const fleshAge = calcAge(m.birthdate);
-  const spiritAge = calcAge(m.spiritual_birthday);
   return (
     <tr
       onMouseEnter={() => setHov(true)}
@@ -124,12 +108,8 @@ function TableRow({ m, idx, rowNum, canEdit, canUnassign, canSelect, selected, o
       <td style={{ padding:'10px 12px', width:36, borderBottom:'1px solid #f1f5f9', verticalAlign:'middle' }} onClick={e=>e.stopPropagation()}>
         {canSelect && <input type="checkbox" checked={!!selected} onChange={onToggleSelect} style={{ cursor:'pointer', width:15, height:15 }} />}
       </td>
-      <td style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', fontSize: 12, width: 40 }}>{rowNum}</td>
       <td style={{ ...tdStyle, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>
         {m.last_name}, {m.first_name}
-      </td>
-      <td style={{ ...tdStyle, textAlign: 'center', width: 50 }}>
-        {m.gender ? m.gender.charAt(0) : '—'}
       </td>
       <td style={{ ...tdStyle, fontSize: 13 }}>{m.cellGroup?.name || '—'}</td>
       <td style={{ ...tdStyle, fontSize: 13 }}>{m.group?.name || '—'}</td>
@@ -138,15 +118,6 @@ function TableRow({ m, idx, rowNum, canEdit, canUnassign, canSelect, selected, o
           {m.status}
         </span>
       </td>
-      <td style={{ ...tdStyle, textAlign: 'center', fontSize: 13 }}>
-        {fleshAge !== null ? fleshAge : '—'}
-      </td>
-      <td style={{ ...tdStyle, fontSize: 13, whiteSpace: 'nowrap' }}>{fmtBday(m.birthdate)}</td>
-      <td style={{ ...tdStyle, textAlign: 'center', fontSize: 13 }}>
-        {spiritAge !== null ? spiritAge : '—'}
-      </td>
-      <td style={{ ...tdStyle, fontSize: 13, whiteSpace: 'nowrap' }}>{fmtBday(m.spiritual_birthday)}</td>
-      <td style={{ ...tdStyle, fontSize: 13 }}>{m.phone || '—'}</td>
       <td style={tdStyle} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={() => onView(m.id)} style={actionBtnSm('#e8f4fd', '#0066b3')}>View</button>
@@ -251,7 +222,6 @@ export default function MembersPage() {
     for (const { col, dir } of sorts) {
       let av = '', bv = '';
       if (col === 'name')   { av = `${a.last_name} ${a.first_name}`.toLowerCase(); bv = `${b.last_name} ${b.first_name}`.toLowerCase(); }
-      if (col === 'gender') { av = a.gender || ''; bv = b.gender || ''; }
       if (col === 'cg')     { av = a.cellGroup?.name || ''; bv = b.cellGroup?.name || ''; }
       if (col === 'group')  { av = a.group?.name || ''; bv = b.group?.name || ''; }
       if (col === 'status') { av = a.status || ''; bv = b.status || ''; }
@@ -604,7 +574,7 @@ export default function MembersPage() {
                       onChange={toggleAll} style={{ cursor:'pointer', width:15, height:15 }} />
                     }
                   </th>
-                  {[['#','',40],['Name','name',null],['M/F','gender',50],['Cell Group','cg',null],['Group','group',null],['Status','status',null],['Flesh Age',null,80],['Flesh Birthday',null,130],['Spirit Age',null,80],['Spiritual Birthday',null,130],['Mobile',null,120],['Actions',null,null]].map(([label, col, w]) => (
+                  {[['Name','name',null],['Cell Group','cg',null],['Group','group',null],['Status','status',null],['Actions',null,null]].map(([label, col, w]) => (
                     <th key={label} onClick={col ? ()=>toggleSort(col) : undefined}
                       style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #e2e8f0', whiteSpace:'nowrap', cursor:col?'pointer':'default', userSelect:'none', width:w||undefined, transition:'background 0.1s' }}
                       onMouseEnter={e=>{if(col)e.currentTarget.style.background='#f0f7ff';}}
@@ -617,11 +587,11 @@ export default function MembersPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={13} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>Loading…</td></tr>
+                  <tr><td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>Loading…</td></tr>
                 ) : sortedMembers.length === 0 ? (
-                  <tr><td colSpan={13} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No members found.</td></tr>
+                  <tr><td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No members found.</td></tr>
                 ) : sortedMembers.map((m, i) => (
-                  <TableRow key={m.id} m={m} idx={i} rowNum={(page-1)*limit+i+1} canEdit={canEdit}
+                  <TableRow key={m.id} m={m} idx={i} canEdit={canEdit}
                     canUnassign={canUnassign} canSelect={canBulkDelete}
                     selected={selected.has(m.id)} onToggleSelect={() => toggleSelect(m.id)}
                     onView={id => navigate(`/members/${id}`)}

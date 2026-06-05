@@ -4,24 +4,24 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 
 const STATUS_META = {
-  draft:     { bg: '#f1f5f9', color: '#475569', label: 'Draft' },
-  published: { bg: '#dcfce7', color: '#16a34a', label: 'Published' },
-  completed: { bg: '#e8f4fd', color: '#0066b3', label: 'Completed' },
-  cancelled: { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
+  Upcoming:  { bg: '#dcfce7', color: '#16a34a', label: 'Upcoming' },
+  Ongoing:   { bg: '#e8f4fd', color: '#0066b3', label: 'Ongoing' },
+  Completed: { bg: '#f1f5f9', color: '#475569', label: 'Completed' },
+  Cancelled: { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
 };
 
 const STATUS_FLOW = {
-  draft:     ['published', 'cancelled'],
-  published: ['completed', 'cancelled'],
-  completed: [],
-  cancelled: [],
+  Upcoming:  ['Ongoing', 'Completed', 'Cancelled'],
+  Ongoing:   ['Completed', 'Cancelled'],
+  Completed: [],
+  Cancelled: [],
 };
 
-const STATUS_ACTION_LABEL = { published: 'Publish', completed: 'Complete', cancelled: 'Cancel' };
+const STATUS_ACTION_LABEL = { Ongoing: 'Start', Completed: 'Complete', Cancelled: 'Cancel' };
 const STATUS_ACTION_STYLE = {
-  published: { background: '#dcfce7', color: '#16a34a' },
-  completed: { background: '#e8f4fd', color: '#0066b3' },
-  cancelled:  { background: '#fef2f2', color: '#dc2626' },
+  Ongoing:   { background: '#e8f4fd', color: '#0066b3' },
+  Completed: { background: '#f1f5f9', color: '#475569' },
+  Cancelled: { background: '#fef2f2', color: '#dc2626' },
 };
 
 export default function EventsPage() {
@@ -49,7 +49,7 @@ export default function EventsPage() {
   const [form, setForm] = useState({
     category_id: '', title: '', description: '', start_date: '',
     end_date: '', start_time: '', location: '', capacity: '',
-    registration_deadline: '', status: 'draft',
+    registration_deadline: '', status: 'Upcoming',
   });
   const [formError, setFormError]   = useState('');
   const [saving, setSaving]         = useState(false);
@@ -91,7 +91,7 @@ export default function EventsPage() {
     setForm({
       category_id: '', title: '', description: '', start_date: '',
       end_date: '', start_time: '', location: '', capacity: '',
-      registration_deadline: '', status: 'draft',
+      registration_deadline: '', status: 'Upcoming',
     });
     setEditEvent(null); setFormError('');
   };
@@ -109,7 +109,7 @@ export default function EventsPage() {
       capacity:              ev.capacity || '',
       registration_deadline: ev.registration_deadline
         ? ev.registration_deadline.slice(0, 16) : '',
-      status: ev.status || 'draft',
+      status: ev.status || 'Upcoming',
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -180,13 +180,13 @@ export default function EventsPage() {
   };
 
   const filterOptions = isMember
-    ? [{ key: '', label: 'All' }, { key: 'published', label: 'Published' }, { key: 'completed', label: 'Completed' }]
+    ? [{ key: '', label: 'All' }, { key: 'Upcoming', label: 'Upcoming' }, { key: 'Ongoing', label: 'Ongoing' }, { key: 'Completed', label: 'Completed' }]
     : [
         { key: '', label: 'All' },
-        { key: 'draft', label: 'Draft' },
-        { key: 'published', label: 'Published' },
-        { key: 'completed', label: 'Completed' },
-        { key: 'cancelled', label: 'Cancelled' },
+        { key: 'Upcoming', label: 'Upcoming' },
+        { key: 'Ongoing', label: 'Ongoing' },
+        { key: 'Completed', label: 'Completed' },
+        { key: 'Cancelled', label: 'Cancelled' },
       ];
 
   return (
@@ -277,8 +277,10 @@ export default function EventsPage() {
                   onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
                   style={s.select}
                 >
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
+                  <option value="Upcoming">Upcoming</option>
+                  <option value="Ongoing">Ongoing</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
             </div>
@@ -372,7 +374,7 @@ export default function EventsPage() {
       ) : (
         <div style={s.grid}>
           {events.map(ev => {
-            const meta         = STATUS_META[ev.status] || STATUS_META.draft;
+            const meta         = STATUS_META[ev.status] || STATUS_META.Upcoming;
             const nextStatuses = (canUpdate && !isMember) ? STATUS_FLOW[ev.status] : [];
             const regCount     = ev.EventRegistrations?.length ?? 0;
 
@@ -430,9 +432,7 @@ export default function EventsPage() {
                           {STATUS_ACTION_LABEL[ns]}
                         </button>
                       ))}
-                      {/* FIX BUG 4: was only 'draft'. Admins must also be able to
-                          delete completed and cancelled events to clean up the list. */}
-                      {canDelete && ['draft', 'completed', 'cancelled'].includes(ev.status) && (
+                      {canDelete && ['Completed', 'Cancelled'].includes(ev.status) && (
                         <button onClick={() => handleDelete(ev.id)} style={s.deleteBtn}>
                           Delete
                         </button>

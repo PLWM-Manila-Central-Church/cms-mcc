@@ -620,7 +620,7 @@ const seedDemoData = async (transaction) => {
     location: "Main Sanctuary Hall",
     capacity: 150,
     registration_deadline: addDays(10),
-    status: "published",
+    status: "Upcoming",
     created_by: refAdminUser.id,
   }, { transaction });
 
@@ -633,7 +633,7 @@ const seedDemoData = async (transaction) => {
     location: "Training Room B",
     capacity: 50,
     registration_deadline: addDays(-16),
-    status: "completed",
+    status: "Completed",
     created_by: refAdminUser.id,
   }, { transaction });
 

@@ -14,6 +14,15 @@ const {
   Group,
 } = require("../models");
 
+const EVENT_STATUS = {
+  UPCOMING: "Upcoming",
+  ONGOING: "Ongoing",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
+
+const REGISTRATION_OPEN_STATUSES = [EVENT_STATUS.UPCOMING, EVENT_STATUS.ONGOING];
+
 // ── Shared includes ──────────────────────────────────────────
 const eventIncludes = [
   {
@@ -122,7 +131,7 @@ exports.createEvent = async (data, createdBy) => {
     location:              location              || null,
     capacity:              capacity              || null,
     registration_deadline: registration_deadline || null,
-    status:                status                || "draft",
+    status:                status                || EVENT_STATUS.UPCOMING,
     is_deleted: 0,
     created_by: createdBy,
   });
@@ -141,7 +150,7 @@ exports.updateEvent = async (id, data, updatedBy) => {
   const event = await Event.findOne({ where: { id, is_deleted: 0 } });
   if (!event) throw { status: 404, message: "Event not found" };
 
-  if (event.status === "completed" || event.status === "cancelled")
+  if (event.status === EVENT_STATUS.COMPLETED || event.status === EVENT_STATUS.CANCELLED)
     throw { status: 400, message: "Cannot update a completed or cancelled event" };
 
   const {
@@ -182,10 +191,10 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
   if (!event) throw { status: 404, message: "Event not found" };
 
   const validTransitions = {
-    draft:     ["published", "cancelled"],
-    published: ["completed", "cancelled"],
-    completed: [],
-    cancelled: [],
+    Upcoming:  [EVENT_STATUS.ONGOING, EVENT_STATUS.COMPLETED, EVENT_STATUS.CANCELLED],
+    Ongoing:   [EVENT_STATUS.COMPLETED, EVENT_STATUS.CANCELLED],
+    Completed: [],
+    Cancelled: [],
   };
 
   if (!validTransitions[event.status]?.includes(newStatus))
@@ -196,7 +205,7 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
 
   await event.update({ status: newStatus });
 
-  if (newStatus === "published") {
+  if ([EVENT_STATUS.UPCOMING, EVENT_STATUS.ONGOING].includes(newStatus)) {
     try {
       // Notify ALL active portal users (not just already-registered ones).
       // Uses bulkCreate for a single DB insert instead of N round-trips.
@@ -230,12 +239,12 @@ exports.deleteEvent = async (id, deletedBy) => {
   const event = await Event.findOne({ where: { id, is_deleted: 0 } });
   if (!event) throw { status: 404, message: "Event not found" };
 
-  // Block deleting a published event — it has active registrations.
-  // Admins must cancel it first (published → cancelled), then delete.
-  if (event.status === "published")
-    throw { status: 400, message: "Cannot delete a published event. Cancel it first." };
+  // Block deleting active events because they may have registrations.
+  // Admins must cancel or complete them first, then delete.
+  if ([EVENT_STATUS.UPCOMING, EVENT_STATUS.ONGOING].includes(event.status))
+    throw { status: 400, message: "Cannot delete an active event. Cancel or complete it first." };
 
-  // draft, completed, and cancelled events can all be deleted.
+  // Completed and cancelled events can be deleted.
   await event.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy });
   auditLog.log({ userId: deletedBy, action: "DELETE_EVENT", targetTable: "events", targetId: id });
   return { message: "Event deleted successfully." };
@@ -299,7 +308,7 @@ exports.getEventRegistrations = async (eventId) => {
 exports.registerMember = async (eventId, memberId, registeredBy) => {
   const event = await Event.findOne({ where: { id: eventId } });
   if (!event) throw { status: 404, message: "Event not found" };
-  if (event.status !== "published")
+  if (!REGISTRATION_OPEN_STATUSES.includes(event.status))
     throw { status: 400, message: "Event is not open for registration" };
   if (event.registration_deadline && new Date() > event.registration_deadline)
     throw { status: 400, message: "Registration deadline has passed" };
@@ -378,7 +387,7 @@ exports.unregisterMember = async (eventId, memberId, unregisteredBy) => {
 exports.bulkRegisterMembers = async (eventId, memberIds, registeredBy) => {
   const event = await Event.findOne({ where: { id: eventId } });
   if (!event) throw { status: 404, message: "Event not found" };
-  if (event.status !== "published")
+  if (!REGISTRATION_OPEN_STATUSES.includes(event.status))
     throw { status: 400, message: "Event is not open for registration" };
   if (event.registration_deadline && new Date() > event.registration_deadline)
     throw { status: 400, message: "Registration deadline has passed" };

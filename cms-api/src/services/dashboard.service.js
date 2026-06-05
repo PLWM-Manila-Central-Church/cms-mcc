@@ -142,7 +142,7 @@ exports.getStats = async ({
     }),
     Service.count({ where: { service_date: { [Op.gte]: now }, status: "published" } }),
     Event.findAll({
-      where: { start_date: { [Op.gte]: now }, status: "published" },
+      where: { start_date: { [Op.gte]: now }, status: "Upcoming" },
       order: [["start_date", "ASC"]],
       limit: 5,
     }),

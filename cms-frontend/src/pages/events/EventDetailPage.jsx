@@ -4,10 +4,10 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 
 const STATUS_META = {
-  draft:     { bg: '#f1f5f9', color: '#475569', label: 'Draft' },
-  published: { bg: '#dcfce7', color: '#16a34a', label: 'Published' },
-  completed: { bg: '#e8f4fd', color: '#0066b3', label: 'Completed' },
-  cancelled: { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
+  Upcoming:  { bg: '#dcfce7', color: '#16a34a', label: 'Upcoming' },
+  Ongoing:   { bg: '#e8f4fd', color: '#0066b3', label: 'Ongoing' },
+  Completed: { bg: '#f1f5f9', color: '#475569', label: 'Completed' },
+  Cancelled: { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
 };
 
 export default function EventDetailPage() {
@@ -78,7 +78,8 @@ export default function EventDetailPage() {
   const regCount       = event?.EventRegistrations?.length ?? 0;
   const isFull         = event?.capacity && regCount >= event.capacity;
   const deadlinePassed = event?.registration_deadline && new Date() > new Date(event.registration_deadline);
-  const canRegister    = event?.status === 'published' && !deadlinePassed && !isFull;
+  const registrationOpen = ['Upcoming', 'Ongoing'].includes(event?.status);
+  const canRegister    = registrationOpen && !deadlinePassed && !isFull;
 
   const handleRegister = async () => {
     setRegLoading(true); setRegMessage(''); setRegError('');
@@ -154,7 +155,7 @@ export default function EventDetailPage() {
   if (error)   return <div style={s.errorBox}>{error}</div>;
   if (!event)  return null;
 
-  const meta = STATUS_META[event.status] || STATUS_META.draft;
+  const meta = STATUS_META[event.status] || STATUS_META.Upcoming;
   const registrations = event.EventRegistrations || [];
   const visibleRegistrations = isCellGroupLeader && attendeeFilter === 'mine'
     ? registrations.filter(r => Number(r.member?.cell_group_id) === Number(user?.leadsCellGroupId))
@@ -231,7 +232,7 @@ export default function EventDetailPage() {
 
         {/* Member self-register / self-unregister
             Only shown when the user has a member profile AND the correct permissions */}
-        {user?.memberId && event.status === 'published' && (
+        {user?.memberId && registrationOpen && (
           <div style={{ marginTop: '20px' }}>
             {regMessage && <div style={s.successBox}>{regMessage}</div>}
             {regError   && <div style={s.errorBox}>{regError}</div>}

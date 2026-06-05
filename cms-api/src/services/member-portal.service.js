@@ -177,11 +177,11 @@ exports.getMyFinance = async (memberId) => {
   return { records, ytdTotal };
 };
 
-// ── Get My Events (published, with registration status) ───────
+// ── Get My Events (open events, with registration status) ─────
 exports.getMyEvents = async (memberId) => {
   const now    = new Date();
   const events = await Event.findAll({
-    where: { status: "published" },
+    where: { status: { [Op.in]: ["Upcoming", "Ongoing"] } },
     include: [
       { model: EventCategory,    as: "category",      attributes: ["id", "name"],           required: false },
       { model: EventRegistration, attributes: ["id", "member_id", "registered_at"],          required: false },
@@ -228,7 +228,7 @@ exports.getMyEvents = async (memberId) => {
 exports.registerForEvent = async (memberId, eventId) => {
   const event = await Event.findOne({ where: { id: eventId } });
   if (!event) throw { status: 404, message: "Event not found" };
-  if (event.status !== "published")
+  if (!["Upcoming", "Ongoing"].includes(event.status))
     throw { status: 400, message: "Event is not open for registration" };
   if (event.registration_deadline && new Date() > new Date(event.registration_deadline))
     throw { status: 400, message: "Registration deadline has passed" };

@@ -154,7 +154,7 @@ function getDashboardConfig({ role, stats, hasPermission }) {
         ],
         watch: [
           row('Pending inventory requests', 'Requests waiting for review.', '/inventory', fmtNumber(stats.inventory.pendingRequests)),
-          row('Upcoming events', 'Published events on the calendar.', '/events', fmtNumber(stats.events.upcoming.length)),
+          row('Upcoming events', 'Scheduled events on the calendar.', '/events', fmtNumber(stats.events.upcoming.length)),
           row('Upcoming services', 'Published services coming up.', '/services', fmtNumber(stats.services.upcoming)),
         ],
         secondaryTitle: 'Recent Activity',
@@ -189,7 +189,7 @@ function getDashboardConfig({ role, stats, hasPermission }) {
           metric('New members', fmtNumber(summary.newMembers), 'Added this month', '/members'),
           metric('Pending invites', fmtNumber(summary.pendingInvites), 'Awaiting acceptance', '/users'),
           metric('Upcoming services', fmtNumber(stats.services.upcoming), 'Published services', '/services'),
-          metric('Upcoming events', fmtNumber(stats.events.upcoming.length), 'Published events', '/events'),
+          metric('Upcoming events', fmtNumber(stats.events.upcoming.length), 'Scheduled events', '/events'),
         ],
         primary: [
           row('Members', 'Register and update member records.', '/members'),

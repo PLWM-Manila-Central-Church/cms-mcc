@@ -11,7 +11,7 @@ exports.getPublicStats = async (req, res, next) => {
     const upcomingEvents = await Event.findAll({
       where: {
         start_date: { [Op.gte]: new Date() },
-        status: "published",
+        status: "Upcoming",
         is_deleted: 0,
       },
       attributes: ["id", "title", "start_date", "end_date", "start_time", "location", "category_id", "description"],
