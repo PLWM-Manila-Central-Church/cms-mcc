@@ -161,7 +161,7 @@ export default function ArchivesPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = record.title || record.file_url.split('/').pop();
+      a.download = record.file_url.split('/').pop();
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -181,7 +181,7 @@ export default function ArchivesPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = fileName || fileUrl.split('/').pop();
+      a.download = fileUrl.split('/').pop();
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
