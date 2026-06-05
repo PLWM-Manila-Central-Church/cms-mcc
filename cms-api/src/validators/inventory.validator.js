@@ -28,8 +28,8 @@ exports.createRequestSchema = Joi.object({
 });
 
 exports.reviewRequestSchema = Joi.object({
-  status:  Joi.string().valid("Approved", "Rejected").required(),
-  remarks: Joi.string().max(500).allow(null, "").optional(),
+  status:      Joi.string().valid("approved", "rejected").required(),
+  review_note: Joi.string().max(500).allow(null, "").optional(),
 });
 
 exports.createUsageSchema = Joi.object({

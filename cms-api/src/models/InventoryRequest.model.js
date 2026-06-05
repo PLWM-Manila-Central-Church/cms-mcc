@@ -21,6 +21,7 @@ const InventoryRequest = sequelize.define(
       defaultValue: "pending",
     },
     reviewed_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    review_note: { type: DataTypes.TEXT, allowNull: true },
   },
   { tableName: "inventory_requests", timestamps: true, underscored: true },
 );

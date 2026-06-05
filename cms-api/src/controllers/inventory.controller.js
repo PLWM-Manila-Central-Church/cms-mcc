@@ -177,8 +177,8 @@ exports.createRequest = async (req, res, next) => {
 exports.reviewRequest = async (req, res, next) => {
   try {
     if (forbidScopedInventoryManage(req, res)) return;
-    const { status } = req.body;
-    const data = await inventoryService.reviewRequest(req.params.id, status, req.user.userId);
+    const { status, review_note } = req.body;
+    const data = await inventoryService.reviewRequest(req.params.id, status, req.user.userId, review_note);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

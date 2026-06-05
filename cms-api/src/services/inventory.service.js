@@ -219,24 +219,25 @@ exports.createRequest = async (data, requestedBy) => {
 };
 
 // ── Review Request (Approve/Reject) ──────────────────────────
-exports.reviewRequest = async (id, status, reviewedBy) => {
+exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
   const request = await InventoryRequest.findByPk(id);
   if (!request) throw { status: 404, message: "Inventory request not found" };
 
   if (request.status !== "pending")
     throw { status: 400, message: "Request has already been reviewed" };
 
-  if (!["approved", "rejected"].includes(status))
+  const normalized = (status || "").toLowerCase();
+  if (!["approved", "rejected"].includes(normalized))
     throw { status: 400, message: "Status must be approved or rejected" };
 
-  if (status === "approved") {
+  if (normalized === "approved") {
     const item = await InventoryItem.findByPk(request.item_id);
     if (item.quantity < request.quantity)
       throw { status: 400, message: "Insufficient inventory quantity" };
     await item.update({ quantity: item.quantity - request.quantity });
   }
 
-  await request.update({ status, reviewed_by: reviewedBy });
+  await request.update({ status: normalized, reviewed_by: reviewedBy, review_note: reviewNote || null });
 
   // FIX BUG 5: notify the requester of the review outcome
   try {
@@ -247,7 +248,7 @@ exports.reviewRequest = async (id, status, reviewedBy) => {
       await notifService.createNotification({
         user_id: requester.id,
         type:    "inventory_request_reviewed",
-        message: `Your inventory request for "${itemName}" has been ${status}.`,
+        message: `Your inventory request for "${itemName}" has been ${normalized}.`,
       });
     }
   } catch (err) {
@@ -255,8 +256,8 @@ exports.reviewRequest = async (id, status, reviewedBy) => {
   }
 
   auditLog.log({
-    userId: reviewedBy, action: `INVENTORY_REQUEST_${status.toUpperCase()}`,
-    targetTable: "inventory_requests", targetId: id, newValues: { status },
+    userId: reviewedBy, action: `INVENTORY_REQUEST_${normalized.toUpperCase()}`,
+    targetTable: "inventory_requests", targetId: id, newValues: { status: normalized },
   });
   return await exports.getRequestById(id);
 };
