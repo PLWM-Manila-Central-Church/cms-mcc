@@ -276,62 +276,6 @@ exports.getStats = async ({
     roleSummary,
     ...(roleName === "Registration Team" ? { attendanceTrend, cellGroupAbsences, latestService: latestServiceInfo } : {}),
   };
-        })
-      );
-    }
-
-    // Per-cell-group attendance at latest service
-    const latestService = await Service.findOne({
-      where: { status: { [Op.in]: ["completed", "published"] } },
-      order: [["service_date", "DESC"]],
-      attributes: ["id", "title", "service_date"],
-    });
-
-    if (latestService) {
-      const cellGroups = await CellGroup.findAll({
-        attributes: ["id", "name"],
-      });
-
-      cellGroupAbsences = await Promise.all(
-        cellGroups.map(async (cg) => {
-          const totalMembers = await Member.count({ where: { cell_group_id: cg.id } });
-          const attended = await Attendance.count({
-            include: [{
-              model: Member,
-              where: { cell_group_id: cg.id },
-              required: true,
-              attributes: [],
-            }],
-            where: { service_id: latestService.id },
-          });
-          return {
-            cellGroupId: cg.id,
-            cellGroupName: cg.name,
-            totalMembers,
-            attended,
-            absent: Math.max(0, totalMembers - attended),
-          };
-        })
-      );
-      // Sort by absent descending
-      cellGroupAbsences.sort((a, b) => b.absent - a.absent);
-    }
-  }
-
-  const result = {
-    members:       memberCounts,
-    finance:       { totalThisMonth, recentRecords },
-    services:      { upcoming: upcomingServices },
-    events:        { upcoming: upcomingEvents },
-    inventory:     { pendingRequests, lowStock },
-    ...(isMember ? {} : { recentActivity }),
-    roleSummary,
-    ...(roleName === "Registration Team" ? {
-      attendanceTrend,
-      cellGroupAbsences,
-      latestService: latestService ? { id: latestService.id, title: latestService.title, service_date: latestService.service_date } : null,
-    } : {}),
-  };
 
   // Cache for 60 seconds (30 seconds for Member role to keep their data fresh)
   cache.set(cacheKey, result, isMember ? 30000 : 60000);
