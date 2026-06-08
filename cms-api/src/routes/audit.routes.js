@@ -18,6 +18,7 @@ router.get(
   authorize("audit", "read"),
   ctrl.getLogsByTable,
 );
+router.post("/:id/revert", auth, authorize("audit", "update"), ctrl.revertLog);
 router.get("/:id", auth, authorize("audit", "read"), ctrl.getLogById);
 
 module.exports = router;
