@@ -12,6 +12,7 @@ const Sentry  = require("@sentry/node");
 const logger  = require("./helpers/logger");
 
 const errorHandler = require("./middlewares/errorHandler");
+const sequelizeHealth = require("./config/db");
 
 const app = express();
 
@@ -47,12 +48,23 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev")); // 
 app.use(express.json({ limit: "10kb" })); // Fix #9
 app.use(express.urlencoded({ extended: true, limit: "10kb" })); // Fix #9
 
-app.get("/health", (_req, res) => {
-  res.status(200).json({
-    status: "ok",
-    service: "plwm-mcc-api",
-    uptime: process.uptime(),
-  });
+app.get("/health", async (_req, res) => {
+  try {
+    await sequelizeHealth.authenticate();
+    res.status(200).json({
+      status: "ok",
+      service: "plwm-mcc-api",
+      uptime: process.uptime(),
+      db: "connected",
+    });
+  } catch (err) {
+    res.status(503).json({
+      status: "error",
+      service: "plwm-mcc-api",
+      uptime: process.uptime(),
+      db: "disconnected",
+    });
+  }
 });
 
 // ── Authenticated file serving for archive uploads ───────────
@@ -91,6 +103,11 @@ const forgotPasswordLimiter = rateLimit({
   max: 5,
   message: { message: "Too many password reset requests. Try again later." },
 });
+const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: "Too many password reset attempts. Try again later." },
+});
 const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
@@ -99,6 +116,7 @@ const refreshLimiter = rateLimit({
 
 app.use("/api/auth/login",           loginLimiter);
 app.use("/api/auth/forgot-password", forgotPasswordLimiter);
+app.use("/api/auth/reset-password",  resetPasswordLimiter);
 app.use("/api/auth/refresh-token",   refreshLimiter);
 
 // ── Global API Rate Limiter ───────────────────────────────────
