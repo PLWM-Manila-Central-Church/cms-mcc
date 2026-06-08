@@ -14,6 +14,7 @@ const logger  = require("./helpers/logger");
 const errorHandler = require("./middlewares/errorHandler");
 const requestId    = require("./middlewares/requestId");
 const sequelizeHealth = require("./config/db");
+const { metricsMiddleware, metricsEndpoint } = require("./helpers/metrics");
 
 const app = express();
 
@@ -31,6 +32,7 @@ if (process.env.SENTRY_DSN) {
 app.set("trust proxy", 1);
 
 app.use(requestId);
+app.use(metricsMiddleware);
 
 // ── Security & Logging ───────────────────────────────────────
 app.use(helmet({
@@ -50,6 +52,8 @@ app.use(cors({
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev")); // Fix #10
 app.use(express.json({ limit: "10kb" })); // Fix #9
 app.use(express.urlencoded({ extended: true, limit: "10kb" })); // Fix #9
+
+app.get("/metrics", metricsEndpoint);
 
 app.get("/health", async (_req, res) => {
   try {
