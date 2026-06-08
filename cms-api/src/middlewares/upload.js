@@ -1,5 +1,9 @@
 "use strict";
 
+// ⚠️ DEPRECATED: This middleware stores files on the local filesystem which is
+// ephemeral on Render. Migrate to upload-s3.js for persistent storage.
+// Kept as fallback when S3 env vars are not configured.
+
 /**
  * Multer middleware for archive file uploads.
  *

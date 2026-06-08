@@ -6,11 +6,7 @@ const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
 const validateQuery = require("../middlewares/validateQuery");
-const multer  = require("multer");
-const path    = require("path");
-const fs      = require("fs");
-const logger  = require("../helpers/logger");
-const crypto    = require("crypto");
+const { receiptUpload } = require("../middlewares/upload-s3");
 
 const {
   createRecordSchema, updateRecordSchema,
@@ -21,66 +17,6 @@ const {
   createExpenseSchema, updateExpenseSchema,
   getRecordsQuerySchema,
 } = require("../validators/finance.validator");
-
-// Multer Storage config for Expense Receipt Attachments
-const RECEIPTS_DIR = path.join(__dirname, "../../uploads/receipts");
-if (!fs.existsSync(RECEIPTS_DIR)) {
-  fs.mkdirSync(RECEIPTS_DIR, { recursive: true });
-}
-
-const ALLOWED_RECEIPT_EXT = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
-const ALLOWED_RECEIPT_MIME = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-];
-
-const receiptStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, RECEIPTS_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const unique = crypto.randomBytes(16).toString("hex");
-    cb(null, `${unique}${ext}`);
-  },
-});
-
-const receiptFileFilter = (_req, file, cb) => {
-  const ext = path.extname(file.originalname).toLowerCase();
-  if (ALLOWED_RECEIPT_EXT.includes(ext)) {
-    cb(null, true);
-  } else {
-    cb(new Error(`File type not allowed. Allowed: ${ALLOWED_RECEIPT_EXT.join(", ")}`), false);
-  }
-};
-
-const receiptUpload = multer({
-  storage: receiptStorage,
-  fileFilter: receiptFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB file limit
-});
-
-// Verify receipt MIME type from actual file content (magic bytes)
-const verifyReceiptMime = async (req, res, next) => {
-  if (!req.file) return next();
-
-  try {
-    const { fileTypeFromBuffer } = await import("file-type");
-    const fs = require("fs");
-    const buffer = fs.readFileSync(req.file.path).slice(0, 4100);
-    const type = await fileTypeFromBuffer(buffer);
-
-    if (!type || !ALLOWED_RECEIPT_MIME.includes(type.mime)) {
-      fs.unlinkSync(req.file.path);
-      return res.status(400).json({ message: "Invalid file content type." });
-    }
-
-    next();
-  } catch (err) {
-    logger.warn(err, "Receipt MIME check failed open");
-    next();
-  }
-};
 
 // ── Financial Records (Income / Tithes / Offerings) ──────────
 router.get("/my-giving",    auth, authorize("finance", "read"), ctrl.getMyGiving);
@@ -132,7 +68,7 @@ router.put("/expenses/:id",     auth, authorize("finance", "update"), validate(u
 router.delete("/expenses/:id",  auth, authorize("finance", "delete"), ctrl.deleteExpense);
 
 // ── Attachments Endpoints ────────────────────────────────────
-router.post("/attachments/upload", auth, authorize("finance", "create"), receiptUpload.single("file"), verifyReceiptMime, ctrl.uploadAttachment);
+router.post("/attachments/upload", auth, authorize("finance", "create"), receiptUpload.single("file"), ctrl.uploadAttachment);
 router.delete("/attachments/:id",  auth, authorize("finance", "delete"), ctrl.deleteAttachment);
 
 // ── Root aliases (frontend compatibility) ────────────────────

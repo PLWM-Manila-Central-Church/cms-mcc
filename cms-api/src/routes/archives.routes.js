@@ -4,7 +4,7 @@ const router    = require("express").Router();
 const ctrl      = require("../controllers/archives.controller");
 const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
-const { upload, verifyMime } = require("../middlewares/upload");
+const { archiveUpload } = require("../middlewares/upload-s3");
 const validateQuery = require("../middlewares/validateQuery");
 const { getArchivesQuerySchema } = require("../validators/archives.validator");
 
@@ -19,9 +19,8 @@ router.delete("/categories/:id", auth, authorize("archives", "delete"), ctrl.del
 router.get("/",    auth, authorize("archives", "read"), validateQuery(getArchivesQuerySchema), ctrl.getAllRecords);
 router.get("/:id", auth, authorize("archives", "read"),   ctrl.getRecordById);
 
-// upload.single("file") parses multipart/form-data and populates req.file
-router.post("/",   auth, authorize("archives", "create"), upload.single("file"), verifyMime, ctrl.createRecord);
-router.put("/:id", auth, authorize("archives", "update"), upload.single("file"), verifyMime, ctrl.updateRecord);
+router.post("/",   auth, authorize("archives", "create"), archiveUpload.single("file"), ctrl.createRecord);
+router.put("/:id", auth, authorize("archives", "update"), archiveUpload.single("file"), ctrl.updateRecord);
 
 router.patch("/:id/approve", auth, authorize("archives", "update"), ctrl.approveRecord);
 router.delete("/:id",        auth, authorize("archives", "delete"), ctrl.deleteRecord);
