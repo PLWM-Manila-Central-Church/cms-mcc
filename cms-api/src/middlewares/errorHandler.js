@@ -16,6 +16,17 @@ module.exports = (err, req, res, next) => {
     });
   }
 
+  // Custom AppError
+  if (err.name === "AppError") {
+    return res.status(err.status || 500).json({
+      error: {
+        code: err.code || "UNKNOWN_ERROR",
+        message: err.message,
+        ...(err.details && { details: err.details }),
+      },
+    });
+  }
+
   // Sequelize unique constraint errors
   if (err.name === "SequelizeUniqueConstraintError") {
     return res.status(409).json({
