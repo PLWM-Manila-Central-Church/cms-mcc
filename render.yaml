@@ -44,3 +44,5 @@ services:
         sync: false
       - key: MAX_FILE_SIZE_MB
         value: "25"
+      - key: MIGRATE_ON_START
+        value: "true"
