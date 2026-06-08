@@ -12,6 +12,7 @@ const Sentry  = require("@sentry/node");
 const logger  = require("./helpers/logger");
 
 const errorHandler = require("./middlewares/errorHandler");
+const requestId    = require("./middlewares/requestId");
 const sequelizeHealth = require("./config/db");
 
 const app = express();
@@ -28,6 +29,8 @@ if (process.env.SENTRY_DSN) {
   logger.info("Sentry DSN not configured — error tracking disabled");
 }
 app.set("trust proxy", 1);
+
+app.use(requestId);
 
 // ── Security & Logging ───────────────────────────────────────
 app.use(helmet({

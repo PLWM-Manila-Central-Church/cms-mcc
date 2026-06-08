@@ -37,6 +37,7 @@
     "qrcode": "^1.5.4",
     "sequelize": "^6.37.8",
     "sequelize-cli": "^6.6.5",
+    "uuid": "^14.0.0",
     "winston": "^3.19.0"
   },
   "devDependencies": {

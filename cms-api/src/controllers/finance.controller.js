@@ -221,6 +221,13 @@ exports.updateExpenseCategory = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.deleteExpenseCategory = async (req, res, next) => {
+  try {
+    const result = await financeService.deleteExpenseCategory(req.params.id, req.user.userId);
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
 // ── 4. PAYMENT METHODS CONTROLLERS ────────────────────────────
 exports.getAllPaymentMethods = async (req, res, next) => {
   try {

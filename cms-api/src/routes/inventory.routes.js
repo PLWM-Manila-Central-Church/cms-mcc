@@ -5,15 +5,17 @@ const ctrl      = require("../controllers/inventory.controller");
 const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
+const validateQuery = require("../middlewares/validateQuery");
 const {
   createItemSchema, updateItemSchema,
   createRequestSchema, reviewRequestSchema,
   createUsageSchema,
   createCategorySchema, updateCategorySchema,
+  getItemsQuerySchema,
 } = require("../validators/inventory.validator");
 
 // ── Items ────────────────────────────────────────────────────
-router.get("/items",        auth, authorize("inventory", "read"),   ctrl.getAllItems);
+router.get("/items",        auth, authorize("inventory", "read"), validateQuery(getItemsQuerySchema), ctrl.getAllItems);
 router.get("/items/:id",    auth, authorize("inventory", "read"),   ctrl.getItemById);
 router.post("/items",       auth, authorize("inventory", "create"), validate(createItemSchema), ctrl.createItem);
 router.put("/items/:id",    auth, authorize("inventory", "update"), validate(updateItemSchema), ctrl.updateItem);
@@ -28,7 +30,7 @@ router.delete("/categories/:id", auth, authorize("inventory", "delete"), ctrl.de
 
 // ── Requests — static paths MUST come before /:id ────────────
 router.get("/requests/mine", auth, authorize("inventory", "read"), ctrl.getMyRequests);
-router.get("/requests/all",  auth, authorize("inventory", "read"), ctrl.getAllRequestsPaginated);
+router.get("/requests/all",  auth, authorize("inventory", "read"), validateQuery(getItemsQuerySchema), ctrl.getAllRequestsPaginated);
 router.get("/requests",      auth, authorize("inventory", "read"), ctrl.getAllRequests);
 router.get("/requests/:id",  auth, authorize("inventory", "read"), ctrl.getRequestById);
 router.post("/requests",                   auth, authorize("inventory", "read"),   validate(createRequestSchema), ctrl.createRequest);

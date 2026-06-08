@@ -375,10 +375,11 @@ exports.searchAssignableForScope = async ({ search = "", limit = 20 } = {}, user
   const where = buildSearchWhere(search);
 
   if (scope.type === "ministry") {
-    const assigned = await MinistryMembership.findAll({
-      attributes: ["member_id"],
-      raw: true,
-    });
+      const assigned = await MinistryMembership.findAll({
+        where: { ministry_role_id: scope.id },
+        attributes: ["member_id"],
+        raw: true,
+      });
     const assignedIds = assigned.map((row) => row.member_id);
     if (assignedIds.length > 0) where.id = { [Op.notIn]: assignedIds };
   }

@@ -89,3 +89,15 @@ exports.updateExpenseSchema = Joi.object({
   description: Joi.string().max(500).allow(null, "").optional(),
   payment_method_id: Joi.number().integer().positive().optional(),
 }).min(1);
+
+exports.getRecordsQuerySchema = Joi.object({
+  page:              Joi.number().integer().min(1).default(1),
+  limit:             Joi.number().integer().min(1).max(100).default(20),
+  category_id:       Joi.number().integer().positive().optional(),
+  payment_method:    Joi.string().max(100).optional(),
+  payment_method_id: Joi.number().integer().positive().optional(),
+  account_id:        Joi.number().integer().positive().optional(),
+  date_from:         Joi.date().iso().optional(),
+  date_to:           Joi.date().iso().optional(),
+});
+

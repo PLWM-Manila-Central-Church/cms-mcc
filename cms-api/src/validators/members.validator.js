@@ -7,13 +7,13 @@ const memberBody = {
   last_name:          Joi.string().max(100).required(),
   email:              Joi.string().email().max(150).allow(null, "").optional(),
   phone:              Joi.string().max(30).allow(null, "").optional(),
-  gender:             Joi.string().valid("Male", "Female", "Other").allow(null, "").optional(),
+  gender:             Joi.string().valid("Male", "Female").allow(null, "").optional(),
   birthdate:          Joi.date().iso().allow(null, "").optional(),
   spiritual_birthday: Joi.date().iso().allow(null, "").optional(),
   address:            Joi.string().max(500).allow(null, "").optional(),
   cell_group_id:      Joi.number().integer().positive().allow(null).optional(),
   group_id:           Joi.number().integer().positive().allow(null).optional(),
-  status:             Joi.string().valid("Active", "Inactive", "Visitor", "Transferred", "Deceased").optional(),
+  status:             Joi.string().valid("New", "Active", "Semi-Active", "Inactive").optional(),
   notes:              Joi.string().max(2000).allow(null, "").optional(),
 };
 
@@ -44,7 +44,7 @@ exports.createMemberNoteSchema = Joi.object({
 });
 
 exports.createMemberStatusHistorySchema = Joi.object({
-  status:      Joi.string().valid("Active", "Inactive", "Visitor", "Transferred", "Deceased").required(),
+  status:      Joi.string().valid("New", "Active", "Semi-Active", "Inactive").required(),
   change_date: Joi.date().iso().optional(),
   remarks:     Joi.string().max(500).allow(null, "").optional(),
 });
@@ -57,4 +57,14 @@ exports.createInviteSchema = Joi.object({
   invited_by:    Joi.number().integer().positive().allow(null).optional(),
   invited_date:  Joi.date().iso().allow(null).optional(),
   notes:         Joi.string().max(500).allow(null, "").optional(),
+});
+
+// ── Query parameter schemas for GET endpoints ──────────────────
+exports.getMembersQuerySchema = Joi.object({
+  page:         Joi.number().integer().min(1).default(1),
+  limit:        Joi.number().integer().min(1).max(100).default(20),
+  search:       Joi.string().max(200).allow("").optional(),
+  status:       Joi.string().valid("New", "Active", "Semi-Active", "Inactive").optional(),
+  cell_group_id: Joi.number().integer().positive().optional(),
+  group_id:     Joi.number().integer().positive().optional(),
 });

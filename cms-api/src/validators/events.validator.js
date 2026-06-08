@@ -41,3 +41,14 @@ exports.registerMemberSchema = Joi.object({
 exports.bulkRegisterSchema = Joi.object({
   member_ids: Joi.array().items(Joi.number().integer().positive()).min(1).required(),
 });
+
+// ── Query parameter schemas for GET endpoints ──────────────────
+exports.getEventsQuerySchema = Joi.object({
+  page:        Joi.number().integer().min(1).default(1),
+  limit:       Joi.number().integer().min(1).max(100).default(15),
+  status:      Joi.string().valid("Draft", "Upcoming", "Ongoing", "Completed", "Cancelled").optional(),
+  search:      Joi.string().max(200).allow("").optional(),
+  category_id: Joi.number().integer().positive().optional(),
+  start_from:  Joi.date().iso().optional(),
+  start_to:    Joi.date().iso().optional(),
+});

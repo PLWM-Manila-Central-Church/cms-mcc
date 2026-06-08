@@ -5,6 +5,7 @@ const ctrl      = require("../controllers/finance.controller");
 const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
+const validateQuery = require("../middlewares/validateQuery");
 const multer  = require("multer");
 const path    = require("path");
 const fs      = require("fs");
@@ -18,6 +19,7 @@ const {
   createAccountSchema, updateAccountSchema,
   createExpenseCategorySchema, updateExpenseCategorySchema,
   createExpenseSchema, updateExpenseSchema,
+  getRecordsQuerySchema,
 } = require("../validators/finance.validator");
 
 // Multer Storage config for Expense Receipt Attachments
@@ -83,8 +85,8 @@ const verifyReceiptMime = async (req, res, next) => {
 // ── Financial Records (Income / Tithes / Offerings) ──────────
 router.get("/my-giving",    auth, authorize("finance", "read"), ctrl.getMyGiving);
 router.get("/balance",      auth, authorize("finance", "read"),   ctrl.getBalance);
-router.get("/summary",      auth, authorize("finance", "read"),   ctrl.getSummary);
-router.get("/records",      auth, authorize("finance", "read"),   ctrl.getAllRecords);
+router.get("/summary",      auth, authorize("finance", "read"), validateQuery(getRecordsQuerySchema), ctrl.getSummary);
+router.get("/records",      auth, authorize("finance", "read"), validateQuery(getRecordsQuerySchema), ctrl.getAllRecords);
 router.get("/records/:id",  auth, authorize("finance", "read"),   ctrl.getRecordById);
 router.post("/records",     auth, authorize("finance", "create"), validate(createRecordSchema), ctrl.createRecord);
 router.put("/records/:id",  auth, authorize("finance", "update"), validate(updateRecordSchema), ctrl.updateRecord);
@@ -116,12 +118,13 @@ router.get("/expense-categories",        auth, authorize("finance", "read"),   c
 router.get("/expense-categories/:id",    auth, authorize("finance", "read"),   ctrl.getExpenseCategoryById);
 router.post("/expense-categories",       auth, authorize("finance", "create"), validate(createExpenseCategorySchema), ctrl.createExpenseCategory);
 router.put("/expense-categories/:id",    auth, authorize("finance", "update"), validate(updateExpenseCategorySchema), ctrl.updateExpenseCategory);
+router.delete("/expense-categories/:id", auth, authorize("finance", "delete"), ctrl.deleteExpenseCategory);
 
 // ── Payment Methods Endpoints ────────────────────────────────
 router.get("/payment-methods", auth, authorize("finance", "read"), ctrl.getAllPaymentMethods);
 
 // ── Expenses Endpoints ────────────────────────────────────────
-router.get("/expenses",         auth, authorize("finance", "read"),   ctrl.getAllExpenses);
+router.get("/expenses",         auth, authorize("finance", "read"), validateQuery(getRecordsQuerySchema), ctrl.getAllExpenses);
 router.get("/expenses/summary", auth, authorize("finance", "read"),   ctrl.getExpenseSummary);
 router.get("/expenses/:id",     auth, authorize("finance", "read"),   ctrl.getExpenseById);
 router.post("/expenses",        auth, authorize("finance", "create"), validate(createExpenseSchema), ctrl.createExpense);

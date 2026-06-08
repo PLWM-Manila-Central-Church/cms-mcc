@@ -48,3 +48,11 @@ exports.updateCategorySchema = Joi.object({
   name:        Joi.string().max(100).optional(),
   description: Joi.string().max(300).allow(null, "").optional(),
 }).min(1);
+
+// ── Query parameter schemas for GET endpoints ──────────────────
+exports.getItemsQuerySchema = Joi.object({
+  page:        Joi.number().integer().min(1).default(1),
+  limit:       Joi.number().integer().min(1).max(100).default(15),
+  search:      Joi.string().max(200).allow("").optional(),
+  category_id: Joi.number().integer().positive().optional(),
+});

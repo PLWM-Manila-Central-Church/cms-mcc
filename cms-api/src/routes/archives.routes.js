@@ -5,6 +5,8 @@ const ctrl      = require("../controllers/archives.controller");
 const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const { upload, verifyMime } = require("../middlewares/upload");
+const validateQuery = require("../middlewares/validateQuery");
+const { getArchivesQuerySchema } = require("../validators/archives.validator");
 
 // ── Categories (MUST be before /:id) ─────────────────────────
 router.get("/categories",        auth, authorize("archives", "read"),   ctrl.getAllCategories);
@@ -14,7 +16,7 @@ router.put("/categories/:id",    auth, authorize("archives", "update"), ctrl.upd
 router.delete("/categories/:id", auth, authorize("archives", "delete"), ctrl.deleteCategory);
 
 // ── Records ──────────────────────────────────────────────────
-router.get("/",    auth, authorize("archives", "read"),   ctrl.getAllRecords);
+router.get("/",    auth, authorize("archives", "read"), validateQuery(getArchivesQuerySchema), ctrl.getAllRecords);
 router.get("/:id", auth, authorize("archives", "read"),   ctrl.getRecordById);
 
 // upload.single("file") parses multipart/form-data and populates req.file

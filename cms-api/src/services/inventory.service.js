@@ -1,5 +1,6 @@
 "use strict";
 
+const sequelize   = require("../config/db");
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
@@ -221,45 +222,72 @@ exports.createRequest = async (data, requestedBy) => {
 
 // ── Review Request (Approve/Reject) ──────────────────────────
 exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
-  const request = await InventoryRequest.findByPk(id);
-  if (!request) throw { status: 404, message: "Inventory request not found" };
-
-  if (request.status !== "pending")
-    throw { status: 400, message: "Request has already been reviewed" };
-
   const normalized = (status || "").toLowerCase();
   if (!["approved", "rejected"].includes(normalized))
     throw { status: 400, message: "Status must be approved or rejected" };
 
-  if (normalized === "approved") {
-    const item = await InventoryItem.findByPk(request.item_id);
-    if (item.quantity < request.quantity)
-      throw { status: 400, message: "Insufficient inventory quantity" };
-    await item.update({ quantity: item.quantity - request.quantity });
-  }
+  await sequelize.transaction(async (t) => {
+    // Lock the request row for update to prevent concurrent reviews
+    const request = await InventoryRequest.findOne({
+      where: { id },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+    if (!request) throw { status: 404, message: "Inventory request not found" };
 
-  await request.update({ status: normalized, reviewed_by: reviewedBy, review_note: reviewNote || null });
+    if (request.status !== "pending")
+      throw { status: 400, message: "Request has already been reviewed" };
 
-  // FIX BUG 5: notify the requester of the review outcome
-  try {
-    const requester = await User.findByPk(request.requested_by, { attributes: ["id"] });
-    if (requester) {
-      const itemRecord = await InventoryItem.findByPk(request.item_id, { attributes: ["name"] });
-      const itemName   = itemRecord?.name || "item";
-      await notifService.createNotification({
-        user_id: requester.id,
-        type:    "inventory_request_reviewed",
-        message: `Your inventory request for "${itemName}" has been ${normalized}.`,
+    if (normalized === "approved") {
+      // Lock the item row and use decrement for atomic quantity update
+      const item = await InventoryItem.findOne({
+        where: { id: request.item_id },
+        lock: t.LOCK.UPDATE,
+        transaction: t,
       });
+      if (!item) throw { status: 404, message: "Inventory item not found" };
+      if (item.quantity < request.quantity)
+        throw { status: 400, message: "Insufficient inventory quantity" };
+      await item.decrement("quantity", { by: request.quantity, transaction: t });
+    }
+
+    await request.update(
+      { status: normalized, reviewed_by: reviewedBy, review_note: reviewNote || null },
+      { transaction: t }
+    );
+
+    // Audit log inside transaction
+    const { AuditLog } = require("../models");
+    await AuditLog.create({
+      user_id: reviewedBy,
+      action: `INVENTORY_REQUEST_${normalized.toUpperCase()}`,
+      target_table: "inventory_requests",
+      target_id: id,
+      new_values: { status: normalized },
+    }, { transaction: t });
+  });
+
+  // Notify requester (outside transaction — non-fatal if it fails)
+  try {
+    const request = await InventoryRequest.findByPk(id, { attributes: ["requested_by", "item_id"] });
+    if (request) {
+      const requester = await User.findByPk(request.requested_by, { attributes: ["id"] });
+      if (requester) {
+        const itemRecord = await InventoryItem.findByPk(request.item_id, { attributes: ["name"] });
+        const itemName   = itemRecord?.name || "item";
+        const notifService = require("./notifications.service");
+        await notifService.createNotification({
+          user_id: requester.id,
+          type:    "inventory_request_reviewed",
+          message: `Your inventory request for "${itemName}" has been ${normalized}.`,
+        });
+      }
     }
   } catch (err) {
-    logger.error(err, "Review notification failed:")
+    const logger = require("../helpers/logger");
+    logger.error(err, "Review notification failed:");
   }
 
-  auditLog.log({
-    userId: reviewedBy, action: `INVENTORY_REQUEST_${normalized.toUpperCase()}`,
-    targetTable: "inventory_requests", targetId: id, newValues: { status: normalized },
-  });
   return await exports.getRequestById(id);
 };
 

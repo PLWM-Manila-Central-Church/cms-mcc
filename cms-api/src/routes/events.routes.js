@@ -5,9 +5,10 @@ const ctrl      = require("../controllers/events.controller");
 const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
+const validateQuery = require("../middlewares/validateQuery");
 const {
   createEventSchema, updateEventSchema, updateEventStatusSchema,
-  registerMemberSchema, bulkRegisterSchema,
+  registerMemberSchema, bulkRegisterSchema, getEventsQuerySchema,
 } = require("../validators/events.validator");
 
 // ── Event Categories (MUST be before /:id) ───────────────────
@@ -18,7 +19,7 @@ router.put("/categories/:id",    auth, authorize("events", "update"), ctrl.updat
 router.delete("/categories/:id", auth, authorize("events", "delete"), ctrl.deleteCategory);
 
 // ── Events ───────────────────────────────────────────────────
-router.get("/",    auth, authorize("events", "read"),   ctrl.getAllEvents);
+router.get("/",    auth, authorize("events", "read"), validateQuery(getEventsQuerySchema), ctrl.getAllEvents);
 router.get("/:id", auth, authorize("events", "read"),   ctrl.getEventById);
 router.post("/",   auth, authorize("events", "create"), validate(createEventSchema),       ctrl.createEvent);
 router.put("/:id", auth, authorize("events", "update"), validate(updateEventSchema),       ctrl.updateEvent);

@@ -65,7 +65,7 @@ const RESTRICTED_ALLOWED = [
 const visibilityFilter = (roleName) => {
   if (ADMIN_PASTOR.includes(roleName)) return null;         // sees everything
   if (RESTRICTED_ALLOWED.includes(roleName)) {
-    return { [require("sequelize").Op.ne]: "confidential" }; // no confidential
+    return { [Op.ne]: "confidential" }; // no confidential
   }
   // All other roles: public only
   return "public";
@@ -75,9 +75,9 @@ const visibilityFilter = (roleName) => {
 exports.getAllRecords = async ({
   page = 1, limit = 15, category_id, status, visibility, search, roleName,
 } = {}) => {
-  const { Op } = require("sequelize");
+
   const offset = (parseInt(page) - 1) * parseInt(limit);
-  const where  = { is_deleted: 0 };
+    const where  = { is_deleted: 0 };
 
   if (category_id) where.category_id = category_id;
   if (status)      where.status      = status;

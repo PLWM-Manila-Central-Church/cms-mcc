@@ -205,6 +205,21 @@ exports.deleteRecord = async (id, deletedBy) => {
   if (!record) throw { status: 404, message: "Financial record not found" };
 
   await sequelize.transaction(async (t) => {
+    // Cascade: delete attachment files + DB records (mirrors deleteExpense)
+    const attachments = await Attachment.findAll({ where: { income_id: id }, transaction: t });
+    const fs = require("fs");
+    const path = require("path");
+    const RECEIPTS_DIR = path.join(__dirname, "../..", "uploads", "receipts");
+    for (const att of attachments) {
+      const filePath = path.isAbsolute(att.file_path)
+        ? att.file_path
+        : path.join(RECEIPTS_DIR, path.basename(att.file_path));
+      if (fs.existsSync(filePath)) {
+        try { fs.unlinkSync(filePath); } catch (e) { logger.error(e, "Could not delete receipt file"); }
+      }
+      await att.destroy({ transaction: t });
+    }
+
     await record.update({
       is_deleted: 1,
       deleted_at: new Date(),

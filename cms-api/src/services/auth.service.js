@@ -130,13 +130,13 @@ exports.refreshToken = async (token) => {
   if (!stored || new Date() > stored.expires_at)
     throw { status: 401, message: "Refresh token expired or revoked" };
 
-  const user = await User.findByPk(decoded.userId, {
-    where: { is_deleted: 0 },
-    include: [
-      { model: Role,   as: "role" },
-      { model: Member, as: "member", attributes: ["cell_group_id", "group_id"], required: false },
-    ],
-  });
+  const user = await User.findOne({
+      where: { id: decoded.userId, is_deleted: 0 },
+      include: [
+        { model: Role,   as: "role" },
+        { model: Member, as: "member", attributes: ["cell_group_id", "group_id"], required: false },
+      ],
+    });
 
   if (!user || !user.is_active)
     throw { status: 401, message: "Account deactivated" };
@@ -179,10 +179,11 @@ exports.forgotPassword = async (email) => {
     logger.error(err, "Failed to send password reset email:")
   });
 
-  const isDev = process.env.NODE_ENV === "development";
+  const isDev  = process.env.NODE_ENV === "development";
+  const isLocal = !process.env.RENDER && !process.env.VERCEL;
   return {
     message: "If that email exists, a reset link was sent.",
-    ...(isDev && { dev_token: rawToken, dev_reset_url: resetUrl }),
+    ...(isDev && isLocal && { dev_token: rawToken, dev_reset_url: resetUrl }),
   };
 };
 

@@ -3,7 +3,7 @@
 const logger = require("../helpers/logger");
 
 module.exports = (err, req, res, next) => {
-  logger.error({ err, req: { method: req.method, url: req.url } }, "Unhandled error");
+  logger.error({ err, reqId: req.requestId, req: { method: req.method, url: req.url } }, "Unhandled error");
 
   // Sequelize validation errors
   if (err.name === "SequelizeValidationError") {
