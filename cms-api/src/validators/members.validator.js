@@ -68,3 +68,8 @@ exports.getMembersQuerySchema = Joi.object({
   cell_group_id: Joi.number().integer().positive().optional(),
   group_id:     Joi.number().integer().positive().optional(),
 });
+
+exports.linkMemberAccountSchema = Joi.object({
+  email:    Joi.string().email().max(150).required(),
+  password: Joi.string().min(8).max(128).required(),
+});

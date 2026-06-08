@@ -89,3 +89,11 @@ exports.assignMemberToScope = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.bulkCreateMembers = async (req, res, next) => {
+  try {
+    if (!req.file) throw { status: 400, message: "No CSV file uploaded" };
+    const result = await membersService.bulkCreateMembers(req.file.buffer, req.user.userId);
+    res.status(201).json({ success: true, data: result });
+  } catch (err) { next(err); }
+};

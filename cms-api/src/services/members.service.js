@@ -1,7 +1,7 @@
 "use strict";
 
 const { Op } = require("sequelize");
-const { Member, CellGroup, MinistryGroup, EmergencyContact, User,
+const { Member, CellGroup, MinistryGroup, EmergencyContact, User, Role,
   MinistryMembership } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
 const logger   = require("../helpers/logger");
@@ -457,4 +457,41 @@ exports.assignMemberToScope = async (memberId, updatedBy, user = {}) => {
   }
 
   throw { status: 400, message: "Unsupported leader scope" };
+};
+
+// ── Bulk Create Members from CSV ─────────────────────────────
+const { parse } = require("csv-parse/sync");
+
+exports.bulkCreateMembers = async (csvBuffer, createdBy) => {
+  const records = parse(csvBuffer.toString("utf8"), {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true,
+  });
+
+  if (records.length === 0) throw { status: 400, message: "CSV file is empty" };
+  if (records.length > 500) throw { status: 400, message: "Maximum 500 members per batch" };
+
+  const results = { created: 0, skipped: 0, errors: [] };
+
+  for (const row of records) {
+    try {
+      await exports.createMember({
+        first_name: row.first_name,
+        last_name: row.last_name,
+        email: row.email || null,
+        phone: row.phone || null,
+        gender: row.gender || null,
+        status: row.status || "New",
+        cell_group_id: row.cell_group_id ? parseInt(row.cell_group_id) : null,
+        group_id: row.group_id ? parseInt(row.group_id) : null,
+      }, createdBy);
+      results.created++;
+    } catch (err) {
+      results.skipped++;
+      results.errors.push({ row: row.first_name + " " + row.last_name, error: err.message });
+    }
+  }
+
+  return results;
 };
