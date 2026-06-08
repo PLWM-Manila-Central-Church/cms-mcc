@@ -97,3 +97,10 @@ exports.bulkCreateMembers = async (req, res, next) => {
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
 };
+
+exports.linkMemberAccount = async (req, res, next) => {
+  try {
+    const result = await membersService.linkMemberAccount(req.params.id, req.body, req.user.userId);
+    res.status(201).json({ success: true, data: result });
+  } catch (err) { next(err); }
+};

@@ -6,7 +6,7 @@ const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
 const validateQuery = require("../middlewares/validateQuery");
-const { createMemberSchema, updateMemberSchema, getMembersQuerySchema } = require("../validators/members.validator");
+const { createMemberSchema, updateMemberSchema, getMembersQuerySchema, linkMemberAccountSchema } = require("../validators/members.validator");
 const multer = require("multer");
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
@@ -23,5 +23,6 @@ router.put("/:id", auth, authorize("members", "update"), validate(updateMemberSc
 router.patch("/:id/unassign-scope", auth, authorize("scope_assignments", "manage"), ctrl.unassignMemberFromScope);
 router.delete("/:id", auth, authorize("members", "delete"), ctrl.deleteMember);
 router.post("/bulk", auth, authorize("members", "create"), csvUpload.single("file"), ctrl.bulkCreateMembers);
+router.post("/:id/link-account", auth, authorize("members", "update"), validate(linkMemberAccountSchema), ctrl.linkMemberAccount);
 
 module.exports = router;

@@ -494,4 +494,32 @@ exports.bulkCreateMembers = async (csvBuffer, createdBy) => {
   }
 
   return results;
-};
+  };
+
+  // ── Link Member to User Account ───────────────────────────────
+  exports.linkMemberAccount = async (memberId, { email, password }, adminId) => {
+    const member = await Member.findByPk(memberId);
+    if (!member) throw { status: 404, message: "Member not found" };
+
+    const existingUser = await User.findOne({ where: { member_id: memberId } });
+    if (existingUser) throw { status: 409, message: "Member already has a linked account" };
+
+    const emailExists = await User.findOne({ where: { email } });
+    if (emailExists) throw { status: 409, message: "Email already in use" };
+
+    const bcrypt = require("bcrypt");
+    const hashedPassword = await bcrypt.hash(password, parseInt(process.env.BCRYPT_ROUNDS) || 10);
+    const memberRole = await Role.findOne({ where: { role_name: "Member" } });
+    if (!memberRole) throw { status: 500, message: "Member role not found — seed database first" };
+
+    const user = await User.create({
+      email,
+      password_hash: hashedPassword,
+      role_id: memberRole.id,
+      member_id: memberId,
+      is_active: 1,
+    });
+
+    auditLog.log({ userId: adminId, action: "LINK_MEMBER_ACCOUNT", targetTable: "users", targetId: user.id });
+    return { message: "Account linked successfully", user_id: user.id };
+  };
