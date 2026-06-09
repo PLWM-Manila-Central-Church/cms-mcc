@@ -23,7 +23,7 @@ exports.getNotificationById = async (id, userId) => {
   const notification = await Notification.findOne({
     where: { id, user_id: userId },
   });
-  if (!notification) throw { status: 404, message: "Notification not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
   return notification;
 };
 
@@ -68,7 +68,7 @@ exports.markAsRead = async (id, userId) => {
   const notification = await Notification.findOne({
     where: { id, user_id: userId },
   });
-  if (!notification) throw { status: 404, message: "Notification not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
 
   // FIX BUG 3: was throwing 400 if already read, causing race-condition failures.
   // Now it's a no-op — if already read, just return it unchanged.
@@ -93,7 +93,7 @@ exports.deleteNotification = async (id, userId) => {
   const notification = await Notification.findOne({
     where: { id, user_id: userId },
   });
-  if (!notification) throw { status: 404, message: "Notification not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
   await notification.destroy();
   return { message: "Notification deleted successfully." };
 };

@@ -62,7 +62,7 @@ const ensureMemberInScope = async (memberId, user = {}) => {
   if (!scope) return;
 
   if (!scope.id) {
-    throw { status: 403, message: "No leader assignment is linked to your account" };
+    throw AppError.forbidden("No leader assignment is linked to your account");
   }
 
   if (scope.type === "ministry") {
@@ -72,7 +72,7 @@ const ensureMemberInScope = async (memberId, user = {}) => {
     });
 
     if (!membership) {
-      throw { status: 403, message: "This member is outside your assigned scope" };
+      throw AppError.forbidden("This member is outside your assigned scope");
     }
     return;
   }
@@ -84,7 +84,7 @@ const ensureMemberInScope = async (memberId, user = {}) => {
   const member = await Member.findOne({ where, attributes: ["id"] });
 
   if (!member) {
-    throw { status: 403, message: "This member is outside your assigned scope" };
+    throw AppError.forbidden("This member is outside your assigned scope");
   }
 };
 

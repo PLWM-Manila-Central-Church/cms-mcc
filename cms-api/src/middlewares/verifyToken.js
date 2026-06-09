@@ -44,6 +44,17 @@ module.exports = async (req, res, next) => {
       leadsMinistryName:  user.leadsMinistry?.name  || null,
     };
 
+    // ── Set Sentry user context for error correlation ──────────
+    try {
+      const Sentry = require("@sentry/node");
+      Sentry.setUser({
+        id: user.id,
+        email: user.email,
+        role: user.role.role_name,
+        memberId: user.member_id || undefined,
+      });
+    } catch (_) { /* Sentry not installed — skip */ }
+
     next();
   } catch {
     return res.status(401).json({ message: "Invalid or expired token" });

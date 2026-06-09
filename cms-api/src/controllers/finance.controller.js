@@ -282,7 +282,7 @@ exports.deleteExpense = async (req, res, next) => {
 // ── 6. ATTACHMENTS CONTROLLERS ────────────────────────────────
 exports.uploadAttachment = async (req, res, next) => {
   try {
-    if (!req.file) throw { status: 400, message: "No receipt file uploaded" };
+    throw AppError.badRequest("VALIDATION", "No receipt file uploaded");
 
     const { income_id, expense_id } = req.body;
     // Store relative URL path instead of absolute filesystem path

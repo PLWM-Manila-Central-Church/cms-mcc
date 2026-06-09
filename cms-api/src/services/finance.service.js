@@ -110,7 +110,7 @@ exports.getRecordById = async (id) => {
     where: { id },
     include: recordIncludes,
   });
-  if (!record) throw { status: 404, message: "Financial record not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Financial record not found");
   return record;
 };
 
@@ -127,13 +127,13 @@ exports.createRecord = async (data, recordedBy) => {
   } = data;
 
   const member = await Member.findByPk(member_id);
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   const category = await FinancialCategory.findByPk(category_id);
-  if (!category) throw { status: 404, message: "Financial category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Financial category not found");
 
   if (!category.is_active)
-    throw { status: 400, message: "Financial category is inactive" };
+    throw AppError.badRequest("VALIDATION", "Financial category is inactive");
 
   const record = await sequelize.transaction(async (t) => {
     const r = await FinancialRecord.create({
@@ -160,7 +160,7 @@ exports.createRecord = async (data, recordedBy) => {
 // ── Update Financial Record ──────────────────────────────────
 exports.updateRecord = async (id, data, updatedBy) => {
   const record = await FinancialRecord.findOne({ where: { id } });
-  if (!record) throw { status: 404, message: "Financial record not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Financial record not found");
 
   const {
     member_id,
@@ -174,13 +174,13 @@ exports.updateRecord = async (id, data, updatedBy) => {
 
   if (member_id) {
     const member = await Member.findByPk(member_id);
-    if (!member) throw { status: 404, message: "Member not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
   }
 
   if (category_id) {
     const category = await FinancialCategory.findByPk(category_id);
-    if (!category) throw { status: 404, message: "Financial category not found" };
-    if (!category.is_active) throw { status: 400, message: "Financial category is inactive" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Financial category not found");
+    throw AppError.badRequest("VALIDATION", "Financial category is inactive");
   }
 
   await sequelize.transaction(async (t) => {
@@ -204,7 +204,7 @@ exports.updateRecord = async (id, data, updatedBy) => {
 // ── Soft Delete Financial Record ─────────────────────────────
 exports.deleteRecord = async (id, deletedBy) => {
   const record = await FinancialRecord.findOne({ where: { id } });
-  if (!record) throw { status: 404, message: "Financial record not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Financial record not found");
 
   await sequelize.transaction(async (t) => {
     // Cascade: delete attachment files + DB records (mirrors deleteExpense)
@@ -246,7 +246,7 @@ exports.getAllCategories = async () => {
 // ── Get Category By ID ───────────────────────────────────────
 exports.getCategoryById = async (id) => {
   const category = await FinancialCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Financial category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Financial category not found");
   return category;
 };
 
@@ -255,7 +255,7 @@ exports.createCategory = async (data) => {
   const { name, description } = data;
 
   const existing = await FinancialCategory.findOne({ where: { name } });
-  if (existing) throw { status: 409, message: "Category name already exists" };
+  throw AppError.conflict("DUPLICATE", "Category name already exists");
 
   return await FinancialCategory.create({
     name,
@@ -267,13 +267,13 @@ exports.createCategory = async (data) => {
 // ── Update Category ──────────────────────────────────────────
 exports.updateCategory = async (id, data) => {
   const category = await FinancialCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Financial category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Financial category not found");
 
   const { name, description, is_active } = data;
 
   if (name && name !== category.name) {
     const existing = await FinancialCategory.findOne({ where: { name } });
-    if (existing) throw { status: 409, message: "Category name already exists" };
+    throw AppError.conflict("DUPLICATE", "Category name already exists");
   }
 
   await category.update({
@@ -288,11 +288,11 @@ exports.updateCategory = async (id, data) => {
 // ── Delete Category ──────────────────────────────────────────
 exports.deleteCategory = async (id) => {
   const category = await FinancialCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Financial category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Financial category not found");
 
   const inUse = await FinancialRecord.count({ where: { category_id: id } });
   if (inUse > 0)
-    throw { status: 400, message: `Cannot delete category. ${inUse} record(s) are using it` };
+    throw AppError.badRequest("VALIDATION", "`Cannot delete category. ${inUse");
 
   await category.destroy();
   return { message: "Financial category deleted successfully." };
@@ -301,7 +301,7 @@ exports.deleteCategory = async (id) => {
 // ── Get My Giving (member's own records) ─────────────────────
 exports.getMyGiving = async (memberId, { page = 1, limit = 20, date_from, date_to } = {}) => {
   const { Op, fn, col } = require("sequelize");
-  if (!memberId) throw { status: 400, message: "No member profile linked to this account" };
+  throw AppError.badRequest("VALIDATION", "No member profile linked to this account");
 
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where = { is_deleted: 0, member_id: memberId };
@@ -349,14 +349,14 @@ exports.getAllFunds = async () => {
 
 exports.getFundById = async (id) => {
   const fund = await Fund.findByPk(id);
-  if (!fund) throw { status: 404, message: "Fund not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Fund not found");
   return fund;
 };
 
 exports.createFund = async (data, userId) => {
   const { name, description } = data;
   const existing = await Fund.findOne({ where: { name } });
-  if (existing) throw { status: 409, message: "Fund name already exists" };
+  throw AppError.conflict("DUPLICATE", "Fund name already exists");
 
   const fund = await sequelize.transaction(async (t) => {
     const f = await Fund.create({ name, description }, { transaction: t });
@@ -372,7 +372,7 @@ exports.updateFund = async (id, data, userId) => {
 
   if (name && name !== fund.name) {
     const existing = await Fund.findOne({ where: { name } });
-    if (existing) throw { status: 409, message: "Fund name already exists" };
+    throw AppError.conflict("DUPLICATE", "Fund name already exists");
   }
 
   await sequelize.transaction(async (t) => {
@@ -390,7 +390,7 @@ exports.deleteFund = async (id, userId) => {
   const fund = await exports.getFundById(id);
   const inUse = await Account.count({ where: { fund_id: id } });
   if (inUse > 0)
-    throw { status: 400, message: `Cannot delete fund. It is in use by ${inUse} account(s).` };
+    throw AppError.badRequest("VALIDATION", "`Cannot delete fund. It is in use by ${inUse");
 
   await sequelize.transaction(async (t) => {
     await fund.destroy({ transaction: t });
@@ -412,17 +412,17 @@ exports.getAccountById = async (id) => {
     where: { id },
     include: [{ model: Fund, as: "fund", attributes: ["id", "name"] }],
   });
-  if (!account) throw { status: 404, message: "Account not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Account not found");
   return account;
 };
 
 exports.createAccount = async (data, userId) => {
   const { name, fund_id, description } = data;
   const fund = await Fund.findByPk(fund_id);
-  if (!fund) throw { status: 404, message: "Fund not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Fund not found");
 
   const existing = await Account.findOne({ where: { name } });
-  if (existing) throw { status: 409, message: "Account name already exists" };
+  throw AppError.conflict("DUPLICATE", "Account name already exists");
 
   const account = await sequelize.transaction(async (t) => {
     const a = await Account.create({ name, fund_id, description }, { transaction: t });
@@ -438,12 +438,12 @@ exports.updateAccount = async (id, data, userId) => {
 
   if (fund_id) {
     const fund = await Fund.findByPk(fund_id);
-    if (!fund) throw { status: 404, message: "Fund not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Fund not found");
   }
 
   if (name && name !== account.name) {
     const existing = await Account.findOne({ where: { name } });
-    if (existing) throw { status: 409, message: "Account name already exists" };
+    throw AppError.conflict("DUPLICATE", "Account name already exists");
   }
 
   await sequelize.transaction(async (t) => {
@@ -464,7 +464,7 @@ exports.deleteAccount = async (id, userId) => {
   const inUseCategories = await ExpenseCategory.count({ where: { account_id: id } });
 
   if (inUseExpenses > 0 || inUseCategories > 0)
-    throw { status: 400, message: "Cannot delete account. It is in use by categories or expenses." };
+    throw AppError.badRequest("VALIDATION", "Cannot delete account. It is in use by categories or expenses.");
 
   await sequelize.transaction(async (t) => {
     await account.destroy({ transaction: t });
@@ -486,17 +486,17 @@ exports.getExpenseCategoryById = async (id) => {
     where: { id },
     include: [{ model: Account, as: "account", attributes: ["id", "name"] }],
   });
-  if (!category) throw { status: 404, message: "Expense category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Expense category not found");
   return category;
 };
 
 exports.createExpenseCategory = async (data, userId) => {
   const { category_name, account_id, description } = data;
   const account = await Account.findByPk(account_id);
-  if (!account) throw { status: 404, message: "Account not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Account not found");
 
   const existing = await ExpenseCategory.findOne({ where: { category_name } });
-  if (existing) throw { status: 409, message: "Expense category name already exists" };
+  throw AppError.conflict("DUPLICATE", "Expense category name already exists");
 
   const category = await sequelize.transaction(async (t) => {
     const c = await ExpenseCategory.create({ category_name, account_id, description }, { transaction: t });
@@ -512,12 +512,12 @@ exports.updateExpenseCategory = async (id, data, userId) => {
 
   if (account_id) {
     const account = await Account.findByPk(account_id);
-    if (!account) throw { status: 404, message: "Account not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Account not found");
   }
 
   if (category_name && category_name !== category.category_name) {
     const existing = await ExpenseCategory.findOne({ where: { category_name } });
-    if (existing) throw { status: 409, message: "Expense category name already exists" };
+    throw AppError.conflict("DUPLICATE", "Expense category name already exists");
   }
 
   await sequelize.transaction(async (t) => {
@@ -536,7 +536,7 @@ exports.deleteExpenseCategory = async (id, userId) => {
   const category = await exports.getExpenseCategoryById(id);
   const inUse = await Expense.count({ where: { category_id: id } });
   if (inUse > 0)
-    throw { status: 400, message: `Cannot delete category. It is in use by ${inUse} expense(s).` };
+    throw AppError.badRequest("VALIDATION", "`Cannot delete category. It is in use by ${inUse");
 
   await sequelize.transaction(async (t) => {
     await category.destroy({ transaction: t });
@@ -633,7 +633,7 @@ exports.getExpenseById = async (id) => {
       { model: Attachment, as: "attachments", attributes: ["id", "file_name", "file_path"] },
     ],
   });
-  if (!expense) throw { status: 404, message: "Expense record not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Expense record not found");
   return expense;
 };
 
@@ -641,13 +641,13 @@ exports.createExpense = async (data, userId) => {
   const { account_id, category_id, date, amount, description, payment_method_id } = data;
 
   const account = await Account.findByPk(account_id);
-  if (!account) throw { status: 404, message: "Account not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Account not found");
 
   const category = await ExpenseCategory.findByPk(category_id);
-  if (!category) throw { status: 404, message: "Expense category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Expense category not found");
 
   const payMethod = await PaymentMethod.findByPk(payment_method_id);
-  if (!payMethod) throw { status: 404, message: "Payment method not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Payment method not found");
 
   const expense = await sequelize.transaction(async (t) => {
     const e = await Expense.create({
@@ -669,23 +669,23 @@ exports.createExpense = async (data, userId) => {
 
 exports.updateExpense = async (id, data, userId) => {
   const expense = await Expense.findByPk(id);
-  if (!expense) throw { status: 404, message: "Expense record not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Expense record not found");
 
   const { account_id, category_id, date, amount, description, payment_method_id } = data;
 
   if (account_id) {
     const account = await Account.findByPk(account_id);
-    if (!account) throw { status: 404, message: "Account not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Account not found");
   }
 
   if (category_id) {
     const category = await ExpenseCategory.findByPk(category_id);
-    if (!category) throw { status: 404, message: "Expense category not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Expense category not found");
   }
 
   if (payment_method_id) {
     const payMethod = await PaymentMethod.findByPk(payment_method_id);
-    if (!payMethod) throw { status: 404, message: "Payment method not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Payment method not found");
   }
 
   await sequelize.transaction(async (t) => {
@@ -706,7 +706,7 @@ exports.updateExpense = async (id, data, userId) => {
 
 exports.deleteExpense = async (id, userId) => {
   const expense = await Expense.findByPk(id);
-  if (!expense) throw { status: 404, message: "Expense record not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Expense record not found");
 
   await sequelize.transaction(async (t) => {
     // Cascade delete attachments
@@ -778,12 +778,12 @@ exports.getBalance = async ({ date_from, date_to } = {}) => {
 exports.createAttachment = async ({ file_name, file_path, income_id, expense_id }, userId) => {
   if (income_id) {
     const income = await FinancialRecord.findByPk(income_id);
-    if (!income) throw { status: 404, message: "Income record not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Income record not found");
   }
 
   if (expense_id) {
     const expense = await Expense.findByPk(expense_id);
-    if (!expense) throw { status: 404, message: "Expense record not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Expense record not found");
   }
 
   const attachment = await sequelize.transaction(async (t) => {
@@ -803,7 +803,7 @@ exports.createAttachment = async ({ file_name, file_path, income_id, expense_id 
 
 exports.deleteAttachment = async (id, userId) => {
   const attachment = await Attachment.findByPk(id);
-  if (!attachment) throw { status: 404, message: "Attachment not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Attachment not found");
 
   await sequelize.transaction(async (t) => {
     const fs = require("fs");

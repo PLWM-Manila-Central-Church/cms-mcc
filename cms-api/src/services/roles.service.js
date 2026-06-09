@@ -28,7 +28,7 @@ exports.getRoleById = async (id) => {
   const role = await Role.findByPk(id, {
     include: [{ model: Permission, as: "permissions", attributes: ["id", "module", "action"], through: { attributes: [] } }],
   });
-  if (!role) throw { status: 404, message: "Role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
   return role;
 };
 
@@ -37,7 +37,7 @@ exports.createRole = async (data, createdBy) => {
   const { role_name, description, permissions } = data;
 
   const existing = await Role.findOne({ where: { role_name } });
-  if (existing) throw { status: 409, message: "Role name already exists" };
+  throw AppError.conflict("DUPLICATE", "Role name already exists");
 
   const role = await Role.create({
     role_name,
@@ -56,16 +56,16 @@ exports.createRole = async (data, createdBy) => {
 // ── Update Role ──────────────────────────────────────────────
 exports.updateRole = async (id, data, updatedBy) => {
   const role = await Role.findByPk(id);
-  if (!role) throw { status: 404, message: "Role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
 
   if (role.is_system)
-    throw { status: 403, message: "System roles cannot be modified" };
+    throw AppError.forbidden("System roles cannot be modified");
 
   const { role_name, description, permissions } = data;
 
   if (role_name && role_name !== role.role_name) {
     const existing = await Role.findOne({ where: { role_name } });
-    if (existing) throw { status: 409, message: "Role name already exists" };
+    throw AppError.conflict("DUPLICATE", "Role name already exists");
   }
 
   await role.update({
@@ -86,10 +86,10 @@ exports.updateRole = async (id, data, updatedBy) => {
 // ── Delete Role ──────────────────────────────────────────────
 exports.deleteRole = async (id, deletedBy) => {
   const role = await Role.findByPk(id);
-  if (!role) throw { status: 404, message: "Role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
 
   if (role.is_system)
-    throw { status: 403, message: "System roles cannot be deleted" };
+    throw AppError.forbidden("System roles cannot be deleted");
 
   const usersWithRole = await User.count({ where: { role_id: id } });
   if (usersWithRole > 0)
@@ -108,10 +108,10 @@ exports.deleteRole = async (id, deletedBy) => {
 // ── Sync Permissions (separate endpoint) ─────────────────────
 exports.syncRolePermissions = async (roleId, permissionIds, updatedBy) => {
   const role = await Role.findByPk(roleId);
-  if (!role) throw { status: 404, message: "Role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
 
   if (role.is_system)
-    throw { status: 403, message: "System role permissions cannot be modified" };
+    throw AppError.forbidden("System role permissions cannot be modified");
 
   await syncPermissions(roleId, permissionIds);
 

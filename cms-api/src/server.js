@@ -59,7 +59,27 @@ const SHUTDOWN_TIMEOUT_MS = 30_000;
     };
 
     process.on("SIGTERM", () => shutdown("SIGTERM"));
-    process.on("SIGINT",  () => shutdown("SIGINT"));
+        process.on("SIGINT",  () => shutdown("SIGINT"));
+
+        // ── Global Crash Handlers ─────────────────────────────────
+        // Catch unhandled rejections anywhere in the app (missed try/catch,
+        // unawaited promises, third-party library rejections).  Log and exit
+        // so the Render/PM2 process manager can restart cleanly.
+        process.on("unhandledRejection", (reason) => {
+          logger.error("Unhandled rejection — server will exit", {
+            error: reason?.message || String(reason),
+            stack: reason?.stack?.split("\n").slice(0, 6).join("\n"),
+          });
+          process.exit(1);
+        });
+
+        process.on("uncaughtException", (err) => {
+          logger.error("Uncaught exception — server will exit", {
+            error: err.message,
+            stack: err.stack?.split("\n").slice(0, 6).join("\n"),
+          });
+          process.exit(1);
+        });
   } catch (err) {
     logger.error(err, "Unable to connect to database");
     process.exit(1);

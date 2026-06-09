@@ -1,5 +1,7 @@
 "use strict";
 
+const AppError = require("../helpers/AppError");
+
 const { AuditLog, User } = require("../models");
 const { Op } = require("sequelize");
 
@@ -36,7 +38,7 @@ exports.getAllLogs = async (query = {}) => {
 
 exports.getLogById = async (id) => {
   const log = await AuditLog.findByPk(id);
-  if (!log) throw { status: 404, message: "Audit log not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Audit log not found");
   return log;
 };
 

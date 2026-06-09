@@ -53,26 +53,26 @@ const validateLeaderAssignment = async (role, data, existingUser = null) => {
   };
 
   if (role.role_name === "Cell Group Leader" && !final.leads_cell_group_id) {
-    throw { status: 400, message: "Cell Group Leader requires a leader cell group assignment" };
+    throw AppError.badRequest("VALIDATION", "Cell Group Leader requires a leader cell group assignment");
   }
   if (role.role_name === "Group Leader" && !final.leads_group_id) {
-    throw { status: 400, message: "Group Leader requires a leader group assignment" };
+    throw AppError.badRequest("VALIDATION", "Group Leader requires a leader group assignment");
   }
   if (role.role_name === "Ministry Leader" && !final.leads_ministry_id) {
-    throw { status: 400, message: "Ministry Leader requires a leader ministry assignment" };
+    throw AppError.badRequest("VALIDATION", "Ministry Leader requires a leader ministry assignment");
   }
 
   if (role.role_name === "Cell Group Leader" && final.leads_cell_group_id) {
     const row = await CellGroup.findByPk(final.leads_cell_group_id);
-    if (!row) throw { status: 404, message: "Leader cell group not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Leader cell group not found");
   }
   if (role.role_name === "Group Leader" && final.leads_group_id) {
     const row = await MinistryGroup.findByPk(final.leads_group_id);
-    if (!row) throw { status: 404, message: "Leader group not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Leader group not found");
   }
   if (role.role_name === "Ministry Leader" && final.leads_ministry_id) {
     const row = await MinistryRole.findByPk(final.leads_ministry_id);
-    if (!row) throw { status: 404, message: "Leader ministry not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Leader ministry not found");
   }
 
   return {
@@ -99,7 +99,7 @@ exports.getUserById = async (id) => {
     attributes: { exclude: ["password_hash"] },
     include: userIncludes,
   });
-  if (!user) throw { status: 404, message: "User not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
   return user;
 };
 
@@ -114,10 +114,10 @@ exports.createUser = async (data, createdBy) => {
   } = data;
 
   const existing = await User.findOne({ where: { email, is_deleted: 0 } });
-  if (existing) throw { status: 409, message: "Email already in use" };
+  throw AppError.conflict("DUPLICATE", "Email already in use");
 
   const role = await Role.findByPk(role_id);
-  if (!role) throw { status: 404, message: "Role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
 
   const leaderAssignment = await validateLeaderAssignment(role, {
     leads_cell_group_id,
@@ -127,7 +127,7 @@ exports.createUser = async (data, createdBy) => {
 
   // Validate: member_ministry_role_id is NOT allowed for Ministry Leader role
   if (member_ministry_role_id && role.role_name === 'Ministry Leader') {
-    throw { status: 400, message: "Use leads_ministry_id for Ministry Leader role, not member_ministry_role_id" };
+    throw AppError.badRequest("VALIDATION", "Use leads_ministry_id for Ministry Leader role, not member_ministry_role_id");
   }
 
   const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -185,7 +185,7 @@ exports.createUser = async (data, createdBy) => {
 // ── Update User ──────────────────────────────────────────────
 exports.updateUser = async (id, data, updatedBy) => {
   const user = await User.findByPk(id);
-  if (!user) throw { status: 404, message: "User not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
 
   const {
     email, role_id, member_id, invited_member_id, is_active,
@@ -197,13 +197,13 @@ exports.updateUser = async (id, data, updatedBy) => {
 
   if (email && email !== user.email) {
     const existing = await User.findOne({ where: { email, is_deleted: 0 } });
-    if (existing) throw { status: 409, message: "Email already in use" };
+    throw AppError.conflict("DUPLICATE", "Email already in use");
   }
 
   const role = role_id
     ? await Role.findByPk(role_id)
     : await Role.findByPk(user.role_id);
-  if (!role) throw { status: 404, message: "Role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
 
   const leaderAssignment = await validateLeaderAssignment(role, {
     leads_cell_group_id,
@@ -212,7 +212,7 @@ exports.updateUser = async (id, data, updatedBy) => {
   }, user);
 
   if (member_ministry_role_id && role.role_name === "Ministry Leader") {
-    throw { status: 400, message: "Use leads_ministry_id for Ministry Leader role, not member_ministry_role_id" };
+    throw AppError.badRequest("VALIDATION", "Use leads_ministry_id for Ministry Leader role, not member_ministry_role_id");
   }
 
   await user.update({
@@ -268,10 +268,10 @@ return await exports.getUserById(id);
 // ── Deactivate User (Soft Delete) ────────────────────────────
 exports.deactivateUser = async (id, requestingUserId) => {
   if (parseInt(id) === parseInt(requestingUserId))
-    throw { status: 400, message: "You cannot deactivate your own account" };
+    throw AppError.badRequest("VALIDATION", "You cannot deactivate your own account");
 
   const user = await User.findOne({ where: { id, is_deleted: 0 } });
-  if (!user) throw { status: 404, message: "User not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
 
   await user.update({ is_active: 0 });
   auditLog.log({ userId: requestingUserId, action: "DEACTIVATE_USER", targetTable: "users", targetId: id });
@@ -281,7 +281,7 @@ exports.deactivateUser = async (id, requestingUserId) => {
 // ── Activate User ─────────────────────────────────────────────
 exports.activateUser = async (id, requestingUserId) => {
   const user = await User.findOne({ where: { id, is_deleted: 0 } });
-  if (!user) throw { status: 404, message: "User not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
 
   await user.update({ is_active: 1 });
   auditLog.log({ userId: requestingUserId, action: "ACTIVATE_USER", targetTable: "users", targetId: id });
@@ -291,10 +291,10 @@ exports.activateUser = async (id, requestingUserId) => {
 // ── Hard Delete User ──────────────────────────────────────────
 exports.hardDeleteUser = async (id, requestingUserId) => {
   if (parseInt(id) === parseInt(requestingUserId))
-    throw { status: 400, message: "You cannot delete your own account" };
+    throw AppError.badRequest("VALIDATION", "You cannot delete your own account");
 
   const user = await User.findOne({ where: { id, is_deleted: 0 } });
-  if (!user) throw { status: 404, message: "User not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
 
   const sequelize = require("../config/db");
 

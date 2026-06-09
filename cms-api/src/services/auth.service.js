@@ -60,11 +60,11 @@ exports.login = async (email, password, ip, device) => {
   });
 
   if (!user || !user.is_active)
-    throw { status: 401, message: "Invalid credentials" };
+    throw new AppError("UNAUTHORIZED", 401, "Invalid credentials");
 
   // Fix #7 — account lockout check
   if (user.locked_until && new Date() < new Date(user.locked_until))
-    throw { status: 429, message: "Account temporarily locked. Try again later." };
+    throw new AppError("RATE_LIMITED", 429, "Account temporarily locked. Try again later.");
 
   const match = await bcrypt.compare(password, user.password_hash);
 
@@ -74,7 +74,7 @@ exports.login = async (email, password, ip, device) => {
     const update   = { failed_login_attempts: attempts };
     if (attempts >= 5) update.locked_until = new Date(Date.now() + 15 * 60 * 1000);
     await user.update(update);
-    throw { status: 401, message: "Invalid credentials" };
+    throw new AppError("UNAUTHORIZED", 401, "Invalid credentials");
   }
 
   // Fix #7 — reset lockout counters on successful login
@@ -115,20 +115,20 @@ exports.login = async (email, password, ip, device) => {
 
 // ── Refresh Token ────────────────────────────────────────────
 exports.refreshToken = async (token) => {
-  if (!token) throw { status: 401, message: "Refresh token required" };
+  throw new AppError("UNAUTHORIZED", 401, "Refresh token required");
 
   let decoded;
   try {
     decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
   } catch {
-    throw { status: 401, message: "Invalid or expired refresh token" };
+    throw new AppError("UNAUTHORIZED", 401, "Invalid or expired refresh token");
   }
 
   // Fix #4 — look up the hashed version of the token
   const stored = await RefreshToken.findOne({ where: { token: hashToken(token), revoked: 0 } });
 
   if (!stored || new Date() > stored.expires_at)
-    throw { status: 401, message: "Refresh token expired or revoked" };
+    throw new AppError("UNAUTHORIZED", 401, "Refresh token expired or revoked");
 
   const user = await User.findOne({
       where: { id: decoded.userId, is_deleted: 0 },
@@ -139,7 +139,7 @@ exports.refreshToken = async (token) => {
     });
 
   if (!user || !user.is_active)
-    throw { status: 401, message: "Account deactivated" };
+    throw new AppError("UNAUTHORIZED", 401, "Account deactivated");
 
   await stored.update({ revoked: 1 });
 
@@ -193,7 +193,7 @@ exports.resetPassword = async (token, newPassword) => {
   const record    = await PasswordResetToken.findOne({ where: { token: tokenHash, used: 0 } });
 
   if (!record || new Date() > record.expires_at)
-    throw { status: 400, message: "Token expired or invalid" };
+    throw AppError.badRequest("VALIDATION", "Token expired or invalid");
 
   const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   await User.update({ password_hash: hash, force_password_change: 0 }, { where: { id: record.user_id } });
@@ -207,7 +207,7 @@ exports.resetPassword = async (token, newPassword) => {
 exports.changePassword = async (userId, currentPassword, newPassword) => {
   const user  = await User.findByPk(userId);
   const match = await bcrypt.compare(currentPassword, user.password_hash);
-  if (!match) throw { status: 400, message: "Current password is incorrect" };
+  throw AppError.badRequest("VALIDATION", "Current password is incorrect");
 
   const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   await user.update({ password_hash: hash, force_password_change: 0 });

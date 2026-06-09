@@ -1,12 +1,14 @@
 "use strict";
 
+const AppError = require("../helpers/AppError");
+
 const PDFDocument = require("pdfkit");
 const { FinancialRecord, FinancialCategory, Member } = require("../models");
 const { Op } = require("sequelize");
 
 exports.generateTithingStatement = async (memberId, year) => {
   const member = await Member.findByPk(memberId, { attributes: ["id", "first_name", "last_name"] });
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   const yearDate = String(year || new Date().getFullYear());
   const from = `${yearDate}-01-01`;

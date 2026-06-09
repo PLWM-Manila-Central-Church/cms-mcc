@@ -14,13 +14,13 @@ const getCellGroupWhereForUser = (user = {}) => {
 const ensureCellGroupAccess = (id, user = {}) => {
   if (user.roleName !== "Cell Group Leader") return;
   if (!user.leadsCellGroupId || parseInt(id, 10) !== parseInt(user.leadsCellGroupId, 10)) {
-    throw { status: 403, message: "This cell group is outside your assignment" };
+    throw AppError.forbidden("This cell group is outside your assignment");
   }
 };
 
 const forbidScopedCellGroupManage = (user = {}) => {
   if (isScopedLeader(user)) {
-    throw { status: 403, message: "Leaders can view assigned cell groups, not manage cell group records" };
+    throw AppError.forbidden("Leaders can view assigned cell groups, not manage cell group records");
   }
 };
 
@@ -48,7 +48,7 @@ exports.getAllCellGroups = async (user = {}) => {
 exports.getCellGroupById = async (id, user = {}) => {
   ensureCellGroupAccess(id, user);
   const cellGroup = await CellGroup.findByPk(id);
-  if (!cellGroup) throw { status: 404, message: "Cell group not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
   return cellGroup;
 };
 
@@ -58,7 +58,7 @@ exports.createCellGroup = async (data, createdBy, user = {}) => {
   const { name, area } = data;
   const existing = await CellGroup.findOne({ where: { name } });
   if (existing)
-    throw { status: 409, message: "Cell group name already exists" };
+    throw AppError.conflict("DUPLICATE", "Cell group name already exists");
   const cg = await CellGroup.create({ name, area: area || null });
   auditLog.log({ userId: createdBy, action: "CREATE_CELL_GROUP", targetTable: "cell_groups", targetId: cg.id });
   return cg;
@@ -68,13 +68,13 @@ exports.createCellGroup = async (data, createdBy, user = {}) => {
 exports.updateCellGroup = async (id, data, updatedBy, user = {}) => {
   forbidScopedCellGroupManage(user);
   const cellGroup = await CellGroup.findByPk(id);
-  if (!cellGroup) throw { status: 404, message: "Cell group not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
 
   const { name, area } = data;
   if (name && name !== cellGroup.name) {
     const existing = await CellGroup.findOne({ where: { name } });
     if (existing)
-      throw { status: 409, message: "Cell group name already exists" };
+      throw AppError.conflict("DUPLICATE", "Cell group name already exists");
   }
 
   await cellGroup.update({
@@ -89,7 +89,7 @@ exports.updateCellGroup = async (id, data, updatedBy, user = {}) => {
 exports.deleteCellGroup = async (id, deletedBy, user = {}) => {
   forbidScopedCellGroupManage(user);
   const cellGroup = await CellGroup.findByPk(id);
-  if (!cellGroup) throw { status: 404, message: "Cell group not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
 
   const inUse = await Member.count({ where: { cell_group_id: id } });
   if (inUse > 0)
@@ -107,7 +107,7 @@ exports.deleteCellGroup = async (id, deletedBy, user = {}) => {
 exports.getCellGroupHistory = async (memberId, user = {}) => {
   await ensureMemberInScope(memberId, user);
   const member = await Member.findByPk(memberId);
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   return await CellGroupHistory.findAll({
     where: { member_id: memberId },
@@ -118,19 +118,19 @@ exports.getCellGroupHistory = async (memberId, user = {}) => {
 // ── Create Cell Group History ────────────────────────────────
 exports.createCellGroupHistory = async (data, changedBy, user = {}) => {
   if (isScopedLeader(user)) {
-    throw { status: 403, message: "Leaders can remove members from their assignment, not move them between cell groups" };
+    throw AppError.forbidden("Leaders can remove members from their assignment, not move them between cell groups");
   }
   const { member_id, new_cell_group_id, reason } = data;
 
   const member = await Member.findByPk(member_id);
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   // Derive old_cell_group_id from the DB — never trust the client
   const old_cell_group_id = member.cell_group_id || null;
 
   if (new_cell_group_id) {
     const cellGroup = await CellGroup.findByPk(new_cell_group_id);
-    if (!cellGroup) throw { status: 404, message: "New cell group not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "New cell group not found");
   }
 
   // Update member's cell group

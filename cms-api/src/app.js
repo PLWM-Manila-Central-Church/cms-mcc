@@ -98,17 +98,20 @@ const serveFile = (folder) => (req, res) => {
   const safeName = path.basename(req.params.filename);
 
   // If S3 is enabled, redirect to the S3/CDN URL
-  if (s3Enabled) {
-    const url = getFileUrl(`${folder}/${safeName}`);
-    return res.redirect(307, url);
-  }
+    if (s3Enabled) {
+      const url = getFileUrl(`${folder}/${safeName}`);
+      return res.redirect(307, url);
+    }
 
-  // Fallback: serve from local disk (pre-S3 behavior)
-  const filePath = path.join(uploadsDir, folder, safeName);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ message: "File not found" });
-  }
-  res.sendFile(path.resolve(filePath));
+    // Fallback: serve from local disk (pre-S3 behavior)
+    const filePath = path.join(uploadsDir, folder, safeName);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found" });
+    }
+    // Set caching headers for static files
+    res.set("Cache-Control", "public, max-age=86400, immutable");
+    res.set("ETag", `"${safeName}"`);
+    res.sendFile(path.resolve(filePath));
 };
 
 const serveUpload   = serveFile("archives");
@@ -151,6 +154,28 @@ const globalLimiter = rateLimit({
   message: { message: "Too many requests. Please slow down." },
 });
 app.use("/api/", globalLimiter);
+
+// ── Mutation-heavy endpoint rate limiters ─────────────────────
+const bulkImportLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { message: "Too many bulk imports. Try again later." },
+});
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { message: "Too many search requests. Slow down." },
+});
+const eventRegisterLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { message: "Too many event registrations. Slow down." },
+});
+
+app.use("/api/members/import-csv",    bulkImportLimiter);
+app.use("/api/members/search",       searchLimiter);
+app.use("/api/events/register",      eventRegisterLimiter);
+app.use("/api/member-portal/events", eventRegisterLimiter);
 
 // ── Public Routes (no auth) ───────────────────────────────────
 app.use("/api/public",        require("./routes/public.routes"));

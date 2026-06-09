@@ -3,6 +3,7 @@
 const { Op }    = require("sequelize");
 const auditLog  = require("../helpers/auditLog.helper");
 const logger    = require("../helpers/logger");
+const AppError  = require("../helpers/AppError");
 const {
   ArchiveRecord,
   ArchiveCategory,
@@ -121,8 +122,8 @@ exports.getRecordById = async (id) => {
     where: { id },
     include: detailIncludes,
   });
-  if (!record) throw { status: 404, message: "Archive record not found" };
-  return remapRecord(record);
+  if (!record) throw AppError.notFound("RECORD_NOT_FOUND", "Archive record not found");
+    return remapRecord(record);
 };
 
 // ── Create Record ────────────────────────────────────────────
@@ -134,7 +135,7 @@ exports.createRecord = async (data, uploadedBy) => {
   } = data;
 
   const category = await ArchiveCategory.findByPk(category_id);
-  if (!category) throw { status: 404, message: "Archive category not found" };
+  if (!category) throw AppError.notFound("CATEGORY_NOT_FOUND", "Archive category not found");
 
   const record = await ArchiveRecord.create({
     category_id,
@@ -168,10 +169,10 @@ exports.createRecord = async (data, uploadedBy) => {
 // ── Update Record ────────────────────────────────────────────
 exports.updateRecord = async (id, data, uploadedBy) => {
   const record = await ArchiveRecord.findOne({ where: { id } });
-  if (!record) throw { status: 404, message: "Archive record not found" };
+  if (!record) throw AppError.notFound("RECORD_NOT_FOUND", "Archive record not found");
 
   if (record.status === "deleted")
-    throw { status: 400, message: "Cannot update a deleted record" };
+    throw AppError.badRequest("DELETED_RECORD", "Cannot update a deleted record");
 
   const {
     category_id, title, description,
@@ -181,7 +182,7 @@ exports.updateRecord = async (id, data, uploadedBy) => {
 
   if (category_id) {
     const category = await ArchiveCategory.findByPk(category_id);
-    if (!category) throw { status: 404, message: "Archive category not found" };
+    if (!category) throw AppError.notFound("CATEGORY_NOT_FOUND", "Archive category not found");
   }
 
   // New file → create new version
@@ -219,10 +220,10 @@ exports.updateRecord = async (id, data, uploadedBy) => {
 // ── Approve Record ───────────────────────────────────────────
 exports.approveRecord = async (id, approvedBy) => {
   const record = await ArchiveRecord.findOne({ where: { id } });
-  if (!record) throw { status: 404, message: "Archive record not found" };
+  if (!record) throw AppError.notFound("RECORD_NOT_FOUND", "Archive record not found");
 
   if (record.status !== "pending")
-    throw { status: 400, message: "Only pending records can be approved" };
+    throw AppError.badRequest("NOT_PENDING", "Only pending records can be approved");
 
   await record.update({ status: "approved", approved_by: approvedBy });
   auditLog.log({ userId: approvedBy, action: "APPROVE_ARCHIVE", targetTable: "archive_records", targetId: id });
@@ -232,7 +233,7 @@ exports.approveRecord = async (id, approvedBy) => {
 // ── Soft Delete Record ───────────────────────────────────────
 exports.deleteRecord = async (id, deletedBy) => {
   const record = await ArchiveRecord.findOne({ where: { id } });
-  if (!record) throw { status: 404, message: "Archive record not found" };
+  if (!record) throw AppError.notFound("RECORD_NOT_FOUND", "Archive record not found");
 
   // Delete the physical file from disk
   const fs = require("fs");
@@ -260,7 +261,7 @@ exports.deleteRecord = async (id, deletedBy) => {
 // ── Get Versions for a Record ────────────────────────────────
 exports.getVersions = async (recordId) => {
   const record = await ArchiveRecord.findOne({ where: { id: recordId } });
-  if (!record) throw { status: 404, message: "Archive record not found" };
+  if (!record) throw AppError.notFound("RECORD_NOT_FOUND", "Archive record not found");
 
   return await ArchiveVersion.findAll({
     where: { record_id: recordId },
@@ -272,7 +273,7 @@ exports.getVersions = async (recordId) => {
 // ── Log Access ───────────────────────────────────────────────
 exports.logAccess = async (recordId, accessedBy, action) => {
   const record = await ArchiveRecord.findOne({ where: { id: recordId } });
-  if (!record) throw { status: 404, message: "Archive record not found" };
+  if (!record) throw AppError.notFound("RECORD_NOT_FOUND", "Archive record not found");
   await ArchiveAccessLog.create({ record_id: recordId, accessed_by: accessedBy, action, accessed_at: new Date() });
   return record;
 };
@@ -280,7 +281,7 @@ exports.logAccess = async (recordId, accessedBy, action) => {
 // ── Get Access Logs for a Record ─────────────────────────────
 exports.getAccessLogs = async (recordId) => {
   const record = await ArchiveRecord.findOne({ where: { id: recordId } });
-  if (!record) throw { status: 404, message: "Archive record not found" };
+  if (!record) throw AppError.notFound("RECORD_NOT_FOUND", "Archive record not found");
 
   const logs = await ArchiveAccessLog.findAll({
     where: { record_id: recordId },
@@ -303,24 +304,24 @@ exports.getAllCategories = async () => {
 
 exports.getCategoryById = async (id) => {
   const category = await ArchiveCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Archive category not found" };
+  if (!category) throw AppError.notFound("CATEGORY_NOT_FOUND", "Archive category not found");
   return category;
 };
 
 exports.createCategory = async (data) => {
   const { name, description } = data;
   const existing = await ArchiveCategory.findOne({ where: { name } });
-  if (existing) throw { status: 409, message: "Category name already exists" };
+  if (existing) throw AppError.conflict("DUPLICATE_NAME", "Category name already exists");
   return await ArchiveCategory.create({ name, description: description || null });
 };
 
 exports.updateCategory = async (id, data) => {
   const category = await ArchiveCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Archive category not found" };
+  if (!category) throw AppError.notFound("CATEGORY_NOT_FOUND", "Archive category not found");
   const { name, description } = data;
   if (name && name !== category.name) {
     const existing = await ArchiveCategory.findOne({ where: { name } });
-    if (existing) throw { status: 409, message: "Category name already exists" };
+    if (existing) throw AppError.conflict("DUPLICATE_NAME", "Category name already exists");
   }
   await category.update({ ...(name && { name }), ...(description !== undefined && { description }) });
   return category;
@@ -328,10 +329,10 @@ exports.updateCategory = async (id, data) => {
 
 exports.deleteCategory = async (id) => {
   const category = await ArchiveCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Archive category not found" };
+  if (!category) throw AppError.notFound("CATEGORY_NOT_FOUND", "Archive category not found");
   const inUse = await ArchiveRecord.count({ where: { category_id: id } });
   if (inUse > 0)
-    throw { status: 400, message: `Cannot delete. ${inUse} record(s) are using this category` };
+    throw AppError.badRequest("CATEGORY_IN_USE", `Cannot delete. ${inUse} record(s) are using this category`);
   await category.destroy();
   return { message: "Archive category deleted successfully." };
 };

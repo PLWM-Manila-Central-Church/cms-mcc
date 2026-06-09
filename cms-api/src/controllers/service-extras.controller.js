@@ -187,7 +187,7 @@ exports.deleteAttendanceForService = async (req, res, next) => {
     const record = await Attendance.findOne({
       where: { service_id: req.params.id, member_id: req.params.memberId },
     });
-    if (!record) throw { status: 404, message: "Attendance record not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Attendance record not found");
     await ensureMemberInScope(record.member_id, req.user);
     // FIX: route through the service layer so syncSummary fires and the
     // attendance bar decrements correctly when Undo is clicked.

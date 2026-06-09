@@ -4,14 +4,21 @@
   "description": "Church Management System - Backend API",
   "main": "src/server.js",
   "jest": {
-                "testEnvironment": "node",
-                "setupFiles": ["./test/setup.js"],
-                "testPathIgnorePatterns": ["/node_modules/", "test/finance.validator.test.js"],
-                "collectCoverageFrom": ["src/**/*.js"],
-                "moduleNameMapper": {
-                  "^uuid$": "<rootDir>/test/__mocks__/uuid.js"
-                }
-              },
+    "testEnvironment": "node",
+    "setupFiles": [
+      "./test/setup.js"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "test/finance.validator.test.js"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ],
+    "moduleNameMapper": {
+      "^uuid$": "<rootDir>/test/__mocks__/uuid.js"
+    }
+  },
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
@@ -51,14 +58,15 @@
     "pdfkit": "^0.19.0",
     "prom-client": "^15.1.3",
     "qrcode": "^1.5.4",
+    "sanitize-html": "^2.17.4",
     "sequelize": "^6.37.8",
-    "sequelize-cli": "^6.6.5",
     "uuid": "^14.0.0",
     "winston": "^3.19.0"
   },
   "devDependencies": {
     "jest": "^30.4.2",
     "nodemon": "^3.1.14",
+    "sequelize-cli": "^6.6.5",
     "supertest": "^7.2.2"
   }
 }

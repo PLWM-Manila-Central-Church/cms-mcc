@@ -30,18 +30,18 @@ const syncSummary = async (serviceId) => {
 // ── Service Attendance Summary ───────────────────────────────
 exports.getSummaryByService = async (serviceId) => {
   const service = await Service.findByPk(serviceId);
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const summary = await ServiceAttendanceSummary.findOne({
     where: { service_id: serviceId },
   });
-  if (!summary) throw { status: 404, message: "Attendance summary not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Attendance summary not found");
   return summary;
 };
 
 exports.upsertSummary = async (serviceId, data) => {
   const service = await Service.findByPk(serviceId);
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const { total_expected, total_attended, total_absent } = data;
 
@@ -58,7 +58,7 @@ exports.upsertSummary = async (serviceId, data) => {
 // ── Service Responses ────────────────────────────────────────
 exports.getResponsesByService = async (serviceId) => {
   const service = await Service.findByPk(serviceId);
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   return await ServiceResponse.findAll({
     where: { service_id: serviceId },
@@ -80,10 +80,10 @@ exports.createOrUpdateResponse = async (
   overrideBy,
 ) => {
   const service = await Service.findByPk(serviceId);
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const member = await Member.findByPk(memberId);
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   const { attendance_status, seat_number, parking_slot, override_reason } =
     data;
@@ -142,7 +142,7 @@ exports.createOrUpdateResponse = async (
 
 exports.deleteResponse = async (id) => {
   const response = await ServiceResponse.findByPk(id);
-  if (!response) throw { status: 404, message: "Service response not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service response not found");
   await response.destroy();
   return { message: "Service response deleted successfully." };
 };
@@ -195,7 +195,7 @@ const scopeSubstituteIncludes = (user = {}) => substituteIncludes.map((include) 
 const ensureSubstituteInScope = (request, user = {}) => {
   if (user.roleName !== "Ministry Leader") return;
   if (request.assignment?.ministry_role_id !== user.leadsMinistryId) {
-    throw { status: 403, message: "This substitute request is outside your ministry" };
+    throw AppError.forbidden("This substitute request is outside your ministry");
   }
 };
 
@@ -219,7 +219,7 @@ exports.getSubstituteRequestById = async (id, user = {}) => {
   const request = await SubstituteRequest.findByPk(id, {
     include: substituteIncludes,
   });
-  if (!request) throw { status: 404, message: "Substitute request not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
   ensureSubstituteInScope(request, user);
   return request;
 };
@@ -241,16 +241,16 @@ exports.createSubstituteRequest = async (data, requestedBy) => {
   }
 
   if (!resolvedAssignmentId)
-    throw { status: 400, message: "Could not find your ministry assignment for this service" };
+    throw AppError.badRequest("VALIDATION", "Could not find your ministry assignment for this service");
 
   const assignment = await MinistryAssignment.findByPk(resolvedAssignmentId);
-  if (!assignment) throw { status: 404, message: "Ministry assignment not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Ministry assignment not found");
 
   const existing = await SubstituteRequest.findOne({
     where: { assignment_id: resolvedAssignmentId, status: "pending" },
   });
   if (existing)
-    throw { status: 409, message: "A pending substitute request already exists for this assignment" };
+    throw AppError.conflict("DUPLICATE", "A pending substitute request already exists for this assignment");
 
   // proposed_substitute is a User FK - look up the user linked to the proposed member
   let proposedUserId = null;
@@ -278,14 +278,14 @@ exports.resolveSubstituteRequest = async (id, status, resolvedBy, user = {}) => 
       { model: User, as: "proposedSubstituteUser", attributes: ["id", "member_id"], required: false },
     ],
   });
-  if (!request) throw { status: 404, message: "Substitute request not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
   ensureSubstituteInScope(request, user);
 
   if (request.status !== "pending")
-    throw { status: 400, message: "Request has already been resolved" };
+    throw AppError.badRequest("VALIDATION", "Request has already been resolved");
 
   if (!["approved", "rejected"].includes(status))
-    throw { status: 400, message: "Status must be approved or rejected" };
+    throw AppError.badRequest("VALIDATION", "Status must be approved or rejected");
 
   // On approval, update the assignment's member to the proposed substitute's linked member
   if (status === "approved" && request.proposed_substitute) {
@@ -306,11 +306,11 @@ exports.deleteSubstituteRequest = async (id, user = {}) => {
   const request = await SubstituteRequest.findByPk(id, {
     include: [{ model: MinistryAssignment, as: "assignment", attributes: ["id", "ministry_role_id"], required: true }],
   });
-  if (!request) throw { status: 404, message: "Substitute request not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
   ensureSubstituteInScope(request, user);
 
   if (request.status !== "pending")
-    throw { status: 400, message: "Only pending requests can be deleted" };
+    throw AppError.badRequest("VALIDATION", "Only pending requests can be deleted");
 
   await request.destroy();
   return { message: "Substitute request deleted successfully." };

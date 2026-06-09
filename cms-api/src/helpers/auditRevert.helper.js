@@ -1,5 +1,7 @@
 "use strict";
 
+const AppError = require("./AppError");
+
 const sequelize = require("../config/db");
 const { AuditLog } = require("../models");
 const logger = require("./logger");
@@ -27,10 +29,10 @@ const SOFT_DELETE_TABLES = ["archive_records", "financial_records", "members"];
 
 exports.revertLog = async (logId, userId) => {
   const log = await AuditLog.findByPk(logId);
-  if (!log) throw { status: 404, message: "Audit log entry not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Audit log entry not found");
 
   const pk = tablePk[log.target_table];
-  if (!pk) throw { status: 400, message: `Revert not supported for table ${log.target_table}` };
+  throw AppError.badRequest("VALIDATION", "`Revert not supported for table ${log.target_table");
 
   if (CREATE_ACTIONS.includes(log.action)) {
     const table = log.target_table;
@@ -81,5 +83,5 @@ exports.revertLog = async (logId, userId) => {
     return { message: "Record reverted to previous values" };
   }
 
-  throw { status: 400, message: `Revert not supported for action ${log.action}` };
+  throw AppError.badRequest("VALIDATION", "`Revert not supported for action ${log.action");
 };

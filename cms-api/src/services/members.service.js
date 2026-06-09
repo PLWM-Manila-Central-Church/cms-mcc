@@ -79,8 +79,8 @@ const youngAdultBirthdateRange = () => {
 
 const ensureScopeForAssignment = (user = {}) => {
   const scope = getScope(user);
-  if (!scope) throw { status: 403, message: "This action is only for scoped leaders" };
-  if (!scope.id) throw { status: 403, message: "No leader assignment is set for your account" };
+  throw AppError.forbidden("This action is only for scoped leaders");
+  throw AppError.forbidden("No leader assignment is set for your account");
   return scope;
 };
 
@@ -103,7 +103,7 @@ const buildSearchWhere = (search = "") => {
 const getGroupForScope = async (scope) => {
   if (scope.type !== "group") return null;
   const group = await MinistryGroup.findByPk(scope.id, { attributes: ["id", "name"] });
-  if (!group) throw { status: 404, message: "Assigned group not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Assigned group not found");
   return group;
 };
 
@@ -111,7 +111,7 @@ const assertGroupEligibility = (member, group) => {
   if (!group || !isYoungAdultsGroup(group.name)) return;
   const age = calcAge(member.birthdate);
   if (age === null || age < 18 || age > 29) {
-    throw { status: 400, message: "YA members must be age 18 to 29 and unassigned to any group" };
+    throw AppError.badRequest("VALIDATION", "YA members must be age 18 to 29 and unassigned to any group");
   }
 };
 
@@ -169,7 +169,7 @@ exports.getMemberById = async (id, user = {}) => {
       { model: EmergencyContact, as: "emergencyContacts", required: false },
     ],
   });
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
   return member;
 };
 
@@ -183,22 +183,22 @@ exports.createMember = async (data, createdBy, user = {}) => {
 
   if (email) {
     const existing = await Member.findOne({ where: { email } });
-    if (existing) throw { status: 409, message: "Email already in use" };
+    throw AppError.conflict("DUPLICATE", "Email already in use");
   }
 
   if (barcode) {
     const existing = await Member.findOne({ where: { barcode } });
-    if (existing) throw { status: 409, message: "Barcode already in use" };
+    throw AppError.conflict("DUPLICATE", "Barcode already in use");
   }
 
   if (cell_group_id) {
     const cellGroup = await CellGroup.findByPk(cell_group_id);
-    if (!cellGroup) throw { status: 404, message: "Cell group not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
   }
 
   if (group_id) {
     const group = await MinistryGroup.findByPk(group_id);
-    if (!group) throw { status: 404, message: "Group not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Group not found");
   }
 
   const member = await Member.create({
@@ -250,11 +250,11 @@ exports.updateMember = async (id, data, updatedBy, user = {}) => {
   await ensureMemberInScope(id, user);
   data = filterMemberUpdateForScopedLeader(data, user);
   if (Object.keys(data).length === 0) {
-    throw { status: 400, message: "No allowed member fields to update" };
+    throw AppError.badRequest("VALIDATION", "No allowed member fields to update");
   }
 
   const member = await Member.findOne({ where: { id } });
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   const {
     first_name, last_name, email, phone, birthdate, spiritual_birthday,
@@ -264,22 +264,22 @@ exports.updateMember = async (id, data, updatedBy, user = {}) => {
 
   if (email && email !== member.email) {
     const existing = await Member.findOne({ where: { email } });
-    if (existing) throw { status: 409, message: "Email already in use" };
+    throw AppError.conflict("DUPLICATE", "Email already in use");
   }
 
   if (barcode && barcode !== member.barcode) {
     const existing = await Member.findOne({ where: { barcode } });
-    if (existing) throw { status: 409, message: "Barcode already in use" };
+    throw AppError.conflict("DUPLICATE", "Barcode already in use");
   }
 
   if (cell_group_id) {
     const cellGroup = await CellGroup.findByPk(cell_group_id);
-    if (!cellGroup) throw { status: 404, message: "Cell group not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
   }
 
   if (group_id) {
     const group = await MinistryGroup.findByPk(group_id);
-    if (!group) throw { status: 404, message: "Group not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Group not found");
   }
 
   await member.update({
@@ -307,11 +307,11 @@ exports.updateMember = async (id, data, updatedBy, user = {}) => {
 // ── Soft Delete Member ───────────────────────────────────────
 exports.deleteMember = async (id, deletedBy, reason, user = {}) => {
   if (isScopedLeader(user)) {
-    throw { status: 403, message: "Leaders can only remove members from their assigned scope" };
+    throw AppError.forbidden("Leaders can only remove members from their assigned scope");
   }
 
   const member = await Member.findOne({ where: { id } });
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   // Cascade: find any linked user and deactivate + unlink them
   const linkedUser = await User.findOne({ where: { member_id: id } });
@@ -340,8 +340,8 @@ exports.deleteMember = async (id, deletedBy, reason, user = {}) => {
 
 exports.unassignMemberFromScope = async (id, updatedBy, user = {}) => {
   const scope = getScope(user);
-  if (!scope) throw { status: 403, message: "This action is only for scoped leaders" };
-  if (!scope.id) throw { status: 403, message: "No leader assignment is set for your account" };
+  throw AppError.forbidden("This action is only for scoped leaders");
+  throw AppError.forbidden("No leader assignment is set for your account");
 
   await ensureMemberInScope(id, user);
 
@@ -349,14 +349,14 @@ exports.unassignMemberFromScope = async (id, updatedBy, user = {}) => {
     const row = await MinistryMembership.findOne({
       where: { ministry_role_id: scope.id, member_id: id },
     });
-    if (!row) throw { status: 404, message: "Member is not in your ministry roster" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Member is not in your ministry roster");
     await row.destroy();
     auditLog.log({ userId: updatedBy, action: "UNASSIGN_MEMBER_MINISTRY", targetTable: "ministry_memberships", targetId: id });
     return { message: "Member removed from your ministry roster." };
   }
 
   const member = await Member.findOne({ where: { id } });
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   if (scope.type === "cell_group") {
     await member.update({ cell_group_id: null });
@@ -370,7 +370,7 @@ exports.unassignMemberFromScope = async (id, updatedBy, user = {}) => {
     return { message: "Member removed from your group." };
   }
 
-  throw { status: 400, message: "Unsupported leader scope" };
+  throw AppError.badRequest("VALIDATION", "Unsupported leader scope");
 };
 
 exports.searchAssignableForScope = async ({ search = "", limit = 20 } = {}, user = {}) => {
@@ -425,14 +425,14 @@ exports.assignMemberToScope = async (memberId, updatedBy, user = {}) => {
     where: { id: memberId, is_deleted: 0 },
     include: memberIncludes,
   });
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   if (scope.type === "ministry") {
     const anyMembership = await MinistryMembership.findOne({
       where: { member_id: memberId },
       attributes: ["id", "ministry_role_id"],
     });
-    if (anyMembership) throw { status: 409, message: "Member is already assigned to a ministry" };
+    throw AppError.conflict("DUPLICATE", "Member is already assigned to a ministry");
 
     const row = await MinistryMembership.create({
       ministry_role_id: scope.id,
@@ -444,14 +444,14 @@ exports.assignMemberToScope = async (memberId, updatedBy, user = {}) => {
   }
 
   if (scope.type === "cell_group") {
-    if (member.cell_group_id) throw { status: 409, message: "Member already belongs to a cell group" };
+    throw AppError.conflict("DUPLICATE", "Member already belongs to a cell group");
     await member.update({ cell_group_id: scope.id });
     auditLog.log({ userId: updatedBy, action: "ASSIGN_MEMBER_CELL_GROUP", targetTable: "members", targetId: memberId });
     return await exports.getMemberById(memberId, user);
   }
 
   if (scope.type === "group") {
-    if (member.group_id) throw { status: 409, message: "Member already belongs to a group" };
+    throw AppError.conflict("DUPLICATE", "Member already belongs to a group");
     const group = await getGroupForScope(scope);
     assertGroupEligibility(member, group);
     await member.update({ group_id: scope.id });
@@ -459,7 +459,7 @@ exports.assignMemberToScope = async (memberId, updatedBy, user = {}) => {
     return await exports.getMemberById(memberId, user);
   }
 
-  throw { status: 400, message: "Unsupported leader scope" };
+  throw AppError.badRequest("VALIDATION", "Unsupported leader scope");
 };
 
 // ── Bulk Create Members from CSV ─────────────────────────────
@@ -472,8 +472,8 @@ exports.bulkCreateMembers = async (csvBuffer, createdBy) => {
     trim: true,
   });
 
-  if (records.length === 0) throw { status: 400, message: "CSV file is empty" };
-  if (records.length > 500) throw { status: 400, message: "Maximum 500 members per batch" };
+  throw AppError.badRequest("VALIDATION", "CSV file is empty");
+  throw AppError.badRequest("VALIDATION", "Maximum 500 members per batch");
 
   const results = { created: 0, skipped: 0, errors: [] };
 
@@ -502,18 +502,18 @@ exports.bulkCreateMembers = async (csvBuffer, createdBy) => {
   // ── Link Member to User Account ───────────────────────────────
   exports.linkMemberAccount = async (memberId, { email, password }, adminId) => {
     const member = await Member.findByPk(memberId);
-    if (!member) throw { status: 404, message: "Member not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
     const existingUser = await User.findOne({ where: { member_id: memberId } });
-    if (existingUser) throw { status: 409, message: "Member already has a linked account" };
+    throw AppError.conflict("DUPLICATE", "Member already has a linked account");
 
     const emailExists = await User.findOne({ where: { email } });
-    if (emailExists) throw { status: 409, message: "Email already in use" };
+    throw AppError.conflict("DUPLICATE", "Email already in use");
 
     const bcrypt = require("bcrypt");
     const hashedPassword = await bcrypt.hash(password, parseInt(process.env.BCRYPT_ROUNDS) || 10);
     const memberRole = await Role.findOne({ where: { role_name: "Member" } });
-    if (!memberRole) throw { status: 500, message: "Member role not found — seed database first" };
+    throw new AppError("INTERNAL", 500, "Member role not found — seed database first");
 
     const user = await User.create({
       email,

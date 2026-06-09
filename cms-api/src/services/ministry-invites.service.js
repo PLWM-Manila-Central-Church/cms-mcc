@@ -38,7 +38,7 @@ const inviteIncludes = [
 // to a specific ministry_role_id (so a Leader only sees their ministry).
 exports.getInvitesByEvent = async (eventId, ministryRoleId = null) => {
   const event = await Event.findByPk(eventId);
-  if (!event) throw { status: 404, message: "Event not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
   const where = { event_id: eventId };
   if (ministryRoleId) where.ministry_role_id = ministryRoleId;
@@ -62,13 +62,13 @@ exports.createInvites = async (
   if (forcedMinistryRoleId) ministry_role_id = forcedMinistryRoleId;
 
   const event = await Event.findByPk(eventId);
-  if (!event) throw { status: 404, message: "Event not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
   const role = await MinistryRole.findByPk(ministry_role_id);
-  if (!role) throw { status: 404, message: "Ministry role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
 
   if (!Array.isArray(member_ids) || member_ids.length === 0)
-    throw { status: 400, message: "member_ids must be a non-empty array" };
+    throw AppError.badRequest("VALIDATION", "member_ids must be a non-empty array");
 
   const results = { created: [], skipped: [], errors: [] };
 
@@ -150,25 +150,25 @@ exports.createInvites = async (
 exports.respondToInvite = async (inviteId, memberId, response_status) => {
   const validStatuses = ["attending", "not_attending"];
   if (!validStatuses.includes(response_status))
-    throw { status: 400, message: `response_status must be one of: ${validStatuses.join(", ")}` };
+    throw AppError.badRequest("VALIDATION", "`response_status must be one of: ${validStatuses.join(", ")");
 
   const invite = await MinistryEventInvite.findByPk(inviteId, {
     include: inviteIncludes,
   });
-  if (!invite) throw { status: 404, message: "Invite not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Invite not found");
 
   // Guard: only the invited member may respond
   if (invite.member_id !== parseInt(memberId))
-    throw { status: 403, message: "You can only respond to your own invites" };
+    throw AppError.forbidden("You can only respond to your own invites");
 
   // Guard: check deadline has not passed
   if (invite.response_deadline && new Date() > new Date(invite.response_deadline))
-    throw { status: 400, message: "Response deadline has passed" };
+    throw AppError.badRequest("VALIDATION", "Response deadline has passed");
 
   // Guard: prevent re-responding once a response has already been recorded.
   // If you need to allow response changes, remove this block.
   if (invite.response_status !== "pending")
-    throw { status: 400, message: "You have already responded to this invite" };
+    throw AppError.badRequest("VALIDATION", "You have already responded to this invite");
 
   await invite.update({
     response_status,
@@ -183,6 +183,6 @@ exports.getInviteById = async (inviteId) => {
   const invite = await MinistryEventInvite.findByPk(inviteId, {
     include: inviteIncludes,
   });
-  if (!invite) throw { status: 404, message: "Invite not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Invite not found");
   return invite;
 };

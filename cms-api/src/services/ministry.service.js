@@ -60,10 +60,10 @@ exports.getAllRoles = async (leadsMinistryId = null) => {
 // ── Get Ministry Role By ID ──────────────────────────────────
 exports.getRoleById = async (id, leadsMinistryId = null) => {
   if (leadsMinistryId && parseInt(id, 10) !== parseInt(leadsMinistryId, 10)) {
-    throw { status: 403, message: "This ministry is outside your assignment" };
+    throw AppError.forbidden("This ministry is outside your assignment");
   }
   const role = await MinistryRole.findByPk(id);
-  if (!role) throw { status: 404, message: "Ministry role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
   return role;
 };
 
@@ -72,7 +72,7 @@ exports.createRole = async (data, createdBy) => {
   const { name } = data;
   const existing = await MinistryRole.findOne({ where: { name } });
   if (existing)
-    throw { status: 409, message: "Ministry role name already exists" };
+    throw AppError.conflict("DUPLICATE", "Ministry role name already exists");
   const role = await MinistryRole.create({ name });
   auditLog.log({ userId: createdBy, action: "CREATE_MINISTRY_ROLE", targetTable: "ministry_roles", targetId: role.id });
   return role;
@@ -81,13 +81,13 @@ exports.createRole = async (data, createdBy) => {
 // ── Update Ministry Role ─────────────────────────────────────
 exports.updateRole = async (id, data, updatedBy) => {
   const role = await MinistryRole.findByPk(id);
-  if (!role) throw { status: 404, message: "Ministry role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
 
   const { name } = data;
   if (name && name !== role.name) {
     const existing = await MinistryRole.findOne({ where: { name } });
     if (existing)
-      throw { status: 409, message: "Ministry role name already exists" };
+      throw AppError.conflict("DUPLICATE", "Ministry role name already exists");
   }
 
   await role.update({ ...(name && { name }) });
@@ -98,7 +98,7 @@ exports.updateRole = async (id, data, updatedBy) => {
 // ── Delete Ministry Role ─────────────────────────────────────
 exports.deleteRole = async (id, deletedBy) => {
   const role = await MinistryRole.findByPk(id);
-  if (!role) throw { status: 404, message: "Ministry role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
 
   const inUse = await MinistryAssignment.count({
     where: { ministry_role_id: id },
@@ -141,9 +141,9 @@ exports.getAssignmentById = async (id, leadsMinistryId = null) => {
     include: assignmentIncludes,
   });
   if (!assignment)
-    throw { status: 404, message: "Ministry assignment not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Ministry assignment not found");
   if (leadsMinistryId && assignment.ministry_role_id !== leadsMinistryId) {
-    throw { status: 403, message: "This assignment is outside your ministry" };
+    throw AppError.forbidden("This assignment is outside your ministry");
   }
   return assignment;
 };
@@ -151,7 +151,7 @@ exports.getAssignmentById = async (id, leadsMinistryId = null) => {
 // ── Get Assignments By Service ───────────────────────────────
 exports.getAssignmentsByService = async (serviceId, leadsMinistryId = null) => {
   const service = await Service.findByPk(serviceId);
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const where = { service_id: serviceId };
   if (leadsMinistryId) where.ministry_role_id = leadsMinistryId;
@@ -167,24 +167,24 @@ exports.getAssignmentsByService = async (serviceId, leadsMinistryId = null) => {
 exports.createAssignment = async (data, createdBy, user = {}) => {
   let { service_id, member_id, ministry_role_id } = data;
   if (user.roleName === "Ministry Leader") {
-    if (!user.leadsMinistryId) throw { status: 403, message: "No ministry is assigned to your account" };
+    throw AppError.forbidden("No ministry is assigned to your account");
     ministry_role_id = user.leadsMinistryId;
   }
 
   const service = await Service.findByPk(service_id);
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const member = await Member.findByPk(member_id);
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   const role = await MinistryRole.findByPk(ministry_role_id);
-  if (!role) throw { status: 404, message: "Ministry role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
 
   if (user.roleName === "Ministry Leader") {
     const membership = await MinistryMembership.findOne({
       where: { ministry_role_id, member_id },
     });
-    if (!membership) throw { status: 403, message: "You can only assign members in your ministry roster" };
+    throw AppError.forbidden("You can only assign members in your ministry roster");
   }
 
   const existing = await MinistryAssignment.findOne({
@@ -234,10 +234,10 @@ exports.createAssignment = async (data, createdBy, user = {}) => {
 exports.updateAssignment = async (id, data, updatedBy, user = {}) => {
   const assignment = await MinistryAssignment.findByPk(id);
   if (!assignment)
-    throw { status: 404, message: "Ministry assignment not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Ministry assignment not found");
   if (user.roleName === "Ministry Leader") {
     if (!user.leadsMinistryId || assignment.ministry_role_id !== user.leadsMinistryId) {
-      throw { status: 403, message: "This assignment is outside your ministry" };
+      throw AppError.forbidden("This assignment is outside your ministry");
     }
     data = { ...data, ministry_role_id: user.leadsMinistryId };
   }
@@ -246,7 +246,7 @@ exports.updateAssignment = async (id, data, updatedBy, user = {}) => {
 
   if (ministry_role_id) {
     const role = await MinistryRole.findByPk(ministry_role_id);
-    if (!role) throw { status: 404, message: "Ministry role not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
   }
 
   await assignment.update({
@@ -263,9 +263,9 @@ exports.updateAssignment = async (id, data, updatedBy, user = {}) => {
 exports.deleteAssignment = async (id, deletedBy, user = {}) => {
   const assignment = await MinistryAssignment.findByPk(id);
   if (!assignment)
-    throw { status: 404, message: "Ministry assignment not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Ministry assignment not found");
   if (user.roleName === "Ministry Leader" && assignment.ministry_role_id !== user.leadsMinistryId) {
-    throw { status: 403, message: "This assignment is outside your ministry" };
+    throw AppError.forbidden("This assignment is outside your ministry");
   }
 
   await assignment.destroy();
@@ -310,15 +310,15 @@ exports.resolveSubstitute = async (id, data, leadsMinistryId, userId) => {
       },
     ],
   });
-  if (!request) throw { status: 404, message: "Substitute request not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
 
   if (request.assignment?.ministry_role_id !== leadsMinistryId) {
-    throw { status: 403, message: "This request is not for your ministry" };
+    throw AppError.forbidden("This request is not for your ministry");
   }
 
   const { status } = data;
   if (!["approved", "rejected"].includes(status)) {
-    throw { status: 400, message: "Status must be 'approved' or 'rejected'" };
+    throw AppError.badRequest("VALIDATION", "Status must be 'approved' or 'rejected'");
   }
 
   await request.update({ status });
@@ -382,15 +382,15 @@ exports.getMyMinistryMembers = async (ministryRoleId) => {
 // ── Ministry Roster — Add Member ─────────────────────────────
 exports.addMemberToMinistry = async (ministryRoleId, memberId, addedBy) => {
   const role   = await MinistryRole.findByPk(ministryRoleId);
-  if (!role) throw { status: 404, message: "Ministry role not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
 
   const member = await Member.findByPk(memberId);
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   const existing = await MinistryMembership.findOne({
     where: { member_id: memberId },
   });
-  if (existing) throw { status: 409, message: "Member is already assigned to a ministry" };
+  throw AppError.conflict("DUPLICATE", "Member is already assigned to a ministry");
 
   return await MinistryMembership.create({
     ministry_role_id: ministryRoleId,
@@ -404,7 +404,7 @@ exports.removeMemberFromMinistry = async (ministryRoleId, memberId) => {
   const row = await MinistryMembership.findOne({
     where: { ministry_role_id: ministryRoleId, member_id: memberId },
   });
-  if (!row) throw { status: 404, message: "Member is not in this ministry roster" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member is not in this ministry roster");
   await row.destroy();
   return { message: "Member removed from ministry roster." };
 };

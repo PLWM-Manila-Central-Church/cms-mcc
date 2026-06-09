@@ -4,6 +4,7 @@ const { Attendance, Member, Service, ServiceAttendanceSummary, User } = require(
 const cache    = require("../helpers/cache.helper");
 const auditLog = require("../helpers/auditLog.helper");
 const logger   = require("../helpers/logger");
+const AppError = require("../helpers/AppError");
 const {
   ensureMemberInScope,
   getMemberScopeWhere,
@@ -55,7 +56,7 @@ exports.getAllAttendance = async (user = {}) => {
 // ── Get Attendance By ID ─────────────────────────────────────
 exports.getAttendanceById = async (id, user = {}) => {
   const record = await Attendance.findByPk(id, { include: attendanceIncludes });
-  if (!record) throw { status: 404, message: "Attendance record not found" };
+  if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
   await ensureMemberInScope(record.member_id, user);
   return record;
 };
@@ -66,13 +67,13 @@ exports.createAttendance = async (data, recordedBy, user = {}) => {
   await ensureMemberInScope(member_id, user);
 
   const service = await Service.findByPk(service_id);
-  if (!service) throw { status: 404, message: "Service not found" };
+  if (!service) throw AppError.notFound("SERVICE_NOT_FOUND", "Service not found");
 
   if (service.status === "cancelled")
-    throw { status: 400, message: "Cannot check in to a cancelled service" };
+    throw AppError.badRequest("SERVICE_CANCELLED", "Cannot check in to a cancelled service");
 
   const member = await Member.findByPk(member_id);
-  if (!member) throw { status: 404, message: "Member not found" };
+  if (!member) throw AppError.notFound("MEMBER_NOT_FOUND", "Member not found");
 
   const existing = await Attendance.findOne({ where: { service_id, member_id } });
   if (existing) {
@@ -82,7 +83,7 @@ exports.createAttendance = async (data, recordedBy, user = {}) => {
       await syncSummary(service_id);
       return await exports.getAttendanceById(existing.id, user);
     }
-    throw { status: 409, message: "Member already checked in to this service" };
+    throw AppError.conflict("ALREADY_CHECKED_IN", "Member already checked in to this service");
   }
 
   const record = await Attendance.create({
@@ -111,7 +112,7 @@ exports.createAttendance = async (data, recordedBy, user = {}) => {
 // ── Update Attendance ────────────────────────────────────────
 exports.updateAttendance = async (id, data, user = {}) => {
   const record = await Attendance.findByPk(id);
-  if (!record) throw { status: 404, message: "Attendance record not found" };
+  if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
   await ensureMemberInScope(record.member_id, user);
 
   const { check_in_method, checked_in_at } = data;
@@ -126,7 +127,7 @@ exports.updateAttendance = async (id, data, user = {}) => {
 // ── Delete Attendance ────────────────────────────────────────
 exports.deleteAttendance = async (id, user = {}) => {
   const record = await Attendance.findByPk(id);
-  if (!record) throw { status: 404, message: "Attendance record not found" };
+  if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
   await ensureMemberInScope(record.member_id, user);
 
   const serviceId = record.service_id;

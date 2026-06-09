@@ -50,7 +50,7 @@ exports.getAllItems = async ({ page = 1, limit = 15, search, category_id } = {})
 // ── Get Item By ID ───────────────────────────────────────────
 exports.getItemById = async (id) => {
   const item = await InventoryItem.findByPk(id, { include: itemIncludes });
-  if (!item) throw { status: 404, message: "Inventory item not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
   return item;
 };
 
@@ -60,7 +60,7 @@ exports.createItem = async (data, createdBy) => {
 
   if (category_id) {
     const category = await InventoryCategory.findByPk(category_id);
-    if (!category) throw { status: 404, message: "Inventory category not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
   }
 
   const item = await InventoryItem.create({
@@ -81,13 +81,13 @@ exports.createItem = async (data, createdBy) => {
 // ── Update Item ──────────────────────────────────────────────
 exports.updateItem = async (id, data, updatedBy) => {
   const item = await InventoryItem.findByPk(id);
-  if (!item) throw { status: 404, message: "Inventory item not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
   const { name, category_id, quantity, unit, condition, low_stock_threshold, notes } = data;
 
   if (category_id) {
     const category = await InventoryCategory.findByPk(category_id);
-    if (!category) throw { status: 404, message: "Inventory category not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
   }
 
   await item.update({
@@ -107,7 +107,7 @@ exports.updateItem = async (id, data, updatedBy) => {
 // ── Delete Item ──────────────────────────────────────────────
 exports.deleteItem = async (id, deletedBy) => {
   const item = await InventoryItem.findByPk(id);
-  if (!item) throw { status: 404, message: "Inventory item not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
   await item.destroy();
   auditLog.log({ userId: deletedBy, action: "DELETE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: id });
@@ -121,25 +121,25 @@ exports.getAllCategories = async () => {
 
 exports.getCategoryById = async (id) => {
   const category = await InventoryCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Inventory category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
   return category;
 };
 
 exports.createCategory = async (data) => {
   const { name } = data;
   const existing = await InventoryCategory.findOne({ where: { name } });
-  if (existing) throw { status: 409, message: "Category name already exists" };
+  throw AppError.conflict("DUPLICATE", "Category name already exists");
   return await InventoryCategory.create({ name });
 };
 
 exports.updateCategory = async (id, data) => {
   const category = await InventoryCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Inventory category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
 
   const { name } = data;
   if (name && name !== category.name) {
     const existing = await InventoryCategory.findOne({ where: { name } });
-    if (existing) throw { status: 409, message: "Category name already exists" };
+    throw AppError.conflict("DUPLICATE", "Category name already exists");
   }
 
   await category.update({ ...(name && { name }) });
@@ -148,11 +148,11 @@ exports.updateCategory = async (id, data) => {
 
 exports.deleteCategory = async (id) => {
   const category = await InventoryCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Inventory category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
 
   const inUse = await InventoryItem.count({ where: { category_id: id } });
   if (inUse > 0)
-    throw { status: 400, message: `Cannot delete. ${inUse} item(s) are using this category` };
+    throw AppError.badRequest("VALIDATION", "`Cannot delete. ${inUse");
 
   await category.destroy();
   return { message: "Inventory category deleted successfully." };
@@ -197,7 +197,7 @@ exports.getRequestById = async (id) => {
       { model: InventoryItem, as: "item", attributes: ["id", "name", "unit"], required: false },
     ],
   });
-  if (!request) throw { status: 404, message: "Inventory request not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory request not found");
   return request;
 };
 
@@ -206,7 +206,7 @@ exports.createRequest = async (data, requestedBy) => {
   const { item_id, quantity, purpose } = data;
 
   const item = await InventoryItem.findByPk(item_id);
-  if (!item) throw { status: 404, message: "Inventory item not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
   const request = await InventoryRequest.create({
     item_id,
@@ -226,7 +226,7 @@ exports.createRequest = async (data, requestedBy) => {
 exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
   const normalized = (status || "").toLowerCase();
   if (!["approved", "rejected"].includes(normalized))
-    throw { status: 400, message: "Status must be approved or rejected" };
+    throw AppError.badRequest("VALIDATION", "Status must be approved or rejected");
 
   await sequelize.transaction(async (t) => {
     // Lock the request row for update to prevent concurrent reviews
@@ -235,10 +235,10 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
       lock: t.LOCK.UPDATE,
       transaction: t,
     });
-    if (!request) throw { status: 404, message: "Inventory request not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Inventory request not found");
 
     if (request.status !== "pending")
-      throw { status: 400, message: "Request has already been reviewed" };
+      throw AppError.badRequest("VALIDATION", "Request has already been reviewed");
 
     if (normalized === "approved") {
       // Lock the item row and use decrement for atomic quantity update
@@ -247,9 +247,9 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
         lock: t.LOCK.UPDATE,
         transaction: t,
       });
-      if (!item) throw { status: 404, message: "Inventory item not found" };
+      throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
       if (item.quantity < request.quantity)
-        throw { status: 400, message: "Insufficient inventory quantity" };
+        throw AppError.badRequest("VALIDATION", "Insufficient inventory quantity");
       await item.decrement("quantity", { by: request.quantity, transaction: t });
     }
 
@@ -296,10 +296,10 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
 // ── Delete Request ───────────────────────────────────────────
 exports.deleteRequest = async (id, deletedBy) => {
   const request = await InventoryRequest.findByPk(id);
-  if (!request) throw { status: 404, message: "Inventory request not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory request not found");
 
   if (request.status !== "pending")
-    throw { status: 400, message: "Only pending requests can be deleted" };
+    throw AppError.badRequest("VALIDATION", "Only pending requests can be deleted");
 
   await request.destroy();
   auditLog.log({ userId: deletedBy, action: "DELETE_INVENTORY_REQUEST", targetTable: "inventory_requests", targetId: id });
@@ -321,10 +321,10 @@ exports.createUsage = async (data, usedBy) => {
   const { item_id, quantity_used, used_for, used_at } = data;
 
   const item = await InventoryItem.findByPk(item_id);
-  if (!item) throw { status: 404, message: "Inventory item not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
   if (item.quantity < quantity_used)
-    throw { status: 400, message: "Insufficient inventory quantity" };
+    throw AppError.badRequest("VALIDATION", "Insufficient inventory quantity");
 
   await item.update({ quantity: item.quantity - quantity_used });
 
@@ -340,7 +340,7 @@ exports.createUsage = async (data, usedBy) => {
 // ── Delete Usage Record ──────────────────────────────────────
 exports.deleteUsage = async (id) => {
   const usage = await InventoryUsage.findByPk(id);
-  if (!usage) throw { status: 404, message: "Usage record not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Usage record not found");
 
   await usage.destroy();
   return { message: "Usage record deleted successfully." };

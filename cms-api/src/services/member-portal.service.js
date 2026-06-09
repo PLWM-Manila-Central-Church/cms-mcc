@@ -53,7 +53,7 @@ exports.getMyProfile = async (memberId) => {
       { model: EmergencyContact, as: "emergencyContacts", required: false },
     ],
   });
-  if (!member) throw { status: 404, message: "Member profile not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member profile not found");
 
   // Fetch linked user to get join date (user account creation = join date).
   // Do NOT restrict attributes — with underscored:true Sequelize exposes timestamps
@@ -79,7 +79,7 @@ const MEMBER_EDITABLE_FIELDS = [
 
 exports.updateMyProfile = async (memberId, data) => {
   const member = await Member.findOne({ where: { id: memberId } });
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   // Whitelist — members cannot touch status, barcode, cell_group_id, group_id, etc.
   const update = {};
@@ -89,7 +89,7 @@ exports.updateMyProfile = async (memberId, data) => {
 
   if (update.email && update.email !== member.email) {
     const existing = await Member.findOne({ where: { email: update.email } });
-    if (existing) throw { status: 409, message: "Email already in use" };
+    throw AppError.conflict("DUPLICATE", "Email already in use");
   }
 
   await member.update(update);
@@ -229,20 +229,20 @@ exports.getMyEvents = async (memberId) => {
 // ── Register for Event (self) ────────────────────────────────
 exports.registerForEvent = async (memberId, eventId) => {
   const event = await Event.findOne({ where: { id: eventId } });
-  if (!event) throw { status: 404, message: "Event not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
   if (!["Upcoming", "Ongoing"].includes(event.status))
-    throw { status: 400, message: "Event is not open for registration" };
+    throw AppError.badRequest("VALIDATION", "Event is not open for registration");
   if (event.registration_deadline && new Date() > new Date(event.registration_deadline))
-    throw { status: 400, message: "Registration deadline has passed" };
+    throw AppError.badRequest("VALIDATION", "Registration deadline has passed");
 
   const existing = await EventRegistration.findOne({
     where: { event_id: eventId, member_id: memberId },
   });
-  if (existing) throw { status: 409, message: "You are already registered for this event" };
+  throw AppError.conflict("DUPLICATE", "You are already registered for this event");
 
   if (event.capacity) {
     const count = await EventRegistration.count({ where: { event_id: eventId } });
-    if (count >= event.capacity) throw { status: 400, message: "Event has reached full capacity" };
+    throw AppError.badRequest("VALIDATION", "Event has reached full capacity");
   }
 
   const reg = await EventRegistration.create({
@@ -257,12 +257,12 @@ exports.registerForEvent = async (memberId, eventId) => {
 exports.cancelEventRegistration = async (memberId, eventId) => {
   const event = await Event.findOne({ where: { id: eventId } });
   if (event?.registration_deadline && new Date() > new Date(event.registration_deadline))
-    throw { status: 400, message: "Cancellation deadline has passed" };
+    throw AppError.badRequest("VALIDATION", "Cancellation deadline has passed");
 
   const reg = await EventRegistration.findOne({
     where: { event_id: eventId, member_id: memberId },
   });
-  if (!reg) throw { status: 404, message: "Registration not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Registration not found");
 
   await reg.destroy();
   return { message: "Registration cancelled successfully." };
@@ -271,13 +271,13 @@ exports.cancelEventRegistration = async (memberId, eventId) => {
 // ── Change My Password ────────────────────────────────────────
 exports.changeMyPassword = async (userId, currentPassword, newPassword) => {
   if (!newPassword || newPassword.length < 8)
-    throw { status: 400, message: "New password must be at least 8 characters" };
+    throw AppError.badRequest("VALIDATION", "New password must be at least 8 characters");
 
   const user = await User.findByPk(userId);
-  if (!user) throw { status: 404, message: "User not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
 
   const match = await bcrypt.compare(currentPassword, user.password_hash);
-  if (!match) throw { status: 400, message: "Current password is incorrect" };
+  throw AppError.badRequest("VALIDATION", "Current password is incorrect");
 
   const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   await user.update({ password_hash: hash, force_password_change: 0 });
@@ -294,8 +294,8 @@ exports.confirmMinistryAssignment = async (memberId, assignmentId) => {
       { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"], required: false },
     ],
   });
-  if (!assignment) throw { status: 404, message: "Assignment not found" };
-  if (assignment.confirmed) throw { status: 400, message: "Already confirmed" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Assignment not found");
+  throw AppError.badRequest("VALIDATION", "Already confirmed");
 
   await assignment.update({ confirmed: 1 });
 
@@ -336,7 +336,7 @@ exports.getUpcomingServices = async () => {
 // ── Upload Profile Photo ──────────────────────────────────────
 exports.uploadProfilePhoto = async (memberId, filePath) => {
   const member = await Member.findOne({ where: { id: memberId } });
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   // Delete the old photo file from disk if it exists
   if (member.profile_photo_url) {
@@ -357,7 +357,7 @@ exports.getServiceDetails = async (serviceId, memberId) => {
   const service = await Service.findByPk(serviceId, {
     attributes: ["id", "title", "service_date", "service_time", "capacity", "status", "response_deadline"],
   });
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const myResponse = await ServiceResponse.findOne({
     where: { service_id: serviceId, member_id: memberId },
@@ -378,11 +378,11 @@ exports.getServiceDetails = async (serviceId, memberId) => {
 // ── Submit Service RSVP (creates Attendance pre-reg for ATTENDING) ─
 exports.submitServiceResponse = async (memberId, serviceId, attendanceStatus) => {
   const service = await Service.findByPk(serviceId);
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const validStatuses = ["ATTENDING", "NOT_ATTENDING", "UNDECIDED"];
   if (!validStatuses.includes(attendanceStatus))
-    throw { status: 400, message: "Invalid attendance status" };
+    throw AppError.badRequest("VALIDATION", "Invalid attendance status");
 
   // Upsert the ServiceResponse
   const existing = await ServiceResponse.findOne({

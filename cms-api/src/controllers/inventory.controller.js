@@ -22,7 +22,7 @@ const scopedRequestsResponse = async (req, res) => {
 
 const ensureOwnInventoryRequest = (request, userId) => {
   if (request.requested_by !== userId) {
-    throw { status: 403, message: "This inventory request is outside your account" };
+    throw AppError.forbidden("This inventory request is outside your account");
   }
 };
 

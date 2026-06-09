@@ -1,6 +1,7 @@
 "use strict";
 
 const { Op } = require("sequelize");
+const AppError    = require("../helpers/AppError");
 const cache       = require("../helpers/cache.helper");
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
@@ -112,9 +113,9 @@ exports.getEventById = async (id) => {
       },
     ],
   });
-  if (!event) throw { status: 404, message: "Event not found" };
-  return remapEvent(event);
-};
+  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+    return remapEvent(event);
+  };
 
 // ── Create Event ─────────────────────────────────────────────
 exports.createEvent = async (data, createdBy) => {
@@ -124,11 +125,11 @@ exports.createEvent = async (data, createdBy) => {
   } = data;
 
   if (end_date && end_date < start_date)
-    throw { status: 400, message: "End date cannot be before start date" };
+    throw AppError.badRequest("VALIDATION", "End date cannot be before start date");
 
   if (category_id) {
     const category = await EventCategory.findByPk(category_id);
-    if (!category) throw { status: 404, message: "Event category not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
   }
 
   const event = await Event.create({
@@ -159,11 +160,11 @@ exports.createEvent = async (data, createdBy) => {
 // ── Update Event ─────────────────────────────────────────────
 exports.updateEvent = async (id, data, updatedBy) => {
   const event = await Event.findOne({ where: { id, is_deleted: 0 } });
-  if (!event) throw { status: 404, message: "Event not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
   const currentStatus = normalizeStatus(event.status);
   if (currentStatus === EVENT_STATUS.COMPLETED || currentStatus === EVENT_STATUS.CANCELLED)
-    throw { status: 400, message: "Cannot update a completed or cancelled event" };
+    throw AppError.badRequest("VALIDATION", "Cannot update a completed or cancelled event");
 
   const {
     category_id, title, description, start_date, end_date,
@@ -173,11 +174,11 @@ exports.updateEvent = async (id, data, updatedBy) => {
   const resolvedStart = start_date || event.start_date;
   const resolvedEnd   = end_date !== undefined ? end_date : event.end_date;
   if (resolvedEnd && resolvedEnd < resolvedStart)
-    throw { status: 400, message: "End date cannot be before start date" };
+    throw AppError.badRequest("VALIDATION", "End date cannot be before start date");
 
   if (category_id) {
     const category = await EventCategory.findByPk(category_id);
-    if (!category) throw { status: 404, message: "Event category not found" };
+    throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
   }
 
   await event.update({
@@ -200,7 +201,7 @@ exports.updateEvent = async (id, data, updatedBy) => {
 // ── Update Event Status ──────────────────────────────────────
 exports.updateEventStatus = async (id, newStatus, updatedBy) => {
   const event = await Event.findOne({ where: { id } });
-  if (!event) throw { status: 404, message: "Event not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
   const currentStatus = normalizeStatus(event.status);
   const validTransitions = {
@@ -254,12 +255,12 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
 // ── Soft Delete Event ────────────────────────────────────────
 exports.deleteEvent = async (id, deletedBy) => {
   const event = await Event.findOne({ where: { id, is_deleted: 0 } });
-  if (!event) throw { status: 404, message: "Event not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
   // Block deleting active events because they may have registrations.
   // Admins must cancel or complete them first, then delete.
   if ([EVENT_STATUS.UPCOMING, EVENT_STATUS.ONGOING].includes(event.status))
-    throw { status: 400, message: "Cannot delete an active event. Cancel or complete it first." };
+    throw AppError.badRequest("VALIDATION", "Cannot delete an active event. Cancel or complete it first.");
 
   // Completed and cancelled events can be deleted.
   await event.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy });
@@ -275,24 +276,24 @@ exports.getAllCategories = async () => {
 
 exports.getCategoryById = async (id) => {
   const category = await EventCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Event category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
   return category;
 };
 
 exports.createCategory = async (data) => {
   const { name, description } = data;
   const existing = await EventCategory.findOne({ where: { name } });
-  if (existing) throw { status: 409, message: "Category name already exists" };
+  throw AppError.conflict("DUPLICATE", "Category name already exists");
   return await EventCategory.create({ name, description: description || null });
 };
 
 exports.updateCategory = async (id, data) => {
   const category = await EventCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Event category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
   const { name, description } = data;
   if (name && name !== category.name) {
     const existing = await EventCategory.findOne({ where: { name } });
-    if (existing) throw { status: 409, message: "Category name already exists" };
+    throw AppError.conflict("DUPLICATE", "Category name already exists");
   }
   await category.update({
     ...(name        && { name }),
@@ -303,10 +304,10 @@ exports.updateCategory = async (id, data) => {
 
 exports.deleteCategory = async (id) => {
   const category = await EventCategory.findByPk(id);
-  if (!category) throw { status: 404, message: "Event category not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
   const inUse = await Event.unscoped().count({ where: { category_id: id } });
   if (inUse > 0)
-    throw { status: 400, message: `Cannot delete category. ${inUse} event(s) are using it` };
+    throw AppError.badRequest("VALIDATION", "`Cannot delete category. ${inUse");
   await category.destroy();
   return { message: "Event category deleted successfully." };
 };
@@ -314,7 +315,7 @@ exports.deleteCategory = async (id) => {
 // ── Get Event Registrations ──────────────────────────────────
 exports.getEventRegistrations = async (eventId) => {
   const event = await Event.findOne({ where: { id: eventId } });
-  if (!event) throw { status: 404, message: "Event not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
   return await EventRegistration.findAll({
     where: { event_id: eventId },
     include: registrationIncludes,
@@ -325,21 +326,21 @@ exports.getEventRegistrations = async (eventId) => {
 // ── Register Member ──────────────────────────────────────────
 exports.registerMember = async (eventId, memberId, registeredBy) => {
   const event = await Event.findOne({ where: { id: eventId } });
-  if (!event) throw { status: 404, message: "Event not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
   if (!REGISTRATION_OPEN_STATUSES.includes(event.status))
-    throw { status: 400, message: "Event is not open for registration" };
+    throw AppError.badRequest("VALIDATION", "Event is not open for registration");
   if (event.registration_deadline && new Date() > event.registration_deadline)
-    throw { status: 400, message: "Registration deadline has passed" };
+    throw AppError.badRequest("VALIDATION", "Registration deadline has passed");
 
   const member = await Member.findByPk(memberId);
-  if (!member) throw { status: 404, message: "Member not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   const existing = await EventRegistration.findOne({ where: { event_id: eventId, member_id: memberId } });
-  if (existing) throw { status: 409, message: "Member already registered for this event" };
+  throw AppError.conflict("DUPLICATE", "Member already registered for this event");
 
   if (event.capacity) {
     const count = await EventRegistration.count({ where: { event_id: eventId } });
-    if (count >= event.capacity) throw { status: 400, message: "Event has reached full capacity" };
+    throw AppError.badRequest("VALIDATION", "Event has reached full capacity");
   }
 
   const reg = await EventRegistration.create({
@@ -372,7 +373,7 @@ exports.registerMember = async (eventId, memberId, registeredBy) => {
 // ── Unregister Member ────────────────────────────────────────
 exports.unregisterMember = async (eventId, memberId, unregisteredBy) => {
   const registration = await EventRegistration.findOne({ where: { event_id: eventId, member_id: memberId } });
-  if (!registration) throw { status: 404, message: "Registration not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Registration not found");
 
   const event = await Event.findOne({ where: { id: eventId } });
   await registration.destroy();
@@ -404,11 +405,11 @@ exports.unregisterMember = async (eventId, memberId, unregisteredBy) => {
 // ── Bulk Register Members ────────────────────────────────────
 exports.bulkRegisterMembers = async (eventId, memberIds, registeredBy) => {
   const event = await Event.findOne({ where: { id: eventId } });
-  if (!event) throw { status: 404, message: "Event not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
   if (!REGISTRATION_OPEN_STATUSES.includes(event.status))
-    throw { status: 400, message: "Event is not open for registration" };
+    throw AppError.badRequest("VALIDATION", "Event is not open for registration");
   if (event.registration_deadline && new Date() > event.registration_deadline)
-    throw { status: 400, message: "Registration deadline has passed" };
+    throw AppError.badRequest("VALIDATION", "Registration deadline has passed");
 
   const results = { registered: [], skipped: [], errors: [] };
 

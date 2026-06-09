@@ -63,7 +63,7 @@ exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
 // ── Get Service By ID ────────────────────────────────────────
 exports.getServiceById = async (id) => {
   const service = await Service.findByPk(id);
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
   return service;
 };
 
@@ -96,10 +96,10 @@ exports.createService = async (data, createdBy) => {
 // ── Update Service ───────────────────────────────────────────
 exports.updateService = async (id, data, updatedBy) => {
   const service = await Service.findByPk(id);
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   if (service.status === "completed" || service.status === "cancelled")
-    throw { status: 400, message: "Cannot update a completed or cancelled service" };
+    throw AppError.badRequest("VALIDATION", "Cannot update a completed or cancelled service");
 
   const {
     title,
@@ -143,7 +143,7 @@ exports.updateService = async (id, data, updatedBy) => {
 // ── Delete Service ───────────────────────────────────────────
 exports.deleteService = async (id, deletedBy) => {
   const service = await Service.findByPk(id);
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
   // Completed services can be deleted (admin request)
   await service.destroy();
   auditLog.log({ userId: deletedBy, action: "DELETE_SERVICE", targetTable: "services", targetId: id });
@@ -154,10 +154,10 @@ exports.deleteService = async (id, deletedBy) => {
 exports.updateStatus = async (id, status, updatedBy) => {
   const allowed = ["draft", "published", "completed", "cancelled"];
   if (!allowed.includes(status))
-    throw { status: 400, message: "Invalid status value" };
+    throw AppError.badRequest("VALIDATION", "Invalid status value");
 
   const service = await Service.findByPk(id);
-  if (!service) throw { status: 404, message: "Service not found" };
+  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const flow = {
     draft:     ["published", "cancelled"],
