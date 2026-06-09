@@ -30,7 +30,7 @@ const getDatabaseOptions = ({ logging = false } = {}) => {
     port: Number(process.env.DB_PORT || 3306),
     dialect: "mysql",
     logging,
-    pool: { max: 35, min: 2, acquire: 60000, idle: 20000 },
+    pool: { max: 15, min: 2, acquire: 60000, idle: 20000 },
     ...(ssl && { dialectOptions: { ssl } }),
   };
 };

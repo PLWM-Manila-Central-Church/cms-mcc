@@ -3,21 +3,13 @@
 const Joi = require("joi");
 
 exports.createCellGroupSchema = Joi.object({
-  name:        Joi.string().max(150).required(),
-  leader_id:   Joi.number().integer().positive().allow(null).optional(),
-  location:    Joi.string().max(300).allow(null, "").optional(),
-  description: Joi.string().max(500).allow(null, "").optional(),
-  day_of_week: Joi.string().max(20).allow(null, "").optional(),
-  meeting_time: Joi.string().max(30).allow(null, "").optional(),
+  name: Joi.string().max(200).required(),
+  area: Joi.string().max(200).optional().allow(""),
 });
 
 exports.updateCellGroupSchema = Joi.object({
-  name:        Joi.string().max(150).optional(),
-  leader_id:   Joi.number().integer().positive().allow(null).optional(),
-  location:    Joi.string().max(300).allow(null, "").optional(),
-  description: Joi.string().max(500).allow(null, "").optional(),
-  day_of_week: Joi.string().max(20).allow(null, "").optional(),
-  meeting_time: Joi.string().max(30).allow(null, "").optional(),
+  name: Joi.string().max(200).optional(),
+  area: Joi.string().max(200).optional().allow(""),
 }).min(1);
 
 exports.createCellGroupHistorySchema = Joi.object({

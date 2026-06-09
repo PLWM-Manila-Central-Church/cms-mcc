@@ -2,6 +2,7 @@
 
 const { SystemSetting } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
+const cache = require("../helpers/cache.helper");
 
 const SETTING_META = {
   // General
@@ -63,8 +64,12 @@ const toKeyedObject = (rows) => {
 
 // ── Get All Settings ─────────────────────────────────────────
 exports.getAllSettings = async () => {
+  const cached = cache.get("settings:all");
+  if (cached) return cached;
   const rows = await SystemSetting.findAll({ order: [["key", "ASC"]] });
-  return toKeyedObject(rows);
+  const result = toKeyedObject(rows);
+  cache.set("settings:all", result, 5 * 60 * 1000); // 5 min
+  return result;
 };
 
 // ── Get Setting By Key ───────────────────────────────────────
@@ -80,6 +85,7 @@ exports.updateSetting = async (key, value, updatedBy) => {
   if (!setting) throw { status: 404, message: "Setting not found" };
   await setting.update({ value, updated_by: updatedBy });
   auditLog.log({ userId: updatedBy, action: "UPDATE_SETTING", targetTable: "system_settings", targetId: key });
+  cache.del("settings:all");
   return setting;
 };
 
@@ -91,6 +97,7 @@ exports.bulkUpdateSettings = async (settings, updatedBy) => {
     await setting.update({ value, updated_by: updatedBy });
   }
   auditLog.log({ userId: updatedBy, action: "UPDATE_SETTINGS", targetTable: "system_settings" });
+  cache.del("settings:all");
   const allRows = await SystemSetting.findAll({ order: [["key", "ASC"]] });
   return toKeyedObject(allRows);
 };
@@ -114,6 +121,7 @@ exports.bulkUpdateFromObject = async (obj, updatedBy) => {
   }
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_SETTINGS", targetTable: "system_settings" });
+  cache.del("settings:all");
   const allRows = await SystemSetting.findAll({ order: [["key", "ASC"]] });
   return toKeyedObject(allRows);
 };
@@ -123,6 +131,7 @@ exports.createSetting = async (data, updatedBy) => {
   const { key, value } = data;
   const existing = await SystemSetting.findOne({ where: { key } });
   if (existing) throw { status: 409, message: "Setting key already exists" };
+  cache.del("settings:all");
   return await SystemSetting.create({ key, value: value || null, updated_by: updatedBy });
 };
 
@@ -131,5 +140,6 @@ exports.deleteSetting = async (key) => {
   const setting = await SystemSetting.findOne({ where: { key } });
   if (!setting) throw { status: 404, message: "Setting not found" };
   await setting.destroy();
+  cache.del("settings:all");
   return { message: "Setting deleted successfully." };
 };

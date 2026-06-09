@@ -1,6 +1,7 @@
 "use strict";
 
 const { Attendance, Member, Service, ServiceAttendanceSummary, User } = require("../models");
+const cache    = require("../helpers/cache.helper");
 const auditLog = require("../helpers/auditLog.helper");
 const logger   = require("../helpers/logger");
 const {
@@ -99,11 +100,12 @@ exports.createAttendance = async (data, recordedBy, user = {}) => {
 
   const created = await exports.getAttendanceById(record.id, user);
   auditLog.log({
-    userId: recordedBy, action: "CHECK_IN",
-    targetTable: "attendances", targetId: created.id,
-    newValues: { service_id, member_id },
-  });
-  return created;
+      userId: recordedBy, action: "CHECK_IN",
+      targetTable: "attendances", targetId: created.id,
+      newValues: { service_id, member_id },
+    });
+    cache.keys("dashboard:*").forEach(k => cache.del(k));
+    return created;
 };
 
 // ── Update Attendance ────────────────────────────────────────
@@ -131,9 +133,10 @@ exports.deleteAttendance = async (id, user = {}) => {
   await record.destroy();
 
   // FIX BUG 2: sync summary after undo so the count decrements correctly
-  try { await syncSummary(serviceId); } catch (err) {
-    logger.error(err, "Failed to sync summary on delete:")
-  }
+    try { await syncSummary(serviceId); } catch (err) {
+      logger.error(err, "Failed to sync summary on delete:")
+    }
 
-  return { message: "Attendance record deleted successfully." };
+    cache.keys("dashboard:*").forEach(k => cache.del(k));
+    return { message: "Attendance record deleted successfully." };
 };

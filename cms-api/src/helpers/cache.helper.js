@@ -20,6 +20,13 @@ exports.set = (key, value, ttlMs = DEFAULT_TTL_MS) => {
 
 exports.del = (key) => store.delete(key);
 
+exports.has = (key) => {
+  const hit = store.get(key);
+  if (hit && Date.now() < hit.expiresAt) return true;
+  store.delete(key);
+  return false;
+};
+
 exports.clear = () => store.clear();
 
 exports.keys = (pattern) => {

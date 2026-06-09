@@ -3,6 +3,7 @@
 const { Op } = require("sequelize");
 const { Member, CellGroup, MinistryGroup, EmergencyContact, User, Role,
   MinistryMembership } = require("../models");
+const cache    = require("../helpers/cache.helper");
 const auditLog = require("../helpers/auditLog.helper");
 const logger   = require("../helpers/logger");
 const {
@@ -240,7 +241,8 @@ exports.createMember = async (data, createdBy, user = {}) => {
   }
 
   auditLog.log({ userId: createdBy, action: "CREATE_MEMBER", targetTable: "members", targetId: created.id });
-  return created;
+    cache.keys("dashboard:*").forEach(k => cache.del(k));
+    return created;
 };
 
 // ── Update Member ────────────────────────────────────────────
@@ -298,11 +300,12 @@ exports.updateMember = async (id, data, updatedBy, user = {}) => {
   });
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_MEMBER", targetTable: "members", targetId: id });
-  return await exports.getMemberById(id, user);
+    cache.keys("dashboard:*").forEach(k => cache.del(k));
+    return await exports.getMemberById(id, user);
 };
 
 // ── Soft Delete Member ───────────────────────────────────────
-exports.deleteMember = async (id, deletedBy, user = {}) => {
+exports.deleteMember = async (id, deletedBy, reason, user = {}) => {
   if (isScopedLeader(user)) {
     throw { status: 403, message: "Leaders can only remove members from their assigned scope" };
   }
@@ -331,8 +334,8 @@ exports.deleteMember = async (id, deletedBy, user = {}) => {
     }
   });
 
-  auditLog.log({ userId: deletedBy, action: "DELETE_MEMBER", targetTable: "members", targetId: id });
-  return { message: "Member deleted and linked user account deactivated." };
+  auditLog.log({ userId: deletedBy, action: "DELETE_MEMBER", targetTable: "members", targetId: id, details: reason ? { reason } : undefined });
+    return { message: "Member deleted and linked user account deactivated." };
 };
 
 exports.unassignMemberFromScope = async (id, updatedBy, user = {}) => {

@@ -30,26 +30,23 @@ const logger = winston.createLogger({
   ],
 });
 
-// In production, also write to rotating files
-if (process.env.NODE_ENV === "production") {
-  // eslint-disable-next-line global-require
-  const fs = require("fs");
-  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+// Always write to rotating files (helps debug issues even in development)
+const fs = require("fs");
+if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
 
-  const fileTransport = new winston.transports.File({
-    filename: path.join(logDir, "app.log"),
-    maxsize: 10 * 1024 * 1024, // 10 MB
-    maxFiles: 5,
-  });
-  logger.add(fileTransport);
+const fileTransport = new winston.transports.File({
+  filename: path.join(logDir, "app.log"),
+  maxsize: 10 * 1024 * 1024, // 10 MB
+  maxFiles: 5,
+});
+logger.add(fileTransport);
 
-  const errorTransport = new winston.transports.File({
-    filename: path.join(logDir, "error.log"),
-    level: "error",
-    maxsize: 10 * 1024 * 1024,
-    maxFiles: 5,
-  });
-  logger.add(errorTransport);
-}
+const errorTransport = new winston.transports.File({
+  filename: path.join(logDir, "error.log"),
+  level: "error",
+  maxsize: 10 * 1024 * 1024,
+  maxFiles: 5,
+});
+logger.add(errorTransport);
 
 module.exports = logger;

@@ -32,6 +32,19 @@ if (process.env.SENTRY_DSN) {
 app.set("trust proxy", 1);
 
 app.use(requestId);
+
+// ── Request Timeout (prevents stuck requests from exhausting DB pool) ──
+app.use((req, res, next) => {
+  const skipFor = ["/api/members/bulk"];
+  if (skipFor.some(p => req.path.startsWith(p))) return next();
+  res.setTimeout(60_000, () => {
+    if (!res.headersSent) {
+      res.status(408).json({ message: "Request timed out" });
+    }
+  });
+  next();
+});
+
 app.use(metricsMiddleware);
 
 // ── Security & Logging ───────────────────────────────────────
@@ -50,8 +63,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev")); // Fix #10
-app.use(express.json({ limit: "10kb" })); // Fix #9
-app.use(express.urlencoded({ extended: true, limit: "10kb" })); // Fix #9
+app.use(express.json({ limit: "500kb" })); // Fix #9
 
 app.get("/metrics", metricsEndpoint);
 
@@ -80,24 +92,27 @@ app.get("/health", async (_req, res) => {
 // ends with /api (Vercel) or not (direct service URL).
 const fs         = require("fs");
 const uploadsDir = path.join(__dirname, "../uploads");
+const { getFileUrl, s3Enabled } = require("./middlewares/upload-s3");
 
-const serveUpload = (req, res) => {
-  const safeName = path.basename(req.params.filename); // prevent path traversal
-  const filePath = path.join(uploadsDir, "archives", safeName);
+const serveFile = (folder) => (req, res) => {
+  const safeName = path.basename(req.params.filename);
+
+  // If S3 is enabled, redirect to the S3/CDN URL
+  if (s3Enabled) {
+    const url = getFileUrl(`${folder}/${safeName}`);
+    return res.redirect(307, url);
+  }
+
+  // Fallback: serve from local disk (pre-S3 behavior)
+  const filePath = path.join(uploadsDir, folder, safeName);
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ message: "File not found" });
   }
   res.sendFile(path.resolve(filePath));
 };
 
-const serveReceipt = (req, res) => {
-  const safeName = path.basename(req.params.filename); // prevent path traversal
-  const filePath = path.join(uploadsDir, "receipts", safeName);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ message: "File not found" });
-  }
-  res.sendFile(path.resolve(filePath));
-};
+const serveUpload   = serveFile("archives");
+const serveReceipt  = serveFile("receipts");
 
 // ── Rate Limiters ─────────────────────────────────────────────
 const loginLimiter = rateLimit({
@@ -180,14 +195,7 @@ app.get("/api/uploads/archives/:filename", verifyToken, serveUpload);
 app.get("/uploads/receipts/:filename",     verifyToken, serveReceipt);
 app.get("/api/uploads/receipts/:filename", verifyToken, serveReceipt);
 
-const serveProfile = (req, res) => {
-  const safeName = path.basename(req.params.filename);
-  const filePath = path.join(uploadsDir, "profiles", safeName);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ message: "File not found" });
-  }
-  res.sendFile(path.resolve(filePath));
-};
+const serveProfile  = serveFile("profiles");
 
 app.get("/uploads/profiles/:filename",     verifyToken, serveProfile);
 app.get("/api/uploads/profiles/:filename", verifyToken, serveProfile);

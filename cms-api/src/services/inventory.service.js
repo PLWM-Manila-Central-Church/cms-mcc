@@ -1,5 +1,6 @@
 "use strict";
 
+const cache       = require("../helpers/cache.helper");
 const sequelize   = require("../config/db");
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
@@ -216,8 +217,9 @@ exports.createRequest = async (data, requestedBy) => {
   });
 
   const created = await exports.getRequestById(request.id);
-  auditLog.log({ userId: requestedBy, action: "CREATE_INVENTORY_REQUEST", targetTable: "inventory_requests", targetId: created.id });
-  return created;
+    auditLog.log({ userId: requestedBy, action: "CREATE_INVENTORY_REQUEST", targetTable: "inventory_requests", targetId: created.id });
+    cache.keys("dashboard:*").forEach(k => cache.del(k));
+    return created;
 };
 
 // ── Review Request (Approve/Reject) ──────────────────────────

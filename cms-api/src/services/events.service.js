@@ -1,6 +1,7 @@
 "use strict";
 
 const { Op } = require("sequelize");
+const cache       = require("../helpers/cache.helper");
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
@@ -147,11 +148,12 @@ exports.createEvent = async (data, createdBy) => {
 
   const created = await exports.getEventById(event.id);
   auditLog.log({
-    userId: createdBy, action: "CREATE_EVENT",
-    targetTable: "events", targetId: created.id,
-    newValues: { title, status: created.status },
-  });
-  return created;
+      userId: createdBy, action: "CREATE_EVENT",
+      targetTable: "events", targetId: created.id,
+      newValues: { title, status: created.status },
+    });
+    cache.keys("dashboard:*").forEach(k => cache.del(k));
+    return created;
 };
 
 // ── Update Event ─────────────────────────────────────────────
@@ -261,8 +263,9 @@ exports.deleteEvent = async (id, deletedBy) => {
 
   // Completed and cancelled events can be deleted.
   await event.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy });
-  auditLog.log({ userId: deletedBy, action: "DELETE_EVENT", targetTable: "events", targetId: id });
-  return { message: "Event deleted successfully." };
+    auditLog.log({ userId: deletedBy, action: "DELETE_EVENT", targetTable: "events", targetId: id });
+    cache.keys("dashboard:*").forEach(k => cache.del(k));
+    return { message: "Event deleted successfully." };
 };
 
 // ── Get All Event Categories ─────────────────────────────────

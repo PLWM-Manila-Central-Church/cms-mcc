@@ -3,6 +3,15 @@
   "version": "1.0.0",
   "description": "Church Management System - Backend API",
   "main": "src/server.js",
+  "jest": {
+                "testEnvironment": "node",
+                "setupFiles": ["./test/setup.js"],
+                "testPathIgnorePatterns": ["/node_modules/", "test/finance.validator.test.js"],
+                "collectCoverageFrom": ["src/**/*.js"],
+                "moduleNameMapper": {
+                  "^uuid$": "<rootDir>/test/__mocks__/uuid.js"
+                }
+              },
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
@@ -10,6 +19,8 @@
     "db:seed": "sequelize-cli db:seed:all",
     "db:validate:3nf": "node scripts/validate-3nf-compatibility.js",
     "test:finance-validator": "node --test test/finance.validator.test.js",
+    "test": "jest --detectOpenHandles --forceExit --testTimeout=15000",
+    "test:coverage": "jest --coverage --detectOpenHandles --forceExit --testTimeout=15000",
     "demo:seed": "node scripts/demo-data.js seed",
     "demo:cleanup": "node scripts/demo-data.js cleanup"
   },
@@ -46,6 +57,8 @@
     "winston": "^3.19.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
   }
 }

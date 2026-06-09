@@ -1,5 +1,6 @@
 "use strict";
 
+const cache    = require("../helpers/cache.helper");
 const auditLog  = require("../helpers/auditLog.helper");
 const sequelize = require("../config/db");
 const logger    = require("../helpers/logger");
@@ -152,7 +153,8 @@ exports.createRecord = async (data, recordedBy) => {
   });
 
   const created = await exports.getRecordById(record.id);
-  return created;
+    cache.keys("dashboard:*").forEach(k => cache.del(k));
+    return created;
 };
 
 // ── Update Financial Record ──────────────────────────────────
@@ -227,9 +229,10 @@ exports.deleteRecord = async (id, deletedBy) => {
     }, { transaction: t });
 
     auditLog.log({ userId: deletedBy, action: "DELETE_FINANCE_RECORD", targetTable: "financial_records", targetId: id }, { transaction: t });
-  });
+      });
 
-  return { message: "Financial record deleted successfully." };
+      cache.keys("dashboard:*").forEach(k => cache.del(k));
+      return { message: "Financial record deleted successfully." };
 };
 
 // ── Get All Categories ───────────────────────────────────────
@@ -659,8 +662,9 @@ exports.createExpense = async (data, userId) => {
 
     auditLog.log({ userId, action: "CREATE_EXPENSE", targetTable: "expenses", targetId: e.id }, { transaction: t });
     return e;
-  });
-  return await exports.getExpenseById(expense.id);
+      });
+      cache.keys("dashboard:*").forEach(k => cache.del(k));
+      return await exports.getExpenseById(expense.id);
 };
 
 exports.updateExpense = async (id, data, userId) => {
@@ -695,8 +699,9 @@ exports.updateExpense = async (id, data, userId) => {
     }, { transaction: t });
 
     auditLog.log({ userId, action: "UPDATE_EXPENSE", targetTable: "expenses", targetId: id }, { transaction: t });
-  });
-  return await exports.getExpenseById(id);
+      });
+      cache.keys("dashboard:*").forEach(k => cache.del(k));
+      return await exports.getExpenseById(id);
 };
 
 exports.deleteExpense = async (id, userId) => {
@@ -721,9 +726,10 @@ exports.deleteExpense = async (id, userId) => {
     }
 
     await expense.destroy({ transaction: t });
-    auditLog.log({ userId, action: "DELETE_EXPENSE", targetTable: "expenses", targetId: id }, { transaction: t });
-  });
-  return { message: "Expense record deleted successfully." };
+        auditLog.log({ userId, action: "DELETE_EXPENSE", targetTable: "expenses", targetId: id }, { transaction: t });
+      });
+      cache.keys("dashboard:*").forEach(k => cache.del(k));
+      return { message: "Expense record deleted successfully." };
 };
 
 // ── Net Balance (income - expenses) ────────────────────────────

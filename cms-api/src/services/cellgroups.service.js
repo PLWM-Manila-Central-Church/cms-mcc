@@ -1,5 +1,6 @@
 "use strict";
 
+const sequelize = require("../config/db");
 const { CellGroup, CellGroupHistory, Member } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
 const { ensureMemberInScope, isScopedLeader } = require("../helpers/scopedLeader.helper");
@@ -23,23 +24,24 @@ const forbidScopedCellGroupManage = (user = {}) => {
   }
 };
 
-// ── Get All Cell Groups ──────────────────────────────────────
+// ── Get All Cell Groups (with member counts in a single query) ──
 exports.getAllCellGroups = async (user = {}) => {
+  const where = getCellGroupWhereForUser(user);
   const groups = await CellGroup.findAll({
-    where: getCellGroupWhereForUser(user),
+    where,
+    attributes: {
+      include: [[
+        sequelize.literal(`(
+          SELECT COUNT(*)
+          FROM members AS m
+          WHERE m.cell_group_id = CellGroup.id AND m.is_deleted = 0
+        )`),
+        "memberCount",
+      ]],
+    },
     order: [["name", "ASC"]],
   });
-  // Attach member count to each group
-  const withCounts = await Promise.all(
-    groups.map(async (g) => {
-      const plain = g.toJSON();
-      plain.memberCount = await Member.count({
-        where: { cell_group_id: g.id, is_deleted: 0 },
-      });
-      return plain;
-    })
-  );
-  return withCounts;
+  return groups;
 };
 
 // ── Get Cell Group By ID ─────────────────────────────────────
