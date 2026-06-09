@@ -7,16 +7,15 @@ import { NAV_ITEMS, NAV_ICONS } from '../../utils/constants';
 import { LANGS, getLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
 import { DEFAULT_TABS, ROLE_TAB_SETS, isVisibleNavItem } from '../../utils/roleAccess';
 import MonoIcon from '../common/MonoIcon';
+import SafeIcon from '../common/SafeIcon';
+import useWindowWidth from '../../hooks/useWindowWidth';
+import useIdleTimer from '../../hooks/useIdleTimer';
+import IdleLockScreen from '../common/IdleLockScreen';
 
 function NavIcon({ name, size = 20 }) {
   const MORE_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
   const svg = NAV_ICONS[name] || MORE_SVG;
-  return (
-    <span
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      dangerouslySetInnerHTML={{ __html: svg.replace(/width="18"/g, `width="${size}"`).replace(/height="18"/g, `height="${size}"`) }}
-    />
-  );
+  return <SafeIcon svg={svg} size={size} />;
 }
 
 const BP_TABLET = 1024;
@@ -25,18 +24,6 @@ const BP_MOBILE = 768;
 const visibleForRole = (item, user, hasPermission) => {
   return isVisibleNavItem(item, user, hasPermission);
 };
-
-function useWindowWidth() {
-  const [width, setWidth] = useState(
-    typeof window !== 'undefined' ? window.innerWidth : 1280
-  );
-  useEffect(() => {
-    const fn = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', fn, { passive: true });
-    return () => window.removeEventListener('resize', fn);
-  }, []);
-  return width;
-}
 
 // ── Role-specific bottom tab definitions ──────────────────────────────────
 // Each role gets 4 labelled tabs + the "More" tab is always appended 5th.
@@ -238,6 +225,18 @@ export default function MainLayout({ children }) {
 
   const [collapsed, setCollapsed] = useState(isTablet);
   const [moreOpen,  setMoreOpen]  = useState(false);
+  const [locked, setLocked] = useState(false);
+  const { idle, resetTimer } = useIdleTimer();
+
+  // When idle fires, show the lock overlay
+  useEffect(() => {
+    if (idle) setLocked(true);
+  }, [idle]);
+
+  const handleUnlock = () => {
+    setLocked(false);
+    resetTimer();
+  };
 
   // ── Google Translate: load once, restore saved language ──
   useEffect(() => {
@@ -325,6 +324,9 @@ export default function MainLayout({ children }) {
 
       {/* Mobile "More" sheet */}
       <MobileMoreDrawer open={moreOpen} onClose={() => setMoreOpen(false)} />
+
+      {/* Idle lock screen overlay */}
+      {locked && <IdleLockScreen onUnlock={handleUnlock} />}
     </div>
   );
 }

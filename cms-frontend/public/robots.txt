@@ -1,3 +1,35 @@
 # https://www.robotstxt.org/robotstxt.html
+# Allow crawling of public-facing pages for search engines.
+# Disallow all CMS/admin routes to prevent credential-stuffing bots
+# and AI crawlers from indexing internal endpoints.
+
 User-agent: *
-Disallow:
+Allow: /$
+Allow: /introduction
+Allow: /introduction/*
+Allow: /seminar
+Allow: /seminar/*
+Allow: /sermons
+Allow: /sermons/*
+
+Disallow: /login
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /force-change-password
+Disallow: /dashboard
+Disallow: /members
+Disallow: /cell-groups
+Disallow: /ministry
+Disallow: /users
+Disallow: /services
+Disallow: /attendance
+Disallow: /finance
+Disallow: /my-giving
+Disallow: /events
+Disallow: /inventory
+Disallow: /archives
+Disallow: /audit
+Disallow: /portal
+Disallow: /settings
+Disallow: /my-settings
+Disallow: /unauthorized

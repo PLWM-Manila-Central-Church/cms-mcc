@@ -4,6 +4,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { LANGS, getLangCode, saveLangCode, loadGTScript, applyGTLang } from '../../utils/langUtils';
 import MonoIcon from '../../components/common/MonoIcon';
+import useWindowWidth from '../../hooks/useWindowWidth';
 
 // ── Constants ─────────────────────────────────────────────────
 const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
@@ -51,17 +52,6 @@ const LBL = {
   en:{tabs:['Overview','Events','Attendance','Tithes'],portal:'Member Portal',welcome:'Welcome',settings:'Settings',logout:'Logout',attendanceRate:'Attendance Rate',last2mo:'Last month',totalOfferings:'Total Tithes & Offerings',thisYear:'This year',memberSince:'Member Since',myProfile:'My Profile',editProfile:'Edit Profile',save:'Save',cancel:'Cancel',memberId:'Member ID',memberName:'Member Name',spiritual:'Spiritual Birthday',cellGroup:'Cell Group',address:'Address',joinDate:'Join Date',group:'Group',contact:'Contact No',birthdate:'Flesh Birthday',status:'Status',ministry:'Ministry Assignments',services:'Upcoming Services',confirm:'Confirm',confirmed:'Confirmed',noMinistry:'No ministry assignments.',noServices:'No upcoming services.',noEvents:'No upcoming events at this time.',registerNow:'Register Now',cancelReg:'Cancel Registration',closedReg:'Registration Closed',viewDetails:'View Details',myRegs:'My Registrations',regDeadline:'Deadline',of:'of',registered:'registered',attendanceHistory:'My Attendance History',noAttendance:'No attendance records found.',date:'Date',service:'Service',checkin:'Check-in',statusL:'Status',present:'Present',absent:'Absent',offeringsHistory:'My Tithes and Offering History',noOfferings:'No giving records.',type:'Type',amount:'Amount',totalYtd:'Total Year-to-Date',verse:'"God loves a cheerful giver." — 2 Corinthians 9:7',excellent:'Excellent',good:'Good',improve:'Needs Improvement',willAttend:'I will attend',wontAttend:'Cannot attend',undecided:'Undecided',rsvp:'RSVP',closePanel:'Close',serviceDetails:'Service Details',eventDetails:'Event Details',attending:'Attending',notAttending:'Not attending',capacity:'Capacity',responseBy:'Response by',yourRsvp:'Your RSVP'},
   tl:{tabs:['Pangkalahatang-tanaw','Mga Kaganapan','Pagdalo','Mga Handog'],portal:'Portal ng Miyembro',welcome:'Maligayang pagdating',settings:'Mga Setting',logout:'Mag-logout',attendanceRate:'Rate ng Pagdalo',last2mo:'Nakaraang buwan',totalOfferings:'Kabuuang Ikapu at Handog',thisYear:'Ngayong taon',memberSince:'Miyembro Mula',myProfile:'Aking Profile',editProfile:'I-edit',save:'I-save',cancel:'Kanselahin',memberId:'Member ID',memberName:'Pangalan',spiritual:'Espirituwal na Kaarawan',cellGroup:'Cell Group',address:'Tirahan',joinDate:'Petsa ng Pagsali',group:'Grupo',contact:'Numero',birthdate:'Kaarawan',status:'Katayuan',ministry:'Mga Takdang Gawain',services:'Mga Paparating na Serbisyo',confirm:'Kumpirmahin',confirmed:'Nakumpirma',noMinistry:'Walang mga takdang gawain.',noServices:'Walang paparating na serbisyo.',noEvents:'Walang mga kaganapan.',registerNow:'Mag-register Na',cancelReg:'Kanselahin',closedReg:'Sarado na',viewDetails:'Tingnan',myRegs:'Aking mga Pagpaparehistro',regDeadline:'Deadline',of:'sa',registered:'nakapag-register',attendanceHistory:'Kasaysayan ng Pagdalo',noAttendance:'Walang rekord ng pagdalo.',date:'Petsa',service:'Serbisyo',checkin:'Check-in',statusL:'Katayuan',present:'Naroroon',absent:'Wala',offeringsHistory:'Kasaysayan ng Ikapu at Handog',noOfferings:'Walang rekord ng pagbibigay.',type:'Uri',amount:'Halaga',totalYtd:'Kabuuang Ikapu at Handog sa Taon',verse:'"Ang nagbibigay nang masaya ay mahal ng Diyos." — 2 Mga Taga-Corinto 9:7',excellent:'Kahusayan',good:'Mabuti',improve:'Kailangan ng Pagpabuti',willAttend:'Darating ako',wontAttend:'Hindi ako makakarating',undecided:'Hindi pa sigurado',rsvp:'RSVP',closePanel:'Isara',serviceDetails:'Detalye ng Serbisyo',eventDetails:'Detalye ng Kaganapan',attending:'Darating',notAttending:'Hindi darating',capacity:'Kapasidad',responseBy:'Sagot bago ang',yourRsvp:'Iyong RSVP'},
 };
-
-// ── Mobile detection hook ─────────────────────────────────────
-function useWindowWidth() {
-  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1280);
-  useEffect(() => {
-    const fn = () => setW(window.innerWidth);
-    window.addEventListener('resize', fn, { passive: true });
-    return () => window.removeEventListener('resize', fn);
-  }, []);
-  return w;
-}
 
 // ── Shared utility components ─────────────────────────────────
 function Ring({value=0,size=88,stroke=8,color='#005599',bg='#e2e8f0'}) {

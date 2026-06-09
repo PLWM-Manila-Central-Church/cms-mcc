@@ -2,13 +2,36 @@
 
 const authService = require("../services/auth.service");
 
+const cookieOpts = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  path: "/",
+};
+
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const ip     = req.ip || req.headers["x-forwarded-for"] || null;
     const device = req.headers["user-agent"] || null;
     const data   = await authService.login(email, password, ip, device);
-    res.json({ success: true, data });
+
+    // Set httpOnly cookies for tokens
+    res.cookie("accessToken",  data.accessToken,  { ...cookieOpts, maxAge: 15 * 60 * 1000 });
+    res.cookie("refreshToken", data.refreshToken, { ...cookieOpts, maxAge: 7 * 24 * 60 * 60 * 1000 });
+    // Non-httpOnly cookies for JS-access
+    res.cookie("user", JSON.stringify(data.user), { ...cookieOpts, httpOnly: false, maxAge: 15 * 60 * 1000 });
+    res.cookie("permissions", JSON.stringify(data.permissions), { ...cookieOpts, httpOnly: false, maxAge: 15 * 60 * 1000 });
+
+    // Don't return tokens in body — only user-facing data
+    res.json({
+      success: true,
+      data: {
+        user: data.user,
+        permissions: data.permissions,
+        forcePasswordChange: data.forcePasswordChange,
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -16,9 +39,14 @@ exports.login = async (req, res, next) => {
 
 exports.refreshToken = async (req, res, next) => {
   try {
-    const { refresh_token } = req.body;
-    const data = await authService.refreshToken(refresh_token);
-    res.json({ success: true, data });
+    const refreshToken = req.cookies?.refreshToken || req.body?.refresh_token;
+    const data = await authService.refreshToken(refreshToken);
+
+    // Set new cookies
+    res.cookie("accessToken",  data.accessToken,  { ...cookieOpts, maxAge: 15 * 60 * 1000 });
+    res.cookie("refreshToken", data.refreshToken, { ...cookieOpts, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+    res.json({ success: true, data: { message: "Token refreshed" } });
   } catch (err) {
     next(err);
   }
@@ -56,8 +84,15 @@ exports.changePassword = async (req, res, next) => {
 
 exports.logout = async (req, res, next) => {
   try {
-    const { refresh_token } = req.body;
-    const data = await authService.logout(req.user.userId, refresh_token);
+    const refreshToken = req.cookies?.refreshToken || req.body?.refresh_token;
+    const data = await authService.logout(req.user.userId, refreshToken);
+
+    // Clear auth cookies
+    res.clearCookie("accessToken",  { ...cookieOpts });
+    res.clearCookie("refreshToken", { ...cookieOpts });
+    res.clearCookie("user",         { ...cookieOpts, httpOnly: false });
+    res.clearCookie("permissions",  { ...cookieOpts, httpOnly: false });
+
     res.json({ success: true, data });
   } catch (err) {
     next(err);

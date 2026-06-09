@@ -63,17 +63,17 @@ const validateLeaderAssignment = async (role, data, existingUser = null) => {
   }
 
   if (role.role_name === "Cell Group Leader" && final.leads_cell_group_id) {
-    const row = await CellGroup.findByPk(final.leads_cell_group_id);
-    throw AppError.notFound("RECORD_NOT_FOUND", "Leader cell group not found");
-  }
-  if (role.role_name === "Group Leader" && final.leads_group_id) {
-    const row = await MinistryGroup.findByPk(final.leads_group_id);
-    throw AppError.notFound("RECORD_NOT_FOUND", "Leader group not found");
-  }
-  if (role.role_name === "Ministry Leader" && final.leads_ministry_id) {
-    const row = await MinistryRole.findByPk(final.leads_ministry_id);
-    throw AppError.notFound("RECORD_NOT_FOUND", "Leader ministry not found");
-  }
+      const row = await CellGroup.findByPk(final.leads_cell_group_id);
+      if (!row) throw AppError.notFound("RECORD_NOT_FOUND", "Leader cell group not found");
+    }
+    if (role.role_name === "Group Leader" && final.leads_group_id) {
+      const row = await MinistryGroup.findByPk(final.leads_group_id);
+      if (!row) throw AppError.notFound("RECORD_NOT_FOUND", "Leader group not found");
+    }
+    if (role.role_name === "Ministry Leader" && final.leads_ministry_id) {
+      const row = await MinistryRole.findByPk(final.leads_ministry_id);
+      if (!row) throw AppError.notFound("RECORD_NOT_FOUND", "Leader ministry not found");
+    }
 
   return {
     leads_cell_group_id: role.role_name === "Cell Group Leader" ? parseInt(final.leads_cell_group_id) : null,
@@ -99,7 +99,7 @@ exports.getUserById = async (id) => {
     attributes: { exclude: ["password_hash"] },
     include: userIncludes,
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
+  if (!user) throw AppError.notFound("RECORD_NOT_FOUND", "Requested resource not available");
   return user;
 };
 
@@ -114,10 +114,10 @@ exports.createUser = async (data, createdBy) => {
   } = data;
 
   const existing = await User.findOne({ where: { email, is_deleted: 0 } });
-  throw AppError.conflict("DUPLICATE", "Email already in use");
+  if (existing) throw AppError.conflict("DUPLICATE", "Email already in use");
 
   const role = await Role.findByPk(role_id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
+  if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
 
   const leaderAssignment = await validateLeaderAssignment(role, {
     leads_cell_group_id,
@@ -185,7 +185,7 @@ exports.createUser = async (data, createdBy) => {
 // ── Update User ──────────────────────────────────────────────
 exports.updateUser = async (id, data, updatedBy) => {
   const user = await User.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
+  if (!user) throw AppError.notFound("RECORD_NOT_FOUND", "Requested resource not available");
 
   const {
     email, role_id, member_id, invited_member_id, is_active,
@@ -197,13 +197,13 @@ exports.updateUser = async (id, data, updatedBy) => {
 
   if (email && email !== user.email) {
     const existing = await User.findOne({ where: { email, is_deleted: 0 } });
-    throw AppError.conflict("DUPLICATE", "Email already in use");
+    if (existing) throw AppError.conflict("DUPLICATE", "Email already in use");
   }
 
   const role = role_id
     ? await Role.findByPk(role_id)
     : await Role.findByPk(user.role_id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
+  if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
 
   const leaderAssignment = await validateLeaderAssignment(role, {
     leads_cell_group_id,
@@ -271,7 +271,7 @@ exports.deactivateUser = async (id, requestingUserId) => {
     throw AppError.badRequest("VALIDATION", "You cannot deactivate your own account");
 
   const user = await User.findOne({ where: { id, is_deleted: 0 } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
+  if (!user) throw AppError.notFound("RECORD_NOT_FOUND", "Requested resource not available");
 
   await user.update({ is_active: 0 });
   auditLog.log({ userId: requestingUserId, action: "DEACTIVATE_USER", targetTable: "users", targetId: id });
@@ -281,7 +281,7 @@ exports.deactivateUser = async (id, requestingUserId) => {
 // ── Activate User ─────────────────────────────────────────────
 exports.activateUser = async (id, requestingUserId) => {
   const user = await User.findOne({ where: { id, is_deleted: 0 } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
+  if (!user) throw AppError.notFound("RECORD_NOT_FOUND", "Requested resource not available");
 
   await user.update({ is_active: 1 });
   auditLog.log({ userId: requestingUserId, action: "ACTIVATE_USER", targetTable: "users", targetId: id });
@@ -294,7 +294,7 @@ exports.hardDeleteUser = async (id, requestingUserId) => {
     throw AppError.badRequest("VALIDATION", "You cannot delete your own account");
 
   const user = await User.findOne({ where: { id, is_deleted: 0 } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
+  if (!user) throw AppError.notFound("RECORD_NOT_FOUND", "Requested resource not available");
 
   const sequelize = require("../config/db");
 

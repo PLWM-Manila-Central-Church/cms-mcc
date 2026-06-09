@@ -2,18 +2,14 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { NAV_ITEMS, NAV_ICONS } from '../../utils/constants';
 import { isVisibleNavItem } from '../../utils/roleAccess';
+import SafeIcon from '../common/SafeIcon';
 
 const LOGO = process.env.PUBLIC_URL + '/logo.jpg';
 
 function NavIcon({ name, size = 18 }) {
   const svg = NAV_ICONS[name];
   if (!svg) return null;
-  return (
-    <span
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, width: 24, height: 24 }}
-      dangerouslySetInnerHTML={{ __html: svg.replace('width="18"', `width="${size}"`).replace('height="18"', `height="${size}"`) }}
-    />
-  );
+  return <SafeIcon svg={svg} size={size} />;
 }
 
 export default function Sidebar({ collapsed, onToggle, isMobile = false }) {

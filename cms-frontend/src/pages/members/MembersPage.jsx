@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
@@ -219,18 +219,18 @@ export default function MembersPage() {
     setSelected(new Set());
   };
 
-  const sortedMembers = [...members].sort((a, b) => {
-    for (const { col, dir } of sorts) {
-      let av = '', bv = '';
-      if (col === 'name')   { av = `${a.last_name} ${a.first_name}`.toLowerCase(); bv = `${b.last_name} ${b.first_name}`.toLowerCase(); }
-      if (col === 'cg')     { av = a.cellGroup?.name || ''; bv = b.cellGroup?.name || ''; }
-      if (col === 'group')  { av = a.group?.name || ''; bv = b.group?.name || ''; }
-      if (col === 'status') { av = a.status || ''; bv = b.status || ''; }
-      if (av < bv) return dir === 'asc' ? -1 : 1;
-      if (av > bv) return dir === 'asc' ? 1 : -1;
-    }
-    return 0;
-  });
+  const sortedMembers = useMemo(() => [...members].sort((a, b) => {
+      for (const { col, dir } of sorts) {
+        let av = '', bv = '';
+        if (col === 'name')   { av = `${a.last_name} ${a.first_name}`.toLowerCase(); bv = `${b.last_name} ${b.first_name}`.toLowerCase(); }
+        if (col === 'cg')     { av = a.cellGroup?.name || ''; bv = b.cellGroup?.name || ''; }
+        if (col === 'group')  { av = a.group?.name || ''; bv = b.group?.name || ''; }
+        if (col === 'status') { av = a.status || ''; bv = b.status || ''; }
+        if (av < bv) return dir === 'asc' ? -1 : 1;
+        if (av > bv) return dir === 'asc' ? 1 : -1;
+      }
+      return 0;
+    }), [members, sorts]);
 
   const SortIndicator = ({ col }) => {
     const idx = sorts.findIndex(s => s.col === col);

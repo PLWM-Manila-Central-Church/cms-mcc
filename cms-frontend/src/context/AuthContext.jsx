@@ -19,64 +19,67 @@ export const AuthProvider = ({ children }) => {
   const permSet = useMemo(() => new Set(permissions), [permissions]);
 
   useEffect(() => {
-    const storedUser        = localStorage.getItem('user');
-    const storedPermissions = localStorage.getItem('permissions');
-    const accessToken       = localStorage.getItem('accessToken');
+      // Read user and permissions from cookies (set by backend on login)
+      // document.cookie is parsed manually — no need for a cookie library for ~4 cookies
+      const parseCookie = (name) => {
+        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? decodeURIComponent(match[2]) : null;
+      };
 
-    if (storedUser && accessToken) {
-      setUser(JSON.parse(storedUser));
-      setPermissions(parseStoredPermissions(storedPermissions));
-    }
-    setLoading(false);
-  }, []);
+      const storedUser        = parseCookie('user');
+      const storedPermissions = parseCookie('permissions');
+      const accessToken       = parseCookie('accessToken');
+
+      if (storedUser && accessToken) {
+        try {
+          setUser(JSON.parse(storedUser));
+          setPermissions(parseStoredPermissions(storedPermissions));
+        } catch {
+          // corrupted cookie — ignore
+        }
+      }
+      setLoading(false);
+    }, []);
 
   const login = async (email, password) => {
-    const res = await axiosInstance.post('/auth/login', { email, password });
-    const { accessToken, refreshToken, user, permissions, forcePasswordChange } = res.data.data;
+      const res = await axiosInstance.post('/auth/login', { email, password });
+      const { user, permissions, forcePasswordChange } = res.data.data;
 
-    // Store forcePasswordChange and leader scope ids inside the user object.
-    // forcePasswordChange: enforced by ProtectedRoute on next navigation.
-    // leadsMinistryId: used by Ministry Leader scoping.
-    const userWithFlag = {
-      ...user,
-      forcePasswordChange: !!forcePasswordChange,
-      leadsCellGroupId:   user.leadsCellGroupId || null,
-      leadsGroupId:       user.leadsGroupId || null,
-      leadsMinistryId:     user.leadsMinistryId || null,
-      leadsCellGroupName: user.leadsCellGroupName || null,
-      leadsGroupName:     user.leadsGroupName || null,
-      leadsMinistryName:  user.leadsMinistryName || null,
+      // user and permissions are already set as cookies by the server
+      // Just update React state
+      const userWithFlag = {
+        ...user,
+        forcePasswordChange: !!forcePasswordChange,
+        leadsCellGroupId:   user.leadsCellGroupId || null,
+        leadsGroupId:       user.leadsGroupId || null,
+        leadsMinistryId:     user.leadsMinistryId || null,
+        leadsCellGroupName: user.leadsCellGroupName || null,
+        leadsGroupName:     user.leadsGroupName || null,
+        leadsMinistryName:  user.leadsMinistryName || null,
+      };
+
+      setUser(userWithFlag);
+      setPermissions(permissions || []);
+
+      return { forcePasswordChange };
     };
 
-    localStorage.setItem('accessToken',  accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('user',         JSON.stringify(userWithFlag));
-    localStorage.setItem('permissions',  JSON.stringify(permissions));
+    const clearForcePasswordChange = () => {
+      const updatedUser = { ...user, forcePasswordChange: false };
+      setUser(updatedUser);
+    };
 
-    setUser(userWithFlag);
-    setPermissions(permissions);
-
-    return { forcePasswordChange };
-  };
-
-  const clearForcePasswordChange = () => {
-    const updatedUser = { ...user, forcePasswordChange: false };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
-  };
-
-  const logout = async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      await axiosInstance.post('/auth/logout', { refresh_token: refreshToken });
-    } catch (err) {
-      // silent
-    } finally {
-      localStorage.clear();
-      setUser(null);
-      setPermissions([]);
-    }
-  };
+    const logout = async () => {
+        try {
+          await axiosInstance.post('/auth/logout', {});
+        } catch (err) {
+          // silent — server may already have invalidated the token
+        } finally {
+          // Server clears all auth cookies; just reset React state
+          setUser(null);
+          setPermissions([]);
+        }
+      };
 
   const hasPermission = (module, action) => {
     return permSet.has(`${module}:${action}`);

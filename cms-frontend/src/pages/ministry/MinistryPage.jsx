@@ -4,45 +4,15 @@ import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
-
-function ageFromDate(dateValue) {
-  if (!dateValue) return null;
-  const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return null;
-  const now = new Date();
-  let age = now.getFullYear() - date.getFullYear();
-  const monthDelta = now.getMonth() - date.getMonth();
-  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < date.getDate())) age -= 1;
-  return age >= 0 ? age : null;
-}
-
-function fullName(member = {}) {
-  return `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'Member';
-}
-
-function ageLabel(dateValue) {
-  const age = ageFromDate(dateValue);
-  return age === null ? '-' : `${age}`;
-}
-
-function dateWithAge(dateValue) {
-  const age = ageFromDate(dateValue);
-  const date = dateValue ? fmtDate(dateValue) : '-';
-  return age === null ? date : `${age} yrs - ${date}`;
-}
+import { fullName, ageLabel, dateWithAge, fmtDate } from '../../utils/member';
 
 function ministryPageTitle(name = '') {
   const value = String(name || '').trim();
   if (!value || value.toLowerCase() === 'ministry') return 'Ministry';
   return /ministry$/i.test(value) ? value : `${value} Ministry`;
-}
+  }
 
-function fmtDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-export default function MinistryPage() {
+  export default function MinistryPage() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const isMember = user?.roleName === 'Member';

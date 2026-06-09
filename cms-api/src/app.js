@@ -6,6 +6,7 @@ const helmet  = require("helmet");
 const morgan  = require("morgan");
 const path    = require("path");
 const rateLimit = require("express-rate-limit");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 
 const Sentry  = require("@sentry/node");
@@ -31,6 +32,7 @@ if (process.env.SENTRY_DSN) {
 }
 app.set("trust proxy", 1);
 
+app.use(cookieParser());
 app.use(requestId);
 
 // ── Request Timeout (prevents stuck requests from exhausting DB pool) ──
@@ -176,6 +178,14 @@ app.use("/api/members/import-csv",    bulkImportLimiter);
 app.use("/api/members/search",       searchLimiter);
 app.use("/api/events/register",      eventRegisterLimiter);
 app.use("/api/member-portal/events", eventRegisterLimiter);
+
+// ── User detail enumeration rate limiter (prevents sequential ID scanning) ──
+const userDetailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { message: "Too many requests. Try again later." },
+});
+app.use("/api/users", userDetailLimiter);
 
 // ── Public Routes (no auth) ───────────────────────────────────
 app.use("/api/public",        require("./routes/public.routes"));

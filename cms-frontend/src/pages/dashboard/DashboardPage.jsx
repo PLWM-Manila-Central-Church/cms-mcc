@@ -228,15 +228,15 @@ function CellGroupAlertsPanel({ data, latestService }) {
   const [view, setView] = useState('table');
   const [sort, setSort] = useState({ key: 'absent', dir: 'desc' });
 
-  if (!latestService) return <div style={S.empty}>No recent service found.</div>;
-  const items = (data || []).filter(g => g.absent > 0);
-  if (items.length === 0) return <div style={S.empty}>All cell groups had full attendance. No alerts.</div>;
+  const items = useMemo(() => (data || []).filter(g => g.absent > 0), [data]);
+  const sorted = useMemo(() => [...items].sort((a, b) => {
+      const av = a[sort.key] ?? 0, bv = b[sort.key] ?? 0;
+      if (sort.key === 'cellGroupName') return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      return sort.dir === 'asc' ? av - bv : bv - av;
+    }), [items, sort]);
 
-  const sorted = [...items].sort((a, b) => {
-    const av = a[sort.key] ?? 0, bv = b[sort.key] ?? 0;
-    if (sort.key === 'cellGroupName') return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-    return sort.dir === 'asc' ? av - bv : bv - av;
-  });
+  if (!latestService) return <div style={S.empty}>No recent service found.</div>;
+  if (items.length === 0) return <div style={S.empty}>All cell groups had full attendance. No alerts.</div>;
 
   const toggleSort = (key) => {
     setSort(prev => {

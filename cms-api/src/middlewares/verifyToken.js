@@ -4,8 +4,11 @@ const jwt = require("jsonwebtoken");
 const { User, Role, Member, MinistryRole, CellGroup, MinistryGroup } = require("../models");
 
 module.exports = async (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+  // Read token from cookie first, then fall back to Authorization header
+  const token = req.cookies?.accessToken || (() => {
+    const authHeader = req.headers["authorization"];
+    return authHeader && authHeader.split(" ")[1];
+  })();
 
   if (!token) return res.status(401).json({ message: "No token provided" });
 

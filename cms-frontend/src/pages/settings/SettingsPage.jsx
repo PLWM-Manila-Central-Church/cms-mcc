@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
@@ -151,9 +151,9 @@ export default function SettingsPage() {
 
   const groups = [...new Set(Object.values(settings).map(s => s.group))].sort();
   const hasChanges = Object.keys(changes).length > 0;
-  const visibleKeys = Object.entries(settings)
-    .filter(([, s]) => s.group === activeGroup)
-    .sort(([, a], [, b]) => a.label.localeCompare(b.label));
+  const visibleKeys = useMemo(() => Object.entries(settings)
+      .filter(([, s]) => s.group === activeGroup)
+      .sort(([, a], [, b]) => a.label.localeCompare(b.label)), [settings, activeGroup]);
 
   const renderInput = (key, setting) => {
     const value = getValue(key);

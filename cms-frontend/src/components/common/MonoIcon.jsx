@@ -73,6 +73,12 @@ const ICONS = {
     <path key="cr1" d="M12 3v18" />,
     <path key="cr2" d="M7 8h10" />,
   ],
+  dashboard: [
+    <rect key="db1" x="3" y="3" width="7" height="7" rx="1" />,
+    <rect key="db2" x="14" y="3" width="7" height="7" rx="1" />,
+    <rect key="db3" x="3" y="14" width="7" height="7" rx="1" />,
+    <rect key="db4" x="14" y="14" width="7" height="7" rx="1" />,
+  ],
   delete: [
     <path key="d1" d="M3 6h18" />,
     <path key="d2" d="M8 6V4h8v2" />,

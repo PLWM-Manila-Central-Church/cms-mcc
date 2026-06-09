@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import AppRoutes from './routes/AppRoute';
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import OfflineBanner from './components/common/OfflineBanner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,6 +82,7 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <GlobalPrefsApplicator />
+          <OfflineBanner />
           <AppRoutes />
         </AuthProvider>
       </BrowserRouter>
