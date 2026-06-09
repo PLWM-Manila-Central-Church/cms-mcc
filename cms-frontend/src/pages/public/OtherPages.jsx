@@ -456,13 +456,13 @@ export function WhatWeBelievePage() {
       ],
     },
     {
-      title: 'The Millennial Kingdom & Eternal Kingdom',
-      image: null,
-      items: [
-        "Christ, who returns to the earth, will reign over the world for a thousand years.",
-        "Born-again Christians will enjoy eternal life and blessedness with Christ in heaven.",
-      ],
-    },
+          title: 'The Millennial Kingdom & Eternal Kingdom',
+          image: '/mk.png',
+          items: [
+            "Christ, who returns to the earth, will reign over the world for a thousand years.",
+            "Born-again Christians will enjoy eternal life and blessedness with Christ in heaven.",
+          ],
+        },
   ];
 
   // Scroll-reveal: observe each belief section
