@@ -87,7 +87,7 @@ axiosInstance.interceptors.response.use(
 
       try {
         // Cookie auto-sends the refreshToken — just hit the endpoint
-        const res = await axios.post(
+        await axios.post(
           `${process.env.REACT_APP_API_URL}/auth/refresh`,
           {},
           { withCredentials: true }
