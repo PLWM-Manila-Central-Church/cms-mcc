@@ -31,7 +31,7 @@ exports.createUser = async (req, res, next) => {
 
 exports.updateUser = async (req, res, next) => {
   try {
-    const result = await usersService.updateUser(req.params.id, req.body, req.user.userId);
+    const result = await usersService.updateUser(req.params.id, req.body, req.user);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

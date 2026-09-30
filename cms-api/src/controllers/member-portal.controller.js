@@ -93,8 +93,12 @@ exports.uploadProfilePhoto = async (req, res, next) => {
       return res.status(400).json({ message: "No member profile linked to this account" });
     if (!req.file)
       return res.status(400).json({ message: "No file uploaded" });
-    const relativePath = `/profiles/${req.file.filename}`;
-    const data = await portalService.uploadProfilePhoto(req.user.memberId, relativePath);
+    // S3 uploads expose the object key on req.file.key; disk uploads on req.file.filename
+    const { s3Enabled, getFileUrl } = require("../middlewares/upload-s3");
+    const filePath = s3Enabled && req.file.key
+      ? getFileUrl(req.file.key)
+      : `/profiles/${req.file.filename}`;
+    const data = await portalService.uploadProfilePhoto(req.user.memberId, filePath);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };

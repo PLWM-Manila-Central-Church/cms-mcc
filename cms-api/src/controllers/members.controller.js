@@ -1,6 +1,7 @@
 "use strict";
 
 const membersService = require("../services/members.service");
+const AppError       = require("../helpers/AppError");
 
 exports.getAllMembers = async (req, res, next) => {
   try {
@@ -43,6 +44,7 @@ exports.deleteMember = async (req, res, next) => {
     const result = await membersService.deleteMember(
       req.params.id,
       req.user.userId,
+      req.body.reason,
       req.user,
     );
     res.json({ success: true, data: result });
@@ -92,7 +94,7 @@ exports.assignMemberToScope = async (req, res, next) => {
 
 exports.bulkCreateMembers = async (req, res, next) => {
   try {
-    throw AppError.badRequest("VALIDATION", "No CSV file uploaded");
+    if (!req.file) throw AppError.badRequest("VALIDATION", "No CSV file uploaded");
     const result = await membersService.bulkCreateMembers(req.file.buffer, req.user.userId);
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
@@ -102,5 +104,36 @@ exports.linkMemberAccount = async (req, res, next) => {
   try {
     const result = await membersService.linkMemberAccount(req.params.id, req.body, req.user.userId);
     res.status(201).json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
+// ── Dropdown lists for the member form ───────────────────────
+// Scoped leaders only see the group they lead; everyone else sees all.
+
+const assignedOnlyWhere = (req, roleName, fieldName) => {
+  if (req.user?.roleName !== roleName) return {};
+  const id = req.user?.[fieldName];
+  return id ? { id } : { id: null };
+};
+
+exports.getCellGroupDropdowns = async (req, res, next) => {
+  try {
+    const { CellGroup } = require("../models");
+    const data = await CellGroup.findAll({
+      where: assignedOnlyWhere(req, "Cell Group Leader", "leadsCellGroupId"),
+      order: [["name", "ASC"]],
+    });
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.getGroupDropdowns = async (req, res, next) => {
+  try {
+    const { MinistryGroup } = require("../models");
+    const data = await MinistryGroup.findAll({
+      where: assignedOnlyWhere(req, "Group Leader", "leadsGroupId"),
+      order: [["name", "ASC"]],
+    });
+    res.json({ success: true, data });
   } catch (err) { next(err); }
 };

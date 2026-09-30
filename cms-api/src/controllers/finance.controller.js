@@ -1,6 +1,7 @@
 "use strict";
 
 const financeService = require("../services/finance.service");
+const AppError       = require("../helpers/AppError");
 
 // ── Financial Records ────────────────────────────────────────
 exports.getAllRecords = async (req, res, next) => {
@@ -282,11 +283,14 @@ exports.deleteExpense = async (req, res, next) => {
 // ── 6. ATTACHMENTS CONTROLLERS ────────────────────────────────
 exports.uploadAttachment = async (req, res, next) => {
   try {
-    throw AppError.badRequest("VALIDATION", "No receipt file uploaded");
+    if (!req.file) throw AppError.badRequest("VALIDATION", "No receipt file uploaded");
 
     const { income_id, expense_id } = req.body;
-    // Store relative URL path instead of absolute filesystem path
-    const relativePath = "/uploads/receipts/" + req.file.filename;
+    // S3 uploads expose the object key on req.file.key; disk uploads on req.file.filename
+    const { s3Enabled, getFileUrl } = require("../middlewares/upload-s3");
+    const relativePath = s3Enabled && req.file.key
+      ? getFileUrl(req.file.key)
+      : "/uploads/receipts/" + req.file.filename;
     const result = await financeService.createAttachment({
       file_name: req.file.originalname,
       file_path: relativePath,

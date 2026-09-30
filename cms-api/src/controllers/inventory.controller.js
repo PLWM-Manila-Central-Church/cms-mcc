@@ -2,6 +2,8 @@
 
 const inventoryService = require("../services/inventory.service");
 const { isScopedLeader } = require("../helpers/scopedLeader.helper");
+const permissionCache    = require("../helpers/permissionCache.helper");
+const AppError           = require("../helpers/AppError");
 
 const forbidScopedInventoryManage = (req, res) => {
   if (!isScopedLeader(req.user)) return false;
@@ -24,6 +26,14 @@ const ensureOwnInventoryRequest = (request, userId) => {
   if (request.requested_by !== userId) {
     throw AppError.forbidden("This inventory request is outside your account");
   }
+};
+
+// Approvers (inventory:update) may access any request; everyone else
+// is restricted to their own — regardless of role.
+const canReviewInventory = async (req) => {
+  if (req.user.roleName === "System Admin") return true;
+  const permissions = await permissionCache.get(req.user.roleId);
+  return permissions.has("inventory:update");
 };
 
 // ── Items ────────────────────────────────────────────────────
@@ -158,7 +168,7 @@ exports.getMyRequests = async (req, res, next) => {
 exports.getRequestById = async (req, res, next) => {
   try {
     const data = await inventoryService.getRequestById(req.params.id);
-    if (isScopedLeader(req.user)) ensureOwnInventoryRequest(data, req.user.userId);
+    if (!(await canReviewInventory(req))) ensureOwnInventoryRequest(data, req.user.userId);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -187,7 +197,7 @@ exports.reviewRequest = async (req, res, next) => {
 
 exports.deleteRequest = async (req, res, next) => {
   try {
-    if (isScopedLeader(req.user)) {
+    if (!(await canReviewInventory(req))) {
       const request = await inventoryService.getRequestById(req.params.id);
       ensureOwnInventoryRequest(request, req.user.userId);
     }
