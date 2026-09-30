@@ -5,6 +5,7 @@ const sequelize   = require("../config/db");
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
+const AppError = require("../helpers/AppError");
 const {
   InventoryItem,
   InventoryCategory,
@@ -50,7 +51,7 @@ exports.getAllItems = async ({ page = 1, limit = 15, search, category_id } = {})
 // ── Get Item By ID ───────────────────────────────────────────
 exports.getItemById = async (id) => {
   const item = await InventoryItem.findByPk(id, { include: itemIncludes });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
+  if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
   return item;
 };
 
@@ -58,15 +59,19 @@ exports.getItemById = async (id) => {
 exports.createItem = async (data, createdBy) => {
   const { name, category_id, quantity, unit, condition, low_stock_threshold, notes } = data;
 
+  const qty = parseInt(quantity, 10) || 0;
+  if (qty < 0)
+    throw AppError.badRequest("VALIDATION", "Quantity must be zero or a positive number");
+
   if (category_id) {
     const category = await InventoryCategory.findByPk(category_id);
-    throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
+    if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
   }
 
   const item = await InventoryItem.create({
     name,
     category_id:         category_id         || null,
-    quantity:            quantity             || 0,
+    quantity:            qty,
     unit:                unit                 || null,
     condition:           condition            || null,
     low_stock_threshold: low_stock_threshold  || null,
@@ -81,19 +86,19 @@ exports.createItem = async (data, createdBy) => {
 // ── Update Item ──────────────────────────────────────────────
 exports.updateItem = async (id, data, updatedBy) => {
   const item = await InventoryItem.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
+  if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
   const { name, category_id, quantity, unit, condition, low_stock_threshold, notes } = data;
 
   if (category_id) {
     const category = await InventoryCategory.findByPk(category_id);
-    throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
+    if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
   }
 
   await item.update({
     ...(name                !== undefined && { name }),
     ...(category_id         !== undefined && { category_id }),
-    ...(quantity            !== undefined && { quantity }),
+    ...(quantity            !== undefined && { quantity: Math.max(0, parseInt(quantity, 10) || 0) }),
     ...(unit                !== undefined && { unit }),
     ...(condition           !== undefined && { condition }),
     ...(low_stock_threshold !== undefined && { low_stock_threshold }),
@@ -107,7 +112,7 @@ exports.updateItem = async (id, data, updatedBy) => {
 // ── Delete Item ──────────────────────────────────────────────
 exports.deleteItem = async (id, deletedBy) => {
   const item = await InventoryItem.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
+  if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
   await item.destroy();
   auditLog.log({ userId: deletedBy, action: "DELETE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: id });
@@ -121,25 +126,25 @@ exports.getAllCategories = async () => {
 
 exports.getCategoryById = async (id) => {
   const category = await InventoryCategory.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
+  if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
   return category;
 };
 
 exports.createCategory = async (data) => {
   const { name } = data;
   const existing = await InventoryCategory.findOne({ where: { name } });
-  throw AppError.conflict("DUPLICATE", "Category name already exists");
+  if (existing) throw AppError.conflict("DUPLICATE", "Category name already exists");
   return await InventoryCategory.create({ name });
 };
 
 exports.updateCategory = async (id, data) => {
   const category = await InventoryCategory.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
+  if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
 
   const { name } = data;
   if (name && name !== category.name) {
     const existing = await InventoryCategory.findOne({ where: { name } });
-    throw AppError.conflict("DUPLICATE", "Category name already exists");
+    if (existing) throw AppError.conflict("DUPLICATE", "Category name already exists");
   }
 
   await category.update({ ...(name && { name }) });
@@ -148,11 +153,11 @@ exports.updateCategory = async (id, data) => {
 
 exports.deleteCategory = async (id) => {
   const category = await InventoryCategory.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
+  if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory category not found");
 
   const inUse = await InventoryItem.count({ where: { category_id: id } });
   if (inUse > 0)
-    throw AppError.badRequest("VALIDATION", "`Cannot delete. ${inUse");
+    throw AppError.badRequest("VALIDATION", `Cannot delete. ${inUse} item(s) use this category`);
 
   await category.destroy();
   return { message: "Inventory category deleted successfully." };
@@ -197,7 +202,7 @@ exports.getRequestById = async (id) => {
       { model: InventoryItem, as: "item", attributes: ["id", "name", "unit"], required: false },
     ],
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory request not found");
+  if (!request) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory request not found");
   return request;
 };
 
@@ -205,13 +210,17 @@ exports.getRequestById = async (id) => {
 exports.createRequest = async (data, requestedBy) => {
   const { item_id, quantity, purpose } = data;
 
+  const qty = parseInt(quantity, 10);
+  if (!Number.isInteger(qty) || qty <= 0)
+    throw AppError.badRequest("VALIDATION", "Quantity must be a positive integer");
+
   const item = await InventoryItem.findByPk(item_id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
+  if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
   const request = await InventoryRequest.create({
     item_id,
     requested_by: requestedBy,
-    quantity,
+    quantity: qty,
     purpose: purpose || null,
     status: "pending",
   });
@@ -235,7 +244,7 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
       lock: t.LOCK.UPDATE,
       transaction: t,
     });
-    throw AppError.notFound("RECORD_NOT_FOUND", "Inventory request not found");
+    if (!request) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory request not found");
 
     if (request.status !== "pending")
       throw AppError.badRequest("VALIDATION", "Request has already been reviewed");
@@ -247,7 +256,7 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
         lock: t.LOCK.UPDATE,
         transaction: t,
       });
-      throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
+      if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
       if (item.quantity < request.quantity)
         throw AppError.badRequest("VALIDATION", "Insufficient inventory quantity");
       await item.decrement("quantity", { by: request.quantity, transaction: t });
@@ -296,7 +305,7 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
 // ── Delete Request ───────────────────────────────────────────
 exports.deleteRequest = async (id, deletedBy) => {
   const request = await InventoryRequest.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory request not found");
+  if (!request) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory request not found");
 
   if (request.status !== "pending")
     throw AppError.badRequest("VALIDATION", "Only pending requests can be deleted");
@@ -320,27 +329,39 @@ exports.getAllUsage = async () => {
 exports.createUsage = async (data, usedBy) => {
   const { item_id, quantity_used, used_for, used_at } = data;
 
-  const item = await InventoryItem.findByPk(item_id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
+  const qty = parseInt(quantity_used, 10);
+  if (!Number.isInteger(qty) || qty <= 0)
+    throw AppError.badRequest("VALIDATION", "Quantity used must be a positive integer");
 
-  if (item.quantity < quantity_used)
-    throw AppError.badRequest("VALIDATION", "Insufficient inventory quantity");
+  // Same pattern as reviewRequest: lock the item row so concurrent usage
+  // records cannot both pass the sufficiency check and drive stock negative.
+  return await sequelize.transaction(async (t) => {
+    const item = await InventoryItem.findOne({
+      where: { id: item_id },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+    if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
-  await item.update({ quantity: item.quantity - quantity_used });
+    if (item.quantity < qty)
+      throw AppError.badRequest("VALIDATION", "Insufficient inventory quantity");
 
-  return await InventoryUsage.create({
-    item_id,
-    quantity_used,
-    used_by:  usedBy,
-    used_for: used_for || null,
-    used_at:  used_at  || new Date(),
+    await item.decrement("quantity", { by: qty, transaction: t });
+
+    return await InventoryUsage.create({
+      item_id,
+      quantity_used: qty,
+      used_by:  usedBy,
+      used_for: used_for || null,
+      used_at:  used_at  || new Date(),
+    }, { transaction: t });
   });
 };
 
 // ── Delete Usage Record ──────────────────────────────────────
 exports.deleteUsage = async (id) => {
   const usage = await InventoryUsage.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Usage record not found");
+  if (!usage) throw AppError.notFound("RECORD_NOT_FOUND", "Usage record not found");
 
   await usage.destroy();
   return { message: "Usage record deleted successfully." };

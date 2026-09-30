@@ -4,6 +4,7 @@ const sequelize = require("../config/db");
 const { CellGroup, CellGroupHistory, Member } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
 const { ensureMemberInScope, isScopedLeader } = require("../helpers/scopedLeader.helper");
+const AppError = require("../helpers/AppError");
 
 const getCellGroupWhereForUser = (user = {}) => {
   if (user.roleName !== "Cell Group Leader") return {};
@@ -48,7 +49,7 @@ exports.getAllCellGroups = async (user = {}) => {
 exports.getCellGroupById = async (id, user = {}) => {
   ensureCellGroupAccess(id, user);
   const cellGroup = await CellGroup.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
+  if (!cellGroup) throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
   return cellGroup;
 };
 
@@ -68,7 +69,7 @@ exports.createCellGroup = async (data, createdBy, user = {}) => {
 exports.updateCellGroup = async (id, data, updatedBy, user = {}) => {
   forbidScopedCellGroupManage(user);
   const cellGroup = await CellGroup.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
+  if (!cellGroup) throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
 
   const { name, area } = data;
   if (name && name !== cellGroup.name) {
@@ -89,7 +90,7 @@ exports.updateCellGroup = async (id, data, updatedBy, user = {}) => {
 exports.deleteCellGroup = async (id, deletedBy, user = {}) => {
   forbidScopedCellGroupManage(user);
   const cellGroup = await CellGroup.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
+  if (!cellGroup) throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
 
   const inUse = await Member.count({ where: { cell_group_id: id } });
   if (inUse > 0)
@@ -107,7 +108,7 @@ exports.deleteCellGroup = async (id, deletedBy, user = {}) => {
 exports.getCellGroupHistory = async (memberId, user = {}) => {
   await ensureMemberInScope(memberId, user);
   const member = await Member.findByPk(memberId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   return await CellGroupHistory.findAll({
     where: { member_id: memberId },
@@ -123,14 +124,14 @@ exports.createCellGroupHistory = async (data, changedBy, user = {}) => {
   const { member_id, new_cell_group_id, reason } = data;
 
   const member = await Member.findByPk(member_id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   // Derive old_cell_group_id from the DB — never trust the client
   const old_cell_group_id = member.cell_group_id || null;
 
   if (new_cell_group_id) {
     const cellGroup = await CellGroup.findByPk(new_cell_group_id);
-    throw AppError.notFound("RECORD_NOT_FOUND", "New cell group not found");
+    if (!cellGroup) throw AppError.notFound("RECORD_NOT_FOUND", "New cell group not found");
   }
 
   // Update member's cell group

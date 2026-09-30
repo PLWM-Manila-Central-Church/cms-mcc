@@ -77,14 +77,14 @@ exports.getAllSettings = async () => {
 // ── Get Setting By Key ───────────────────────────────────────
 exports.getSettingByKey = async (key) => {
   const setting = await SystemSetting.findOne({ where: { key } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Setting not found");
+  if (!setting) throw AppError.notFound("RECORD_NOT_FOUND", "Setting not found");
   return setting;
 };
 
 // ── Update Setting By Key ────────────────────────────────────
 exports.updateSetting = async (key, value, updatedBy) => {
   const setting = await SystemSetting.findOne({ where: { key } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Setting not found");
+  if (!setting) throw AppError.notFound("RECORD_NOT_FOUND", "Setting not found");
   await setting.update({ value, updated_by: updatedBy });
   auditLog.log({ userId: updatedBy, action: "UPDATE_SETTING", targetTable: "system_settings", targetId: key });
   cache.del("settings:all");
@@ -95,7 +95,7 @@ exports.updateSetting = async (key, value, updatedBy) => {
 exports.bulkUpdateSettings = async (settings, updatedBy) => {
   for (const { key, value } of settings) {
     const setting = await SystemSetting.findOne({ where: { key } });
-    throw AppError.notFound("RECORD_NOT_FOUND", "`Setting '${key");
+    if (!setting) throw AppError.notFound("RECORD_NOT_FOUND", `Setting '${key}' not found`);
     await setting.update({ value, updated_by: updatedBy });
   }
   auditLog.log({ userId: updatedBy, action: "UPDATE_SETTINGS", targetTable: "system_settings" });
@@ -132,7 +132,7 @@ exports.bulkUpdateFromObject = async (obj, updatedBy) => {
 exports.createSetting = async (data, updatedBy) => {
   const { key, value } = data;
   const existing = await SystemSetting.findOne({ where: { key } });
-  throw AppError.conflict("DUPLICATE", "Setting key already exists");
+  if (existing) throw AppError.conflict("DUPLICATE", "Setting key already exists");
   cache.del("settings:all");
   return await SystemSetting.create({ key, value: value || null, updated_by: updatedBy });
 };
@@ -140,7 +140,7 @@ exports.createSetting = async (data, updatedBy) => {
 // ── Delete Setting ───────────────────────────────────────────
 exports.deleteSetting = async (key) => {
   const setting = await SystemSetting.findOne({ where: { key } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Setting not found");
+  if (!setting) throw AppError.notFound("RECORD_NOT_FOUND", "Setting not found");
   await setting.destroy();
   cache.del("settings:all");
   return { message: "Setting deleted successfully." };

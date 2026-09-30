@@ -37,8 +37,10 @@ exports.getAllLogs = async (query = {}) => {
 };
 
 exports.getLogById = async (id) => {
-  const log = await AuditLog.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Audit log not found");
+  const log = await AuditLog.findByPk(id, {
+    include: [{ model: User, attributes: ["id", "email"], required: false }],
+  });
+  if (!log) throw AppError.notFound("RECORD_NOT_FOUND", "Audit log not found");
   return log;
 };
 
@@ -53,18 +55,5 @@ exports.getLogsByTable = async (targetTable) => {
   return await AuditLog.findAll({
     where: { target_table: targetTable },
     order: [["created_at", "DESC"]],
-  });
-};
-
-exports.createLog = async (data) => {
-  const { user_id, action, target_table, target_id, old_values, new_values, ip_address } = data;
-  return await AuditLog.create({
-    user_id,
-    action,
-    target_table: target_table || null,
-    target_id:    target_id   || null,
-    old_values:   old_values  || null,
-    new_values:   new_values  || null,
-    ip_address:   ip_address  || null,
   });
 };

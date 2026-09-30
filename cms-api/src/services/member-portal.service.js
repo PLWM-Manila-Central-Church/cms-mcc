@@ -6,13 +6,14 @@ const sequelize = require("../config/db");
 const path     = require("path");
 const fs       = require("fs");
 const logger   = require("../helpers/logger");
+const AppError = require("../helpers/AppError");
 const {
   Member, CellGroup, Group, EmergencyContact,
   Attendance, Service, ServiceResponse, ServiceAttendanceSummary,
   FinancialRecord, FinancialCategory,
   Event, EventRegistration, EventCategory,
   MinistryAssignment, MinistryRole, MinistryEventInvite, Notification,
-  User,
+  User, RefreshToken,
 } = require("../models");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
@@ -53,7 +54,7 @@ exports.getMyProfile = async (memberId) => {
       { model: EmergencyContact, as: "emergencyContacts", required: false },
     ],
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Member profile not found");
+  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member profile not found");
 
   // Fetch linked user to get join date (user account creation = join date).
   // Do NOT restrict attributes — with underscored:true Sequelize exposes timestamps
@@ -79,7 +80,7 @@ const MEMBER_EDITABLE_FIELDS = [
 
 exports.updateMyProfile = async (memberId, data) => {
   const member = await Member.findOne({ where: { id: memberId } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   // Whitelist — members cannot touch status, barcode, cell_group_id, group_id, etc.
   const update = {};
@@ -89,7 +90,7 @@ exports.updateMyProfile = async (memberId, data) => {
 
   if (update.email && update.email !== member.email) {
     const existing = await Member.findOne({ where: { email: update.email } });
-    throw AppError.conflict("DUPLICATE", "Email already in use");
+    if (existing) throw AppError.conflict("DUPLICATE", "Email already in use");
   }
 
   await member.update(update);
@@ -228,29 +229,36 @@ exports.getMyEvents = async (memberId) => {
 
 // ── Register for Event (self) ────────────────────────────────
 exports.registerForEvent = async (memberId, eventId) => {
-  const event = await Event.findOne({ where: { id: eventId } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
-  if (!["Upcoming", "Ongoing"].includes(event.status))
-    throw AppError.badRequest("VALIDATION", "Event is not open for registration");
-  if (event.registration_deadline && new Date() > new Date(event.registration_deadline))
-    throw AppError.badRequest("VALIDATION", "Registration deadline has passed");
+  // Transaction + row lock on the event serializes concurrent registrations
+  // so capacity cannot be exceeded by racing requests.
+  return await sequelize.transaction(async (t) => {
+    const event = await Event.findOne({
+      where: { id: eventId },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+    if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+    if (!["Upcoming", "Ongoing"].includes(event.status))
+      throw AppError.badRequest("VALIDATION", "Event is not open for registration");
+    if (event.registration_deadline && new Date() > new Date(event.registration_deadline))
+      throw AppError.badRequest("VALIDATION", "Registration deadline has passed");
 
-  const existing = await EventRegistration.findOne({
-    where: { event_id: eventId, member_id: memberId },
+    const existing = await EventRegistration.findOne({
+      where: { event_id: eventId, member_id: memberId },
+      transaction: t,
+    });
+    if (existing) throw AppError.conflict("DUPLICATE", "You are already registered for this event");
+
+    if (event.capacity) {
+      const count = await EventRegistration.count({ where: { event_id: eventId }, transaction: t });
+      if (count >= event.capacity) throw AppError.badRequest("VALIDATION", "Event has reached full capacity");
+    }
+
+    return await EventRegistration.create({
+      event_id: eventId, member_id: memberId,
+      registered_at: new Date(), registered_by: null,
+    }, { transaction: t });
   });
-  throw AppError.conflict("DUPLICATE", "You are already registered for this event");
-
-  if (event.capacity) {
-    const count = await EventRegistration.count({ where: { event_id: eventId } });
-    throw AppError.badRequest("VALIDATION", "Event has reached full capacity");
-  }
-
-  const reg = await EventRegistration.create({
-    event_id: eventId, member_id: memberId,
-    registered_at: new Date(), registered_by: null,
-  });
-
-  return reg;
 };
 
 // ── Cancel Event Registration (self) ─────────────────────────
@@ -262,7 +270,7 @@ exports.cancelEventRegistration = async (memberId, eventId) => {
   const reg = await EventRegistration.findOne({
     where: { event_id: eventId, member_id: memberId },
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Registration not found");
+  if (!reg) throw AppError.notFound("RECORD_NOT_FOUND", "Registration not found");
 
   await reg.destroy();
   return { message: "Registration cancelled successfully." };
@@ -274,13 +282,15 @@ exports.changeMyPassword = async (userId, currentPassword, newPassword) => {
     throw AppError.badRequest("VALIDATION", "New password must be at least 8 characters");
 
   const user = await User.findByPk(userId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
+  if (!user) throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
 
   const match = await bcrypt.compare(currentPassword, user.password_hash);
-  throw AppError.badRequest("VALIDATION", "Current password is incorrect");
+  if (!match) throw AppError.badRequest("VALIDATION", "Current password is incorrect");
 
   const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   await user.update({ password_hash: hash, force_password_change: 0 });
+  // Revoke all sessions so outstanding refresh tokens die with the old password
+  await RefreshToken.update({ revoked: 1 }, { where: { user_id: userId, revoked: 0 } });
 
   return { message: "Password changed successfully." };
 };
@@ -294,8 +304,8 @@ exports.confirmMinistryAssignment = async (memberId, assignmentId) => {
       { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"], required: false },
     ],
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Assignment not found");
-  throw AppError.badRequest("VALIDATION", "Already confirmed");
+  if (!assignment) throw AppError.notFound("RECORD_NOT_FOUND", "Assignment not found");
+  if (assignment.confirmed) throw AppError.badRequest("VALIDATION", "Already confirmed");
 
   await assignment.update({ confirmed: 1 });
 
@@ -336,7 +346,7 @@ exports.getUpcomingServices = async () => {
 // ── Upload Profile Photo ──────────────────────────────────────
 exports.uploadProfilePhoto = async (memberId, filePath) => {
   const member = await Member.findOne({ where: { id: memberId } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   // Delete the old photo file from disk if it exists
   if (member.profile_photo_url) {
@@ -357,7 +367,7 @@ exports.getServiceDetails = async (serviceId, memberId) => {
   const service = await Service.findByPk(serviceId, {
     attributes: ["id", "title", "service_date", "service_time", "capacity", "status", "response_deadline"],
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const myResponse = await ServiceResponse.findOne({
     where: { service_id: serviceId, member_id: memberId },
@@ -378,7 +388,7 @@ exports.getServiceDetails = async (serviceId, memberId) => {
 // ── Submit Service RSVP (creates Attendance pre-reg for ATTENDING) ─
 exports.submitServiceResponse = async (memberId, serviceId, attendanceStatus) => {
   const service = await Service.findByPk(serviceId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const validStatuses = ["ATTENDING", "NOT_ATTENDING", "UNDECIDED"];
   if (!validStatuses.includes(attendanceStatus))

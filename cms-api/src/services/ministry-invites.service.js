@@ -3,6 +3,7 @@
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
+const AppError     = require("../helpers/AppError");
 const {
   MinistryEventInvite,
   MinistryRole,
@@ -38,7 +39,7 @@ const inviteIncludes = [
 // to a specific ministry_role_id (so a Leader only sees their ministry).
 exports.getInvitesByEvent = async (eventId, ministryRoleId = null) => {
   const event = await Event.findByPk(eventId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
   const where = { event_id: eventId };
   if (ministryRoleId) where.ministry_role_id = ministryRoleId;
@@ -62,10 +63,10 @@ exports.createInvites = async (
   if (forcedMinistryRoleId) ministry_role_id = forcedMinistryRoleId;
 
   const event = await Event.findByPk(eventId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
   const role = await MinistryRole.findByPk(ministry_role_id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
+  if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
 
   if (!Array.isArray(member_ids) || member_ids.length === 0)
     throw AppError.badRequest("VALIDATION", "member_ids must be a non-empty array");
@@ -150,12 +151,12 @@ exports.createInvites = async (
 exports.respondToInvite = async (inviteId, memberId, response_status) => {
   const validStatuses = ["attending", "not_attending"];
   if (!validStatuses.includes(response_status))
-    throw AppError.badRequest("VALIDATION", "`response_status must be one of: ${validStatuses.join(", ")");
+    throw AppError.badRequest("VALIDATION", `response_status must be one of: ${validStatuses.join(", ")}`);
 
   const invite = await MinistryEventInvite.findByPk(inviteId, {
     include: inviteIncludes,
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Invite not found");
+  if (!invite) throw AppError.notFound("RECORD_NOT_FOUND", "Invite not found");
 
   // Guard: only the invited member may respond
   if (invite.member_id !== parseInt(memberId))
@@ -183,6 +184,6 @@ exports.getInviteById = async (inviteId) => {
   const invite = await MinistryEventInvite.findByPk(inviteId, {
     include: inviteIncludes,
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Invite not found");
+  if (!invite) throw AppError.notFound("RECORD_NOT_FOUND", "Invite not found");
   return invite;
 };

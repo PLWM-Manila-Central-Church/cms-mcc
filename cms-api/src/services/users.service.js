@@ -3,6 +3,8 @@
 const bcrypt = require("bcrypt");
 const { User, Role, Member, MinistryRole, MinistryMembership, CellGroup, MinistryGroup } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
+const permissionCache = require("../helpers/permissionCache.helper");
+const AppError = require("../helpers/AppError");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
 
@@ -183,7 +185,8 @@ exports.createUser = async (data, createdBy) => {
 };
 
 // ── Update User ──────────────────────────────────────────────
-exports.updateUser = async (id, data, updatedBy) => {
+exports.updateUser = async (id, data, actor) => {
+  const updatedBy = actor?.userId ?? actor;
   const user = await User.findByPk(id);
   if (!user) throw AppError.notFound("RECORD_NOT_FOUND", "Requested resource not available");
 
@@ -243,8 +246,18 @@ exports.updateUser = async (id, data, updatedBy) => {
     }
   }
 
-  // Update linked member if exists
-  if (user.member_id) {
+  // Update linked member if exists — writing member profile fields
+  // (name/contact/group assignments) requires members:update, otherwise
+  // a users:update-only role could silently move members between groups.
+  const canEditMembers = actor?.roleName === "System Admin" || (
+    actor?.roleId && (await permissionCache.get(actor.roleId)).has("members:update")
+  );
+  const hasMemberFields =
+    first_name !== undefined || last_name !== undefined || phone !== undefined ||
+    gender !== undefined || birthdate !== undefined || spiritual_birthday !== undefined ||
+    address !== undefined || cell_group_id !== undefined || group_id !== undefined;
+
+  if (user.member_id && hasMemberFields && canEditMembers) {
     const member = await Member.findByPk(user.member_id);
     if (member) {
       await member.update({

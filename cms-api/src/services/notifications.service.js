@@ -1,6 +1,7 @@
 "use strict";
 
 const { Notification } = require("../models");
+const AppError = require("../helpers/AppError");
 
 // ── Get All Notifications for User ──────────────────────────
 exports.getUserNotifications = async (userId) => {
@@ -23,7 +24,7 @@ exports.getNotificationById = async (id, userId) => {
   const notification = await Notification.findOne({
     where: { id, user_id: userId },
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
+  if (!notification) throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
   return notification;
 };
 
@@ -68,7 +69,7 @@ exports.markAsRead = async (id, userId) => {
   const notification = await Notification.findOne({
     where: { id, user_id: userId },
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
+  if (!notification) throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
 
   // FIX BUG 3: was throwing 400 if already read, causing race-condition failures.
   // Now it's a no-op — if already read, just return it unchanged.
@@ -93,7 +94,7 @@ exports.deleteNotification = async (id, userId) => {
   const notification = await Notification.findOne({
     where: { id, user_id: userId },
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
+  if (!notification) throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
   await notification.destroy();
   return { message: "Notification deleted successfully." };
 };
