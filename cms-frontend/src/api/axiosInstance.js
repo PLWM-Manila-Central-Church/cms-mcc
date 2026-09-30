@@ -75,8 +75,8 @@ axiosInstance.interceptors.response.use(
       if (isRefreshing) {
         // Another request is already refreshing — queue this one
         return new Promise((resolve) => {
-          subscribeToRefresh((newToken) => {
-            original.headers['Authorization'] = `Bearer ${newToken}`;
+          subscribeToRefresh(() => {
+            // Cookies were refreshed by the server — just replay the request
             resolve(axiosInstance(original));
           });
         });
