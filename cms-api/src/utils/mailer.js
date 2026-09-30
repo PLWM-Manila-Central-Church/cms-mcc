@@ -38,8 +38,9 @@ async function sendViaBrevo(payload) {
 
 // ── Send Password Reset Email ────────────────────────────────
 exports.sendPasswordReset = async ({ to, resetUrl }) => {
-  // Reads from SMTP_FROM env var e.g. "PLWM-MCC <johnlesterdematera0961@gmail.com>"
-  const smtpFrom  = process.env.SMTP_FROM || "PLWM-MCC <johnlesterdematera0961@gmail.com>";
+  // Reads from SMTP_FROM env var e.g. "PLWM-MCC <noreply@example.com>"
+  const smtpFrom  = process.env.SMTP_FROM;
+  if (!smtpFrom) throw new Error("[Mailer] SMTP_FROM env variable is not set.");
   const match     = smtpFrom.match(/^(.*?)\s*<(.+)>$/);
   const fromName  = match ? match[1].trim() : "PLWM-MCC";
   const fromEmail = match ? match[2].trim() : smtpFrom.trim();
