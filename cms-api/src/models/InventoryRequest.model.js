@@ -23,7 +23,14 @@ const InventoryRequest = sequelize.define(
     reviewed_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     review_note: { type: DataTypes.TEXT, allowNull: true },
   },
-  { tableName: "inventory_requests", timestamps: true, underscored: true },
+  {
+    tableName: "inventory_requests",
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      { fields: ["requested_by", "status"], name: "idx_ir_requester_status" },
+    ],
+  },
 );
 
 module.exports = InventoryRequest;

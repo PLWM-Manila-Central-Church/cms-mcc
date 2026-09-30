@@ -13,7 +13,7 @@ module.exports = async (req, res, next) => {
   if (!token) return res.status(401).json({ message: "No token provided" });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
 
     const user = await User.findByPk(decoded.userId, {
       attributes: ["id", "email", "role_id", "member_id", "is_active", "force_password_change", "leads_cell_group_id", "leads_group_id", "leads_ministry_id"],
@@ -28,6 +28,19 @@ module.exports = async (req, res, next) => {
 
     if (!user) return res.status(401).json({ message: "User not found" });
     if (!user.is_active) return res.status(401).json({ message: "Account deactivated" });
+
+    // ── Force password change: block all endpoints except change-password and logout ──
+    if (user.force_password_change === 1) {
+      const allowedPaths = ["/api/auth/change-password", "/api/auth/logout"];
+      const isAllowed = allowedPaths.some(p => req.path.startsWith(p));
+      if (!isAllowed) {
+        return res.status(403).json({
+          success: false,
+          message: "You must change your password before continuing",
+          code: "FORCE_PASSWORD_CHANGE",
+        });
+      }
+    }
 
     req.user = {
       userId:             user.id,

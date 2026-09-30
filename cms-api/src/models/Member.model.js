@@ -42,6 +42,12 @@ const Member = sequelize.define(
     underscored: true,
     defaultScope: { where: { is_deleted: 0 } },
     scopes: { withDeleted: {} },
+    indexes: [
+      { fields: ["status"], name: "idx_member_status" },
+      { fields: ["cell_group_id"], name: "idx_member_cell_group" },
+      { fields: ["group_id"], name: "idx_member_group" },
+      { fields: ["email"], name: "idx_member_email" },
+    ],
   },
 );
 

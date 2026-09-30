@@ -2,6 +2,7 @@
 
 const { Op } = require("sequelize");
 const { Member, MinistryMembership } = require("../models");
+const AppError = require("../helpers/AppError");
 
 const SCOPED_ROLES = new Set(["Ministry Leader", "Cell Group Leader", "Group Leader"]);
 
@@ -91,6 +92,8 @@ const ensureMemberInScope = async (memberId, user = {}) => {
 const filterMemberUpdateForScopedLeader = (data = {}, user = {}) => {
   if (!isScopedLeader(user)) return data;
 
+  // Barcode excluded — it is an operational attendance identifier,
+  // not profile data; only full member editors may change it.
   const allowed = [
     "first_name",
     "last_name",
@@ -101,7 +104,6 @@ const filterMemberUpdateForScopedLeader = (data = {}, user = {}) => {
     "address",
     "gender",
     "profile_photo_url",
-    "barcode",
   ];
 
   return allowed.reduce((acc, key) => {

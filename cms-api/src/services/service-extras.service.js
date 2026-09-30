@@ -10,7 +10,8 @@ const {
   Member,
   User,
 } = require("../models");
-const logger = require("../helpers/logger");
+const logger   = require("../helpers/logger");
+const AppError = require("../helpers/AppError");
 
 // ── Helpers ──────────────────────────────────────────────────
 const syncSummary = async (serviceId) => {
@@ -30,18 +31,18 @@ const syncSummary = async (serviceId) => {
 // ── Service Attendance Summary ───────────────────────────────
 exports.getSummaryByService = async (serviceId) => {
   const service = await Service.findByPk(serviceId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const summary = await ServiceAttendanceSummary.findOne({
     where: { service_id: serviceId },
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Attendance summary not found");
+  if (!summary) throw AppError.notFound("RECORD_NOT_FOUND", "Attendance summary not found");
   return summary;
 };
 
 exports.upsertSummary = async (serviceId, data) => {
   const service = await Service.findByPk(serviceId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const { total_expected, total_attended, total_absent } = data;
 
@@ -58,7 +59,7 @@ exports.upsertSummary = async (serviceId, data) => {
 // ── Service Responses ────────────────────────────────────────
 exports.getResponsesByService = async (serviceId) => {
   const service = await Service.findByPk(serviceId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   return await ServiceResponse.findAll({
     where: { service_id: serviceId },
@@ -80,10 +81,10 @@ exports.createOrUpdateResponse = async (
   overrideBy,
 ) => {
   const service = await Service.findByPk(serviceId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const member = await Member.findByPk(memberId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   const { attendance_status, seat_number, parking_slot, override_reason } =
     data;
@@ -142,7 +143,7 @@ exports.createOrUpdateResponse = async (
 
 exports.deleteResponse = async (id) => {
   const response = await ServiceResponse.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Service response not found");
+  if (!response) throw AppError.notFound("RECORD_NOT_FOUND", "Service response not found");
   await response.destroy();
   return { message: "Service response deleted successfully." };
 };
@@ -219,66 +220,7 @@ exports.getSubstituteRequestById = async (id, user = {}) => {
   const request = await SubstituteRequest.findByPk(id, {
     include: substituteIncludes,
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
-  ensureSubstituteInScope(request, user);
-  return request;
-};
-
-exports.createSubstituteRequest = async (data, requestedBy) => {
-  const { assignment_id, service_id, proposed_member_id, reason } = data;
-
-  let resolvedAssignmentId = assignment_id;
-
-  // If frontend sends service_id instead of assignment_id, look up the assignment
-  if (!resolvedAssignmentId && service_id && requestedBy) {
-    const user = await User.findByPk(requestedBy, { attributes: ["member_id"] });
-    if (user?.member_id) {
-      const assignment = await MinistryAssignment.findOne({
-        where: { service_id, member_id: user.member_id },
-      });
-      if (assignment) resolvedAssignmentId = assignment.id;
-    }
-  }
-
-  if (!resolvedAssignmentId)
-    throw AppError.badRequest("VALIDATION", "Could not find your ministry assignment for this service");
-
-  const assignment = await MinistryAssignment.findByPk(resolvedAssignmentId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Ministry assignment not found");
-
-  const existing = await SubstituteRequest.findOne({
-    where: { assignment_id: resolvedAssignmentId, status: "pending" },
-  });
-  if (existing)
-    throw AppError.conflict("DUPLICATE", "A pending substitute request already exists for this assignment");
-
-  // proposed_substitute is a User FK - look up the user linked to the proposed member
-  let proposedUserId = null;
-  if (proposed_member_id) {
-    const proposedUser = await User.findOne({
-      where: { member_id: proposed_member_id },
-      attributes: ["id"],
-    });
-    proposedUserId = proposedUser?.id || null;
-  }
-
-  return await SubstituteRequest.create({
-    assignment_id:       resolvedAssignmentId,
-    requested_by:        requestedBy,
-    proposed_substitute: proposedUserId,
-    reason:              reason || null,
-    status:              "pending",
-  });
-};
-
-exports.resolveSubstituteRequest = async (id, status, resolvedBy, user = {}) => {
-  const request = await SubstituteRequest.findByPk(id, {
-    include: [
-      { model: MinistryAssignment, as: "assignment", attributes: ["id", "ministry_role_id"], required: true },
-      { model: User, as: "proposedSubstituteUser", attributes: ["id", "member_id"], required: false },
-    ],
-  });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
+  if (!request) throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
   ensureSubstituteInScope(request, user);
 
   if (request.status !== "pending")
@@ -306,7 +248,7 @@ exports.deleteSubstituteRequest = async (id, user = {}) => {
   const request = await SubstituteRequest.findByPk(id, {
     include: [{ model: MinistryAssignment, as: "assignment", attributes: ["id", "ministry_role_id"], required: true }],
   });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
+  if (!request) throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
   ensureSubstituteInScope(request, user);
 
   if (request.status !== "pending")

@@ -8,14 +8,19 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 export default function useIdleTimer(timeoutMs = 15 * 60 * 1000) {
   const [idle, setIdle] = useState(false);
   const timerRef = useRef(null);
+  const idleRef = useRef(false); // ref to avoid stale closure
 
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (idle) setIdle(false); // user came back
+    if (idleRef.current) {
+      idleRef.current = false;
+      setIdle(false);
+    }
     timerRef.current = setTimeout(() => {
+      idleRef.current = true;
       setIdle(true);
     }, timeoutMs);
-  }, [timeoutMs, idle]);
+  }, [timeoutMs]); // no longer depends on `idle` state
 
   useEffect(() => {
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];

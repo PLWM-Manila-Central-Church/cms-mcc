@@ -4,6 +4,8 @@ const router = require("express").Router();
 const ctrl   = require("../controllers/ministry-invites.controller");
 const auth   = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
+const validate = require("../middlewares/validate");
+const { createInvitesSchema, respondToInviteSchema } = require("../validators/ministry-invites.validator");
 
 // ── Ministry Event Invites ───────────────────────────────────
 // Mounted at /api/events in app.js — paths are relative to that.
@@ -23,6 +25,7 @@ router.post(
   "/:eventId/invites",
   auth,
   authorize("events", "invite"),
+  validate(createInvitesSchema),
   ctrl.createInvites,
 );
 
@@ -32,6 +35,7 @@ router.post(
 router.patch(
   "/invites/:inviteId/respond",
   auth,
+  validate(respondToInviteSchema),
   ctrl.respondToInvite,
 );
 

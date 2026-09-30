@@ -8,7 +8,7 @@ const { Op } = require("sequelize");
 
 exports.generateTithingStatement = async (memberId, year) => {
   const member = await Member.findByPk(memberId, { attributes: ["id", "first_name", "last_name"] });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   const yearDate = String(year || new Date().getFullYear());
   const from = `${yearDate}-01-01`;

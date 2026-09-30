@@ -29,32 +29,36 @@ const SOFT_DELETE_TABLES = ["archive_records", "financial_records", "members"];
 
 exports.revertLog = async (logId, userId) => {
   const log = await AuditLog.findByPk(logId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Audit log entry not found");
+  if (!log) throw AppError.notFound("RECORD_NOT_FOUND", "Audit log entry not found");
 
   const pk = tablePk[log.target_table];
-  throw AppError.badRequest("VALIDATION", "`Revert not supported for table ${log.target_table");
+  if (!pk) throw AppError.badRequest("VALIDATION", `Revert not supported for table ${log.target_table}`);
 
+  // Each revert runs in a transaction so the data mutation and its
+  // REVERT_AUDIT trail commit (or roll back) together.
   if (CREATE_ACTIONS.includes(log.action)) {
     const table = log.target_table;
-    if (SOFT_DELETE_TABLES.includes(table)) {
-      await sequelize.query(
-        `UPDATE ${sequelize.escape(table)} SET is_deleted = 1, deleted_at = NOW() WHERE ${sequelize.escape(pk)} = ?`,
-        { replacements: [log.target_id] }
-      );
-    } else {
-      await sequelize.query(
-        `DELETE FROM ${sequelize.escape(table)} WHERE ${sequelize.escape(pk)} = ?`,
-        { replacements: [log.target_id] }
-      );
-    }
+    await sequelize.transaction(async (t) => {
+      if (SOFT_DELETE_TABLES.includes(table)) {
+        await sequelize.query(
+          `UPDATE ${sequelize.escape(table)} SET is_deleted = 1, deleted_at = NOW() WHERE ${sequelize.escape(pk)} = ?`,
+          { replacements: [log.target_id], transaction: t }
+        );
+      } else {
+        await sequelize.query(
+          `DELETE FROM ${sequelize.escape(table)} WHERE ${sequelize.escape(pk)} = ?`,
+          { replacements: [log.target_id], transaction: t }
+        );
+      }
 
-    await AuditLog.create({
-      user_id: userId,
-      action: "REVERT_AUDIT",
-      target_table: log.target_table,
-      target_id: log.target_id,
-      old_values: log.new_values,
-      new_values: log.old_values,
+      await AuditLog.create({
+        user_id: userId,
+        action: "REVERT_AUDIT",
+        target_table: log.target_table,
+        target_id: log.target_id,
+        old_values: log.new_values,
+        new_values: log.old_values,
+      }, { transaction: t });
     });
 
     return { message: "Record reverted successfully (removed or soft-deleted)" };
@@ -66,22 +70,24 @@ exports.revertLog = async (logId, userId) => {
       .join(", ");
     const values = Object.values(log.old_values);
 
-    await sequelize.query(
-      `UPDATE ${sequelize.escape(log.target_table)} SET ${sets} WHERE ${sequelize.escape(pk)} = ?`,
-      { replacements: [...values, log.target_id] }
-    );
+    await sequelize.transaction(async (t) => {
+      await sequelize.query(
+        `UPDATE ${sequelize.escape(log.target_table)} SET ${sets} WHERE ${sequelize.escape(pk)} = ?`,
+        { replacements: [...values, log.target_id], transaction: t }
+      );
 
-    await AuditLog.create({
-      user_id: userId,
-      action: "REVERT_AUDIT",
-      target_table: log.target_table,
-      target_id: log.target_id,
-      old_values: log.new_values,
-      new_values: log.old_values,
+      await AuditLog.create({
+        user_id: userId,
+        action: "REVERT_AUDIT",
+        target_table: log.target_table,
+        target_id: log.target_id,
+        old_values: log.new_values,
+        new_values: log.old_values,
+      }, { transaction: t });
     });
 
     return { message: "Record reverted to previous values" };
   }
 
-  throw AppError.badRequest("VALIDATION", "`Revert not supported for action ${log.action");
+  throw AppError.badRequest("VALIDATION", `Revert not supported for action ${log.action}`);
 };

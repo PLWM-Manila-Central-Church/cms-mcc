@@ -36,6 +36,10 @@ const Event = sequelize.define(
     underscored: true,
     defaultScope: { where: { is_deleted: 0 } },
     scopes: { withDeleted: {} },
+    indexes: [
+      { fields: ["start_date", "status"], name: "idx_event_date_status" },
+      { fields: ["status"], name: "idx_event_status" },
+    ],
   },
 );
 

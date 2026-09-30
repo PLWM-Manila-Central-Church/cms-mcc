@@ -54,6 +54,11 @@ module.exports = (err, req, res, next) => {
     return res.status(401).json({ message: "Token expired" });
   }
 
+  // CORS origin rejections (cors middleware throws plain Error)
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({ message: "Origin not allowed" });
+  }
+
   // Default server error — never expose internal messages in production
   const isDev = process.env.NODE_ENV === "development";
   return res.status(err.status || 500).json({

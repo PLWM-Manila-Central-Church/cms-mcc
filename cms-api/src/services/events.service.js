@@ -1,6 +1,7 @@
 "use strict";
 
 const { Op } = require("sequelize");
+const sequelize = require("../config/db");
 const AppError    = require("../helpers/AppError");
 const cache       = require("../helpers/cache.helper");
 const auditLog     = require("../helpers/auditLog.helper");
@@ -129,7 +130,7 @@ exports.createEvent = async (data, createdBy) => {
 
   if (category_id) {
     const category = await EventCategory.findByPk(category_id);
-    throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
+    if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
   }
 
   const event = await Event.create({
@@ -160,7 +161,7 @@ exports.createEvent = async (data, createdBy) => {
 // ── Update Event ─────────────────────────────────────────────
 exports.updateEvent = async (id, data, updatedBy) => {
   const event = await Event.findOne({ where: { id, is_deleted: 0 } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
   const currentStatus = normalizeStatus(event.status);
   if (currentStatus === EVENT_STATUS.COMPLETED || currentStatus === EVENT_STATUS.CANCELLED)
@@ -178,7 +179,7 @@ exports.updateEvent = async (id, data, updatedBy) => {
 
   if (category_id) {
     const category = await EventCategory.findByPk(category_id);
-    throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
+    if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
   }
 
   await event.update({
@@ -201,7 +202,7 @@ exports.updateEvent = async (id, data, updatedBy) => {
 // ── Update Event Status ──────────────────────────────────────
 exports.updateEventStatus = async (id, newStatus, updatedBy) => {
   const event = await Event.findOne({ where: { id } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
   const currentStatus = normalizeStatus(event.status);
   const validTransitions = {
@@ -255,7 +256,7 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
 // ── Soft Delete Event ────────────────────────────────────────
 exports.deleteEvent = async (id, deletedBy) => {
   const event = await Event.findOne({ where: { id, is_deleted: 0 } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
   // Block deleting active events because they may have registrations.
   // Admins must cancel or complete them first, then delete.
@@ -276,24 +277,24 @@ exports.getAllCategories = async () => {
 
 exports.getCategoryById = async (id) => {
   const category = await EventCategory.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
+  if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
   return category;
 };
 
 exports.createCategory = async (data) => {
   const { name, description } = data;
   const existing = await EventCategory.findOne({ where: { name } });
-  throw AppError.conflict("DUPLICATE", "Category name already exists");
+  if (existing) throw AppError.conflict("DUPLICATE", "Category name already exists");
   return await EventCategory.create({ name, description: description || null });
 };
 
 exports.updateCategory = async (id, data) => {
   const category = await EventCategory.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
+  if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
   const { name, description } = data;
   if (name && name !== category.name) {
     const existing = await EventCategory.findOne({ where: { name } });
-    throw AppError.conflict("DUPLICATE", "Category name already exists");
+    if (existing) throw AppError.conflict("DUPLICATE", "Category name already exists");
   }
   await category.update({
     ...(name        && { name }),
@@ -304,10 +305,10 @@ exports.updateCategory = async (id, data) => {
 
 exports.deleteCategory = async (id) => {
   const category = await EventCategory.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
+  if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
   const inUse = await Event.unscoped().count({ where: { category_id: id } });
   if (inUse > 0)
-    throw AppError.badRequest("VALIDATION", "`Cannot delete category. ${inUse");
+    throw AppError.badRequest("VALIDATION", `Cannot delete category. ${inUse} event(s) use this category`);
   await category.destroy();
   return { message: "Event category deleted successfully." };
 };
@@ -315,7 +316,7 @@ exports.deleteCategory = async (id) => {
 // ── Get Event Registrations ──────────────────────────────────
 exports.getEventRegistrations = async (eventId) => {
   const event = await Event.findOne({ where: { id: eventId } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
   return await EventRegistration.findAll({
     where: { event_id: eventId },
     include: registrationIncludes,
@@ -325,27 +326,38 @@ exports.getEventRegistrations = async (eventId) => {
 
 // ── Register Member ──────────────────────────────────────────
 exports.registerMember = async (eventId, memberId, registeredBy) => {
-  const event = await Event.findOne({ where: { id: eventId } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
-  if (!REGISTRATION_OPEN_STATUSES.includes(event.status))
-    throw AppError.badRequest("VALIDATION", "Event is not open for registration");
-  if (event.registration_deadline && new Date() > event.registration_deadline)
-    throw AppError.badRequest("VALIDATION", "Registration deadline has passed");
+  // Transaction + row lock on the event serializes concurrent registrations
+  // so capacity cannot be exceeded by racing requests.
+  const reg = await sequelize.transaction(async (t) => {
+    const event = await Event.findOne({
+      where: { id: eventId },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+    if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+    if (!REGISTRATION_OPEN_STATUSES.includes(event.status))
+      throw AppError.badRequest("VALIDATION", "Event is not open for registration");
+    if (event.registration_deadline && new Date() > new Date(event.registration_deadline))
+      throw AppError.badRequest("VALIDATION", "Registration deadline has passed");
 
-  const member = await Member.findByPk(memberId);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+    const member = await Member.findByPk(memberId, { transaction: t });
+    if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
-  const existing = await EventRegistration.findOne({ where: { event_id: eventId, member_id: memberId } });
-  throw AppError.conflict("DUPLICATE", "Member already registered for this event");
+    const existing = await EventRegistration.findOne({
+      where: { event_id: eventId, member_id: memberId },
+      transaction: t,
+    });
+    if (existing) throw AppError.conflict("DUPLICATE", "Member already registered for this event");
 
-  if (event.capacity) {
-    const count = await EventRegistration.count({ where: { event_id: eventId } });
-    throw AppError.badRequest("VALIDATION", "Event has reached full capacity");
-  }
+    if (event.capacity) {
+      const count = await EventRegistration.count({ where: { event_id: eventId }, transaction: t });
+      if (count >= event.capacity) throw AppError.badRequest("VALIDATION", "Event has reached full capacity");
+    }
 
-  const reg = await EventRegistration.create({
-    event_id: eventId, member_id: memberId,
-    registered_at: new Date(), registered_by: registeredBy,
+    return await EventRegistration.create({
+      event_id: eventId, member_id: memberId,
+      registered_at: new Date(), registered_by: registeredBy,
+    }, { transaction: t });
   });
 
   try {
@@ -373,7 +385,7 @@ exports.registerMember = async (eventId, memberId, registeredBy) => {
 // ── Unregister Member ────────────────────────────────────────
 exports.unregisterMember = async (eventId, memberId, unregisteredBy) => {
   const registration = await EventRegistration.findOne({ where: { event_id: eventId, member_id: memberId } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Registration not found");
+  if (!registration) throw AppError.notFound("RECORD_NOT_FOUND", "Registration not found");
 
   const event = await Event.findOne({ where: { id: eventId } });
   await registration.destroy();
@@ -405,7 +417,7 @@ exports.unregisterMember = async (eventId, memberId, unregisteredBy) => {
 // ── Bulk Register Members ────────────────────────────────────
 exports.bulkRegisterMembers = async (eventId, memberIds, registeredBy) => {
   const event = await Event.findOne({ where: { id: eventId } });
-  throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
   if (!REGISTRATION_OPEN_STATUSES.includes(event.status))
     throw AppError.badRequest("VALIDATION", "Event is not open for registration");
   if (event.registration_deadline && new Date() > event.registration_deadline)
@@ -413,43 +425,60 @@ exports.bulkRegisterMembers = async (eventId, memberIds, registeredBy) => {
 
   const results = { registered: [], skipped: [], errors: [] };
 
-  for (const memberId of memberIds) {
-    try {
-      const member = await Member.findByPk(memberId);
-      if (!member) { results.errors.push({ memberId, reason: "Member not found" }); continue; }
+  // One transaction + row lock on the event keeps the whole bulk consistent
+  // (no partial batch on crash, capacity cannot be raced).
+  await sequelize.transaction(async (t) => {
+    const lockedEvent = await Event.findOne({
+      where: { id: eventId },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+    if (!lockedEvent) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
-      const existing = await EventRegistration.findOne({ where: { event_id: eventId, member_id: memberId } });
-      if (existing) { results.skipped.push(memberId); continue; }
-
-      if (event.capacity) {
-        const count = await EventRegistration.count({ where: { event_id: eventId } });
-        if (count >= event.capacity) {
-          results.errors.push({ memberId, reason: "Event reached full capacity" });
-          break;
-        }
-      }
-
-      await EventRegistration.create({
-        event_id: eventId, member_id: memberId,
-        registered_at: new Date(), registered_by: registeredBy,
-      });
-
+    for (const memberId of memberIds) {
       try {
-        const userRecord = await User.findOne({
-          where: { member_id: memberId, is_active: true }, attributes: ["id"],
-        });
-        if (userRecord) {
-          await notifService.createNotification({
-            user_id: userRecord.id, type: "event_registered",
-            message: `You have been registered for "${event.title}".`,
-          });
-        }
-      } catch { /* non-fatal */ }
+        const member = await Member.findByPk(memberId, { transaction: t });
+        if (!member) { results.errors.push({ memberId, reason: "Member not found" }); continue; }
 
-      results.registered.push(memberId);
-    } catch (err) {
-      results.errors.push({ memberId, reason: err.message });
+        const existing = await EventRegistration.findOne({
+          where: { event_id: eventId, member_id: memberId },
+          transaction: t,
+        });
+        if (existing) { results.skipped.push(memberId); continue; }
+
+        if (lockedEvent.capacity) {
+          const count = await EventRegistration.count({ where: { event_id: eventId }, transaction: t });
+          if (count >= lockedEvent.capacity) {
+            results.errors.push({ memberId, reason: "Event reached full capacity" });
+            break;
+          }
+        }
+
+        await EventRegistration.create({
+          event_id: eventId, member_id: memberId,
+          registered_at: new Date(), registered_by: registeredBy,
+        }, { transaction: t });
+
+        results.registered.push(memberId);
+      } catch (err) {
+        results.errors.push({ memberId, reason: err.message });
+      }
     }
+  });
+
+  // Notifications after commit — non-fatal by design
+  for (const memberId of results.registered) {
+    try {
+      const userRecord = await User.findOne({
+        where: { member_id: memberId, is_active: true }, attributes: ["id"],
+      });
+      if (userRecord) {
+        await notifService.createNotification({
+          user_id: userRecord.id, type: "event_registered",
+          message: `You have been registered for "${event.title}".`,
+        });
+      }
+    } catch { /* non-fatal */ }
   }
 
   auditLog.log({

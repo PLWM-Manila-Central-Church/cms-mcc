@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PLWM-MCC Landing Redesign, Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ Quiet Cathedral, design tokens ============ */
+  :root {
+    --paper: #F4F5F2;
+    --panel: #FFFFFF;
+    --ink: #0B2447;
+    --ink-deep: #071830;
+    --muted: #5C6570;
+    --muted-dark: rgba(238, 241, 245, 0.72);
+    --hairline: #D9DDE2;
+    --hairline-dark: rgba(238, 241, 245, 0.16);
+    --gold: #C9A84C;
+    --gold-text: #8A6B21;
+    --gold-bright: #E6C878;
+    --live: #2E7D32;
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans: 'Archivo', system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  img { display: block; max-width: 100%; }
+  a { color: inherit; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+
+  /* small-caps utility (used sparingly: hero, seminar, group headers) */
+  .caps {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--gold-text);
+  }
+
+  h1, h2, .serif { font-family: var(--serif); font-weight: 600; }
+
+  /* ============ Buttons: sharp, one system ============ */
+  .btn {
+    display: inline-block; font-family: var(--sans); font-size: 14px; font-weight: 600;
+    letter-spacing: 0.02em; padding: 15px 30px; text-decoration: none; cursor: pointer;
+    transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-ink { background: var(--ink); color: var(--paper); border: 1px solid var(--ink); }
+  .btn-ink:hover { background: var(--ink-deep); }
+  .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
+  .btn-ghost:hover { background: rgba(11, 36, 71, 0.06); }
+
+  /* ============ Nav ============ */
+  nav {
+    position: sticky; top: 0; z-index: 50; height: 64px;
+    background: rgba(244, 245, 242, 0.92); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .nav-in { height: 64px; display: flex; align-items: center; gap: 32px; }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .brand img { width: 30px; height: 30px; object-fit: contain; }
+  .brand-name { font-family: var(--serif); font-weight: 600; font-size: 17px; letter-spacing: 0.01em; }
+  .brand-name span { color: var(--muted); font-family: var(--sans); font-weight: 500; font-size: 13px; margin-left: 10px; }
+  .nav-links { margin-left: auto; display: flex; align-items: center; gap: 26px; }
+  .nav-links a {
+    text-decoration: none; font-size: 13.5px; font-weight: 500; color: var(--ink);
+    padding: 4px 0; border-bottom: 1px solid transparent;
+  }
+  .nav-links a:hover { border-bottom-color: var(--gold); }
+  .nav-cta { display: flex; align-items: center; gap: 14px; }
+  .lang { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-decoration: none; color: var(--muted); border: 1px solid var(--hairline); padding: 6px 10px; }
+  .nav-login { font-size: 13px; font-weight: 600; text-decoration: none; background: var(--ink); color: var(--paper); padding: 9px 18px; }
+  .nav-login:hover { background: var(--ink-deep); }
+
+  /* ============ Hero: asymmetric split ============ */
+  .hero { min-height: 100dvh; display: flex; align-items: center; padding: 96px 0 72px; }
+  .hero-grid { display: grid; grid-template-columns: 7fr 5fr; gap: 64px; align-items: center; width: 100%; }
+  .hero-eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+  .hero-eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--gold); }
+  .hero h1 {
+    font-size: clamp(3.2rem, 6.2vw, 5.4rem);
+    line-height: 1.04; letter-spacing: -0.015em; max-width: 11ch;
+    margin-bottom: 30px;
+  }
+  .hero h1 em { font-style: italic; font-weight: 500; }
+  .hero-verse {
+    font-family: var(--serif); font-style: italic; font-weight: 500;
+    font-size: clamp(1.15rem, 1.7vw, 1.4rem); line-height: 1.45;
+    color: var(--muted); max-width: 34ch; margin-bottom: 14px;
+  }
+  .hero-ref { margin-bottom: 40px; }
+  .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; }
+
+  /* media arch: the only rounded shape on the page */
+  .arch {
+    border-radius: 999px 999px 0 0; overflow: hidden; position: relative;
+    background: var(--ink-deep); aspect-ratio: 4 / 5; max-height: 72vh; width: 100%;
+    box-shadow: 0 24px 70px rgba(11, 36, 71, 0.22);
+  }
+  /* oversized media so parallax drift never exposes edges */
+  .arch .media { position: absolute; inset: -10% 0; }
+  .arch .media iframe {
+    position: absolute; top: 0; left: 50%; height: 100%; width: 267%;
+    transform: translateX(-50%); border: 0; pointer-events: none;
+  }
+  .arch > img {
+    position: absolute; left: 0; top: -8%; width: 100%; height: 116%;
+    object-fit: cover;
+  }
+  .pxdrift { position: relative; overflow: hidden; }
+  .pxdrift img { position: absolute; left: 0; top: -8%; width: 100%; height: 116%; object-fit: cover; }
+  .arch::before { content: ""; position: absolute; inset: 0; z-index: 2; background: linear-gradient(to bottom, rgba(11,36,71,0.30), rgba(11,36,71,0.12) 45%, rgba(11,36,71,0.34)); pointer-events: none; }
+  .arch::after { content: ""; position: absolute; inset: 10px; z-index: 3; border: 1px solid rgba(201, 168, 76, 0.45); border-radius: 999px 999px 0 0; pointer-events: none; }
+
+  /* ============ Stats band ============ */
+  .stats { border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); padding: 44px 0 48px; }
+  .stats-lead { font-size: 14.5px; color: var(--muted); margin-bottom: 30px; max-width: 52ch; }
+  .stats-lead strong { color: var(--ink); font-weight: 600; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .stat { padding: 6px 28px; border-left: 1px solid var(--gold); }
+  .stat:first-child { border-left: 0; padding-left: 0; }
+  .stat-num { font-family: var(--serif); font-size: 3.1rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+  .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-top: 10px; }
+
+  /* ============ Section scaffolding ============ */
+  section { padding: 104px 0; }
+  .sec-head { margin-bottom: 56px; }
+  .sec-head h2 { font-size: clamp(2rem, 3.4vw, 2.9rem); line-height: 1.12; letter-spacing: -0.01em; margin-top: 16px; }
+  .sec-sub { font-size: 15px; color: var(--muted); margin-top: 12px; max-width: 56ch; }
+
+  /* ============ Gatherings: timetable ============ */
+  .day + .day { margin-top: 52px; }
+  .day-head { display: flex; align-items: baseline; gap: 18px; margin-bottom: 6px; }
+  .day-head .day-name { font-size: 12px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink); }
+  .day-head::after { content: ""; flex: 1; height: 1px; background: var(--hairline); }
+  .row {
+    display: grid; grid-template-columns: 190px 1fr auto; gap: 28px; align-items: baseline;
+    padding: 20px 12px; margin: 0 -12px; transition: background 0.2s ease;
+  }
+  .row:hover { background: rgba(11, 36, 71, 0.045); }
+  .row-time { font-variant-numeric: tabular-nums; font-size: 14.5px; font-weight: 600; letter-spacing: 0.02em; }
+  .row-name { font-family: var(--serif); font-size: 1.45rem; font-weight: 600; line-height: 1.2; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .tag { font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--muted); border: 1px solid var(--hairline); padding: 3px 7px; transform: translateY(-2px); }
+  .row-meta { text-align: right; font-size: 13px; color: var(--muted); line-height: 1.55; }
+  .row-meta .who { color: var(--ink); font-weight: 600; }
+
+  /* ============ Events ============ */
+  .events { background: #ECEEF0; border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); }
+  .live-line { display: flex; align-items: center; gap: 9px; margin-top: 18px; font-size: 13px; color: var(--muted); }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); flex-shrink: 0; }
+  .live-line strong { color: var(--ink); font-weight: 600; }
+  .event-track { display: grid; grid-auto-flow: column; grid-auto-columns: 300px; gap: 20px; overflow-x: auto; padding-bottom: 14px; scroll-snap-type: x mandatory; }
+  .event { scroll-snap-align: start; display: block; text-decoration: none; background: var(--panel); border: 1px solid var(--hairline); padding: 26px 26px 24px; transition: border-color 0.2s ease, transform 0.25s ease; }
+  .event:hover { border-color: var(--ink); transform: translateY(-3px); }
+  .event-date { font-family: var(--serif); font-size: 2.5rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+  .event-month { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold-text); margin-top: 6px; }
+  .event-title { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; line-height: 1.25; margin-top: 18px; }
+  .event-loc { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .event-empty { font-family: var(--serif); font-style: italic; font-size: 1.15rem; color: var(--muted); padding: 10px 0 4px; }
+
+  /* ============ Bible Seminar: split with index ============ */
+  .sem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 88px; align-items: start; }
+  .sem-grid .caps { display: block; margin-bottom: 18px; }
+  .sem-copy h2 { font-size: clamp(2rem, 3.2vw, 2.7rem); line-height: 1.14; letter-spacing: -0.01em; margin-bottom: 22px; }
+  .sem-copy p { font-size: 15.5px; color: var(--muted); max-width: 46ch; margin-bottom: 30px; }
+  .affirm { border-top: 1px solid var(--hairline); padding: 16px 0; }
+  .affirm:last-of-type { border-bottom: 1px solid var(--hairline); margin-bottom: 34px; }
+  .affirm b { display: block; font-size: 14.5px; font-weight: 600; margin-bottom: 3px; }
+  .affirm span { font-size: 13.5px; color: var(--muted); }
+  .index { border-top: 1px solid var(--hairline); }
+  .index-row { display: grid; grid-template-columns: 86px 1fr; gap: 20px; align-items: baseline; padding: 24px 0; border-bottom: 1px solid var(--hairline); }
+  .index-num { font-family: var(--serif); font-size: 2.6rem; font-weight: 500; line-height: 1; color: rgba(11, 36, 71, 0.22); font-variant-numeric: tabular-nums; }
+  .index-title { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; line-height: 1.3; }
+
+  /* ============ Scripture interlude: the one dark block ============ */
+  .interlude { background: var(--ink-deep); color: #EEF1F5; padding: 128px 0 104px; }
+  .verse {
+    font-family: var(--serif); font-style: italic; font-weight: 500;
+    font-size: clamp(2.1rem, 4.6vw, 3.6rem); line-height: 1.22;
+    text-align: center; max-width: 24ch; margin: 0 auto 26px;
+  }
+  .verse-ref { text-align: center; margin-bottom: 88px; }
+  .verse-ref .caps { color: var(--gold-bright); }
+  .inter-grid { display: grid; grid-template-columns: 5fr 6fr; gap: 72px; align-items: center; }
+  .inter-photo { border-top: 1px solid var(--gold); padding-top: 14px; }
+  .inter-photo figcaption { font-size: 12px; color: var(--muted-dark); margin-top: 12px; letter-spacing: 0.04em; }
+  .inter-copy p { font-size: 15.5px; line-height: 1.8; color: var(--muted-dark); max-width: 52ch; }
+  .vision { margin-top: 30px; font-size: 13px; letter-spacing: 0.06em; color: var(--gold-bright); font-weight: 600; line-height: 2; }
+
+  /* ============ Leadership & Visit ============ */
+  .lv-grid { display: grid; grid-template-columns: 6fr 5fr; gap: 88px; align-items: start; }
+  .leader { display: grid; grid-template-columns: 1fr auto; gap: 6px 24px; padding: 22px 0; border-bottom: 1px solid var(--hairline); align-items: baseline; }
+  .leader:first-of-type { border-top: 1px solid var(--hairline); margin-top: 34px; }
+  .leader-name { font-family: var(--serif); font-size: 1.5rem; font-weight: 600; }
+  .leader-role { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold-text); }
+  .leader-phone { grid-row: span 2; font-variant-numeric: tabular-nums; font-size: 14px; color: var(--muted); text-decoration: none; }
+  .leader-phone:hover { color: var(--ink); }
+  .visit-arch { aspect-ratio: 4 / 4.6; max-height: 520px; }
+  .visit-info { margin-top: 30px; font-size: 14.5px; color: var(--muted); line-height: 1.8; }
+  .visit-info b { color: var(--ink); font-weight: 600; }
+  .visit-links { display: flex; gap: 22px; margin-top: 16px; }
+  .visit-links a { font-size: 13.5px; font-weight: 600; color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--gold); padding-bottom: 2px; }
+
+  /* ============ CTA band ============ */
+  .cta { text-align: center; border-top: 1px solid var(--hairline); }
+  .cta h2 { font-size: clamp(2.4rem, 4.4vw, 3.6rem); line-height: 1.1; margin-bottom: 18px; }
+  .cta h2 em { font-style: italic; font-weight: 500; }
+  .cta p { font-size: 15.5px; color: var(--muted); max-width: 56ch; margin: 0 auto 36px; }
+
+  /* ============ Footer ============ */
+  footer { border-top: 1px solid var(--hairline); padding: 64px 0 40px; background: var(--paper); }
+  .foot-grid { display: grid; grid-template-columns: 4fr 4fr 4fr; gap: 56px; }
+  .foot-brand { font-family: var(--serif); font-size: 1.35rem; font-weight: 600; margin-bottom: 12px; }
+  .foot-mission { font-size: 13.5px; color: var(--muted); max-width: 30ch; }
+  .foot-h { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink); margin-bottom: 16px; }
+  .foot-list { list-style: none; font-size: 13.5px; color: var(--muted); }
+  .foot-list li { margin-bottom: 8px; }
+  .foot-list b { color: var(--ink); font-weight: 600; }
+  .foot-list a { color: var(--muted); text-decoration: none; }
+  .foot-list a:hover { color: var(--ink); }
+  .foot-base { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--hairline); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+
+  /* ============ Motion: reveals ============ */
+  .reveal { opacity: 0; translate: 0 26px; transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), translate 0.75s cubic-bezier(0.16, 1, 0.3, 1); transition-delay: var(--d, 0s); }
+  .reveal.in { opacity: 1; translate: 0 0; }
+
+  /* ============ Motion: scroll-driven parallax (no JS listeners) ============ */
+  @supports (animation-timeline: view()) {
+    /* Layer 1: hero media drifts against scroll as the page leaves the hero */
+    .px-hero { animation: pxHero linear both; animation-timeline: scroll(root); animation-range: 0px 100vh; }
+    @keyframes pxHero { to { transform: translateY(-9%); } }
+    /* Layer 2: content lift, subtler than media so depth is felt */
+    .px-hero-copy { animation: pxCopy linear both; animation-timeline: scroll(root); animation-range: 0px 100vh; }
+    @keyframes pxCopy { to { transform: translateY(-26px); opacity: 0.55; } }
+    /* Layer 3: in-view drift for scripture verse and visit photo */
+    .px-view { animation: pxView linear both; animation-timeline: view(); animation-range: entry 10% cover 55%; }
+    @keyframes pxView { from { transform: translateY(5%); } to { transform: translateY(-5%); } }
+    .px-view-slow { animation: pxViewSlow linear both; animation-timeline: view(); animation-range: entry 10% cover 60%; }
+    @keyframes pxViewSlow { from { transform: translateY(7%); } to { transform: translateY(-7%); } }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .px-hero, .px-hero-copy, .px-view, .px-view-slow { animation: none !important; }    .reveal { opacity: 1; translate: none; transition: none; }
+    * { transition-duration: 0.01ms !important; }
+  }
+
+  /* ============ Responsive collapse ============ */
+  @media (max-width: 1024px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 56px; }
+    .hero { padding-top: 80px; }
+    .arch { max-width: 460px; margin: 0 auto; }
+    .hero h1 { max-width: none; }
+    .sem-grid, .inter-grid, .lv-grid { grid-template-columns: 1fr; gap: 56px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 34px 0; }
+    .stat:nth-child(3) { border-left: 0; padding-left: 0; }
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 680px) {
+    .wrap { padding: 0 20px; }
+    section { padding: 72px 0; }
+    .nav-links { display: none; }
+    .row { grid-template-columns: 1fr; gap: 8px; }
+    .row-meta { text-align: left; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .stat { padding: 0 0 0 18px; }
+    .foot-grid { grid-template-columns: 1fr; gap: 36px; }
+    .event-track { grid-auto-columns: 82%; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="brand" href="#">
+      <img src="assets/logo.jpg" alt="PLWM-MCC logo">
+      <span class="brand-name">PLWM-MCC <span>Manila Central Church</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="#">Bible Seminar</a>
+      <a href="#">Sermon</a>
+      <a href="#">World Mission</a>
+      <a href="#">Introduction</a>
+    </div>
+    <div class="nav-cta">
+      <a class="lang" href="#">EN</a>
+      <a class="nav-login" href="#">Member Login</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div class="px-hero-copy">
+      <div class="hero-eyebrow"><span class="caps">Philippine Life Word Mission</span></div>
+      <h1>Welcome to <em>Our Church</em></h1>
+      <p class="hero-verse">&ldquo;I shall not die, but live, and declare the works of the LORD.&rdquo;</p>
+      <div class="hero-ref"><span class="caps">Psalm 118:17</span></div>
+      <div class="hero-cta">
+        <a class="btn btn-ink" href="#">Become a Member</a>
+        <a class="btn btn-ghost" href="#">Watch Sermon</a>
+      </div>
+    </div>
+    <div class="px-hero">
+      <div class="arch">
+        <div class="media">
+          <iframe src="https://www.youtube.com/embed/4v-66wXlQCE?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&playsinline=1&start=227" title="Church welcome video" allow="autoplay; encrypted-media"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- STATS BAND -->
+<div class="stats">
+  <div class="wrap">
+    <p class="stats-lead reveal"><strong>Manila Central Church</strong> is the mother church of the Philippine Life Word Mission, planting churches and mission branches across the Philippines.</p>
+    <div class="stats-grid">
+      <div class="stat reveal" style="--d:0s"><div class="stat-num">17</div><div class="stat-label">Active Cellgroups</div></div>
+      <div class="stat reveal" style="--d:0.08s"><div class="stat-num">108</div><div class="stat-label">PLWM Churches</div></div>
+      <div class="stat reveal" style="--d:0.16s"><div class="stat-num">60</div><div class="stat-label">Mission Branches</div></div>
+      <div class="stat reveal" style="--d:0.24s"><div class="stat-num">3</div><div class="stat-label">Major Islands</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- GATHERINGS -->
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <h2>Weekly Gatherings</h2>
+      <p class="sec-sub">Join us every week for worship, the Word, and fellowship. All are welcome.</p>
+    </div>
+
+    <div class="day reveal">
+      <div class="day-head"><span class="day-name">Sunday</span></div>
+      <div class="row">
+        <div class="row-time">9:30-11:10 AM</div>
+        <div class="row-name">Filipino Service <span class="tag">PH</span></div>
+        <div class="row-meta"><span class="who">Sr. Pastor Park Heung Soon</span><br>Main Hall, 3rd Floor</div>
+      </div>
+      <div class="row">
+        <div class="row-time">2:00-4:00 PM</div>
+        <div class="row-name">Korean Service <span class="tag">KR</span></div>
+        <div class="row-meta"><span class="who">Sr. Pastor Park Heung Soon</span><br>Medium Hall, 2nd Floor</div>
+      </div>
+    </div>
+
+    <div class="day reveal">
+      <div class="day-head"><span class="day-name">Wednesday</span></div>
+      <div class="row">
+        <div class="row-time">7:00-9:00 PM</div>
+        <div class="row-name">Midweek Service</div>
+        <div class="row-meta"><span class="who">Pastor Jayson Rolusta</span><br>Main Hall, 3rd Floor</div>
+      </div>
+    </div>
+
+    <div class="day reveal">
+      <div class="day-head"><span class="day-name">Saturday</span></div>
+      <div class="row">
+        <div class="row-time">2:00-4:00 PM</div>
+        <div class="row-name">High School Fellowship</div>
+        <div class="row-meta"><span class="who">Evg. Romnick Dadangue</span><br>Medium Hall, 2nd Floor</div>
+      </div>
+      <div class="row">
+        <div class="row-time">7:00-9:00 PM</div>
+        <div class="row-name">Young Adults Fellowship</div>
+        <div class="row-meta"><span class="who">Evg. Romnick Dadangue</span><br>Medium Hall, 2nd Floor</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EVENTS -->
+<section class="events">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <h2>Events &amp; Announcements</h2>
+      <div class="live-line"><span class="live-dot"></span><span><strong>Live from the church system.</strong> Posted by the registration team and admins.</span></div>
+    </div>
+    <!-- Mock cards use the real 2026 retreat dates from the church's retreat poster; live data replaces them via /public/stats -->
+    <div class="event-track reveal">
+      <a class="event" href="#">
+        <div class="event-date">2-4</div>
+        <div class="event-month">April 2026</div>
+        <div class="event-title">Summer Retreat, 1st Batch</div>
+        <div class="event-loc">Registration open</div>
+      </a>
+      <a class="event" href="#">
+        <div class="event-date">9-11</div>
+        <div class="event-month">April 2026</div>
+        <div class="event-title">Summer Retreat, 2nd Batch</div>
+        <div class="event-loc">Registration open</div>
+      </a>
+      <a class="event" href="#">
+        <div class="event-date">1-3</div>
+        <div class="event-month">May 2026</div>
+        <div class="event-title">Summer Retreat, 3rd Batch</div>
+        <div class="event-loc">Registration open</div>
+      </a>
+    </div>
+    <p class="event-empty" style="display:none">No upcoming events at this time. Check back soon.</p>
+  </div>
+</section>
+
+<!-- BIBLE SEMINAR -->
+<section>
+  <div class="wrap sem-grid">
+    <div class="sem-copy reveal">
+      <span class="caps">Bible Seminar</span>
+      <h2>Are you looking for answers about life and eternal life?</h2>
+      <p>The Bible Seminar covers five sessions that share the Gospel message, exploring how the Bible is true and how God saved us through Jesus Christ.</p>
+      <div class="affirm"><b>Prove the existence of God</b><span>Meet the living God who created the heavens and the earth and governs human history.</span></div>
+      <div class="affirm"><b>Testify to the truthfulness of the Bible</b><span>The Bible is not a mere religious book. It is God&rsquo;s history, containing His amazing grace.</span></div>
+      <div class="affirm"><b>Preach the Gospel of Jesus Christ</b><span>Through Jesus Christ, the good news of redemption is delivered to all who are suffering from sin.</span></div>
+      <a class="btn btn-ink" href="#">View the Five Sessions</a>
+    </div>
+    <div class="index reveal" style="--d:0.12s">
+      <div class="index-row"><div class="index-num">01</div><div class="index-title">God Who Created the Heavens and the Earth Is Alive</div></div>
+      <div class="index-row"><div class="index-num">02</div><div class="index-title">Creation and Historical Events in the Bible</div></div>
+      <div class="index-row"><div class="index-num">03</div><div class="index-title">What Is God&rsquo;s Purpose in Choosing Israel?</div></div>
+      <div class="index-row"><div class="index-num">04</div><div class="index-title">Our History and the Future Through the Bible</div></div>
+      <div class="index-row"><div class="index-num">05</div><div class="index-title">What Is the End of Human History and God&rsquo;s Kingdom?</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- SCRIPTURE INTERLUDE (the one dark block) -->
+<section class="interlude">
+  <div class="wrap">
+    <p class="verse px-view-slow">&ldquo;I shall not die, but live, and declare the works of the LORD.&rdquo;</p>
+    <div class="verse-ref reveal"><span class="caps">Psalm 118:17</span></div>
+    <div class="inter-grid">
+      <figure class="inter-photo reveal">
+        <div class="pxdrift" style="aspect-ratio: 4/3;">
+          <img class="px-view" src="assets/mcc.jpg" alt="The Life Word Mission church building in Parañaque City">
+        </div>
+        <figcaption>Manila Central Church, Parañaque City</figcaption>
+      </figure>
+      <div class="inter-copy reveal" style="--d:0.12s">
+        <p>Manila Central Church stands as the mother church of the Philippine Life Word Mission. Through faithful ministry, we have grown to plant churches and establish mission branches across every region of the Philippines.</p>
+        <div class="vision">Vision 26/800 &middot; &ldquo;Love One Another&rdquo;<br>One Mind &nbsp;|&nbsp; Obedience &nbsp;|&nbsp; Sacrifice</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LEADERSHIP & VISIT -->
+<section>
+  <div class="wrap lv-grid">
+    <div class="reveal">
+      <div class="sec-head" style="margin-bottom:0">
+        <h2>Leadership</h2>
+      </div>
+      <div class="leader">
+        <div class="leader-name">Park Heung Soon</div>
+        <a class="leader-phone" href="tel:09158076300">0915-807-6300</a>
+        <div class="leader-role">Senior Pastor</div>
+      </div>
+      <div class="leader">
+        <div class="leader-name">Jayson Rolusta</div>
+        <a class="leader-phone" href="tel:09484258472">0948-425-8472</a>
+        <div class="leader-role">Pastor</div>
+      </div>
+      <div class="leader">
+        <div class="leader-name">Romnick Dadangue</div>
+        <a class="leader-phone" href="tel:09388910092">0938-891-0092</a>
+        <div class="leader-role">Evangelist</div>
+      </div>
+    </div>
+    <div class="reveal" style="--d:0.12s">
+      <div class="arch visit-arch">
+        <img class="px-view" src="assets/church.webp" alt="The Manila Central Church building">
+      </div>
+      <div class="visit-info">
+        <b>Visit us.</b> Lot 2 Blk 2 Filipinas Ave., UPS 5, Brgy. San Isidro, Parañaque City<br>
+        Landline (02) 7745-6212
+      </div>
+      <div class="visit-links">
+        <a href="https://www.youtube.com/@PLWMManilaCentralChurch" target="_blank" rel="noopener noreferrer">YouTube</a>
+        <a href="https://www.facebook.com/groups/plwmmcc" target="_blank" rel="noopener noreferrer">Facebook</a>
+        <a href="https://www.jbch.org/en/" target="_blank" rel="noopener noreferrer">jbch.org</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="wrap reveal">
+    <h2>Become a <em>Member</em></h2>
+    <p>Fellowship, sermons, and retreats. Every person belongs here.</p>
+    <a class="btn btn-ink" href="#">Become a Member</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-brand">PLWM-MCC</div>
+        <p class="foot-mission">Manila Central Church, mother church of the Philippine Life Word Mission. Serving Manila and the Philippines through the Word of God.</p>
+      </div>
+      <div>
+        <div class="foot-h">Service Times</div>
+        <ul class="foot-list">
+          <li><b>Sunday</b> 9:30 AM Filipino, 2:00 PM Korean</li>
+          <li><b>Wednesday</b> 7:00 PM Midweek Service</li>
+          <li><b>Saturday</b> 2:00 PM Youth, 7:00 PM Young Adults</li>
+        </ul>
+      </div>
+      <div>
+        <div class="foot-h">Contact</div>
+        <ul class="foot-list">
+          <li>Lot 2 Blk 2 Filipinas Ave., UPS 5, Brgy. San Isidro, Parañaque City</li>
+          <li><a href="tel:0277456212">(02) 7745-6212</a></li>
+          <li><a href="#">YouTube</a> &nbsp; <a href="#">Facebook</a> &nbsp; <a href="#">jbch.org</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-base">
+      <span>© 2026 Manila Central Church, Philippine Life Word Mission. All rights reserved.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Scroll reveals via IntersectionObserver (no scroll listeners anywhere).
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -36px 0px' });
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+</script>
+</body>
+</html>

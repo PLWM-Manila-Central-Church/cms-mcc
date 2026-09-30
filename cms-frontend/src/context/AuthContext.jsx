@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
       setUser(userWithFlag);
       setPermissions(permissions || []);
 
-      return { forcePasswordChange };
+      return { forcePasswordChange, user: userWithFlag };
     };
 
     const clearForcePasswordChange = () => {

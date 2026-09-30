@@ -1,7 +1,11 @@
+previews:
+  generation: off
+
 services:
   - type: web
     name: plwm-mcc-api
     runtime: node
+    branch: main
     plan: free
     region: singapore
     rootDir: cms-api
@@ -42,6 +46,8 @@ services:
         sync: false
       - key: SMTP_FROM
         sync: false
+      - key: METRICS_TOKEN
+        generateValue: true
       - key: MAX_FILE_SIZE_MB
         value: "25"
       - key: MIGRATE_ON_START

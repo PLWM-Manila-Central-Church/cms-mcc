@@ -17,6 +17,11 @@ router.post("/scope/assign", auth, authorize("scope_assignments", "manage"), ctr
 
 router.get("/",    auth, authorize("members", "read"), validateQuery(getMembersQuerySchema), ctrl.getAllMembers);
 
+// Dropdown endpoints must be registered before GET /:id, otherwise
+// "dropdowns" is captured as the :id param and the route 404s.
+router.get("/dropdowns/cell-groups", auth, authorize("members", "read"), ctrl.getCellGroupDropdowns);
+router.get("/dropdowns/groups",      auth, authorize("members", "read"), ctrl.getGroupDropdowns);
+
 router.get("/:id", auth, authorize("members", "read"),   ctrl.getMemberById);
 router.post("/",   auth, authorize("members", "create"), validate(createMemberSchema), ctrl.createMember);  // Fix #1
 router.put("/:id", auth, authorize("members", "update"), validate(updateMemberSchema), ctrl.updateMember);  // Fix #1

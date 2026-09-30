@@ -30,9 +30,20 @@ if (s3Enabled) {
   logger.warn("S3 not configured — falling back to local disk storage");
 }
 
-const ALLOWED_ARCHIVE_EXT = [".pdf", ".docx", ".xlsx", ".jpg", ".jpeg", ".png", ".mp4", ".mp3"];
-const ALLOWED_RECEIPT_EXT = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
-const ALLOWED_PROFILE_EXT = [".jpg", ".jpeg", ".png", ".webp"];
+const ALLOWED_ARCHIVE_EXT  = [".pdf", ".docx", ".xlsx", ".jpg", ".jpeg", ".png", ".mp4", ".mp3"];
+const ALLOWED_RECEIPT_EXT  = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
+const ALLOWED_PROFILE_EXT  = [".jpg", ".jpeg", ".png", ".webp"];
+
+// Declared MIME types must match the extension allowlist — extension-only
+// checks accept renamed polyglot/HTML payloads.
+const ALLOWED_ARCHIVE_MIME = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/jpeg", "image/png", "video/mp4", "audio/mpeg",
+];
+const ALLOWED_RECEIPT_MIME = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+const ALLOWED_PROFILE_MIME = ["image/jpeg", "image/png", "image/webp"];
 
 const createS3Storage = (folder) =>
   multerS3({
@@ -60,9 +71,10 @@ const createDiskFallback = (folder) => {
   });
 };
 
-const fileFilter = (allowedExt) => (_req, file, cb) => {
+const fileFilter = (allowedExt, allowedMime) => (_req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  if (allowedExt.includes(ext)) {
+  const mimeOk = !file.mimetype || allowedMime.includes(file.mimetype);
+  if (allowedExt.includes(ext) && mimeOk) {
     cb(null, true);
   } else {
     cb(new Error(`File type not allowed. Allowed: ${allowedExt.join(", ")}`), false);
@@ -74,36 +86,36 @@ const fileFilter = (allowedExt) => (_req, file, cb) => {
 exports.archiveUpload = s3Enabled
   ? multer({
       storage: createS3Storage("archives"),
-      fileFilter: fileFilter(ALLOWED_ARCHIVE_EXT),
+      fileFilter: fileFilter(ALLOWED_ARCHIVE_EXT, ALLOWED_ARCHIVE_MIME),
       limits: { fileSize: 25 * 1024 * 1024 },
     })
   : multer({
       storage: createDiskFallback("archives"),
-      fileFilter: fileFilter(ALLOWED_ARCHIVE_EXT),
+      fileFilter: fileFilter(ALLOWED_ARCHIVE_EXT, ALLOWED_ARCHIVE_MIME),
       limits: { fileSize: 25 * 1024 * 1024 },
     });
 
 exports.receiptUpload = s3Enabled
   ? multer({
       storage: createS3Storage("receipts"),
-      fileFilter: fileFilter(ALLOWED_RECEIPT_EXT),
+      fileFilter: fileFilter(ALLOWED_RECEIPT_EXT, ALLOWED_RECEIPT_MIME),
       limits: { fileSize: 10 * 1024 * 1024 },
     })
   : multer({
       storage: createDiskFallback("receipts"),
-      fileFilter: fileFilter(ALLOWED_RECEIPT_EXT),
+      fileFilter: fileFilter(ALLOWED_RECEIPT_EXT, ALLOWED_RECEIPT_MIME),
       limits: { fileSize: 10 * 1024 * 1024 },
     });
 
 exports.profileUpload = s3Enabled
   ? multer({
       storage: createS3Storage("profiles"),
-      fileFilter: fileFilter(ALLOWED_PROFILE_EXT),
+      fileFilter: fileFilter(ALLOWED_PROFILE_EXT, ALLOWED_PROFILE_MIME),
       limits: { fileSize: 5 * 1024 * 1024 },
     })
   : multer({
       storage: createDiskFallback("profiles"),
-      fileFilter: fileFilter(ALLOWED_PROFILE_EXT),
+      fileFilter: fileFilter(ALLOWED_PROFILE_EXT, ALLOWED_PROFILE_MIME),
       limits: { fileSize: 5 * 1024 * 1024 },
     });
 

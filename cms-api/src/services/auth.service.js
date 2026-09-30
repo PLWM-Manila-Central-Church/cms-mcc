@@ -11,6 +11,7 @@ const {
 } = require("../models");
 const mailer   = require("../utils/mailer");
 const auditLog = require("../helpers/auditLog.helper");
+const AppError = require("../helpers/AppError");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
 
@@ -38,12 +39,25 @@ const generateRefreshToken = (userId) => {
 // does not expose active sessions. Same pattern as password reset tokens.
 const hashToken = (raw) => crypto.createHash("sha256").update(raw).digest("hex");
 
+// Burned on logins for nonexistent users so response timing does not
+// reveal whether an email exists (bcrypt compare cost either way).
+const DUMMY_HASH = bcrypt.hashSync("timing-equalization-dummy", BCRYPT_ROUNDS);
+
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
 const getUserPermissions = async (roleId) => {
   const rp = await RolePermission.findAll({
     where:   { role_id: roleId },
     include: [{ model: Permission, attributes: ["module", "action"] }],
   });
   return rp.map(r => `${r.Permission.module}:${r.Permission.action}`);
+};
+
+// Revoke every outstanding refresh token for a user (password change/reset,
+// or refresh-token reuse detection). Forces re-login on all devices.
+const revokeAllRefreshTokens = async (userId) => {
+  await RefreshToken.update({ revoked: 1 }, { where: { user_id: userId, revoked: 0 } });
 };
 
 // ── Login ────────────────────────────────────────────────────
@@ -59,20 +73,34 @@ exports.login = async (email, password, ip, device) => {
     ],
   });
 
-  if (!user || !user.is_active)
+  if (!user || !user.is_active) {
+    await bcrypt.compare(password, DUMMY_HASH); // timing equalization
     throw new AppError("UNAUTHORIZED", 401, "Invalid credentials");
+  }
 
-  // Fix #7 — account lockout check
-  if (user.locked_until && new Date() < new Date(user.locked_until))
-    throw new AppError("RATE_LIMITED", 429, "Account temporarily locked. Try again later.");
+  // Fix #7 — account lockout check. Returns the same generic message as a
+  // wrong password so the lock state cannot be used to enumerate accounts.
+  const now = new Date();
+  const lockActive = user.locked_until && now < new Date(user.locked_until);
+  if (lockActive) {
+    await bcrypt.compare(password, DUMMY_HASH); // timing equalization
+    throw new AppError("UNAUTHORIZED", 401, "Invalid credentials");
+  }
 
   const match = await bcrypt.compare(password, user.password_hash);
 
   if (!match) {
-    // Fix #7 — increment failed attempts and lock after 5
-    const attempts = (user.failed_login_attempts || 0) + 1;
-    const update   = { failed_login_attempts: attempts };
-    if (attempts >= 5) update.locked_until = new Date(Date.now() + 15 * 60 * 1000);
+    // Fix #7 — increment failed attempts and lock after 5.
+    // A lock that has already expired starts the counter fresh, so a single
+    // late failure does not instantly re-lock the account.
+    const lockExpired = user.locked_until && now >= new Date(user.locked_until);
+    const attempts    = lockExpired ? 1 : (user.failed_login_attempts || 0) + 1;
+    const update      = { failed_login_attempts: attempts };
+    if (attempts >= LOCKOUT_THRESHOLD) {
+      update.locked_until = new Date(Date.now() + LOCKOUT_DURATION_MS);
+    } else if (lockExpired) {
+      update.locked_until = null;
+    }
     await user.update(update);
     throw new AppError("UNAUTHORIZED", 401, "Invalid credentials");
   }
@@ -115,20 +143,25 @@ exports.login = async (email, password, ip, device) => {
 
 // ── Refresh Token ────────────────────────────────────────────
 exports.refreshToken = async (token) => {
-  throw new AppError("UNAUTHORIZED", 401, "Refresh token required");
+  if (!token) throw new AppError("UNAUTHORIZED", 401, "Refresh token required");
 
   let decoded;
   try {
-    decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+    decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET, { algorithms: ["HS256"] });
   } catch {
     throw new AppError("UNAUTHORIZED", 401, "Invalid or expired refresh token");
   }
 
-  // Fix #4 — look up the hashed version of the token
-  const stored = await RefreshToken.findOne({ where: { token: hashToken(token), revoked: 0 } });
+  // Fix #4 — look up the hashed version of the token (including revoked ones
+  // so reuse of an already-rotated token can be detected)
+  const stored = await RefreshToken.findOne({ where: { token: hashToken(token) } });
 
-  if (!stored || new Date() > stored.expires_at)
+  if (!stored || stored.revoked || new Date() > stored.expires_at) {
+    // Signature verified but the token is gone/expired/revoked → likely reuse
+    // of a rotated token (stolen cookie). Kill every session for this user.
+    await revokeAllRefreshTokens(decoded.userId);
     throw new AppError("UNAUTHORIZED", 401, "Refresh token expired or revoked");
+  }
 
   const user = await User.findOne({
       where: { id: decoded.userId, is_deleted: 0 },
@@ -198,6 +231,9 @@ exports.resetPassword = async (token, newPassword) => {
   const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   await User.update({ password_hash: hash, force_password_change: 0 }, { where: { id: record.user_id } });
   await record.update({ used: 1 });
+  // Invalidate all sessions — a reset link must not leave existing
+  // refresh tokens (e.g. an attacker's) usable.
+  await revokeAllRefreshTokens(record.user_id);
 
   auditLog.log({ userId: record.user_id, action: "RESET_PASSWORD" });
   return { message: "Password updated successfully." };
@@ -206,11 +242,15 @@ exports.resetPassword = async (token, newPassword) => {
 // ── Change Password ──────────────────────────────────────────
 exports.changePassword = async (userId, currentPassword, newPassword) => {
   const user  = await User.findByPk(userId);
+  if (!user) throw AppError.notFound("RECORD_NOT_FOUND", "User not found");
+
   const match = await bcrypt.compare(currentPassword, user.password_hash);
-  throw AppError.badRequest("VALIDATION", "Current password is incorrect");
+  if (!match) throw AppError.badRequest("VALIDATION", "Current password is incorrect");
 
   const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   await user.update({ password_hash: hash, force_password_change: 0 });
+  // Revoke other sessions so a stolen refresh token dies with the old password
+  await revokeAllRefreshTokens(userId);
 
   auditLog.log({ userId, action: "CHANGE_PASSWORD" });
   return { message: "Password changed successfully." };

@@ -19,11 +19,9 @@ exports.login = async (req, res, next) => {
     // Set httpOnly cookies for tokens
     res.cookie("accessToken",  data.accessToken,  { ...cookieOpts, maxAge: 15 * 60 * 1000 });
     res.cookie("refreshToken", data.refreshToken, { ...cookieOpts, maxAge: 7 * 24 * 60 * 60 * 1000 });
-    // Non-httpOnly cookies for JS-access
-    res.cookie("user", JSON.stringify(data.user), { ...cookieOpts, httpOnly: false, maxAge: 15 * 60 * 1000 });
-    res.cookie("permissions", JSON.stringify(data.permissions), { ...cookieOpts, httpOnly: false, maxAge: 15 * 60 * 1000 });
 
-    // Don't return tokens in body — only user-facing data
+    // User and permissions are returned in the response body — no need for non-httpOnly cookies
+    // (exposing them to JS via cookies increases XSS attack surface)
     res.json({
       success: true,
       data: {
@@ -90,8 +88,6 @@ exports.logout = async (req, res, next) => {
     // Clear auth cookies
     res.clearCookie("accessToken",  { ...cookieOpts });
     res.clearCookie("refreshToken", { ...cookieOpts });
-    res.clearCookie("user",         { ...cookieOpts, httpOnly: false });
-    res.clearCookie("permissions",  { ...cookieOpts, httpOnly: false });
 
     res.json({ success: true, data });
   } catch (err) {

@@ -1,0 +1,84 @@
+"use strict";
+
+const rateLimit = require("express-rate-limit");
+
+// ── Auth endpoint limiters ────────────────────────────────────
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: "Too many login attempts. Try again later." },
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: "Too many password reset requests. Try again later." },
+});
+
+const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: "Too many password reset attempts. Try again later." },
+});
+
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { message: "Too many requests. Try again later." },
+});
+
+// ── Global API limiter ────────────────────────────────────────
+// Catches runaway clients / frontend bugs before they exhaust the DB pool.
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 150,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests. Please slow down." },
+});
+
+// ── Mutation-heavy endpoint limiters ──────────────────────────
+const bulkImportLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { message: "Too many bulk imports. Try again later." },
+});
+
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { message: "Too many search requests. Slow down." },
+});
+
+const eventRegisterLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { message: "Too many event registrations. Slow down." },
+});
+
+// ── User detail enumeration limiter (blocks sequential ID scanning) ──
+const userDetailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { message: "Too many requests. Try again later." },
+});
+
+const mountRateLimiters = (app) => {
+  app.use("/api/auth/login",           loginLimiter);
+  app.use("/api/auth/forgot-password", forgotPasswordLimiter);
+  app.use("/api/auth/reset-password",  resetPasswordLimiter);
+  app.use("/api/auth/refresh-token",   refreshLimiter);
+  app.use("/api/auth/refresh",         refreshLimiter);
+
+  app.use("/api/", globalLimiter);
+
+  app.use("/api/members/bulk",         bulkImportLimiter);
+  app.use("/api/members/scope/search", searchLimiter);
+  app.use("/api/events/register",      eventRegisterLimiter);
+  app.use("/api/events/:id/registrations", eventRegisterLimiter);
+  app.use("/api/member-portal/events", eventRegisterLimiter);
+
+  app.use("/api/users", userDetailLimiter);
+};
+
+module.exports = { mountRateLimiters };

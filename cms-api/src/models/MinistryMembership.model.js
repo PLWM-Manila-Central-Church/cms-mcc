@@ -29,6 +29,9 @@ const MinistryMembership = sequelize.define(
     timestamps: true,
     underscored: true,
     updatedAt:  false,
+    indexes: [
+      { fields: ["ministry_role_id"], name: "idx_mm_ministry_role" },
+    ],
   },
 );
 

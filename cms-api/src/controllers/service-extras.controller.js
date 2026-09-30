@@ -5,6 +5,7 @@ const {
   ensureMemberInScope,
   getMemberScopeWhere,
 } = require("../helpers/scopedLeader.helper");
+const AppError = require("../helpers/AppError");
 
 // ── Attendance Summary ───────────────────────────────────────
 exports.getSummaryByService = async (req, res, next) => {
