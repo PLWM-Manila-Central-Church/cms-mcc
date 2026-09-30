@@ -348,8 +348,10 @@ const seedDemoData = async (transaction) => {
     "Torres", "Mercado", "De Leon", "Gomez", "Del Rosario", "Alvarez", "Castillo", "Tolentino", "Pascual", "Valenzuela"
   ];
 
-  // Hash the testing password once for extreme speed optimization (approx 10s -> 0.1s!)
-  const tempPassword = "PLWM_mcc2026!";
+  // Hash the demo password once for extreme speed optimization (approx 10s -> 0.1s!)
+  // Generated per run — never hardcoded, so a repo reader cannot log into
+  // any environment where demo data was seeded.
+  const tempPassword = `Demo_${crypto.randomBytes(9).toString("hex")}!`;
   const passwordHash = await bcrypt.hash(tempPassword, 12);
 
   const createdMembers = [];
