@@ -1,2 +1,24 @@
 /cms-api/nbproject/private/
-docs/
+/.mysql-data/
+/cms-api/logs/
+/cms-api/uploads/**
+!/cms-api/uploads/**/
+!/cms-api/uploads/**/.gitkeep
+/docs/rendered_full_system_doc/
+
+# Keep real and machine-specific environment files out of Git.
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.render.example
+
+# Dependencies, generated output, and local editor files.
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+**/*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+~$*

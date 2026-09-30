@@ -158,7 +158,8 @@ cms-mcc/
       routes/          Route definitions
       utils/           Constants, role access, and display helpers
 
-  docs/                Local-only documentation artifacts
+  docs/                Project guides, ERD, migration notes, user manual
+  design/landing-redesign/  Static redesign prototype (not deployed)
   render.yaml          Render backend Blueprint
 ```
 
@@ -289,15 +290,11 @@ The backend exposes REST endpoints under `/api`.
 
 ## Documentation
 
-Local documentation artifacts are stored in `docs/`. That folder is intentionally ignored by Git in this repository.
+Project documentation is versioned under `docs/`: architecture and UX guides, the ERD, migration notes, and the full system user manual. The manual is included as editable DOCX and PDF files; page-by-page render previews are generated artifacts and stay out of Git.
 
-Useful local documents may include:
+`design/landing-redesign/` is a static design prototype and is not part of the deployed application.
 
-- system handbook
-- database schema notes
-- ERD/DBML exports
-- migration notes
-- QA and audit notes
+Production deployment sources are restricted to `main`: Vercel Production tracks `main`, Vercel Preview branch tracking is disabled, and the Render API service tracks `main`.
 
 ## License
 
