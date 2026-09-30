@@ -18,7 +18,7 @@ const passwordSchema = Joi.string()
 
 exports.loginSchema = Joi.object({
   email:    Joi.string().email().required().messages({ "string.email": "A valid email is required" }),
-  password: Joi.string().required(),
+  password: Joi.string().max(128).required(),
 });
 
 exports.refreshTokenSchema = Joi.object({
