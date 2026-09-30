@@ -9,8 +9,30 @@ const PORT = process.env.PORT || 5000;
 const MIGRATE_ON_START = process.env.MIGRATE_ON_START !== "false";
 const SHUTDOWN_TIMEOUT_MS = 30_000;
 
+// ── Fail fast on weak/missing auth secrets ─────────────────────
+// A short JWT secret makes HS256 tokens brute-forceable; better to refuse
+// to boot than to run with guessable session forgery.
+const assertSecretStrength = (name) => {
+  const value = process.env[name];
+  if (!value) {
+    logger.error(`${name} is not set — refusing to start`);
+    process.exit(1);
+  }
+  if (value.length < 32) {
+    logger.error(`${name} must be at least 32 characters — refusing to start`);
+    process.exit(1);
+  }
+};
+
 (async () => {
   try {
+    if (process.env.NODE_ENV === "production") {
+      assertSecretStrength("JWT_SECRET");
+      assertSecretStrength("REFRESH_TOKEN_SECRET");
+    } else if (!process.env.JWT_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
+      logger.warn("JWT_SECRET / REFRESH_TOKEN_SECRET not set — auth endpoints will fail");
+    }
+
     await sequelize.authenticate();
     logger.info("Database connected");
 

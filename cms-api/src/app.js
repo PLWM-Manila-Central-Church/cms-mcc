@@ -4,18 +4,18 @@ const express = require("express");
 const cors    = require("cors");
 const helmet  = require("helmet");
 const morgan  = require("morgan");
-const path    = require("path");
-const rateLimit = require("express-rate-limit");
 const cookieParser = require("cookie-parser");
 require("dotenv").config();
 
 const Sentry  = require("@sentry/node");
 const logger  = require("./helpers/logger");
 
-const errorHandler = require("./middlewares/errorHandler");
-const requestId    = require("./middlewares/requestId");
+const errorHandler  = require("./middlewares/errorHandler");
+const requestId     = require("./middlewares/requestId");
+const csrfOriginCheck = require("./middlewares/csrfOrigin");
 const sequelizeHealth = require("./config/db");
 const { metricsMiddleware, metricsEndpoint } = require("./helpers/metrics");
+const { mountRateLimiters } = require("./middlewares/rateLimiters");
 
 const app = express();
 
@@ -56,7 +56,13 @@ app.use(helmet({
 app.use(cors({
   origin: (origin, callback) => {
     const allowed = (process.env.ALLOWED_ORIGIN || "").split(",").map(o => o.trim()).filter(Boolean);
-    if (!origin || allowed.includes(origin) || allowed.includes("*")) {
+    // Allow requests with no origin (same-origin, curl, server-to-server)
+    // but never allow wildcard * or null (null origin = sandboxed iframes, data: URIs)
+    if (!origin) return callback(null, true);
+    if (allowed.length === 0 && process.env.NODE_ENV !== "production") {
+      return callback(null, true);
+    }
+    if (allowed.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -67,7 +73,22 @@ app.use(cors({
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev")); // Fix #10
 app.use(express.json({ limit: "500kb" })); // Fix #9
 
-app.get("/metrics", metricsEndpoint);
+// ── CSRF origin check (cookie-authenticated mutations only) ──
+app.use(csrfOriginCheck);
+
+// ── Metrics (optionally protected by METRICS_TOKEN) ──────────
+app.get("/metrics", (req, res, next) => {
+  const token = process.env.METRICS_TOKEN;
+  if (!token) {
+    if (process.env.NODE_ENV === "production") {
+      logger.warn("METRICS_TOKEN not set — /metrics is exposed unauthenticated");
+    }
+    return next();
+  }
+  const provided = req.get("authorization")?.replace(/^Bearer\s+/i, "") || req.query.token;
+  if (provided === token) return next();
+  return res.status(403).json({ message: "Forbidden" });
+}, metricsEndpoint);
 
 app.get("/health", async (_req, res) => {
   try {
@@ -88,104 +109,8 @@ app.get("/health", async (_req, res) => {
   }
 });
 
-// ── Authenticated file serving for archive uploads ───────────
-// Files require a valid JWT — unauthenticated requests get 401.
-// Both paths kept so the frontend works whether REACT_APP_API_URL
-// ends with /api (Vercel) or not (direct service URL).
-const fs         = require("fs");
-const uploadsDir = path.join(__dirname, "../uploads");
-const { getFileUrl, s3Enabled } = require("./middlewares/upload-s3");
-
-const serveFile = (folder) => (req, res) => {
-  const safeName = path.basename(req.params.filename);
-
-  // If S3 is enabled, redirect to the S3/CDN URL
-    if (s3Enabled) {
-      const url = getFileUrl(`${folder}/${safeName}`);
-      return res.redirect(307, url);
-    }
-
-    // Fallback: serve from local disk (pre-S3 behavior)
-    const filePath = path.join(uploadsDir, folder, safeName);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: "File not found" });
-    }
-    // Set caching headers for static files
-    res.set("Cache-Control", "public, max-age=86400, immutable");
-    res.set("ETag", `"${safeName}"`);
-    res.sendFile(path.resolve(filePath));
-};
-
-const serveUpload   = serveFile("archives");
-const serveReceipt  = serveFile("receipts");
-
 // ── Rate Limiters ─────────────────────────────────────────────
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { message: "Too many login attempts. Try again later." },
-});
-const forgotPasswordLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { message: "Too many password reset requests. Try again later." },
-});
-const resetPasswordLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { message: "Too many password reset attempts. Try again later." },
-});
-const refreshLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  message: { message: "Too many requests. Try again later." },
-});
-
-app.use("/api/auth/login",           loginLimiter);
-app.use("/api/auth/forgot-password", forgotPasswordLimiter);
-app.use("/api/auth/reset-password",  resetPasswordLimiter);
-app.use("/api/auth/refresh-token",   refreshLimiter);
-
-// ── Global API Rate Limiter ───────────────────────────────────
-// Catches runaway clients / frontend bugs before they exhaust the DB pool.
-const globalLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 150,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: "Too many requests. Please slow down." },
-});
-app.use("/api/", globalLimiter);
-
-// ── Mutation-heavy endpoint rate limiters ─────────────────────
-const bulkImportLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 5,
-  message: { message: "Too many bulk imports. Try again later." },
-});
-const searchLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 60,
-  message: { message: "Too many search requests. Slow down." },
-});
-const eventRegisterLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 10,
-  message: { message: "Too many event registrations. Slow down." },
-});
-
-app.use("/api/members/import-csv",    bulkImportLimiter);
-app.use("/api/members/search",       searchLimiter);
-app.use("/api/events/register",      eventRegisterLimiter);
-app.use("/api/member-portal/events", eventRegisterLimiter);
-
-// ── User detail enumeration rate limiter (prevents sequential ID scanning) ──
-const userDetailLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  message: { message: "Too many requests. Try again later." },
-});
-app.use("/api/users", userDetailLimiter);
+mountRateLimiters(app);
 
 // ── Public Routes (no auth) ───────────────────────────────────
 app.use("/api/public",        require("./routes/public.routes"));
@@ -211,44 +136,14 @@ app.use("/api/settings",      require("./routes/settings.routes"));
 app.use("/api/audit",         require("./routes/audit.routes"));
 app.use("/api/audit-logs",    require("./routes/audit.routes"));
 app.use("/api/member-portal", require("./routes/member-portal.routes"));
-app.use("/api/reports",      require("./routes/reports.routes"));
+app.use("/api/reports",       require("./routes/reports.routes"));
 
-// ── Dropdown aliases for frontend member form ────────────────
-const { CellGroup, MinistryGroup } = require("./models");
-const verifyToken = require("./middlewares/verifyToken");
-
-const assignedOnlyWhere = (req, roleName, fieldName) => {
-  if (req.user?.roleName !== roleName) return {};
-  const id = req.user?.[fieldName];
-  return id ? { id } : { id: null };
-};
-
-// Fix #3 — authenticated file serving (replaces public express.static)
-app.get("/uploads/archives/:filename",     verifyToken, serveUpload);
-app.get("/api/uploads/archives/:filename", verifyToken, serveUpload);
-
-app.get("/uploads/receipts/:filename",     verifyToken, serveReceipt);
-app.get("/api/uploads/receipts/:filename", verifyToken, serveReceipt);
-
-const serveProfile  = serveFile("profiles");
-
-app.get("/uploads/profiles/:filename",     verifyToken, serveProfile);
-app.get("/api/uploads/profiles/:filename", verifyToken, serveProfile);
-
-app.get("/api/members/dropdowns/cell-groups", verifyToken, async (req, res) => {
-  const data = await CellGroup.findAll({
-    where: assignedOnlyWhere(req, "Cell Group Leader", "leadsCellGroupId"),
-    order: [["name", "ASC"]],
-  });
-  res.json({ success: true, data });
-});
-app.get("/api/members/dropdowns/groups", verifyToken, async (req, res) => {
-  const data = await MinistryGroup.findAll({
-    where: assignedOnlyWhere(req, "Group Leader", "leadsGroupId"),
-    order: [["name", "ASC"]],
-  });
-  res.json({ success: true, data });
-});
+// ── Authenticated file serving for archive uploads ────────────
+// Both paths kept so the frontend works whether REACT_APP_API_URL
+// ends with /api (Vercel) or not (direct service URL).
+const uploadsRoutes = require("./routes/uploads.routes");
+app.use("/uploads",     uploadsRoutes);
+app.use("/api/uploads", uploadsRoutes);
 
 // ── Sentry error handler (must come before custom error handler) ──
 if (process.env.SENTRY_DSN) {
