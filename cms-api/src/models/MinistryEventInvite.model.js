@@ -46,6 +46,9 @@ const MinistryEventInvite = sequelize.define(
     timestamps:  true,
     underscored: true,
     updatedAt:   false,
+    indexes: [
+      { fields: ["ministry_role_id", "response_status"], name: "idx_mei_role_status" },
+    ],
   },
 );
 

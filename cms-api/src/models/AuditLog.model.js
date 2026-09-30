@@ -25,6 +25,11 @@ const AuditLog = sequelize.define(
     underscored: true,
     updatedAt: false,
     createdAt: "created_at",
+    indexes: [
+      { fields: ["user_id"], name: "idx_audit_user_id" },
+      { fields: ["created_at"], name: "idx_audit_created_at" },
+      { fields: ["target_table", "target_id"], name: "idx_audit_target" },
+    ],
   },
 );
 

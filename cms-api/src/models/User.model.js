@@ -38,6 +38,10 @@ const User = sequelize.define(
     scopes: {
       active: { where: { is_deleted: 0 } },
     },
+    indexes: [
+      { fields: ["member_id"], name: "idx_user_member_id" },
+      { fields: ["email"], name: "idx_user_email" },
+    ],
   },
 );
 

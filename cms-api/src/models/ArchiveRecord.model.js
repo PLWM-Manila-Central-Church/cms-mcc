@@ -43,6 +43,9 @@ const ArchiveRecord = sequelize.define(
     underscored: true,
     defaultScope: { where: { is_deleted: 0 } },
     scopes: { withDeleted: {} },
+    indexes: [
+      { fields: ["status"], name: "idx_archive_status" },
+    ],
   },
 );
 

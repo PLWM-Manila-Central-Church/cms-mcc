@@ -20,7 +20,17 @@ const Attendance = sequelize.define(
     checked_in_at: { type: DataTypes.DATE, allowNull: false },
     recorded_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   },
-  { tableName: "attendances", timestamps: false, underscored: true },
+  {
+    tableName: "attendances",
+    timestamps: false,
+    underscored: true,
+    indexes: [
+      { fields: ["service_id"], name: "idx_attendance_service_id" },
+      { fields: ["member_id"], name: "idx_attendance_member_id" },
+      { fields: ["service_id", "member_id"], name: "idx_attendance_svc_member" },
+      { fields: ["checked_in_at"], name: "idx_attendance_checked_in" },
+    ],
+  },
 );
 
 module.exports = Attendance;
