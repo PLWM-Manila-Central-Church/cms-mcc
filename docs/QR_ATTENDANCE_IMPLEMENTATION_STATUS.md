@@ -24,9 +24,9 @@ The feature implementation and local source checks are ready for isolated QA rev
 | Diff whitespace check | Pass | `git diff --check` is clean. |
 | Browser image decoding | Pass, limited | Actual scanner component and decoder were exercised with a synthetic QR image. No API or database write occurred. |
 | Camera optical test | Not verified | No physical-device camera session is recorded. Image upload remains the mandatory laptop path. |
-| Migration and API/database persistence | Blocked | No safe isolated, disposable TiDB target or local MySQL/TiDB service is available. The original checkout `.env` points to a production-oriented TiDB host/schema and was not used. The prior `mcc-local-dev` target contains data and was not used for writes. |
+| Migration and API/database persistence | Blocked | No safe isolated, disposable TiDB target or local MySQL/TiDB service is available. The original checkout `.env` points to a production-oriented TiDB host/schema and was not used. The prior `mcc-local-dev` target contains data and was not used for writes. A previous authorized TiDB sign-in exposed no resources in that organization; this in-app browser session currently redirects to TiDB sign-in. |
 | Live login and existing-module regression | Not verified on a QR deployment | No QR build has been deployed. Source review shows authentication files were not changed; that is not live regression evidence. |
-| Remote review and deployment | Blocked | GitHub branch-creation/push attempts returned HTTP 403. No remote feature branch or PR exists; `main` has not been changed. |
+| Remote review and deployment | Blocked | The GitHub connector identifies `Lester0961` and repository metadata reports admin/push access, but create-branch still returns HTTP 403 (`Resource not accessible by integration`); local Git push also returned 403. No remote feature branch or PR exists; `main` has not been changed. |
 
 ## External gates to close
 
