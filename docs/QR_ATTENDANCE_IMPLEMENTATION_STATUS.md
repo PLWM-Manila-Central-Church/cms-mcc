@@ -4,7 +4,7 @@ Updated 7 October 2026. This status is for the local `codex/qr-attendance` workt
 
 ## Current outcome
 
-The feature implementation and local source checks are ready for isolated QA review. The requested production-ready outcome is **not complete**: there has been no database migration, database-backed attendance write, remote pull request, or deployment. Production data and configuration have not been changed.
+The feature implementation and local source checks are ready for isolated QA review. Draft PR #14 is open, but the requested production-ready outcome is **not complete**: there has been no database migration, database-backed attendance write, or deployment. Production data and configuration have not been changed.
 
 ## Work completed locally
 
@@ -18,7 +18,7 @@ The feature implementation and local source checks are ready for isolated QA rev
 
 | Gate | Result | Evidence / limitation |
 | --- | --- | --- |
-| API automated tests | Pass | 9 Jest suites, 43 tests. |
+| API automated tests | Pass | 10 Jest suites, 44 tests, including the `system_settings` seed-shape regression. |
 | Frontend automated tests | Pass | 5 Vitest files, 15 tests. Role-flow workspace tests mock the API and do not prove persistence. |
 | Frontend production build | Pass with warning | Vite build succeeds. The main bundle is 933.03 kB and ZXing is 477.54 kB; both trigger the configured 500 kB chunk advisory. The workspace is lazy-loaded. |
 | Diff whitespace check | Pass | `git diff --check` is clean. |
@@ -26,12 +26,12 @@ The feature implementation and local source checks are ready for isolated QA rev
 | Camera optical test | Not verified | No physical-device camera session is recorded. Image upload remains the mandatory laptop path. |
 | Migration and API/database persistence | Blocked | TiDB is now signed in. The active `PLWM-MCC` Starter cluster lists an active `mcc-local-dev` branch from `main`; the UI rounds row storage to 0 MiB, but the previous read-only audit found about 3,901 rows there. It is not a disposable target. The original checkout `.env` is production-oriented, and no QR migration or database write has occurred. |
 | Live login and existing-module regression | Not verified on a QR deployment | No QR build has been deployed. Source review shows authentication files were not changed; that is not live regression evidence. |
-| Remote review and deployment | In review | `codex/qr-attendance` is published and draft [PR #14](https://github.com/PLWM-Manila-Central-Church/cms-mcc/pull/14) is open against `main` at `eaf9b91`. PR is unmerged; GitHub Actions CI is in progress. Repo settings show no classic branch protections or repo rulesets; org-level policies remain unverified. |
+| Remote review and deployment | In review | Draft [PR #14](https://github.com/PLWM-Manila-Central-Church/cms-mcc/pull/14) is open against `main` and unmerged. Its first CI run failed in the QR permission migration; a fix and regression test are pushed, and the rerun is pending. |
 
 ## External gates to close
 
 1. Provide a dedicated empty QA TiDB cluster/branch/schema and scoped test credentials. Do not reuse the production-oriented endpoint or the data-bearing `mcc-local-dev` target.
-2. Let CI complete, review draft PR #14, and keep it unmerged until isolated QA and browser persistence checks pass. Do not deploy the draft.
+2. Confirm fresh-database CI passes after the migration fix, review draft PR #14, and keep it unmerged until isolated QA and browser persistence checks pass. Do not deploy the draft.
 3. Apply the additive migrations only to the isolated QA target, then verify readiness, feature-off behavior, and deliberate enablement.
 4. Run the Services and Events browser flows with synthetic accounts and actual generated PNGs through the real upload UI; verify durable rows, idempotency, role/group scope, review receipts, summaries, member history, CSV, and audit records.
 5. Re-run login and existing-module journeys in the QA deployment. Record camera results separately; lack of a camera must not be reported as a pass.
