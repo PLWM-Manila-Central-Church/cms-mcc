@@ -24,10 +24,10 @@ The feature implementation and local source checks are ready for isolated QA rev
 | Diff whitespace check | Pass | `git diff --check` is clean. |
 | Browser image decoding | Pass, limited | Actual scanner component and decoder were exercised with a synthetic QR image. No API or database write occurred. |
 | Camera optical test | Not verified | No physical-device camera session is recorded. Image upload remains the mandatory laptop path. |
-| API/database persistence | Pass, limited to CI MySQL | Fresh MySQL migrations and four QR HTTP/API integration tests passed in GitHub Actions run `37547896338`, covering direct Service/Event writes, leader batch scope/approval, duplicates, counts, history, CSV, issue/image, and reissue. This does not establish TiDB or browser-upload integration. |
+| API/database persistence | Pass, limited to CI MySQL | Fresh MySQL migrations and four QR HTTP/API integration tests passed in GitHub Actions run `37548097586`, covering direct Service/Event writes, leader batch scope/approval, duplicates, scoped summaries, history, CSV, issue/image, and reissue. This does not establish TiDB or browser-upload integration. |
 | Browser/API/TiDB persistence | Blocked | The TiDB `mcc-local-dev` branch is active but data-bearing (about 3,901 rows in the prior read-only audit); the production-oriented `.env` target was not used. No QR migration or attendance write has occurred on TiDB. |
 | Live login and existing-module regression | Not verified on a QR deployment | No QR build has been deployed. Source review shows authentication files were not changed; that is not live regression evidence. |
-| Remote review and deployment | In review | Draft [PR #14](https://github.com/PLWM-Manila-Central-Church/cms-mcc/pull/14) is open against `main` and unmerged. The follow-up CI run passed on head `f9451e6`, including fresh database migrations, API tests, and frontend build/tests. Isolated TiDB QA and production checks remain pending. |
+| Remote review and deployment | In review | Draft [PR #14](https://github.com/PLWM-Manila-Central-Church/cms-mcc/pull/14) is open against `main` and unmerged. CI run `37548097586` passed on head `a73ab61`, including fresh database migrations, four QR API persistence tests, API tests, and frontend build/tests. Isolated TiDB QA, browser upload persistence, and production checks remain pending. |
 
 ## External gates to close
 
