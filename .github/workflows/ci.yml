@@ -58,6 +58,7 @@ jobs:
         working-directory: cms-api
     env:
       NODE_ENV: test
+      JWT_SECRET: qr-attendance-ci-integration-secret-only
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
       DB_NAME: plwm_mcc
@@ -77,6 +78,10 @@ jobs:
         run: npm ci
       - name: Apply all migrations to a fresh database
         run: npm run db:migrate
+      - name: Run QR attendance persistence integration tests
+        env:
+          QR_ATTENDANCE_INTEGRATION_DB: "true"
+        run: npm run test:qr-integration
 
   frontend-build:
     name: Frontend production build

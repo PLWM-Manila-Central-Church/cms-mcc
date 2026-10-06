@@ -4,13 +4,13 @@ const { Op } = require("sequelize");
 const AppError = require("../../helpers/AppError");
 const { Member, Service } = require("../../models");
 const { AttendanceBatch, AttendanceBatchItem, AttendanceExpectedMember, EventAttendance, QrAttendanceSession, QrServiceAttendance } = require("./models");
-const { getScope } = require("../../helpers/scopedLeader.helper");
+const { getMemberScopeWhere, getScope } = require("../../helpers/scopedLeader.helper");
 
 const getScopeMemberIds = async (user) => {
   const scope = getScope(user);
   if (!scope) return null;
   if (!scope.id) return [];
-  const memberWhere = await getScopedAttendanceMemberWhere(user);
+  const memberWhere = await getMemberScopeWhere(user);
   const rows = await Member.findAll({ where: memberWhere || {}, attributes: ["id"], raw: true });
   return rows.map((row) => Number(row.id));
 };
