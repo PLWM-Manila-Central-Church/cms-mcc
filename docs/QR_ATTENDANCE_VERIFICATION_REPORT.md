@@ -31,7 +31,7 @@ These tests prove frontend request sequencing and UI state handling. They do not
 - Verify the full set of malformed, wrong-session, revoked, expired, duplicate, and out-of-scope QR cases leave counts and authentication intact.
 - Verify login, logout, refresh/session persistence, and representative existing modules on the QA deployment after the QR build is deployed.
 - Record physical camera success/fallback separately. Current verified laptop evidence uses image upload and does not claim camera verification.
-- Obtain remote code review and production `main` deployment evidence. The feature branch is published to `origin/codex/qr-attendance` at `4b12502`, but no PR exists. GitHub API PR creation returns 403; GitHub CLI PR listing is rejected under the organization’s fine-grained-token lifetime policy. Repo-level branch protections/rulesets are absent; org-level controls remain unverified. TiDB Cloud is signed in, but the visible `mcc-local-dev` branch has existing rows according to the prior read-only audit and is not safe for QR writes. No isolated QA resource was created.
+- Draft PR #14 is open from `codex/qr-attendance` to `main` at `eaf9b91`, unmerged; GitHub Actions CI is in progress. Keep it draft until review and isolated QA pass. Repo-level branch protections/rulesets are absent; org-level controls remain unverified. TiDB Cloud is signed in, but the visible `mcc-local-dev` branch has existing rows according to the prior read-only audit and is not safe for QR writes. No isolated QA resource was created.
 
 ## Review note
 
