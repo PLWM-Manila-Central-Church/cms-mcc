@@ -739,7 +739,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
                   return <tr key={`${session.service_id ? 's' : 'e'}-${record.id}`}>
                     <td>{member?.last_name}, {member?.first_name}</td>
                     <td>{new Date(record.checked_in_at).toLocaleString()}</td>
-                    <td>{record.check_in_method}</td>
+                    <td>{record.entry_source !== 'legacy' && record.check_in_method === 'barcode' ? 'QR' : record.check_in_method}</td>
                     <td>{record.entry_source}</td>
                     <td>{record.voided_at ? 'Voided' : 'Present'}</td>
                     {canCorrect && <td>{qrRecord && <button type="button" className={record.voided_at ? 'qr-secondary-button' : 'qr-danger-button'} disabled={busy} onClick={() => correctRecord(record, record.voided_at ? 'reinstate' : 'void')}>{record.voided_at ? 'Reinstate' : 'Void'}</button>}</td>}

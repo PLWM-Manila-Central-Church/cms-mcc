@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { LANGS, getLangCode, saveLangCode, loadGTScript, applyGTLang } from '../../utils/langUtils';
 import MonoIcon from '../../components/common/MonoIcon';
 import useWindowWidth from '../../hooks/useWindowWidth';
-import MemberQrPanel from '../../components/attendance/MemberQrPanel';
+const MemberQrPanel = lazy(() => import('../../components/attendance/MemberQrPanel'));
 
 // ── Constants ─────────────────────────────────────────────────
 const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
@@ -614,7 +614,9 @@ function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile,language}) {
       <div className="qr-workspace-card" style={{marginBottom:16,background:c.surface,borderColor:c.border,color:c.t1}}>
         <h3 style={{fontSize:f.md,color:c.t1,margin:'0 0 5px'}}>Member attendance QR</h3>
         <p style={{fontSize:f.xs,color:c.t3,margin:'0 0 12px'}}>Create your fixed QR once, then show it to Registration Team when you attend a Service or Event.</p>
-        <MemberQrPanel language={language} />
+        <Suspense fallback={<div role="status" style={{fontSize:f.xs,color:c.t3}}>Loading QR tools…</div>}>
+          <MemberQrPanel language={language} />
+        </Suspense>
       </div>
       <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 260px',gap:16,alignItems:'start'}}>
       <div>

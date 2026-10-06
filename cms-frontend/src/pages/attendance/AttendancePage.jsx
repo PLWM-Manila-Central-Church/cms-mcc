@@ -385,7 +385,7 @@ export default function AttendancePage() {
                 </td>
                 <td style={styles.td}>
                   <span style={{ ...styles.methodBadge, ...METHOD_STYLE[r.check_in_method] }}>
-                    {r.check_in_method === 'pre-reg' ? 'pre-reg' : r.check_in_method}
+                    {r.check_in_method === 'pre-reg' ? 'pre-reg' : r.entry_source !== 'legacy' && r.check_in_method === 'barcode' ? 'QR' : r.check_in_method}
                   </span>
                 </td>
                 <td style={{ ...styles.td, color: '#64748b' }}>
