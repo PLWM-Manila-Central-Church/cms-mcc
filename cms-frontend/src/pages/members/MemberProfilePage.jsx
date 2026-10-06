@@ -4,6 +4,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
+import OperationalMemberQrPanel from '../../components/attendance/OperationalMemberQrPanel';
 
 const STATUS_COLORS = {
   New:         { bg: '#eff6ff', color: '#3b82f6' },
@@ -96,6 +97,7 @@ export default function MemberProfilePage() {
           ← Back to Members
         </button>
         <div style={styles.topActions}>
+          {hasPermission('member_qr', 'manage') && <OperationalMemberQrPanel memberId={id} memberName={fullName} />}
           {hasPermission('members', 'update') && (
             <button onClick={() => navigate(`/members/${id}/edit`)} style={styles.editBtn}>
               Edit Member

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { LANGS, getLangCode, saveLangCode, loadGTScript, applyGTLang } from '../../utils/langUtils';
 import MonoIcon from '../../components/common/MonoIcon';
 import useWindowWidth from '../../hooks/useWindowWidth';
+import MemberQrPanel from '../../components/attendance/MemberQrPanel';
 
 // ── Constants ─────────────────────────────────────────────────
 const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
@@ -574,14 +575,48 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
   );
 }
 
-function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile}) {
+function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile,language}) {
   const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
   const bdg  = (bg,color,border)=>({padding:'4px 12px',borderRadius:20,fontSize:f.xs,fontWeight:700,background:bg,color,border});
   const rate = attendance?.attendanceRate||0;
   const rateColor = rate>=80?c.success:rate>=50?c.amber:c.danger;
+  const [eventRecords, setEventRecords] = useState([]);
+  const [eventHistoryAvailable, setEventHistoryAvailable] = useState(true);
+  const [historyFilter, setHistoryFilter] = useState('all');
+
+  useEffect(() => {
+    let active = true;
+    axiosInstance.get('/member-portal/attendance-qr/history')
+      .then((response) => {
+        if (!active) return;
+        setEventRecords((response.data.data.records || []).map((record) => ({ ...record, kind: 'event' })));
+        setEventHistoryAvailable(true);
+      })
+      .catch(() => { if (active) setEventHistoryAvailable(false); });
+    return () => { active = false; };
+  }, []);
+
+  const serviceRecords = (attendance?.records || []).map((record) => ({ ...record, kind: 'service' }));
+  const historyRecords = historyFilter === 'services'
+    ? serviceRecords
+    : historyFilter === 'events' ? eventRecords : [...serviceRecords, ...eventRecords];
+  const recordTitle = (record) => record.kind === 'event' ? record.event_title : record.service_title;
+  const recordKey = (record) => `${record.kind}-${record.id}`;
+  const statusStyle = (status) => {
+    if (status === 'Present') return bdg(c.successL,c.success,`1px solid ${c.successB}`);
+    if (status === 'Pre-registered') return bdg('#faf5ff','#7c3aed','1px solid #ddd6fe');
+    if (status === 'Voided') return bdg(c.surfaceAlt,c.t3,`1px solid ${c.border}`);
+    return bdg(c.dangerL,c.danger,`1px solid ${c.dangerB}`);
+  };
 
   return (
-    <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 260px',gap:16,alignItems:'start'}}>
+    <div>
+      <div className="qr-workspace-card" style={{marginBottom:16,background:c.surface,borderColor:c.border,color:c.t1}}>
+        <h3 style={{fontSize:f.md,color:c.t1,margin:'0 0 5px'}}>Member attendance QR</h3>
+        <p style={{fontSize:f.xs,color:c.t3,margin:'0 0 12px'}}>Create your fixed QR once, then show it to Registration Team when you attend a Service or Event.</p>
+        <MemberQrPanel language={language} />
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 260px',gap:16,alignItems:'start'}}>
       <div>
         {/* Rate card on mobile — shown above the list */}
         {isMobile&&(
@@ -601,22 +636,30 @@ function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile}) {
         )}
 
         <div style={{...card,overflow:'hidden'}}>
-          <div style={{padding:'14px 18px',borderBottom:`1px solid ${c.borderL}`,fontSize:f.lg,fontWeight:700,color:c.t1}}>{t.attendanceHistory}</div>
+          <div style={{padding:'14px 18px',borderBottom:`1px solid ${c.borderL}`,display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+            <span style={{fontSize:f.lg,fontWeight:700,color:c.t1}}>{t.attendanceHistory}</span>
+            <div role="group" aria-label="Filter attendance history" style={{display:'flex',gap:4,background:c.surfaceAlt,borderRadius:9,padding:3}}>
+              {[['all','All'],['services',t.service],['events','Events']].map(([value,label])=>(
+                <button key={value} type="button" onClick={()=>setHistoryFilter(value)} aria-pressed={historyFilter===value}
+                  style={{border:0,borderRadius:7,padding:'6px 9px',fontSize:f.xs,fontWeight:700,cursor:'pointer',background:historyFilter===value?c.surface:'transparent',color:historyFilter===value?c.accentT:c.t3}}>{label}</button>
+              ))}
+            </div>
+          </div>
+          {!eventHistoryAvailable && historyFilter !== 'services' && <div style={{padding:'9px 18px',fontSize:f.xs,color:c.t3}}>Event attendance history is currently unavailable.</div>}
 
           {isMobile?(
             // Card list on mobile
             <div style={{padding:'8px 0'}}>
-              {(!attendance?.records||attendance.records.length===0)
+              {historyRecords.length===0
                 ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{t.noAttendance}</div>
-                : attendance.records.map(r=>(
-                  <div key={r.id} style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+                : historyRecords.map(r=>(
+                  <div key={recordKey(r)} style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:f.sm,fontWeight:700,color:c.t1,marginBottom:2}}>{r.service_title}</div>
+                      <div style={{fontSize:f.sm,fontWeight:700,color:c.t1,marginBottom:2}}>{recordTitle(r)}</div>
+                      <div style={{fontSize:f.xs,color:c.t3}}>{r.kind==='event'?'Event':'Service'}{r.session_title?` · ${r.session_title}`:''}</div>
                       <div style={{fontSize:f.xs,color:c.t3}}>{fmtDate(r.date)}{r.check_in_time?` · ${fmtTime(r.check_in_time)}`:''}</div>
                     </div>
-                    <span style={bdg(r.status==='Present'?c.successL:c.dangerL,r.status==='Present'?c.success:c.danger,`1px solid ${r.status==='Present'?c.successB:c.dangerB}`)}>
-                      {r.status==='Present'?t.present:t.absent}
-                    </span>
+                    <span style={statusStyle(r.status)}>{r.status==='Present'?t.present:r.status==='Pre-registered'?'Pre-registered':r.status==='Voided'?'Voided':t.absent}</span>
                   </div>
                 ))}
             </div>
@@ -632,17 +675,15 @@ function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile}) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(!attendance?.records||attendance.records.length===0)
+                  {historyRecords.length===0
                     ? <tr><td colSpan={4} style={{padding:'40px',textAlign:'center',color:c.t3}}>{t.noAttendance}</td></tr>
-                    : attendance.records.map((r,i)=>(
-                      <tr key={r.id} style={{background:i%2===0?c.surface:c.surfaceAlt,borderBottom:`1px solid ${c.borderL}`}}>
+                    : historyRecords.map((r,i)=>(
+                      <tr key={recordKey(r)} style={{background:i%2===0?c.surface:c.surfaceAlt,borderBottom:`1px solid ${c.borderL}`}}>
                         <td style={{padding:'12px 18px',fontSize:f.base,color:c.t2}}>{fmtDate(r.date)}</td>
-                        <td style={{padding:'12px 18px',fontSize:f.base,color:c.t1,fontWeight:500}}>{r.service_title}</td>
+                        <td style={{padding:'12px 18px',fontSize:f.base,color:c.t1,fontWeight:500}}>{recordTitle(r)} <span style={{fontSize:f.xs,color:c.t3}}>({r.kind==='event'?'Event':'Service'})</span></td>
                         <td style={{padding:'12px 18px',fontSize:f.base,color:c.t2}}>{r.check_in_time?fmtTime(r.check_in_time):'—'}</td>
                         <td style={{padding:'12px 18px'}}>
-                          <span style={bdg(r.status==='Present'?c.successL:c.dangerL,r.status==='Present'?c.success:c.danger,`1px solid ${r.status==='Present'?c.successB:c.dangerB}`)}>
-                            {r.status==='Present'?t.present:t.absent}
-                          </span>
+                          <span style={statusStyle(r.status)}>{r.status==='Present'?t.present:r.status==='Pre-registered'?'Pre-registered':r.status==='Voided'?'Voided':t.absent}</span>
                         </td>
                       </tr>
                     ))}
@@ -668,6 +709,7 @@ function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile}) {
           <div style={{fontSize:f.xs,color:c.t3,marginTop:2}}>{t.last2mo}</div>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -1069,7 +1111,7 @@ export default function MemberPortal() {
           <>
             {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={PHP} fmtDate={fmtDate} isMobile={isMobile}/>}
             {tab===1&&<EventsTab events={events} assigns={assigns} services={services} invites={invites} evtL={evtL} confL={confL} inviteResponding={inviteResponding} doRegister={doRegister} doCancel={doCancel} doConfirm={doConfirm} onServiceClick={onServiceClick} onEventDetailsClick={onEventDetailsClick} onInviteRespond={onInviteRespond} c={c} f={f} t={t} fmtDate={fmtDate} fmtShort={fmtShort} fmtSvcT={fmtSvcT} isMobile={isMobile}/>}
-            {tab===2&&<AttendanceTab attendance={attendance} c={c} f={f} t={t} fmtDate={fmtDate} fmtTime={fmtTime} isMobile={isMobile}/>}
+            {tab===2&&<AttendanceTab attendance={attendance} c={c} f={f} t={t} fmtDate={fmtDate} fmtTime={fmtTime} isMobile={isMobile} language={lang}/>}
             {tab===3&&<FinanceTab finance={finance} c={c} f={f} t={t} fmtDate={fmtDate} PHP={PHP} isMobile={isMobile}/>}
           </>
         )}

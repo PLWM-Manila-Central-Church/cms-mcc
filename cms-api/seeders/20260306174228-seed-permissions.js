@@ -1,5 +1,7 @@
 "use strict";
 
+const { PERMISSIONS } = require("../src/modules/qr-attendance/permissions");
+
 module.exports = {
   up: async (queryInterface) => {
     const now = new Date();
@@ -81,6 +83,9 @@ module.exports = {
       { module: "audit", action: "read", description: "View audit logs", created_at: now, updated_at: now },
       // ── Dashboard ─────────────────────────────────────────
       { module: "dashboard", action: "read", description: "View role-scoped dashboard statistics", created_at: now, updated_at: now },
+      ...PERMISSIONS.map(({ module, action, description }) => ({
+        module, action, description, created_at: now, updated_at: now,
+      })),
     ].filter(p => !existingSet.has(`${p.module}.${p.action}`));
 
     if (permsToAdd.length > 0) {

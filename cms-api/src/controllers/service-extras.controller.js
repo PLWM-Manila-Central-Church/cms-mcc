@@ -122,7 +122,9 @@ const attendanceService = require("../services/attendance.service");
 
 exports.getAttendanceByService = async (req, res, next) => {
   try {
-    const { Attendance, Member, Service, ServiceAttendanceSummary, ServiceResponse } = require("../models");
+    const { Member, Service, ServiceAttendanceSummary, ServiceResponse } = require("../models");
+    const { getAttendanceModel } = require("../helpers/attendanceSummary.helper");
+    const AttendanceModel = await getAttendanceModel();
 
     const service = await Service.findByPk(req.params.id);
     if (!service) return res.status(404).json({ success: false, message: "Service not found" });
@@ -135,11 +137,19 @@ exports.getAttendanceByService = async (req, res, next) => {
       ...(memberScopeWhere && { where: memberScopeWhere }),
     };
 
-    const records = await Attendance.findAll({
+    const records = await AttendanceModel.findAll({
       where: { service_id: req.params.id },
       include: [memberInclude],
       order: [["checked_in_at", "DESC"]],
     });
+
+    const recordsWithStatus = records
+      .filter((record) => record.check_in_method !== "pre-reg")
+      .map((record) => ({
+      ...record.toJSON(),
+      is_pre_reg: false,
+      is_voided: Boolean(record.voided_at),
+    }));
 
     const summary = await ServiceAttendanceSummary.findOne({
       where: { service_id: req.params.id },
@@ -147,7 +157,9 @@ exports.getAttendanceByService = async (req, res, next) => {
 
     // ── Merge pre-reg responses as virtual attendance rows ──────
     // Include members who said they're attending but haven't checked in yet
-    const checkedInIds = new Set(records.map(r => r.member_id));
+    const checkedInIds = new Set(recordsWithStatus
+      .filter((record) => !record.is_pre_reg && !record.is_voided)
+      .map((record) => Number(record.member_id)));
     const preRegs = await ServiceResponse.findAll({
       where: { service_id: req.params.id, attendance_status: "ATTENDING" },
       include: [memberInclude],
@@ -165,7 +177,7 @@ exports.getAttendanceByService = async (req, res, next) => {
         Member:          pr.Member,
       }));
 
-    res.json({ success: true, data: { service, records: [...records, ...preRegRows], summary: summary || null } });
+    res.json({ success: true, data: { service, records: [...recordsWithStatus, ...preRegRows], summary: summary || null } });
   } catch (err) { next(err); }
 };
 
@@ -188,7 +200,7 @@ exports.deleteAttendanceForService = async (req, res, next) => {
     const record = await Attendance.findOne({
       where: { service_id: req.params.id, member_id: req.params.memberId },
     });
-    throw AppError.notFound("RECORD_NOT_FOUND", "Attendance record not found");
+    if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
     await ensureMemberInScope(record.member_id, req.user);
     // FIX: route through the service layer so syncSummary fires and the
     // attendance bar decrements correctly when Undo is clicked.

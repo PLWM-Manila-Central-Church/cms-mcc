@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
@@ -21,6 +22,7 @@ import UsersPage         from '../pages/users/UsersPage';
 import UserFormPage      from '../pages/users/UserFormPage';
 import ServicesPage      from '../pages/services/ServicesPage';
 import AttendancePage    from '../pages/attendance/AttendancePage';
+const QrAttendancePage = lazy(() => import('../pages/attendance/QrAttendancePage'));
 import FinancePage       from '../pages/finance/FinancePage';
 import MyGivingPage      from '../pages/finance/MyGivingPage';
 import AttendanceOverviewPage from '../pages/attendance/AttendanceOverviewPage';
@@ -116,6 +118,7 @@ const AppRoutes = () => {
       <Route path="/events"     element={<ProtectedRoute module="events" action="read"><MainLayout><EventsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/events/:id" element={<ProtectedRoute module="events" action="read"><MainLayout><EventDetailPage /></MainLayout></ProtectedRoute>} />
       <Route path="/attendance" element={<ProtectedRoute module="attendance" action="read"><MainLayout><AttendanceOverviewPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/attendance/qr" element={<ProtectedRoute module="qr_attendance" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading attendance tools…</div>}><QrAttendancePage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/finance"    element={<ProtectedRoute module="finance" action="read"><MainLayout><FinancePage /></MainLayout></ProtectedRoute>} />
       <Route path="/finance/my-giving" element={<ProtectedRoute module="finance" action="read"><MainLayout><MyGivingPage /></MainLayout></ProtectedRoute>} />
       <Route path="/services"          element={<ProtectedRoute module="services" action="read"><MainLayout><ServicesPage /></MainLayout></ProtectedRoute>} />

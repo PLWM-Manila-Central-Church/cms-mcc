@@ -1,5 +1,7 @@
 "use strict";
 
+const { ROLE_GRANTS } = require("../src/modules/qr-attendance/permissions");
+
 module.exports = {
   up: async (queryInterface) => {
     const now = new Date();
@@ -181,6 +183,12 @@ module.exports = {
       // Member access is scoped through /api/member-portal and does not use
       // broad CMS module permissions.
     ];
+
+    for (const [role_name, grants] of Object.entries(ROLE_GRANTS)) {
+      for (const [module, action] of grants) {
+        rolePermissions.push({ role_name, module, action });
+      }
+    }
 
     const existingRPs = await queryInterface.sequelize.query(
       "SELECT role_id, permission_id FROM role_permissions",

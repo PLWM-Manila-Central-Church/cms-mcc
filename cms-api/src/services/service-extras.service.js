@@ -12,17 +12,12 @@ const {
 } = require("../models");
 const logger   = require("../helpers/logger");
 const AppError = require("../helpers/AppError");
+const { syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
 
 // ── Helpers ──────────────────────────────────────────────────
 const syncSummary = async (serviceId) => {
   try {
-    const total_attended = await Attendance.count({ where: { service_id: serviceId } });
-    const service = await Service.findByPk(serviceId, { attributes: ["capacity"] });
-    const total_expected = service?.capacity || 0;
-    const total_absent   = Math.max(0, total_expected - total_attended);
-    await ServiceAttendanceSummary.upsert({
-      service_id: serviceId, total_attended, total_expected, total_absent,
-    });
+    await syncServiceAttendanceSummary(serviceId);
   } catch (err) {
     logger.error(err, "syncSummary failed:");
   }

@@ -5,6 +5,7 @@ const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
 const { Service, ServiceAttendanceSummary, ServiceResponse, Attendance, User } = require("../models");
+const { syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
 
 // ── Get All Services (paginated) ─────────────────────────────
 exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
@@ -125,13 +126,7 @@ exports.updateService = async (id, data, updatedBy) => {
 
   // Re-sync summary if capacity changed
   if (capacity !== undefined) {
-    try {
-      const total_attended = await Attendance.count({ where: { service_id: id } });
-      const total_absent   = Math.max(0, capacity - total_attended);
-      await ServiceAttendanceSummary.upsert({
-        service_id: id, total_attended, total_expected: capacity, total_absent,
-      });
-    } catch (err) {
+    try { await syncServiceAttendanceSummary(id); } catch (err) {
       logger.error(err, "Failed to sync summary after capacity change:");
     }
   }
