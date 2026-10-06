@@ -7,6 +7,7 @@ Updated 7 October 2026. This is a verification record for the local QR attendanc
 | Environment / test | Result | What it establishes |
 | --- | --- | --- |
 | `cms-api`: `npm test -- --runInBand` | Pass: 10 suites / 44 tests | Unit and contract coverage for QR permissions/policies, payloads, migration shape, schema fallback, attendance writers, and the settings-table timestamp contract. No TiDB connection was made. |
+| GitHub Actions QR API persistence integration, run 37547896338 | Pass: 4 integration tests | Fresh MySQL migrations plus real Express routes and persisted writes: member QR issue/PNG, Service/Event direct check-in, Cell/Group leader scope and batch approval, duplicate counts, scoped summaries, event history, CSV, and QR reissue. Not a browser upload or TiDB test. |
 | GitHub Actions CI, run 37546655300 | Pass | API tests, frontend tests/build, and fresh MySQL database migrations passed on PR head `f9451e6`. |
 | `cms-frontend`: `npm test` | Pass: 5 files / 15 tests | Component behavior using mocked APIs. Includes the Admin session lifecycle test and Registration Team / Cell Group Leader flows below. |
 | `cms-frontend`: `npm run build` | Pass with chunk advisory | Production assets compile. Main bundle: 933.03 kB; ZXing: 477.54 kB. The attendance workspace and scanner entry are emitted separately. |
@@ -26,7 +27,7 @@ These tests prove frontend request sequencing and UI state handling. They do not
 
 ## End-to-end requirements still pending
 
-- Run both Service and Event individual check-in and leader batch approval through the browser upload flow against a dedicated isolated QA database.
+- Run both Service and Event individual check-in and leader batch approval through the actual browser image-upload flow against a dedicated isolated TiDB QA schema/branch. CI MySQL integration does not replace this gate.
 - Verify migration application/readiness, stored member QR identity, approval receipt persistence, duplicate/idempotent outcomes, scope enforcement, timestamps, audit history, session totals, member history, and exported CSV.
 - Exercise cross-device member QR redisplay and reasoned QR reissue/revocation, including an earlier PNG after reissue.
 - Verify the full set of malformed, wrong-session, revoked, expired, duplicate, and out-of-scope QR cases leave counts and authentication intact.
