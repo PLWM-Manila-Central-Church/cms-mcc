@@ -126,7 +126,7 @@ const AppRoutes = () => {
 
       {/* Members routes — Ministry Leaders are redirected to /ministry */}
       <Route path="/members" element={
-        <ProtectedRoute>
+        <ProtectedRoute module="members" action="read">
           <MainLayout>
             <MembersRoute><MembersPage /></MembersRoute>
           </MainLayout>

@@ -1,4 +1,6 @@
 export const ROLE_ALLOWED_PATHS = {
+  // Members use self-scoped APIs through the standalone portal only.
+  Member: ['/portal'],
   'Finance Team': ['/dashboard', '/members', '/finance', '/archives', '/my-settings'],
   'Ministry Leader': ['/dashboard', '/ministry', '/events', '/attendance', '/inventory', '/archives', '/my-settings'],
   'Cell Group Leader': ['/dashboard', '/cell-groups', '/attendance', '/events', '/inventory', '/archives', '/my-settings'],
@@ -61,6 +63,7 @@ export const isAllowedForRolePath = (roleName, pathname) => {
   const allowed = ROLE_ALLOWED_PATHS[roleName];
   if (!allowed) return true;
   if (pathname === '/force-change-password' || pathname === '/unauthorized') return true;
+  if (roleName === 'Member') return pathname === '/portal' || pathname.startsWith('/portal/');
   if (roleName === 'Ministry Leader' && pathname.startsWith('/services/')) return true;
   if (roleName === 'Cell Group Leader' && /^\/services\/[^/]+\/attendance$/.test(pathname)) return true;
   return allowed.some(path => pathname === path || pathname.startsWith(`${path}/`));
