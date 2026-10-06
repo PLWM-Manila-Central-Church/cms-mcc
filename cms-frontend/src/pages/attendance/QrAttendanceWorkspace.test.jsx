@@ -38,12 +38,13 @@ const member = { id: 10, first_name: 'Jordan', last_name: 'Test', status: 'Activ
 
 let batchRows;
 let batchDetail;
+let currentSession;
 
 function mockScenario() {
   fixture.get.mockImplementation(async (url) => {
     if (url === '/qr-attendance/capabilities') return { data: { data: { enabled: true, schemaReady: true, reason: null } } };
-    if (url === '/qr-attendance/sessions') return { data: { data: { sessions: [session] } } };
-    if (url === '/qr-attendance/sessions/1') return { data: { data: session } };
+    if (url === '/qr-attendance/sessions') return { data: { data: { sessions: currentSession ? [currentSession] : [] } } };
+    if (url === `/qr-attendance/sessions/${currentSession?.id}`) return { data: { data: currentSession } };
     if (url.endsWith('/summary')) return { data: { data: { confirmed_count: 0, expected_count: null, registered_count: 0, pending_members_count: 0, absent_count: null } } };
     if (url.endsWith('/attendance')) return { data: { data: { records: [], count: 0, page: 1, limit: 100 } } };
     if (url.endsWith('/batches')) return { data: { data: { batches: batchRows } } };
@@ -62,6 +63,7 @@ describe('QR attendance workspace role flows', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     batchRows = [];
+    currentSession = { ...session };
     batchDetail = {
       batch: { id: 8, state: 'draft', revision: 1, submitted_by: 2, approval_deadline: '2026-10-08T02:00:00.000Z' },
       items: [],
@@ -91,6 +93,45 @@ describe('QR attendance workspace role flows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Check-in' }));
     await waitFor(() => expect(fixture.post).toHaveBeenCalledWith('/qr-attendance/sessions/1/check-ins', { qr_payload: 'MCC:MEMBER:1:123' }));
     expect(await screen.findByText('Jordan Test is checked in.')).toBeInTheDocument();
+  });
+
+  it('lets Admin create a draft session and open check-in as a separate action', async () => {
+    currentSession = null;
+    fixture.post.mockImplementation(async (url, payload) => {
+      if (url === '/qr-attendance/sessions') {
+        currentSession = {
+          ...session,
+          id: 2,
+          title: payload.title,
+          session_key: payload.session_key,
+          starts_at: payload.starts_at,
+          status: 'draft',
+        };
+        return { data: { data: currentSession } };
+      }
+      if (url === '/qr-attendance/sessions/2/open') {
+        currentSession = { ...currentSession, status: 'open' };
+        return { data: { data: { session: currentSession } } };
+      }
+      throw new Error(`Unexpected POST ${url}`);
+    });
+
+    renderWorkspace();
+    fireEvent.change(await screen.findByLabelText('Session title'), { target: { value: 'Sunday Morning' } });
+    fireEvent.change(screen.getByLabelText('Session key'), { target: { value: 'sunday-am' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Draft Session' }));
+
+    expect(await screen.findByText('Draft attendance session created. Open it when check-in is ready.')).toBeInTheDocument();
+    await waitFor(() => expect(fixture.post).toHaveBeenCalledWith('/qr-attendance/sessions', expect.objectContaining({
+      target_type: 'event', target_id: 7, title: 'Sunday Morning', session_key: 'sunday-am',
+      time_zone: 'Asia/Manila', expected_basis: 'none', registration_required: false,
+    })));
+    expect(await screen.findByRole('button', { name: 'Open Check-in' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Check-in' }));
+    expect(await screen.findByText('Attendance session opened.')).toBeInTheDocument();
+    await waitFor(() => expect(fixture.post).toHaveBeenCalledWith('/qr-attendance/sessions/2/open', {}));
+    expect(await screen.findByText('open', { selector: '.qr-session-status' })).toBeInTheDocument();
   });
 
   it('lets a scoped Cell Group Leader record a draft and receive a batch QR only after submission', async () => {
