@@ -7,6 +7,7 @@ Updated 7 October 2026. This is a verification record for the local QR attendanc
 | Environment / test | Result | What it establishes |
 | --- | --- | --- |
 | `cms-api`: `npm test -- --runInBand` | Pass: 10 suites / 44 tests | Unit and contract coverage for QR permissions/policies, payloads, migration shape, schema fallback, attendance writers, and the settings-table timestamp contract. No TiDB connection was made. |
+| GitHub Actions CI, run 37546655300 | Pass | API tests, frontend tests/build, and fresh MySQL database migrations passed on PR head `f9451e6`. |
 | `cms-frontend`: `npm test` | Pass: 5 files / 15 tests | Component behavior using mocked APIs. Includes the Admin session lifecycle test and Registration Team / Cell Group Leader flows below. |
 | `cms-frontend`: `npm run build` | Pass with chunk advisory | Production assets compile. Main bundle: 933.03 kB; ZXing: 477.54 kB. The attendance workspace and scanner entry are emitted separately. |
 | `git diff --check` | Pass | No whitespace errors in the current local change. |
@@ -31,11 +32,11 @@ These tests prove frontend request sequencing and UI state handling. They do not
 - Verify the full set of malformed, wrong-session, revoked, expired, duplicate, and out-of-scope QR cases leave counts and authentication intact.
 - Verify login, logout, refresh/session persistence, and representative existing modules on the QA deployment after the QR build is deployed.
 - Record physical camera success/fallback separately. Current verified laptop evidence uses image upload and does not claim camera verification.
-- Draft PR #14 is open from `codex/qr-attendance` to `main`, unmerged. Its first fresh-migration CI job failed at the QR permissions seed; the repair is pushed and the CI rerun is pending. Keep the PR draft until review and isolated QA pass. Repo-level branch protections/rulesets are absent; org-level controls remain unverified. TiDB Cloud is signed in, but the visible `mcc-local-dev` branch has existing rows according to the prior read-only audit and is not safe for QR writes. No isolated QA resource was created.
+- Draft PR #14 is open from `codex/qr-attendance` to `main`, unmerged. The follow-up CI passed the fresh migrations, API tests, and frontend tests/build. Keep the PR draft until review and isolated QA pass. Repo-level branch protections/rulesets are absent; org-level controls remain unverified. TiDB Cloud is signed in, but the visible `mcc-local-dev` branch has existing rows according to the prior read-only audit and is not safe for QR writes. No isolated QA resource was created.
 
 ## CI migration repair
 
-The first draft-PR CI run passed the API-test and frontend-build jobs but failed the fresh MySQL migration job at `20261007000002-seed-qr-attendance-permissions` with `Unknown column 'created_at'`. The existing `system_settings` schema has `updated_at` but no `created_at`; the new seed had supplied both. The seed now writes only supported columns, and `cms-api/test/qr-attendance-permissions-migration.test.js` guards this shape. The focused migration test and full API suite pass locally (10 suites / 44 tests). Fix commit `cbd8857` is on the PR branch; GitHub Actions rerun is pending.
+The first draft-PR CI run passed the API-test and frontend-build jobs but failed the fresh MySQL migration job at `20261007000002-seed-qr-attendance-permissions` with `Unknown column 'created_at'`. The existing `system_settings` schema has `updated_at` but no `created_at`; the new seed had supplied both. The seed now writes only supported columns, and `cms-api/test/qr-attendance-permissions-migration.test.js` guards this shape. Fix commit `cbd8857` is on the PR branch. The focused migration test and full API suite pass locally (10 suites / 44 tests); follow-up GitHub Actions run `37546655300` passed all jobs, including fresh MySQL migration, frontend tests/build, and API tests.
 
 ## Review note
 
