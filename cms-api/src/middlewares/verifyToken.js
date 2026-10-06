@@ -31,7 +31,7 @@ module.exports = async (req, res, next) => {
 
     // ── Force password change: block all endpoints except change-password and logout ──
     if (user.force_password_change === 1) {
-      const allowedPaths = ["/api/auth/change-password", "/api/auth/logout"];
+      const allowedPaths = ["/api/auth/change-password", "/api/auth/logout", "/api/auth/session"];
       const isAllowed = allowedPaths.some(p => req.path.startsWith(p));
       if (!isAllowed) {
         return res.status(403).json({
