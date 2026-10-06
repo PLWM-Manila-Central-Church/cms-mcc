@@ -5,7 +5,7 @@ const authService = require("../services/auth.service");
 const cookieOpts = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  sameSite: "lax",
   path: "/",
 };
 
@@ -48,7 +48,36 @@ exports.refreshToken = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};exports.getSession = async (req, res, next) => {
+  try {
+    const permissions = await authService.getUserPermissionsForRole(req.user.roleId);
+    const user = {
+      id: req.user.userId,
+      email: req.user.email,
+      roleName: req.user.roleName,
+      memberId: req.user.memberId,
+      leadsCellGroupId: req.user.leadsCellGroupId,
+      leadsGroupId: req.user.leadsGroupId,
+      leadsMinistryId: req.user.leadsMinistryId,
+      leadsCellGroupName: req.user.leadsCellGroupName,
+      leadsGroupName: req.user.leadsGroupName,
+      leadsMinistryName: req.user.leadsMinistryName,
+    };
+
+    res.json({
+      success: true,
+      data: {
+        user,
+        permissions,
+        forcePasswordChange: Boolean(Number(req.user.forcePasswordChange)),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
 };
+
+
 
 exports.forgotPassword = async (req, res, next) => {
   try {
