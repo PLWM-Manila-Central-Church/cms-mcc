@@ -79,6 +79,8 @@ module.exports = {
       { module: "settings", action: "delete", description: "Delete system settings", created_at: now, updated_at: now },
       // ── Audit ──────────────────────────────────────────────
       { module: "audit", action: "read", description: "View audit logs", created_at: now, updated_at: now },
+      // ── Dashboard ─────────────────────────────────────────
+      { module: "dashboard", action: "read", description: "View role-scoped dashboard statistics", created_at: now, updated_at: now },
     ].filter(p => !existingSet.has(`${p.module}.${p.action}`));
 
     if (permsToAdd.length > 0) {

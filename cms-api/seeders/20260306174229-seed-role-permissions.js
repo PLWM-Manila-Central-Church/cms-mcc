@@ -83,6 +83,7 @@ module.exports = {
       { role_name: "System Admin", module: "settings", action: "update" },
       { role_name: "System Admin", module: "settings", action: "delete" },
       { role_name: "System Admin", module: "audit", action: "read" },
+      { role_name: "System Admin", module: "dashboard", action: "read" },
 
       // ── Pastor — read everything + approve archives ──────────
       { role_name: "Pastor", module: "members", action: "read" },
@@ -96,6 +97,7 @@ module.exports = {
       { role_name: "Pastor", module: "ministry", action: "read" },
       { role_name: "Pastor", module: "cell_groups", action: "read" },
       { role_name: "Pastor", module: "audit", action: "read" },
+      { role_name: "Pastor", module: "dashboard", action: "read" },
 
       // ── Registration Team ────────────────────────────────────
       { role_name: "Registration Team", module: "members", action: "read" },
@@ -117,6 +119,7 @@ module.exports = {
       { role_name: "Registration Team", module: "cell_groups", action: "read" },
       { role_name: "Registration Team", module: "ministry", action: "read" },
       { role_name: "Registration Team", module: "ministry", action: "create" },
+      { role_name: "Registration Team", module: "dashboard", action: "read" },
 
       // ── Finance Team ─────────────────────────────────────────
       { role_name: "Finance Team", module: "members", action: "read" },
@@ -124,6 +127,7 @@ module.exports = {
       { role_name: "Finance Team", module: "finance", action: "create" },
       { role_name: "Finance Team", module: "finance", action: "update" },
       { role_name: "Finance Team", module: "archives", action: "read" },
+      { role_name: "Finance Team", module: "dashboard", action: "read" },
 
       // ── Cell Group Leader ─────────────────────────────────────
       { role_name: "Cell Group Leader", module: "members", action: "read" },
@@ -136,6 +140,7 @@ module.exports = {
       { role_name: "Cell Group Leader", module: "archives", action: "read" },
       { role_name: "Cell Group Leader", module: "cell_groups", action: "read" },
       { role_name: "Cell Group Leader", module: "ministry", action: "read" },
+      { role_name: "Cell Group Leader", module: "dashboard", action: "read" },
 
       // ── Group Leader ──────────────────────────────────────────
       { role_name: "Group Leader", module: "members", action: "read" },
@@ -147,6 +152,7 @@ module.exports = {
       { role_name: "Group Leader", module: "inventory", action: "create" },
       { role_name: "Group Leader", module: "archives", action: "read" },
       { role_name: "Group Leader", module: "ministry", action: "read" },
+      { role_name: "Group Leader", module: "dashboard", action: "read" },
 
       // ── Ministry Leader ─────────────────────────────────────────
       // Ministry page permissions
@@ -172,12 +178,8 @@ module.exports = {
       { role_name: "Ministry Leader", module: "dashboard", action: "read" },
 
       // ── Member ────────────────────────────────────────────────
-      { role_name: "Member", module: "members", action: "read" },
-      { role_name: "Member", module: "finance", action: "read" },
-      { role_name: "Member", module: "events", action: "read" },
-      { role_name: "Member", module: "services", action: "read" },
-      { role_name: "Member", module: "services", action: "create" },
-      { role_name: "Member", module: "archives", action: "read" },
+      // Member access is scoped through /api/member-portal and does not use
+      // broad CMS module permissions.
     ];
 
     const existingRPs = await queryInterface.sequelize.query(
