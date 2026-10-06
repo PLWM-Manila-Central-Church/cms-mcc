@@ -40,7 +40,6 @@ module.exports = {
         key: "qr_attendance_enabled",
         value: "false",
         updated_by: null,
-        created_at: now,
         updated_at: now,
       }]);
     }
