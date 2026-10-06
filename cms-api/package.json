@@ -26,6 +26,7 @@
     "db:seed": "sequelize-cli db:seed:all",
     "db:validate:3nf": "node scripts/validate-3nf-compatibility.js",
     "test:qr-integration": "jest --detectOpenHandles --forceExit --testTimeout=60000 --runInBand test/qr-attendance.integration.test.js",
+    "seed:qr-browser-e2e": "node scripts/seed-qr-attendance-browser-e2e.js",
     "test:finance-validator": "node --test test/finance.validator.test.js",
     "test": "jest --detectOpenHandles --forceExit --testTimeout=15000",
     "test:coverage": "jest --coverage --detectOpenHandles --forceExit --testTimeout=15000",

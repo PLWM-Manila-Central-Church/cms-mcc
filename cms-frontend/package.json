@@ -21,6 +21,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:e2e:qr": "node scripts/qr-attendance-browser-e2e.mjs",
     "test:watch": "vitest"
   },
   "devDependencies": {
@@ -30,6 +31,7 @@
     "@testing-library/user-event": "^13.5.0",
     "@vitejs/plugin-react": "^6.1.1",
     "jsdom": "^30.1.1",
+    "playwright": "^1.63.0",
     "vite": "^8.3.2",
     "vitest": "^5.0.3"
   },
