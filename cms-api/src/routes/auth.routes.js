@@ -18,6 +18,8 @@ router.post("/login",           validate(loginSchema),           ctrl.login);
 router.post("/refresh-token",   validate(refreshTokenSchema),    ctrl.refreshToken);
 // Alias used by the frontend axios instance — keep in sync with /refresh-token
 router.post("/refresh",         validate(refreshTokenSchema),    ctrl.refreshToken);
+router.get("/session", auth, ctrl.getSession);
+
 router.post("/forgot-password", validate(forgotPasswordSchema),  ctrl.forgotPassword);
 router.post("/reset-password",  validate(resetPasswordSchema),   ctrl.resetPassword);
 router.put("/change-password",  auth, validate(changePasswordSchema), ctrl.changePassword);

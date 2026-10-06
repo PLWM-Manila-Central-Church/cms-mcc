@@ -1,92 +1,98 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import axiosInstance from '../api/axiosInstance';
 
 const AuthContext = createContext(null);
 
-const parseStoredPermissions = (value) => {
-  try {
-    const parsed = JSON.parse(value || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
+const normalizeUser = (user, forcePasswordChange = false) => ({
+  ...user,
+  forcePasswordChange: Boolean(forcePasswordChange),
+  leadsCellGroupId: user.leadsCellGroupId || null,
+  leadsGroupId: user.leadsGroupId || null,
+  leadsMinistryId: user.leadsMinistryId || null,
+  leadsCellGroupName: user.leadsCellGroupName || null,
+  leadsGroupName: user.leadsGroupName || null,
+  leadsMinistryName: user.leadsMinistryName || null,
+});
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser]               = useState(null);
+  const [user, setUser] = useState(null);
   const [permissions, setPermissions] = useState([]);
-  const [loading, setLoading]         = useState(true);
+  const [loading, setLoading] = useState(true);
+  const authRevision = useRef(0);
   const permSet = useMemo(() => new Set(permissions), [permissions]);
 
   useEffect(() => {
-      // Read user and permissions from cookies (set by backend on login)
-      // document.cookie is parsed manually — no need for a cookie library for ~4 cookies
-      const parseCookie = (name) => {
-        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-        return match ? decodeURIComponent(match[2]) : null;
-      };
+    let mounted = true;
+    const revision = authRevision.current;
 
-      const storedUser        = parseCookie('user');
-      const storedPermissions = parseCookie('permissions');
-      const accessToken       = parseCookie('accessToken');
+    const restoreSession = async () => {
+      try {
+        const response = await axiosInstance.get('/auth/session', {
+          _skipAuthRedirect: true,
+        });
+        if (!mounted || authRevision.current !== revision) return;
 
-      if (storedUser && accessToken) {
-        try {
-          setUser(JSON.parse(storedUser));
-          setPermissions(parseStoredPermissions(storedPermissions));
-        } catch {
-          // corrupted cookie — ignore
-        }
+        const data = response.data?.data || {};
+        setUser(data.user ? normalizeUser(data.user, data.forcePasswordChange) : null);
+        setPermissions(Array.isArray(data.permissions) ? data.permissions : []);
+      } catch {
+        if (!mounted || authRevision.current !== revision) return;
+        setUser(null);
+        setPermissions([]);
+      } finally {
+        if (mounted && authRevision.current === revision) setLoading(false);
       }
-      setLoading(false);
-    }, []);
+    };
+
+    restoreSession();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const login = async (email, password) => {
-      const res = await axiosInstance.post('/auth/login', { email, password });
-      const { user, permissions, forcePasswordChange } = res.data.data;
+    const revision = ++authRevision.current;
+    try {
+      const response = await axiosInstance.post('/auth/login', { email, password });
+      const { user: responseUser, permissions: responsePermissions, forcePasswordChange } = response.data.data;
+      const normalizedUser = normalizeUser(responseUser, forcePasswordChange);
 
-      // user and permissions are already set as cookies by the server
-      // Just update React state
-      const userWithFlag = {
-        ...user,
-        forcePasswordChange: !!forcePasswordChange,
-        leadsCellGroupId:   user.leadsCellGroupId || null,
-        leadsGroupId:       user.leadsGroupId || null,
-        leadsMinistryId:     user.leadsMinistryId || null,
-        leadsCellGroupName: user.leadsCellGroupName || null,
-        leadsGroupName:     user.leadsGroupName || null,
-        leadsMinistryName:  user.leadsMinistryName || null,
-      };
+      if (authRevision.current === revision) {
+        setUser(normalizedUser);
+        setPermissions(Array.isArray(responsePermissions) ? responsePermissions : []);
+      }
 
-      setUser(userWithFlag);
-      setPermissions(permissions || []);
-
-      return { forcePasswordChange, user: userWithFlag };
-    };
-
-    const clearForcePasswordChange = () => {
-      const updatedUser = { ...user, forcePasswordChange: false };
-      setUser(updatedUser);
-    };
-
-    const logout = async () => {
-        try {
-          await axiosInstance.post('/auth/logout', {});
-        } catch (err) {
-          // silent — server may already have invalidated the token
-        } finally {
-          // Server clears all auth cookies; just reset React state
-          setUser(null);
-          setPermissions([]);
-        }
-      };
-
-  const hasPermission = (module, action) => {
-    return permSet.has(`${module}:${action}`);
+      return { forcePasswordChange: normalizedUser.forcePasswordChange, user: normalizedUser };
+    } finally {
+      if (authRevision.current === revision) setLoading(false);
+    }
   };
 
+  const clearForcePasswordChange = () => {
+    setUser((current) => current && { ...current, forcePasswordChange: false });
+  };
+
+  const logout = async () => {
+    const revision = ++authRevision.current;
+    try {
+      await axiosInstance.post('/auth/logout', {});
+    } catch {
+      // The session may already have expired or been revoked.
+    } finally {
+      if (authRevision.current === revision) {
+        setUser(null);
+        setPermissions([]);
+        setLoading(false);
+      }
+    }
+  };
+
+  const hasPermission = (module, action) => permSet.has(`${module}:${action}`);
+
   return (
-    <AuthContext.Provider value={{ user, permissions, loading, login, logout, hasPermission, clearForcePasswordChange }}>
+    <AuthContext.Provider
+      value={{ user, permissions, loading, login, logout, hasPermission, clearForcePasswordChange }}
+    >
       {children}
     </AuthContext.Provider>
   );

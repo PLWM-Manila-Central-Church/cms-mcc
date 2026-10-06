@@ -54,6 +54,8 @@ const getUserPermissions = async (roleId) => {
   return rp.map(r => `${r.Permission.module}:${r.Permission.action}`);
 };
 
+exports.getUserPermissionsForRole = getUserPermissions;
+
 // Revoke every outstanding refresh token for a user (password change/reset,
 // or refresh-token reuse detection). Forces re-login on all devices.
 const revokeAllRefreshTokens = async (userId) => {
