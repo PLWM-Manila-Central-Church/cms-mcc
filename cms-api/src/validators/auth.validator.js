@@ -22,7 +22,8 @@ exports.loginSchema = Joi.object({
 });
 
 exports.refreshTokenSchema = Joi.object({
-  refresh_token: Joi.string().required(),
+  // Cookie-based clients omit this body field; the controller verifies the HttpOnly cookie.
+  refresh_token: Joi.string().optional(),
 });
 
 exports.forgotPasswordSchema = Joi.object({
