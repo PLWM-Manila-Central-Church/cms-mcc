@@ -20,7 +20,7 @@ const ProtectedRoute = ({ children, module, action }) => {
   }
 
   if (!isAllowedForRolePath(user.roleName, location.pathname)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={user.roleName === 'Member' ? '/portal' : '/dashboard'} replace />;
   }
 
   if (module && action && !hasPermission(module, action)) {
