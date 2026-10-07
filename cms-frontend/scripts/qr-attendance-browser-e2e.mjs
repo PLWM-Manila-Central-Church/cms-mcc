@@ -32,6 +32,7 @@ const login = async (credentials, destination) => {
   const page = await context.newPage();
   const qrApiResponses = [];
   const historyApiResponses = [];
+  const settingsApiResponses = [];
   logPageErrors(page, credentials.email);
   page.on('response', async (response) => {
     const url = new URL(response.url());
@@ -48,6 +49,15 @@ const login = async (credentials, destination) => {
         message: body?.message || body?.error?.message || null,
       });
     }
+    if (url.pathname === '/api/settings' && response.request().method() === 'GET') {
+      const body = await response.json().catch(() => null);
+      settingsApiResponses.push({
+        status: response.status(),
+        settingCount: body?.data && typeof body.data === 'object' ? Object.keys(body.data).length : 0,
+        qrEnabled: body?.data?.qr_attendance_enabled?.value ?? null,
+        message: body?.message || body?.error?.message || null,
+      });
+    }
   });
   await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded' });
   await page.locator('input[name="email"]').fill(credentials.email);
@@ -56,12 +66,21 @@ const login = async (credentials, destination) => {
     page.waitForURL((url) => url.pathname === destination, { timeout: 45_000 }),
     page.getByRole('button', { name: /Sign In/ }).click(),
   ]);
-  return { context, page, qrApiResponses, historyApiResponses };
+  return { context, page, qrApiResponses, historyApiResponses, settingsApiResponses };
 };
 
-const enableQrAttendanceInAdminSettings = async (page) => {
+const enableQrAttendanceInAdminSettings = async ({ page, settingsApiResponses }) => {
   await page.goto(`${baseUrl}/settings`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /Services/ }).click();
+  try {
+    await page.getByRole('button', { name: /Services/ }).click({ timeout: 10_000 });
+  } catch (error) {
+    const visibleText = await page.locator('body').innerText().catch(() => 'Unable to read page text');
+    throw new Error(
+      `Admin Settings Services group did not render. URL: ${page.url()}. `
+      + `Settings API: ${JSON.stringify(settingsApiResponses)}. `
+      + `Visible page text: ${visibleText.slice(-1800)}. Cause: ${error.message}`,
+    );
+  }
   const settingRow = page.getByText('qr_attendance_enabled', { exact: true }).locator('xpath=../..');
   await settingRow.getByText('Disabled', { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
   const [response] = await Promise.all([
@@ -193,7 +212,7 @@ const scanAndApproveBatch = async (page, imagePath, apiResponses, label) => {
 
 try {
   const admin = await login(fixture.admin, '/dashboard');
-  await enableQrAttendanceInAdminSettings(admin.page);
+  await enableQrAttendanceInAdminSettings(admin);
   const serviceSessionId = await createAndOpenSession(admin.page, 'service', fixture.service.id, 'Browser E2E Service', 'primary');
   const eventSessionId = await createAndOpenSession(admin.page, 'event', fixture.event.id, 'Browser E2E Event', 'browser-e2e');
   await admin.context.close();
