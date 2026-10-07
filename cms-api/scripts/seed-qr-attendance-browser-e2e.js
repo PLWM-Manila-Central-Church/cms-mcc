@@ -63,7 +63,7 @@ const run = async () => {
   const memberCUser = await makeUser("Member", "member-c", memberC.id);
 
   await SystemSetting.update(
-    { value: "true", updated_by: adminUser.id },
+    { value: "false", updated_by: adminUser.id },
     { where: { key: "qr_attendance_enabled" } },
   );
   const today = new Date().toISOString().slice(0, 10);

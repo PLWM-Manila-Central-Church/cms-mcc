@@ -59,6 +59,22 @@ const login = async (credentials, destination) => {
   return { context, page, qrApiResponses, historyApiResponses };
 };
 
+const enableQrAttendanceInAdminSettings = async (page) => {
+  await page.goto(`${baseUrl}/settings`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: /Services/ }).click();
+  const settingRow = page.getByText('qr_attendance_enabled', { exact: true }).locator('xpath=../..');
+  await settingRow.getByText('Disabled', { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+  const [response] = await Promise.all([
+    page.waitForResponse((candidate) => {
+      const url = new URL(candidate.url());
+      return url.pathname === '/api/settings' && candidate.request().method() === 'PUT';
+    }, { timeout: 30_000 }),
+    settingRow.getByRole('button', { name: 'Toggle QR Attendance', exact: true }).click(),
+  ]);
+  assert.equal(response.status(), 200, 'Admin could not enable QR attendance in Settings');
+  await settingRow.getByText('Enabled', { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+};
+
 const createMemberQrDownload = async (credentials, label) => {
   const signedIn = await login(credentials, '/portal');
   const { page, context } = signedIn;
@@ -177,6 +193,7 @@ const scanAndApproveBatch = async (page, imagePath, apiResponses, label) => {
 
 try {
   const admin = await login(fixture.admin, '/dashboard');
+  await enableQrAttendanceInAdminSettings(admin.page);
   const serviceSessionId = await createAndOpenSession(admin.page, 'service', fixture.service.id, 'Browser E2E Service', 'primary');
   const eventSessionId = await createAndOpenSession(admin.page, 'event', fixture.event.id, 'Browser E2E Event', 'browser-e2e');
   await admin.context.close();
