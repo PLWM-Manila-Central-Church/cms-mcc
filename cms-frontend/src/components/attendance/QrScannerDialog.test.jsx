@@ -52,6 +52,16 @@ describe('QrScannerDialog', () => {
     expect(mocks.decodeFromVideoDevice).not.toHaveBeenCalled();
   });
 
+  it('starts the default camera without treating the click event as a device ID', async () => {
+    render(<QrScannerDialog onDecode={vi.fn()} onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /start camera/i }));
+
+    await waitFor(() => expect(mocks.decodeFromVideoDevice).toHaveBeenCalledTimes(1));
+    expect(mocks.decodeFromVideoDevice.mock.calls[0][0]).toBeUndefined();
+    expect(await screen.findByText(/Camera is ready/i)).toBeInTheDocument();
+  });
+
   it('decodes an uploaded image through the shared payload callback', async () => {
     const onDecode = vi.fn();
     render(<ScannerHarness onDecode={onDecode} closeOnDecode />);
@@ -151,12 +161,24 @@ describe('QrScannerDialog', () => {
   });
 
   it('keeps image upload available when camera startup fails', async () => {
-    mocks.decodeFromVideoDevice.mockRejectedValueOnce(new Error('Camera permission denied.'));
+    const permissionError = Object.assign(new Error('Permission denied'), { name: 'NotAllowedError' });
+    mocks.decodeFromVideoDevice.mockRejectedValueOnce(permissionError);
     render(<QrScannerDialog onDecode={vi.fn()} onClose={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: /start camera/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Camera permission denied.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Allow camera access for this site in browser settings/i);
+    expect(screen.getByLabelText(/upload qr image/i)).toBeEnabled();
+  });
+
+  it('explains when the browser cannot find a camera', async () => {
+    const missingCamera = Object.assign(new Error('Requested device not found'), { name: 'NotFoundError' });
+    mocks.decodeFromVideoDevice.mockRejectedValueOnce(missingCamera);
+    render(<QrScannerDialog onDecode={vi.fn()} onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /start camera/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/No camera was found/i);
     expect(screen.getByLabelText(/upload qr image/i)).toBeEnabled();
   });
 });
