@@ -278,8 +278,19 @@ try {
   }
   await memberA.page.locator('tr').filter({ hasText: fixture.service.title }).last().waitFor({ state: 'visible', timeout: 30_000 });
 
+  const logoutResponsePromise = memberA.page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === '/api/auth/logout' && response.request().method() === 'POST';
+  }, { timeout: 30_000 });
+  await memberA.page.getByRole('button', { name: /Sign Out|Logout/i }).last().click();
+  const logoutResponse = await logoutResponsePromise;
+  assert.equal(logoutResponse.status(), 200, 'Member logout should revoke the authenticated session');
+  await memberA.page.waitForURL((url) => url.pathname === '/login', { timeout: 30_000 });
+  await memberA.page.goto(`${baseUrl}/portal`, { waitUntil: 'domcontentloaded' });
+  await memberA.page.waitForURL((url) => url.pathname === '/login', { timeout: 30_000 });
+
   assert.deepEqual(browserErrors, [], `Browser errors: ${browserErrors.join('; ')}`);
-  console.log('QR browser E2E passed: fixed member QR upload, Service/Event direct check-in, scoped leader batches, approval, counts, and member history.');
+  console.log('QR browser E2E passed: fixed member QR upload, Service/Event direct check-in, scoped leader batches, approval, counts, member history, logout, and protected-route redirect.');
 } catch (error) {
   console.error('QR browser E2E failed:', error.stack || error.message);
   process.exitCode = 1;

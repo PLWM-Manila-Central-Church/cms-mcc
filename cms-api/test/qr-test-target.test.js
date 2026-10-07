@@ -12,11 +12,11 @@ const tidbQaTarget = {
   NODE_ENV: "test",
   QR_ATTENDANCE_TEST_TARGET: "tidb-mcc-local-dev",
   QR_ATTENDANCE_TEST_CONFIRM: "mcc-local-dev/qr_attendance_qa",
-  QR_ATTENDANCE_QA_DB_USER: "branchprefix.qr_attendance_qa_app",
+  QR_ATTENDANCE_QA_DB_USER: "branchprefix.qrqa_app",
   DB_HOST: "gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com",
   DB_PORT: "4000",
   DB_NAME: "qr_attendance_qa",
-  DB_USER: "branchprefix.qr_attendance_qa_app",
+  DB_USER: "branchprefix.qrqa_app",
   DB_SSL: "true",
 };
 

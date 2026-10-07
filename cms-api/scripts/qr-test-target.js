@@ -1,7 +1,7 @@
 "use strict";
 
 const QR_QA_DATABASE = "qr_attendance_qa";
-const QR_QA_USER_SUFFIX = ".qr_attendance_qa_app";
+const QR_QA_USER_SUFFIX = ".qrqa_app";
 const QR_QA_CONFIRMATION = "mcc-local-dev/qr_attendance_qa";
 const QR_QA_HOST = "gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com";
 
@@ -35,7 +35,7 @@ const assertSafeQrTestTarget = (env = process.env) => {
   if (isSafeQrTestTarget(env)) return;
 
   throw new Error(
-    "Refusing QR test writes to an unapproved database. Use disposable loopback MySQL (plwm_mcc) or explicitly configure the TLS-only mcc-local-dev qr_attendance_qa schema with its scoped qr_attendance_qa_app user and confirmation marker.",
+    "Refusing QR test writes to an unapproved database. Use disposable loopback MySQL (plwm_mcc) or explicitly configure the TLS-only mcc-local-dev qr_attendance_qa schema with its scoped qrqa_app user and confirmation marker.",
   );
 };
 

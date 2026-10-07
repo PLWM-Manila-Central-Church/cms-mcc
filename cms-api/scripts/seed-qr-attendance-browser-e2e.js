@@ -97,7 +97,7 @@ const run = async () => {
     service: { id: service.id, title: service.title },
     event: { id: event.id, title: event.title },
   }), { encoding: "utf8", mode: 0o600 });
-  console.log("Seeded synthetic QR browser E2E fixtures into isolated CI MySQL.");
+  console.log("Seeded synthetic QR browser E2E fixtures into the isolated QR QA database.");
 };
 
 run()

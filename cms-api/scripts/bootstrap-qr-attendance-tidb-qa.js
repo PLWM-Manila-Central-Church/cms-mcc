@@ -13,7 +13,7 @@ const runtimeEnvPath = path.join(apiDirectory, ".env");
 const expectedBranch = "mcc-local-dev";
 const expectedDatabase = "qr_attendance_qa";
 const expectedHost = "gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com";
-const appUserSuffix = "qr_attendance_qa_app";
+const appUserSuffix = "qrqa_app";
 
 const readBootstrapConfig = () => {
   if (!fs.existsSync(bootstrapEnvPath)) {
@@ -31,10 +31,13 @@ const readBootstrapConfig = () => {
   if (!rootUserMatch) throw new Error("Bootstrap user must be the branch-specific <prefix>.root user.");
   if (!config.TIDB_QA_ROOT_PASSWORD) throw new Error("TIDB_QA_ROOT_PASSWORD is empty.");
 
+  const appUser = `${rootUserMatch[1]}.${appUserSuffix}`;
+  if (appUser.length > 32) throw new Error("The branch-prefixed QR QA user name exceeds TiDB's 32-character limit.");
+
   return {
     ...config,
     rootPrefix: rootUserMatch[1],
-    appUser: `${rootUserMatch[1]}.${appUserSuffix}`,
+    appUser,
   };
 };
 
@@ -93,8 +96,8 @@ const main = async () => {
       ssl,
     });
 
-    const [identityRows] = await connection.query("SELECT CURRENT_USER() AS current_user");
-    const currentUser = String(identityRows[0]?.current_user || "").split("@")[0];
+    const [identityRows] = await connection.query("SELECT CURRENT_USER() AS connected_identity");
+    const currentUser = String(identityRows[0]?.connected_identity || "").split("@")[0];
     if (currentUser !== config.TIDB_QA_ROOT_USER) {
       throw new Error("Connected identity does not match the mcc-local-dev branch root user.");
     }
@@ -104,11 +107,17 @@ const main = async () => {
       [expectedDatabase],
     );
     if (schemaRows.length > 0) {
-      throw new Error("qr_attendance_qa already exists; refusing to overwrite an existing schema.");
+      const [tableRows] = await connection.execute(
+        "SELECT COUNT(*) AS table_count FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?",
+        [expectedDatabase],
+      );
+      if (Number(tableRows[0]?.table_count || 0)) {
+        throw new Error("qr_attendance_qa already contains tables; refusing to modify it.");
+      }
+    } else {
+      await connection.query(`CREATE DATABASE ${sql.escapeId(expectedDatabase)} CHARACTER SET utf8mb4`);
+      createdDatabase = true;
     }
-
-    await connection.query(`CREATE DATABASE ${sql.escapeId(expectedDatabase)} CHARACTER SET utf8mb4`);
-    createdDatabase = true;
 
     const account = `${sql.escape(config.appUser)}@'%'`;
     await connection.query(`CREATE USER ${account} IDENTIFIED BY ${sql.escape(appPassword)} REQUIRE SSL`);

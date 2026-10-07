@@ -5,10 +5,14 @@ module.exports = {
     await queryInterface.addColumn("event_registrations", "registered_by", {
       type: Sequelize.INTEGER.UNSIGNED,
       allowNull: true,
-      references: { model: "users", key: "id" },
+    });
+    await queryInterface.addConstraint("event_registrations", {
+      fields: ["registered_by"],
+      type: "foreign key",
+      name: "fk_event_registrations_registered_by",
+      references: { table: "users", field: "id" },
       onUpdate: "CASCADE",
       onDelete: "SET NULL",
-      after: "registered_at",
     });
 
     const now = new Date();
