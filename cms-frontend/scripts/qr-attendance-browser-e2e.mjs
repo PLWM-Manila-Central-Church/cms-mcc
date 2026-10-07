@@ -39,6 +39,7 @@ const login = async (credentials, destination) => {
   const historyApiResponses = [];
   const settingsApiResponses = [];
   const leaderScopeHeaders = [];
+  page.qrApiResponses = qrApiResponses;
   logPageErrors(page, credentials.email);
   page.on('request', (request) => {
     const scope = request.headers()['x-mcc-leader-scope'];
@@ -212,7 +213,18 @@ const createAndOpenSession = async (page, targetType, targetId, title, sessionKe
 
 const openWorkspace = async (page, targetType, targetId, sessionId) => {
   await page.goto(`${baseUrl}/attendance/qr?target_type=${targetType}&target_id=${targetId}&session_id=${sessionId}`, { waitUntil: 'domcontentloaded' });
-  await page.locator('#qr-session-select').waitFor({ state: 'visible', timeout: 30_000 });
+  try {
+    await page.locator('#qr-session-select').waitFor({ state: 'visible', timeout: 30_000 });
+  } catch (error) {
+    const diagnostics = await page.evaluate(() => ({
+      path: `${location.pathname}${location.search}`,
+      headings: [...document.querySelectorAll('h1, h2')].map((element) => element.innerText.trim().slice(0, 100)),
+      alerts: [...document.querySelectorAll('[role="alert"], [role="status"]')]
+        .map((element) => element.innerText.trim().slice(0, 160)).filter(Boolean).slice(-8),
+      selectorPresent: Boolean(document.querySelector('#qr-session-select')),
+    })).catch(() => ({ path: page.url(), headings: [], alerts: [], selectorPresent: false }));
+    throw new Error(`QR session selector did not render: ${JSON.stringify({ diagnostics, qrApiResponses: page.qrApiResponses || [] })}. ${error.message}`);
+  }
   await page.waitForFunction((id) => document.querySelector('#qr-session-select')?.value === String(id), sessionId, { timeout: 30_000 });
   await page.locator('.qr-session-status').filter({ hasText: 'open' }).waitFor({ state: 'visible', timeout: 30_000 });
 };
