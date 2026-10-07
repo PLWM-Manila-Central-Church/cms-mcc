@@ -36,17 +36,30 @@ const login = async (credentials, destination) => {
   contexts.push(context);
   const page = await context.newPage();
   const qrApiResponses = [];
+  const authApiResponses = [];
+  const authApiFailures = [];
   const historyApiResponses = [];
   const settingsApiResponses = [];
   const leaderScopeHeaders = [];
   page.qrApiResponses = qrApiResponses;
+  page.authApiResponses = authApiResponses;
+  page.authApiFailures = authApiFailures;
   logPageErrors(page, credentials.email);
   page.on('request', (request) => {
     const scope = request.headers()['x-mcc-leader-scope'];
     if (scope) leaderScopeHeaders.push(scope);
   });
+  page.on('requestfailed', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith('/api/auth/')) {
+      authApiFailures.push(`${request.method()} ${url.pathname} ${request.failure()?.errorText || 'request failed'}`);
+    }
+  });
   page.on('response', async (response) => {
     const url = new URL(response.url());
+    if (url.pathname.startsWith('/api/auth/')) {
+      authApiResponses.push(`${response.status()} ${response.request().method()} ${url.pathname}`);
+    }
     if (url.pathname.includes('/attendance-qr') || url.pathname.includes('/qr-attendance/')) {
       qrApiResponses.push(`${response.status()} ${url.pathname}`);
     }
@@ -77,7 +90,7 @@ const login = async (credentials, destination) => {
     page.waitForURL((url) => url.pathname === destination, { timeout: 45_000 }),
     page.getByRole('button', { name: /Sign In/ }).click(),
   ]);
-  return { context, page, qrApiResponses, historyApiResponses, settingsApiResponses, leaderScopeHeaders };
+  return { context, page, qrApiResponses, authApiResponses, authApiFailures, historyApiResponses, settingsApiResponses, leaderScopeHeaders };
 };
 
 const createUnifiedLeaderFromAdmin = async (page, fixture) => {
@@ -223,7 +236,7 @@ const openWorkspace = async (page, targetType, targetId, sessionId) => {
         .map((element) => element.innerText.trim().slice(0, 160)).filter(Boolean).slice(-8),
       selectorPresent: Boolean(document.querySelector('#qr-session-select')),
     })).catch(() => ({ path: page.url(), headings: [], alerts: [], selectorPresent: false }));
-    throw new Error(`QR session selector did not render: ${JSON.stringify({ diagnostics, qrApiResponses: page.qrApiResponses || [] })}. ${error.message}`);
+    throw new Error(`QR session selector did not render: ${JSON.stringify({ diagnostics, authApiResponses: page.authApiResponses || [], authApiFailures: page.authApiFailures || [], qrApiResponses: page.qrApiResponses || [] })}. ${error.message}`);
   }
   await page.waitForFunction((id) => document.querySelector('#qr-session-select')?.value === String(id), sessionId, { timeout: 30_000 });
   await page.locator('.qr-session-status').filter({ hasText: 'open' }).waitFor({ state: 'visible', timeout: 30_000 });
