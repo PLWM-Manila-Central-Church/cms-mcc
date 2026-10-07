@@ -64,10 +64,10 @@ describe('QrScannerDialog', () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:qr-test');
   });
 
-  it('retries an image miss with ZXing try-harder QR hints', async () => {
+  it('retries a decoder error with ZXing try-harder QR hints', async () => {
     const onDecode = vi.fn();
     mocks.decodeFromImageElement
-      .mockRejectedValueOnce({ name: 'NotFoundException' })
+      .mockRejectedValueOnce({ name: 'ChecksumException', message: 'QR checksum failed.' })
       .mockResolvedValueOnce({ getText: () => 'MCC:BATCH:1:123' });
     render(<QrScannerDialog onDecode={onDecode} onClose={vi.fn()} />);
 

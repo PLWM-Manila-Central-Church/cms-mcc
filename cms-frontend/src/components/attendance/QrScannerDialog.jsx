@@ -178,7 +178,7 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
       try {
         result = await decodeWithTimeout(reader);
       } catch (firstDecodeError) {
-        if (firstDecodeError?.name !== 'NotFoundException' && firstDecodeError?.message) throw firstDecodeError;
+        if (firstDecodeError?.message === 'Image decoding took too long. Try a smaller image.') throw firstDecodeError;
         const retryReader = await loadReader(true);
         result = await decodeWithTimeout(retryReader);
       }
