@@ -38,14 +38,14 @@ The feature implementation and Services/Events browser upload flow are verified 
 | TiDB migrations and readiness | Pass on isolated QA | All 71 migrations applied to `qr_attendance_qa`, including QR schema, permissions, and the event-registration FK repair. A second `db:migrate` run was a no-op. All six QR tables and the enabled QA setting are present. |
 | Persisted TiDB attendance evidence | Pass, synthetic QA data | In the successful browser run, the Service and Event sessions each finished with two confirmed attendees: one direct member scan and one leader-approved item. Each session had one approved leader batch. Repeat diagnostic runs also created synthetic QA fixtures; no production records were read or changed. |
 | Login and representative module regression | Pass on isolated QA; production pending | Synthetic Admin, Registration Team, Cell/Group Leader, and Member login journeys passed locally against TiDB QA. Member portal service/event/finance/attendance endpoints loaded. Logout and protected-route redirect passed; production regression remains pending deployment. |
-| Remote review and deployment | In review | Draft [PR #14](https://github.com/PLWM-Manila-Central-Church/cms-mcc/pull/14) is open against `main` and unmerged. TiDB QA passes locally; the latest migration compatibility and auth queue changes need to be pushed for fresh CI. Render's live API service tracks `main` and auto-deploys commits; `MIGRATE_ON_START=true` means a production deploy applies unapplied migrations. Current Render deploy was recorded as `0aa4f2b` and Vercel production as `e698ef4`; recheck these before release. Production checks remain pending. |
+| Remote review and deployment | CI passed; release pending | Draft [PR #14](https://github.com/PLWM-Manila-Central-Church/cms-mcc/pull/14) is open against `main` and unmerged. GitHub Actions run `37565377891` passed all three jobs on head `b1f8493`, including fresh migrations, API/frontend tests/build, persistence integration, and uploaded-QR browser flow. Render's live API service tracks `main` and auto-deploys commits; `MIGRATE_ON_START=true` applies unapplied migrations during startup. Current Render deploy is `0aa4f2b` and Vercel production is `e698ef4`. Production checks remain pending. |
 
 ## External gates to close
 
-1. Commit and push the TiDB compatibility migration and auth refresh-queue repair; then run CI and review the final diff.
-2. Keep PR #14 in draft until CI and release-readiness review pass.
-3. Verify camera operation on physical hardware if available; uploaded QR images already pass end to end on TiDB QA.
-4. After review, merge through the normal process. Verify Render migration/startup and Vercel production deployment on `main`, then perform live login and read-only existing-module smoke checks.
-5. Keep production attendance data untouched during smoke checks; enable QR for production use only after the release gate is confirmed.
+1. Review the final diff and merge PR #14 to `main`; the fresh CI run has passed.
+2. Verify Render applies the migration and becomes healthy, then confirm Vercel production deploys the merge commit.
+3. Perform live login/logout and read-only existing-module smoke checks on production; leave QR disabled until the release check succeeds.
+4. Verify camera operation on physical hardware if available; uploaded QR images already pass end to end on TiDB QA.
+5. Keep production attendance data untouched during smoke checks.
 
-Do not mark this implementation complete until fresh CI, production deployment, and post-deployment login/existing-module regression have evidence recorded in `QR_ATTENDANCE_VERIFICATION_REPORT.md`. Physical camera optics remain optional for the laptop image-upload path.
+Do not mark this implementation complete until the production deployment and post-deployment login/existing-module regression have evidence recorded in `QR_ATTENDANCE_VERIFICATION_REPORT.md`. Physical camera optics remain optional for the laptop image-upload path.
