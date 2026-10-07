@@ -52,14 +52,13 @@ const createMemberQrDownload = async (credentials, label) => {
   await page.getByRole('button', { name: 'Attendance', exact: true }).click();
   await page.getByRole('button', { name: 'My Attendance QR', exact: true }).click();
   const createButton = page.getByRole('button', { name: 'Create My QR', exact: true });
+  if (await createButton.count()) await createButton.click();
   try {
-    await createButton.waitFor({ state: 'visible', timeout: 8_000 });
+    await page.locator('img[alt="Your fixed member attendance QR code"]').waitFor({ state: 'visible', timeout: 12_000 });
   } catch {
     const dialogText = await page.locator('[role="dialog"]').innerText({ timeoutMs: 5_000 }).catch(() => 'QR dialog was not rendered');
-    throw new Error(`Member QR create action was not available for ${label}. Dialog: ${dialogText}. QR API responses: ${signedIn.qrApiResponses.join(', ')}`);
+    throw new Error(`Member QR image was not available for ${label}. Dialog: ${dialogText}. QR API responses: ${signedIn.qrApiResponses.join(', ')}`);
   }
-  await createButton.click();
-  await page.locator('img[alt="Your fixed member attendance QR code"]').waitFor({ state: 'visible', timeout: 30_000 });
 
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 30_000 }),
@@ -157,6 +156,11 @@ try {
 
   const memberA = await createMemberQrDownload(fixture.members.direct, 'direct');
   const memberASecondDevice = await createMemberQrDownload(fixture.members.direct, 'direct-second-device');
+  assert.equal(
+    createHash('sha256').update(fs.readFileSync(memberA.pngPath)).digest('hex'),
+    createHash('sha256').update(fs.readFileSync(memberASecondDevice.pngPath)).digest('hex'),
+    'A returning member must receive the same fixed QR image on a fresh browser context',
+  );
   const memberB = await createMemberQrDownload(fixture.members.cell, 'cell-leader-member');
   const memberC = await createMemberQrDownload(fixture.members.group, 'group-leader-member');
   await memberASecondDevice.context.close();
