@@ -11,7 +11,10 @@ assert.ok(fixturePath && fs.existsSync(fixturePath), 'QR_E2E_FIXTURE_PATH must p
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcc-qr-browser-e2e-'));
 const browserErrors = [];
-const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+const browser = await chromium.launch({
+  headless: true,
+  args: ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+});
 const contexts = [];
 
 const localDateTime = (offsetMs) => {
@@ -26,6 +29,7 @@ const logPageErrors = (page, label) => {
 const login = async (credentials, destination) => {
   const context = await browser.newContext({
     acceptDownloads: true,
+    permissions: ['camera'],
     viewport: { width: 1365, height: 900 },
   });
   contexts.push(context);
@@ -153,6 +157,25 @@ const openWorkspace = async (page, targetType, targetId, sessionId) => {
   await page.locator('.qr-session-status').filter({ hasText: 'open' }).waitFor({ state: 'visible', timeout: 30_000 });
 };
 
+const assertCameraStarts = async (page) => {
+  await page.getByRole('button', { name: 'Scan Member QR', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Scan Member QR', exact: true });
+  await dialog.getByRole('button', { name: 'Start Camera', exact: true }).click();
+  await dialog.getByText('Camera is ready. Hold the QR code in the frame.', { exact: true })
+    .waitFor({ state: 'visible', timeout: 20_000 });
+
+  const video = await dialog.locator('video[aria-label="Camera QR preview"]').evaluate((element) => ({
+    width: element.videoWidth,
+    height: element.videoHeight,
+    tracks: element.srcObject?.getVideoTracks?.().map((track) => track.readyState) || [],
+  }));
+  assert.ok(video.width > 0 && video.height > 0, 'Camera preview should have live video dimensions');
+  assert.ok(video.tracks.includes('live'), 'Camera preview should retain a live video track');
+
+  await dialog.getByRole('button', { name: 'Close scanner', exact: true }).click();
+  await dialog.waitFor({ state: 'detached', timeout: 15_000 });
+};
+
 const assertConfirmedCount = async (page, expected) => {
   const confirmedValue = page.locator('.qr-summary-tile').filter({ hasText: 'Confirmed' }).locator('strong');
   await confirmedValue.waitFor({ state: 'visible', timeout: 30_000 });
@@ -241,6 +264,7 @@ try {
 
   const registration = await login(fixture.registration, '/dashboard');
   await openWorkspace(registration.page, 'service', fixture.service.id, serviceSessionId);
+  await assertCameraStarts(registration.page);
   await directCheckIn(registration.page, fixture.members.direct, memberA.pngPath);
   await assertConfirmedCount(registration.page, 1);
 
@@ -290,7 +314,7 @@ try {
   await memberA.page.waitForURL((url) => url.pathname === '/login', { timeout: 30_000 });
 
   assert.deepEqual(browserErrors, [], `Browser errors: ${browserErrors.join('; ')}`);
-  console.log('QR browser E2E passed: fixed member QR upload, Service/Event direct check-in, scoped leader batches, approval, counts, member history, logout, and protected-route redirect.');
+  console.log('QR browser E2E passed: fake-camera startup, fixed member QR upload, Service/Event direct check-in, scoped leader batches, approval, counts, member history, logout, and protected-route redirect.');
 } catch (error) {
   console.error('QR browser E2E failed:', error.stack || error.message);
   process.exitCode = 1;

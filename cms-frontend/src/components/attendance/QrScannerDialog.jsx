@@ -7,6 +7,25 @@ const MAX_IMAGE_PIXELS = 16 * 1024 * 1024;
 const IMAGE_DECODE_TIMEOUT = 'Image decoding took too long. Try a smaller image.';
 const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
+const cameraStartErrorMessage = (error) => {
+  switch (error?.name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'Camera permission was denied. Allow camera access for this site in browser settings, then try again. You can still upload a QR image.';
+    case 'NotFoundError':
+    case 'DevicesNotFoundError':
+      return 'No camera was found. Connect or enable a camera, then try again, or upload a QR image.';
+    case 'NotReadableError':
+    case 'TrackStartError':
+      return 'The camera is busy or unavailable. Close other apps using it, then try again, or upload a QR image.';
+    case 'OverconstrainedError':
+    case 'ConstraintNotSatisfiedError':
+      return 'The selected camera is unavailable. Choose another camera or upload a QR image.';
+    default:
+      return error?.message || 'Camera could not start. Upload a QR image instead.';
+  }
+};
+
 export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onClose }) {
   const videoRef = useRef(null);
   const controlsRef = useRef(null);
@@ -83,16 +102,20 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error('This browser does not support camera access. Upload a QR image instead.');
       }
+      // React passes its click event to an event handler. Only a string from
+      // Switch Camera is a valid device ID; never send the event to ZXing as
+      // an exact deviceId constraint.
+      const requestedDeviceId = typeof preferredDeviceId === 'string' ? preferredDeviceId : '';
       const reader = await loadReader();
       const devices = typeof reader.listVideoInputDevices === 'function'
         ? await reader.listVideoInputDevices().catch(() => [])
         : [];
       if (mountedRef.current) setVideoDevices(devices);
-      const preferredIndex = preferredDeviceId
-        ? devices.findIndex((device) => device.deviceId === preferredDeviceId)
+      const preferredIndex = requestedDeviceId
+        ? devices.findIndex((device) => device.deviceId === requestedDeviceId)
         : Math.max(0, devices.findIndex((device) => /back|rear|environment/i.test(device.label || '')));
       const deviceIndex = preferredIndex >= 0 ? preferredIndex : 0;
-      const deviceId = preferredDeviceId || devices[deviceIndex]?.deviceId;
+      const deviceId = requestedDeviceId || devices[deviceIndex]?.deviceId;
       if (mountedRef.current) setVideoDeviceIndex(deviceIndex);
       const controls = await reader.decodeFromVideoDevice(deviceId, videoRef.current, (result, _decodeError, activeControls) => {
         if (!result) return;
@@ -120,7 +143,7 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
       }
     } catch (scanError) {
       stopCamera();
-      if (mountedRef.current) setError(scanError?.message || 'Camera could not start. Upload a QR image instead.');
+      if (mountedRef.current) setError(cameraStartErrorMessage(scanError));
     } finally {
       if (mountedRef.current) setCameraStarting(false);
     }
@@ -230,7 +253,7 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
         <video ref={videoRef} className="qr-camera-preview" muted playsInline autoPlay aria-label="Camera QR preview" />
         {imagePreview && <img className="qr-image-preview" src={imagePreview} alt="Selected QR image preview" />}
         <div className="qr-scanner-actions">
-          <button type="button" className="qr-primary-button" onClick={startCamera} disabled={cameraStarting || cameraActive}>
+          <button type="button" className="qr-primary-button" onClick={() => startCamera()} disabled={cameraStarting || cameraActive}>
             {cameraStarting ? 'Starting camera…' : cameraActive ? 'Camera running' : 'Start Camera'}
           </button>
           {cameraActive && videoDevices.length > 1 && <button type="button" className="qr-secondary-button" onClick={switchCamera}>Switch Camera</button>}
