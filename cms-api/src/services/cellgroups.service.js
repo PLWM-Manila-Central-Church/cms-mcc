@@ -1,18 +1,37 @@
 "use strict";
 
+const { Op } = require("sequelize");
 const sequelize = require("../config/db");
-const { CellGroup, CellGroupHistory, Member } = require("../models");
+const { CellGroup, CellGroupHistory, Member, User, UserLeaderAssignment } = require("../models");
 const auditLog = require("../helpers/auditLog.helper");
-const { ensureMemberInScope, isScopedLeader } = require("../helpers/scopedLeader.helper");
+const { ensureMemberInScope, getScope, getUnifiedAssignments, isScopedLeader } = require("../helpers/scopedLeader.helper");
 const AppError = require("../helpers/AppError");
 
 const getCellGroupWhereForUser = (user = {}) => {
+  if (user.roleName === "Leader") {
+    const scope = getScope(user);
+    if (scope.type === "cell_group") return { id: scope.id };
+    if (scope.type !== "all") return { id: { [Op.in]: [] } };
+    const ids = (scope.assignments || [])
+      .filter((assignment) => assignment.type === "cell_group")
+      .map((assignment) => assignment.id);
+    return ids.length ? { id: { [Op.in]: ids } } : { id: null };
+  }
   if (user.roleName !== "Cell Group Leader") return {};
   if (!user.leadsCellGroupId) return { id: null };
   return { id: user.leadsCellGroupId };
 };
 
 const ensureCellGroupAccess = (id, user = {}) => {
+  if (user.roleName === "Leader") {
+    const scope = getScope(user);
+    const ownsCellGroup = getUnifiedAssignments(user).some((assignment) =>
+      assignment.type === "cell_group" && Number(assignment.id) === Number(id));
+    if (!ownsCellGroup || !["cell_group", "all"].includes(scope.type)) {
+      throw AppError.forbidden("This cell group is outside your current leadership assignments");
+    }
+    return;
+  }
   if (user.roleName !== "Cell Group Leader") return;
   if (!user.leadsCellGroupId || parseInt(id, 10) !== parseInt(user.leadsCellGroupId, 10)) {
     throw AppError.forbidden("This cell group is outside your assignment");
@@ -89,17 +108,30 @@ exports.updateCellGroup = async (id, data, updatedBy, user = {}) => {
 // ── Delete Cell Group ────────────────────────────────────────
 exports.deleteCellGroup = async (id, deletedBy, user = {}) => {
   forbidScopedCellGroupManage(user);
-  const cellGroup = await CellGroup.findByPk(id);
-  if (!cellGroup) throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
+  await sequelize.transaction(async (transaction) => {
+    const cellGroup = await CellGroup.findByPk(id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!cellGroup) throw AppError.notFound("RECORD_NOT_FOUND", "Cell group not found");
 
-  const inUse = await Member.count({ where: { cell_group_id: id } });
-  if (inUse > 0)
-    throw {
-      status: 400,
-      message: `Cannot delete. ${inUse} member(s) are in this cell group`,
-    };
+    const [memberCount, normalizedLeaderCount, legacyLeaderCount] = await Promise.all([
+      Member.count({ where: { cell_group_id: id }, transaction }),
+      UserLeaderAssignment.count({ where: { scope_type: "cell_group", scope_id: id }, transaction }),
+      User.count({ where: { leads_cell_group_id: id, is_deleted: 0 }, transaction }),
+    ]);
+    if (memberCount > 0) {
+      throw AppError.conflict("CELL_GROUP_IN_USE", `Cannot delete. ${memberCount} member(s) are in this cell group`);
+    }
+    if (normalizedLeaderCount > 0 || legacyLeaderCount > 0) {
+      throw AppError.conflict(
+        "LEADER_ASSIGNMENTS_EXIST",
+        "Cannot delete a cell group with current or historical leader assignments. Reassign leaders first.",
+      );
+    }
 
-  await cellGroup.destroy();
+    await cellGroup.destroy({ transaction });
+  });
   auditLog.log({ userId: deletedBy, action: "DELETE_CELL_GROUP", targetTable: "cell_groups", targetId: id });
   return { message: "Cell group deleted successfully." };
 };

@@ -13,6 +13,7 @@ exports.getStats = async (req, res, next) => {
       leadsCellGroupName: req.user.leadsCellGroupName,
       leadsGroupId: req.user.leadsGroupId,
       leadsGroupName: req.user.leadsGroupName,
+      user: req.user,
     });
     res.json({ success: true, data });
   } catch (err) {

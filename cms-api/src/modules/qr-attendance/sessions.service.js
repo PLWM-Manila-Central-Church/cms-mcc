@@ -4,7 +4,12 @@ const { Op } = require("sequelize");
 const AppError = require("../../helpers/AppError");
 const { Event, EventRegistration, Member, Service, ServiceResponse } = require("../../models");
 const { getMemberScopeWhere, getScope } = require("../../helpers/scopedLeader.helper");
-const { AttendanceExpectedMember, QrAttendanceSession, sequelize } = require("./models");
+const {
+  AttendanceBatch,
+  AttendanceExpectedMember,
+  QrAttendanceSession,
+  sequelize,
+} = require("./models");
 const { writeQrAudit } = require("./audit");
 
 const MAX_ROSTER_ADD = 200;
@@ -39,7 +44,7 @@ const readExpectedMembers = async ({ session, targetType, transaction }) => {
   if (session.expected_basis === "explicit_roster") {
     return AttendanceExpectedMember.findAll({
       where: { session_id: session.id },
-      attributes: ["member_id"],
+      attributes: ["member_id", "source", "created_at"],
       raw: true,
       transaction,
     });
@@ -71,34 +76,56 @@ const snapshotExpectedMembers = async ({ session, targetType, transaction }) => 
     throw AppError.conflict("EXPECTED_ROSTER_EMPTY", "Add the expected roster before opening this session");
   }
   const uniqueIds = [...new Set(memberIds)];
+  const expectedRows = await AttendanceExpectedMember.findAll({
+    where: { session_id: session.id },
+    attributes: ["member_id", "source", "created_at"],
+    raw: true,
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+  const existingByMemberId = new Map(expectedRows.map((row) => [Number(row.member_id), row]));
   const members = uniqueIds.length
     ? await Member.findAll({
-      where: { id: { [Op.in]: uniqueIds } },
+      where: { id: { [Op.in]: uniqueIds }, is_deleted: 0 },
       attributes: ["id", "cell_group_id", "group_id"],
       transaction,
+      lock: transaction.LOCK.UPDATE,
     })
     : [];
+  if (members.length !== uniqueIds.length) {
+    throw AppError.conflict(
+      "EXPECTED_MEMBER_UNAVAILABLE",
+      "An expected member is no longer available. Review the roster before opening this session",
+    );
+  }
   const membersById = new Map(members.map((member) => [Number(member.id), member]));
   const source = session.expected_basis === "explicit_roster"
     ? "staff_added"
     : targetType === "event" ? "event_registration" : "service_rsvp";
   const capturedAt = new Date();
-  const toCreate = uniqueIds.filter((id) => membersById.has(id)).map((id) => {
+  const frozenRows = uniqueIds.map((id) => {
     const member = membersById.get(id);
+    const existing = existingByMemberId.get(id);
     return {
       session_id: session.id,
       member_id: member.id,
-      source,
+      source: existing?.source || source,
       cell_group_id_at_freeze: member.cell_group_id || null,
       group_id_at_freeze: member.group_id || null,
-      created_at: capturedAt,
+      created_at: existing?.created_at || capturedAt,
     };
   });
-  if (toCreate.length) {
-    await AttendanceExpectedMember.bulkCreate(toCreate, { transaction });
+  if (frozenRows.length) {
+    // Explicit rosters are saved while the session is a draft. Upsert their
+    // freeze-time group snapshots instead of inserting duplicate session/member
+    // keys when the session opens.
+    await AttendanceExpectedMember.bulkCreate(frozenRows, {
+      updateOnDuplicate: ["cell_group_id_at_freeze", "group_id_at_freeze"],
+      transaction,
+    });
   }
   await session.update({ expected_roster_frozen_at: capturedAt }, { transaction });
-  return toCreate.length;
+  return uniqueIds.length;
 };
 
 const createSession = async (data, user) => {
@@ -224,6 +251,12 @@ const openSession = async (sessionId, user) => sequelize.transaction(async (tran
     lock: transaction.LOCK.UPDATE,
   });
   if (!session) throw AppError.notFound("ATTENDANCE_SESSION_NOT_FOUND", "Attendance session was not found");
+  if (session.status === "open") {
+    const expectedCount = session.expected_basis === "none"
+      ? null
+      : await AttendanceExpectedMember.count({ where: { session_id: session.id }, distinct: true, col: "member_id", transaction });
+    return { session_id: session.id, status: "open", expected_count: expectedCount, already_open: true };
+  }
   if (session.status !== "draft") throw AppError.conflict("SESSION_NOT_DRAFT", "Only a draft attendance session can be opened");
   const targetType = session.service_id ? "service" : "event";
   const target = await lookupParent(targetType, session.service_id || session.event_id, transaction);
@@ -257,17 +290,121 @@ const closeSession = async (sessionId, user) => sequelize.transaction(async (tra
   if (!session) throw AppError.notFound("ATTENDANCE_SESSION_NOT_FOUND", "Attendance session was not found");
   if (session.status === "closed") return session;
   if (session.status !== "open") throw AppError.conflict("SESSION_NOT_OPEN", "Only an open attendance session can be closed");
-  await session.update({ status: "closed" }, { transaction });
+  const captureClosedAt = new Date();
+  await session.update({ status: "closed", capture_closed_at: captureClosedAt }, { transaction });
   await writeQrAudit({
     actorId: user.userId,
     action: "QR_SESSION_CLOSED",
     table: "attendance_sessions",
     recordId: session.id,
-    newValues: { session_id: session.id },
+    newValues: { session_id: session.id, capture_closed_at: captureClosedAt },
     transaction,
   });
   return session;
 });
+
+const finalizeSession = async (sessionId, { expected_activity_revision: expectedRevision, reason }, user) =>
+  sequelize.transaction(async (transaction) => {
+    const session = await QrAttendanceSession.findByPk(sessionId, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!session) throw AppError.notFound("ATTENDANCE_SESSION_NOT_FOUND", "Attendance session was not found");
+    if (session.status !== "closed") {
+      throw AppError.conflict("SESSION_NOT_CLOSED", "Close the attendance session before finalizing its expected roster");
+    }
+    if (session.expected_basis === "none") {
+      throw AppError.conflict("EXPECTED_BASIS_REQUIRED", "This session has no expected roster to reconcile");
+    }
+
+    const activityRevision = Number(session.activity_revision || 1);
+    if (Number(expectedRevision) !== activityRevision) {
+      throw AppError.conflict("SESSION_ACTIVITY_CHANGED", "Attendance changed after this report loaded; refresh before finalizing");
+    }
+    if (session.finalized_at && Number(session.finalized_revision) === activityRevision) {
+      return {
+        session_id: session.id,
+        finalized: true,
+        already_finalized: true,
+        finalized_at: session.finalized_at,
+        finalized_revision: session.finalized_revision,
+      };
+    }
+
+    const unresolvedBatchCount = await AttendanceBatch.count({
+      where: { session_id: session.id, state: ["draft", "submitted"] },
+      transaction,
+    });
+    if (unresolvedBatchCount > 0) {
+      throw AppError.conflict(
+        "SESSION_BATCHES_UNRESOLVED",
+        "Submit, withdraw, or review every saved draft and submitted batch before finalizing",
+      );
+    }
+
+    const expectedCount = await AttendanceExpectedMember.count({
+      where: { session_id: session.id },
+      distinct: true,
+      col: "member_id",
+      transaction,
+    });
+    const table = session.service_id ? "attendances" : "event_attendances";
+    const attendanceJoin = session.service_id
+      ? "a.service_id = :targetId AND a.check_in_method <> 'pre-reg'"
+      : "a.session_id = :sessionId";
+    const attendanceReplacements = {
+      sessionId: Number(session.id),
+      targetId: Number(session.service_id || session.id),
+    };
+    const countRows = await sequelize.query(`
+      SELECT COUNT(DISTINCT expected.member_id) AS confirmed_expected_count
+      FROM attendance_expected_members expected
+      JOIN ${table} a
+        ON a.member_id = expected.member_id
+       AND ${attendanceJoin}
+       AND a.voided_at IS NULL
+      WHERE expected.session_id = :sessionId
+    `, {
+      replacements: attendanceReplacements,
+      type: sequelize.QueryTypes.SELECT,
+      transaction,
+    });
+    const confirmedExpectedCount = Number(countRows[0]?.confirmed_expected_count || 0);
+    const finalAbsentCount = Math.max(0, Number(expectedCount) - confirmedExpectedCount);
+    const finalizedAt = new Date();
+
+    await session.update({
+      finalized_at: finalizedAt,
+      finalized_by: user.userId,
+      finalized_revision: activityRevision,
+    }, { transaction });
+    await writeQrAudit({
+      actorId: user.userId,
+      action: "QR_SESSION_FINALIZED",
+      table: "attendance_sessions",
+      recordId: session.id,
+      newValues: {
+        session_id: Number(session.id),
+        expected_count: Number(expectedCount),
+        confirmed_expected_count: confirmedExpectedCount,
+        final_absent_count: finalAbsentCount,
+        activity_revision: activityRevision,
+        reason: reason.trim(),
+      },
+      transaction,
+    });
+
+    return {
+      session_id: session.id,
+      finalized: true,
+      already_finalized: false,
+      finalized_at: finalizedAt,
+      finalized_revision: activityRevision,
+      expected_count: Number(expectedCount),
+      confirmed_expected_count: confirmedExpectedCount,
+      final_absent_count: finalAbsentCount,
+    };
+  });
 
 const cancelSession = async (sessionId, reason, user) => sequelize.transaction(async (transaction) => {
   const session = await QrAttendanceSession.findByPk(sessionId, {
@@ -320,16 +457,12 @@ const listSessionRoster = async (sessionId, { limit = 50, page = 1, search = "" 
   const pageSize = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const scope = getScope(user);
   const memberWhere = {};
-  if (scope?.type === "cell_group") {
-    if (!scope.id) memberWhere.id = { [Op.in]: [] };
-    else memberWhere.cell_group_id = scope.id;
-  } else if (scope?.type === "group") {
-    if (!scope.id) memberWhere.id = { [Op.in]: [] };
-    else memberWhere.group_id = scope.id;
-  } else if (scope?.type === "ministry") {
-    // Ministry leaders have summary access only and must not enumerate the full church roster.
-    const ministryWhere = await getMemberScopeWhere(user);
-    memberWhere.id = ministryWhere?.id || { [Op.in]: [] };
+  if (scope) {
+    // Keep every scoped leader's roster inside the assigned member union.
+    // For a multi-team Leader this is a deduplicated read-only union; writes
+    // still require a single team context in authorization and the service.
+    const scopedWhere = await getMemberScopeWhere(user);
+    if (scopedWhere) memberWhere[Op.and] = [scopedWhere];
   }
 
   if (session.expected_roster_frozen_at && (session.registration_required || session.expected_basis === "explicit_roster")) {
@@ -339,8 +472,15 @@ const listSessionRoster = async (sessionId, { limit = 50, page = 1, search = "" 
       raw: true,
     });
     const expectedIds = expectedMembers.map((row) => Number(row.member_id));
-    const scopeIds = memberWhere.id?.[Op.in];
-    memberWhere.id = { [Op.in]: scopeIds ? expectedIds.filter((id) => scopeIds.includes(id)) : expectedIds };
+    const scopeClause = memberWhere[Op.and]?.[0];
+    if (scopeClause?.id?.[Op.in]) {
+      memberWhere[Op.and][0] = { id: { [Op.in]: expectedIds.filter((id) => scopeClause.id[Op.in].includes(id)) } };
+    } else {
+      memberWhere[Op.and] = [
+        ...(memberWhere[Op.and] || []),
+        { id: { [Op.in]: expectedIds } },
+      ];
+    }
   }
 
   if (search.trim()) {
@@ -371,6 +511,7 @@ module.exports = {
   addExplicitExpectedMembers,
   cancelSession,
   closeSession,
+  finalizeSession,
   createSession,
   getParent: lookupParent,
   getSession,

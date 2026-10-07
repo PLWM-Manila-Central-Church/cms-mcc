@@ -15,11 +15,12 @@ const STATUS_META = {
 export default function EventDetailPage() {
   const { id }   = useParams();
   const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, activeLeaderScopeKey } = useAuth();
   const canDelete    = hasPermission('events', 'delete');
   const canViewRegistrations = hasPermission('events', 'read') && user?.roleName !== 'Member';
-  const isCellGroupLeader = user?.roleName === 'Cell Group Leader';
-  const isScopedRegistrationViewer = ['Cell Group Leader', 'Group Leader', 'Ministry Leader'].includes(user?.roleName);
+  const isCellGroupLeader = user?.roleName === 'Cell Group Leader'
+    || (user?.roleName === 'Leader' && String(activeLeaderScopeKey || '').startsWith('cell_group:'));
+  const isScopedRegistrationViewer = ['Cell Group Leader', 'Group Leader', 'Ministry Leader', 'Leader'].includes(user?.roleName);
   // Self-registration requires events:create; self-unregister requires events:delete
   const canSelfRegister   = hasPermission('events', 'create');
   const canSelfUnregister = hasPermission('events', 'delete');

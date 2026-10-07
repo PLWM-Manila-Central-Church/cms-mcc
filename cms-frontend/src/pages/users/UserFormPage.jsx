@@ -25,6 +25,11 @@ const EMPTY_FORM = {
   cell_group_id: '', group_id: '',
   // Leader fields
   leads_cell_group_id: '', leads_group_id: '', leads_ministry_id: '',
+  leader_assignments: { cell_group_id: '', group_id: '' },
+  leadership_reason: 'Assigned during account setup',
+  expected_leadership_revision: 0,
+  original_role_name: '',
+  original_leader_assignments: { cell_group_id: '', group_id: '' },
   // Member ministry sub-role (via MinistryMembership)
   member_ministry_role_id: '',
 };
@@ -47,7 +52,7 @@ export default function UserFormPage() {
   // Fetch roles, cell groups, groups, and ministry roles for dropdowns
   useEffect(() => {
     axiosInstance.get('/roles/list')
-      .then(res => setRoles(res.data.data || []))
+      .then(res => setRoles((res.data.data || []).filter(role => isEdit || !['Cell Group Leader', 'Group Leader'].includes(role.role_name))))
       .catch(() => {});
 
     axiosInstance.get('/members/dropdowns/cell-groups')
@@ -74,6 +79,8 @@ export default function UserFormPage() {
           email:               u.email               || '',
           password:            '',
           role_id:             u.role_id             || '',
+          original_role_name:  u.role?.role_name     || '',
+          expected_leadership_revision: Number(u.leadership_revision || 0),
           first_name:          u.member?.first_name  || '',
           last_name:           u.member?.last_name   || '',
           phone:               u.member?.phone       || '',
@@ -87,6 +94,16 @@ export default function UserFormPage() {
           leads_cell_group_id: u.leads_cell_group_id || '',
           leads_group_id:      u.leads_group_id      || '',
           leads_ministry_id:   u.leads_ministry_id   || '',
+          leader_assignments: {
+            cell_group_id: u.leaderAssignments?.find(a => a.scope_type === 'cell_group' && Number(a.is_active ?? 1) === 1)?.scope_id || u.leads_cell_group_id || '',
+            group_id: u.leaderAssignments?.find(a => a.scope_type === 'member_group' && Number(a.is_active ?? 1) === 1)?.scope_id || u.leads_group_id || '',
+          },
+          original_leader_assignments: {
+            cell_group_id: u.leaderAssignments?.find(a => a.scope_type === 'cell_group' && Number(a.is_active ?? 1) === 1)?.scope_id || u.leads_cell_group_id || '',
+            group_id: u.leaderAssignments?.find(a => a.scope_type === 'member_group' && Number(a.is_active ?? 1) === 1)?.scope_id || u.leads_group_id || '',
+            ministry_id: u.leaderAssignments?.find(a => a.scope_type === 'ministry' && Number(a.is_active ?? 1) === 1)?.scope_id || u.leads_ministry_id || '',
+          },
+          leadership_reason: '',
           // Member sub-role via MinistryMembership
           member_ministry_role_id: u.member?.MinistryMemberships?.[0]?.ministry_role_id || '',
         });
@@ -97,14 +114,27 @@ export default function UserFormPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-// When role changes, clear leader-specific fields to avoid stale values
     if (name === 'role_id') {
+      const selected = roles.find(role => String(role.id) === String(value));
+      const nextRoleName = selected?.role_name || '';
+      const unifiedLeader = nextRoleName === 'Leader';
+      const oldAssignmentState = form.leader_assignments || EMPTY_FORM.leader_assignments;
       setForm(f => ({
         ...f,
         role_id:             value,
-        leads_cell_group_id: '',
-        leads_group_id:       '',
-        leads_ministry_id:    '',
+        leads_cell_group_id: unifiedLeader
+          ? (oldAssignmentState.cell_group_id || f.leads_cell_group_id || '')
+          : nextRoleName === 'Cell Group Leader' ? (oldAssignmentState.cell_group_id || f.leads_cell_group_id || '') : '',
+        leads_group_id: unifiedLeader
+          ? (oldAssignmentState.group_id || f.leads_group_id || '')
+          : nextRoleName === 'Group Leader' ? (oldAssignmentState.group_id || f.leads_group_id || '') : '',
+        leads_ministry_id: nextRoleName === 'Ministry Leader' ? (f.leads_ministry_id || '') : '',
+        leader_assignments: unifiedLeader
+          ? oldAssignmentState
+          : {
+            cell_group_id: nextRoleName === 'Cell Group Leader' ? (oldAssignmentState.cell_group_id || f.leads_cell_group_id || '') : '',
+            group_id: nextRoleName === 'Group Leader' ? (oldAssignmentState.group_id || f.leads_group_id || '') : '',
+          },
         member_ministry_role_id: '',
       }));
     } else {
@@ -117,6 +147,32 @@ export default function UserFormPage() {
     e.preventDefault();
     if (!form.first_name.trim() || !form.last_name.trim()) {
       setError('First and last name are required.');
+      return;
+    }
+
+    const selectedRoleName = roles.find(role => String(role.id) === String(form.role_id))?.role_name || '';
+    const isUnifiedLeader = selectedRoleName === 'Leader';
+    const leadershipProfiles = ['Leader', 'Cell Group Leader', 'Group Leader', 'Ministry Leader'];
+    const currentAssignments = form.original_leader_assignments || {
+      cell_group_id: form.original_role_name === 'Cell Group Leader' ? form.leads_cell_group_id : '',
+      group_id: form.original_role_name === 'Group Leader' ? form.leads_group_id : '',
+    };
+    const requestedAssignments = isUnifiedLeader
+      ? form.leader_assignments
+      : {
+        cell_group_id: selectedRoleName === 'Cell Group Leader' ? form.leads_cell_group_id : '',
+        group_id: selectedRoleName === 'Group Leader' ? form.leads_group_id : '',
+      };
+    const leadershipChanged = form.original_role_name !== selectedRoleName
+      || String(currentAssignments.cell_group_id || '') !== String(requestedAssignments.cell_group_id || '')
+      || String(currentAssignments.group_id || '') !== String(requestedAssignments.group_id || '');
+    if (isUnifiedLeader && !requestedAssignments.cell_group_id && !requestedAssignments.group_id) {
+      setError('Assign a cell group, a group, or both to activate this Leader account.');
+      return;
+    }
+    if ((leadershipProfiles.includes(selectedRoleName) || leadershipProfiles.includes(form.original_role_name))
+        && leadershipChanged && form.leadership_reason.trim().length < 5) {
+      setError('Enter a reason of at least 5 characters for the leadership change.');
       return;
     }
     setSaving(true);
@@ -140,7 +196,18 @@ export default function UserFormPage() {
       leads_ministry_id:    form.leads_ministry_id    ? parseInt(form.leads_ministry_id)    : null,
       // Member ministry sub-role (via MinistryMembership)
       member_ministry_role_id: form.member_ministry_role_id ? parseInt(form.member_ministry_role_id) : null,
+      leadership_reason: form.leadership_reason.trim(),
+      expected_leadership_revision: Number(form.expected_leadership_revision || 0),
     };
+    if (isUnifiedLeader) {
+      payload.leader_assignments = {
+        cell_group_id: form.leader_assignments.cell_group_id ? parseInt(form.leader_assignments.cell_group_id) : null,
+        group_id: form.leader_assignments.group_id ? parseInt(form.leader_assignments.group_id) : null,
+      };
+      payload.leads_cell_group_id = null;
+      payload.leads_group_id = null;
+      payload.leads_ministry_id = null;
+    }
     if (!isEdit) payload.password = form.password;
 
     try {
@@ -172,7 +239,24 @@ export default function UserFormPage() {
   const isCGLeader       = selectedRoleName === 'Cell Group Leader';
   const isGroupLeader    = selectedRoleName === 'Group Leader';
   const isMinistryLeader = selectedRoleName === 'Ministry Leader';
-  const showLeaderSection = isCGLeader || isGroupLeader || isMinistryLeader;
+  const isUnifiedLeader  = selectedRoleName === 'Leader';
+  const showLeaderSection = isCGLeader || isGroupLeader || isMinistryLeader || isUnifiedLeader;
+  const leadershipProfiles = [
+    'Leader', 'Cell Group Leader', 'Group Leader', 'Ministry Leader',
+  ];
+  const showLeadershipReason = leadershipProfiles.includes(selectedRoleName)
+    || (isEdit && leadershipProfiles.includes(form.original_role_name));
+  const originalAssignments = form.original_leader_assignments || {};
+  const requestedAssignments = isUnifiedLeader
+    ? form.leader_assignments
+    : {
+      cell_group_id: isCGLeader ? form.leads_cell_group_id : '',
+      group_id: isGroupLeader ? form.leads_group_id : '',
+    };
+  const leadershipHasChanged = form.original_role_name !== selectedRoleName
+    || String(originalAssignments.cell_group_id || '') !== String(requestedAssignments.cell_group_id || '')
+    || String(originalAssignments.group_id || '') !== String(requestedAssignments.group_id || '')
+    || String(originalAssignments.ministry_id || '') !== String(isMinistryLeader ? form.leads_ministry_id || '' : '');
 
   if (loading) return <div style={S.loading}>Loading...</div>;
 
@@ -360,6 +444,51 @@ export default function UserFormPage() {
               Assign which cell group, group, or ministry this user leads.
             </p>
 
+            {isUnifiedLeader && (
+              <div style={{ ...S.row, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+                <div style={S.field}>
+                  <label style={S.label} htmlFor="leader-cell-group">Leads Cell Group</label>
+                  <select
+                    id="leader-cell-group"
+                    value={form.leader_assignments?.cell_group_id || ''}
+                    onChange={(event) => setForm(current => ({
+                      ...current,
+                      leader_assignments: { ...current.leader_assignments, cell_group_id: event.target.value },
+                    }))}
+                    style={selectStyle}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                  >
+                    <option value="">— None —</option>
+                    {cellGroups.map((cellGroup) => (
+                      <option key={cellGroup.id} value={cellGroup.id}>
+                        {cellGroup.name}{cellGroup.area ? ` (${cellGroup.area})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p style={S.hint}>Assign the cell-group responsibility independently.</p>
+                </div>
+                <div style={S.field}>
+                  <label style={S.label} htmlFor="leader-group">Leads Group</label>
+                  <select
+                    id="leader-group"
+                    value={form.leader_assignments?.group_id || ''}
+                    onChange={(event) => setForm(current => ({
+                      ...current,
+                      leader_assignments: { ...current.leader_assignments, group_id: event.target.value },
+                    }))}
+                    style={selectStyle}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                  >
+                    <option value="">— None —</option>
+                    {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+                  </select>
+                  <p style={S.hint}>Assign the group responsibility independently.</p>
+                </div>
+              </div>
+            )}
+
             {isCGLeader && (
               <div style={S.field}>
                 <label style={S.label}>Leads Cell Group</label>
@@ -410,6 +539,26 @@ export default function UserFormPage() {
                   ))}
                 </select>
                 <p style={S.hint}>The ministry this user is responsible for leading.</p>
+              </div>
+            )}
+
+            {showLeadershipReason && (
+              <div style={{ ...S.field, marginTop: 16 }}>
+                <label style={S.label} htmlFor="leadership-reason">Reason for granting, changing, or removing leadership</label>
+                <textarea
+                  id="leadership-reason"
+                  name="leadership_reason"
+                  value={form.leadership_reason}
+                  onChange={handleChange}
+                  rows={2}
+                  maxLength={500}
+                  minLength={5}
+                  required={!isEdit || leadershipHasChanged}
+                  style={{ ...inputStyle, resize: 'vertical', minHeight: 70 }}
+                  placeholder="For example, assigned to lead Cell Group 4"
+                  onFocus={onFocus}
+                  onBlur={onBlur}
+                />
               </div>
             )}
           </div>

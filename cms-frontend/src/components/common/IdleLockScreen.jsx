@@ -1,6 +1,17 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
+export const getUnlockErrorMessage = (error) => {
+  const status = error?.response?.status;
+  if (status === 401) return 'Incorrect password';
+  if (status === 429) {
+    return error.response.data?.message || 'Too many login attempts. Try again later.';
+  }
+  if (!error?.response) return 'Could not contact the server. Check your connection and try again.';
+  if (status >= 500) return 'The server could not verify your session. Try again later.';
+  return error.response.data?.message || 'Unable to unlock the session. Please try again.';
+};
+
 /**
  * IdleLockScreen — full-screen lock overlay shown after inactivity.
  * User must re-enter their password to dismiss.
@@ -22,7 +33,7 @@ export default function IdleLockScreen({ onUnlock }) {
       setPassword('');
       if (onUnlock) onUnlock();
     } catch (err) {
-      setError('Incorrect password');
+      setError(getUnlockErrorMessage(err));
       setPassword('');
     } finally {
       setLoading(false);

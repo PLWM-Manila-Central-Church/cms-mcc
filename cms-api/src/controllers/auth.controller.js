@@ -48,9 +48,12 @@ exports.refreshToken = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-};exports.getSession = async (req, res, next) => {
+};
+
+exports.getSession = async (req, res, next) => {
   try {
     const permissions = await authService.getUserPermissionsForRole(req.user.roleId);
+    const leaderAssignments = await authService.getLeaderAssignmentContext(req.user, req.user.leaderAssignments);
     const user = {
       id: req.user.userId,
       email: req.user.email,
@@ -62,6 +65,8 @@ exports.refreshToken = async (req, res, next) => {
       leadsCellGroupName: req.user.leadsCellGroupName,
       leadsGroupName: req.user.leadsGroupName,
       leadsMinistryName: req.user.leadsMinistryName,
+      leadershipRevision: req.user.leadershipRevision,
+      leaderAssignments,
     };
 
     res.json({

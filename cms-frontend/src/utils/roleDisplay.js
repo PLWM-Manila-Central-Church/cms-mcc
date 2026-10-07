@@ -1,4 +1,4 @@
-export const SCOPED_LEADER_ROLES = ['Ministry Leader', 'Cell Group Leader', 'Group Leader'];
+export const SCOPED_LEADER_ROLES = ['Ministry Leader', 'Cell Group Leader', 'Group Leader', 'Leader'];
 
 export const isScopedLeaderRole = (roleName) => SCOPED_LEADER_ROLES.includes(roleName);
 
@@ -30,6 +30,12 @@ export const groupMembersTitle = (user = {}) => `${compactGroupName(user.leadsGr
 
 export const greetingTarget = (user = {}) => {
   const role = user.roleName;
+  if (role === 'Leader') {
+    const teams = (user.leaderAssignments || []).map((assignment) => assignment.teamName).filter(Boolean);
+    if (user.activeLeaderScopeKey === 'all') return teams.length ? `Leader · ${teams.join(' + ')}` : 'Leader';
+    const selected = user.leaderAssignments?.find((assignment) => assignment.scopeKey === user.activeLeaderScopeKey);
+    return selected?.teamName ? `Leader · ${selected.teamName}` : 'Leader';
+  }
   if (role === 'System Admin') return 'Admin';
   if (role === 'Registration Team') return 'Registration team';
   if (role === 'Finance Team') return 'Finance team';

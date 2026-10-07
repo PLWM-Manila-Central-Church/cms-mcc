@@ -24,7 +24,7 @@ const TYPE_ICON = {
 const defaultType = TYPE_ICON.info;
 
 export default function Header({ sidebarWidth, isMobile = false }) {
-  const { user, logout } = useAuth();
+  const { user, logout, activeLeaderScopeKey, selectLeaderScope } = useAuth();
   const navigate = useNavigate();
 
   const [notifs,    setNotifs]    = useState([]);
@@ -173,10 +173,13 @@ export default function Header({ sidebarWidth, isMobile = false }) {
     'Finance Team':      { bg: '#f0fdf4', color: '#059669', dot: '#059669' },
     'Cell Group Leader': { bg: '#fffbeb', color: '#d97706', dot: '#d97706' },
     'Group Leader':      { bg: '#ecfeff', color: '#0891b2', dot: '#0891b2' },
+    'Leader':             { bg: '#e0f2fe', color: '#075985', dot: '#0284c7' },
     'Member':            { bg: '#f8fafc', color: '#64748b', dot: '#94a3b8' },
   };
   const displayRole = isMinistryLeader ? 'Ministry Leader' : (user?.roleName || 'Member');
   const rc = roleColors[displayRole] || roleColors['Member'];
+  const leaderAssignments = user?.roleName === 'Leader' ? (user.leaderAssignments || []) : [];
+  const currentLeaderScope = activeLeaderScopeKey || user?.activeLeaderScopeKey || '';
 
   const panelWidth = isMobile ? 'calc(100vw - 24px)' : '360px';
 
@@ -194,6 +197,38 @@ export default function Header({ sidebarWidth, isMobile = false }) {
       </div>
 
       <div style={S.right}>
+        {leaderAssignments.length > 0 && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', whiteSpace: 'nowrap' }}>
+              {!isMobile && 'Team'}
+            </span>
+            <select
+              aria-label="Active leadership team"
+              value={currentLeaderScope}
+              onChange={(event) => selectLeaderScope(event.target.value, { reload: true })}
+              style={{
+                maxWidth: isMobile ? 138 : 230,
+                minHeight: 34,
+                border: '1px solid #dbe4ee',
+                borderRadius: 8,
+                background: '#fff',
+                color: '#1e293b',
+                padding: '5px 8px',
+                fontSize: 12,
+                fontWeight: 600,
+                fontFamily: 'inherit',
+              }}
+            >
+              {leaderAssignments.length > 1 && <option value="all">All assigned teams · read only</option>}
+              {leaderAssignments.map((assignment) => (
+                <option key={assignment.scopeKey} value={assignment.scopeKey}>
+                  {assignment.teamName || `${assignment.scopeType === 'cell_group' ? 'Cell group' : 'Group'} #${assignment.scopeId}`}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         {!isMobile && (
           <div style={{ ...S.roleTag, background: rc.bg }}>
             <span style={{ ...S.roleDot, background: rc.dot }} />

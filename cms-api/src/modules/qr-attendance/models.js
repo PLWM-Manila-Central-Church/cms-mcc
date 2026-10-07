@@ -42,6 +42,12 @@ const QrAttendanceSession = sequelize.define("QrAttendanceSession", {
     defaultValue: "batch_review",
   },
   expected_roster_frozen_at: { type: DataTypes.DATE, allowNull: true },
+  config_revision: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
+  activity_revision: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
+  capture_closed_at: { type: DataTypes.DATE, allowNull: true },
+  finalized_at: { type: DataTypes.DATE, allowNull: true },
+  finalized_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+  finalized_revision: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   created_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
 }, { ...timestamps, tableName: "attendance_sessions" });
 

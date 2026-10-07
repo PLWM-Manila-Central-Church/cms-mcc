@@ -1,10 +1,18 @@
 "use strict";
 
 const bcrypt = require("bcrypt");
-const { User, Role, Member, MinistryRole, MinistryMembership, CellGroup, MinistryGroup } = require("../models");
+const { User, Role, Member, MinistryRole, MinistryMembership, CellGroup, MinistryGroup, UserLeaderAssignment, AuditLog } = require("../models");
+const sequelize = require("../config/db");
 const auditLog = require("../helpers/auditLog.helper");
 const permissionCache = require("../helpers/permissionCache.helper");
 const AppError = require("../helpers/AppError");
+const {
+  LEADER_ROLE,
+  assignmentProjections,
+  persistAssignments,
+  targetsForRole,
+  validateAssignmentTargets,
+} = require("./leaderAssignments.service");
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
 
@@ -45,9 +53,150 @@ const userIncludes = [
     attributes: ["id", "name"],
     required: false,
   },
+  {
+    model: UserLeaderAssignment,
+    as: "leaderAssignments",
+    attributes: ["id", "scope_type", "scope_id", "legacy_column", "assigned_by", "is_active", "version", "revoked_at"],
+    required: false,
+    separate: true,
+    order: [["scope_type", "ASC"], ["scope_id", "ASC"], ["id", "ASC"]],
+  },
 ];
 
+
+const LEADERSHIP_PROFILE_ROLES = new Set([
+  LEADER_ROLE, "Cell Group Leader", "Group Leader", "Ministry Leader",
+]);
+
+const isSystemAdministrator = (actor) =>
+  actor && typeof actor === "object" && actor.roleName === "System Admin";
+
+const hasAssignedLeadershipInput = (data = {}) => Boolean(
+  data.leader_assignments
+  || data.leads_cell_group_id
+  || data.leads_group_id
+  || data.leads_ministry_id,
+);
+
+const createUserWithLeadership = async (data, role, actor) => {
+  if (!isSystemAdministrator(actor)) {
+    throw AppError.forbidden("Only System Admin can create or assign a leadership account");
+  }
+
+  const desired = await targetsForRole(role.role_name, data, [], true);
+  const reason = String(data.leadership_reason || "").trim();
+  if (reason.length < 5) {
+    throw AppError.badRequest("LEADERSHIP_REASON_REQUIRED", "Enter a reason of at least 5 characters for this leadership assignment");
+  }
+  const assignmentFields = assignmentProjections(role.role_name, desired);
+  const passwordHash = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
+
+  const createdId = await sequelize.transaction(async (transaction) => {
+    const duplicate = await User.findOne({
+      where: { email: data.email, is_deleted: 0 },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (duplicate) throw AppError.conflict("DUPLICATE", "Email already in use");
+
+    let memberId = data.member_id || null;
+    if (memberId) {
+      const member = await Member.findOne({
+        where: { id: memberId, is_deleted: 0 },
+        attributes: ["id"],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!member) throw AppError.notFound("MEMBER_NOT_FOUND", "Member is not available");
+    } else if (data.first_name && data.last_name) {
+      const member = await Member.create({
+        first_name: data.first_name.trim(),
+        last_name: data.last_name.trim(),
+        email: data.email || null,
+        phone: data.phone || null,
+        gender: data.gender || null,
+        birthdate: data.birthdate || null,
+        spiritual_birthday: data.spiritual_birthday || null,
+        address: data.address || null,
+        cell_group_id: data.cell_group_id ? Number(data.cell_group_id) : null,
+        group_id: data.group_id ? Number(data.group_id) : null,
+        status: "Active",
+        is_deleted: 0,
+      }, { transaction });
+      memberId = member.id;
+    }
+
+    const user = await User.create({
+      email: data.email,
+      password_hash: passwordHash,
+      role_id: role.id,
+      member_id: memberId,
+      invited_member_id: data.invited_member_id || null,
+      ...assignmentFields,
+      leadership_revision: 1,
+      is_active: 1,
+      force_password_change: 1,
+    }, { transaction });
+
+    const assignmentRows = await UserLeaderAssignment.findAll({
+      where: { user_id: user.id },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    await persistAssignments({
+      userId: user.id,
+      actorId: actor.userId,
+      roleName: role.role_name,
+      desired,
+      reason,
+      existingRows: assignmentRows,
+      transaction,
+    });
+
+    if (data.member_ministry_role_id && memberId) {
+      if (role.role_name === "Ministry Leader") {
+        throw AppError.badRequest("VALIDATION", "Use the leader assignment controls to assign a Ministry Leader");
+      }
+      await MinistryMembership.findOrCreate({
+        where: {
+          ministry_role_id: Number(data.member_ministry_role_id),
+          member_id: Number(memberId),
+        },
+        defaults: {
+          ministry_role_id: Number(data.member_ministry_role_id),
+          member_id: Number(memberId),
+          added_by: actor.userId,
+        },
+        transaction,
+      });
+    }
+
+    await AuditLog.create({
+      user_id: actor.userId,
+      action: "CREATE_LEADERSHIP_USER",
+      target_table: "users",
+      target_id: user.id,
+      new_values: {
+        user_id: user.id,
+        role_name: role.role_name,
+        assignment_types: [...desired.entries()].filter(([, id]) => id != null).map(([type]) => type),
+        reason,
+      },
+    }, { transaction });
+
+    return user.id;
+  });
+
+  const created = await exports.getUserById(createdId);
+  auditLog.log({ userId: actor.userId, action: "CREATE_USER", targetTable: "users", targetId: created.id });
+  return created;
+};
 const validateLeaderAssignment = async (role, data, existingUser = null) => {
+  if (role.role_name === LEADER_ROLE) {
+    const desired = await targetsForRole(role.role_name, data, existingUser?.leaderAssignments || [], !existingUser);
+    await validateAssignmentTargets(desired);
+    return assignmentProjections(role.role_name, desired);
+  }
   const final = {
     leads_cell_group_id: data.leads_cell_group_id !== undefined ? data.leads_cell_group_id : existingUser?.leads_cell_group_id,
     leads_group_id:      data.leads_group_id      !== undefined ? data.leads_group_id      : existingUser?.leads_group_id,
@@ -107,6 +256,8 @@ exports.getUserById = async (id) => {
 
 // ── Create User ──────────────────────────────────────────────
 exports.createUser = async (data, createdBy) => {
+  const actor = createdBy && typeof createdBy === "object" ? createdBy : null;
+  const createdById = actor?.userId ?? createdBy;
   const {
     email, password, role_id, member_id, invited_member_id,
     first_name, last_name, phone, gender, birthdate,
@@ -120,6 +271,13 @@ exports.createUser = async (data, createdBy) => {
 
   const role = await Role.findByPk(role_id);
   if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
+
+  if (LEADERSHIP_PROFILE_ROLES.has(role.role_name)) {
+    if (!isSystemAdministrator(actor)) {
+      throw AppError.forbidden("Only System Admin can create a leadership account or assign its teams");
+    }
+    return createUserWithLeadership(data, role, actor);
+  }
 
   const leaderAssignment = await validateLeaderAssignment(role, {
     leads_cell_group_id,
@@ -180,8 +338,177 @@ exports.createUser = async (data, createdBy) => {
   }
 
   const created = await exports.getUserById(user.id);
-  auditLog.log({ userId: createdBy, action: "CREATE_USER", targetTable: "users", targetId: created.id });
+  auditLog.log({ userId: createdById, action: "CREATE_USER", targetTable: "users", targetId: created.id });
   return created;
+};
+
+
+const hasLeaderAssignmentInput = (data = {}) => Boolean(
+  data.leader_assignments
+  || data.leads_cell_group_id
+  || data.leads_group_id
+  || data.leads_ministry_id
+);
+
+const getAssignmentKeySet = (rows = []) => new Set(rows
+  .filter((row) => Number(row.is_active ?? 1) === 1 && !row.revoked_at)
+  .map((row) => `${row.scope_type}:${Number(row.scope_id)}`));
+
+const assignmentKeysMatch = (currentRows, desired) => {
+  const current = getAssignmentKeySet(currentRows);
+  const next = new Set([...desired.entries()]
+    .filter(([, id]) => id != null)
+    .map(([type, id]) => `${type}:${Number(id)}`));
+  return current.size === next.size && [...current].every((key) => next.has(key));
+};
+
+const updateUserWithLeaderScope = async (id, data, actor, requestedRole) => {
+  if (!isSystemAdministrator(actor)) {
+    throw AppError.forbidden("Only System Admin can change a leadership role or assignment");
+  }
+  if (data.member_ministry_role_id && requestedRole.role_name === "Ministry Leader") {
+    throw AppError.badRequest("VALIDATION", "Use the leadership assignment control to assign a Ministry Leader");
+  }
+
+  const reason = String(data.leadership_reason || "").trim();
+  const sequelizeInstance = sequelize;
+  const changedId = await sequelizeInstance.transaction(async (transaction) => {
+    const user = await User.findOne({
+      where: { id, is_deleted: 0 },
+      include: [{ model: Role, as: "role", attributes: ["id", "role_name"] }],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!user) throw AppError.notFound("RECORD_NOT_FOUND", "Requested resource not available");
+
+    const expectedRevision = data.expected_leadership_revision;
+    if (expectedRevision !== undefined && Number(expectedRevision) !== Number(user.leadership_revision || 0)) {
+      throw AppError.conflict("LEADERSHIP_REVISION_CHANGED", "Leadership assignments changed. Reload this account and try again");
+    }
+
+    if (data.email && data.email !== user.email) {
+      const duplicate = await User.findOne({
+        where: { email: data.email, is_deleted: 0 },
+        attributes: ["id"],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (duplicate && Number(duplicate.id) !== Number(user.id)) {
+        throw AppError.conflict("DUPLICATE", "Email already in use");
+      }
+    }
+
+    const [existingRows, memberRole] = await Promise.all([
+      UserLeaderAssignment.findAll({
+        where: { user_id: user.id },
+        order: [["scope_type", "ASC"], ["scope_id", "ASC"], ["id", "ASC"]],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      }),
+      Role.findByPk(data.role_id || user.role_id, { transaction }),
+    ]);
+    if (!memberRole) throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
+
+    const desired = await targetsForRole(memberRole.role_name, data, existingRows, false, {
+      leads_cell_group_id: user.leads_cell_group_id,
+      leads_group_id: user.leads_group_id,
+      leads_ministry_id: user.leads_ministry_id,
+    });
+    const changed = Number(memberRole.id) !== Number(user.role_id)
+      || !assignmentKeysMatch(existingRows, desired);
+    if (changed && reason.length < 5) {
+      throw AppError.badRequest("LEADERSHIP_REASON_REQUIRED", "Enter a reason of at least 5 characters for the leadership change");
+    }
+
+    const nextMemberId = data.member_id !== undefined ? data.member_id : user.member_id;
+    const projections = assignmentProjections(memberRole.role_name, desired);
+    const nextLeadershipRevision = changed
+      ? Number(user.leadership_revision || 0) + 1
+      : Number(user.leadership_revision || 0);
+
+    await user.update({
+      ...(data.email && { email: data.email }),
+      ...(data.role_id && { role_id: data.role_id }),
+      ...(data.member_id !== undefined && { member_id: data.member_id }),
+      ...(data.invited_member_id !== undefined && { invited_member_id: data.invited_member_id }),
+      ...projections,
+      ...(changed && { leadership_revision: nextLeadershipRevision }),
+    }, { transaction });
+
+    if (changed) {
+      await persistAssignments({
+        userId: user.id,
+        actorId: actor.userId,
+        roleName: memberRole.role_name,
+        desired,
+        reason,
+        existingRows,
+        transaction,
+      });
+    }
+
+    if (nextMemberId && data.member_ministry_role_id !== undefined) {
+      if (data.member_ministry_role_id) {
+        const [membership, created] = await MinistryMembership.findOrCreate({
+          where: { member_id: nextMemberId },
+          defaults: {
+            ministry_role_id: Number(data.member_ministry_role_id),
+            member_id: nextMemberId,
+            added_by: actor.userId,
+          },
+          transaction,
+        });
+        if (!created && Number(membership.ministry_role_id) !== Number(data.member_ministry_role_id)) {
+          await membership.update({ ministry_role_id: Number(data.member_ministry_role_id) }, { transaction });
+        }
+      } else {
+        await MinistryMembership.destroy({ where: { member_id: nextMemberId }, transaction });
+      }
+    }
+
+    const canEditMembers = (await permissionCache.get(actor.roleId)).has("members:update");
+    const hasMemberFields =
+      data.first_name !== undefined || data.last_name !== undefined || data.phone !== undefined
+      || data.gender !== undefined || data.birthdate !== undefined || data.spiritual_birthday !== undefined
+      || data.address !== undefined || data.cell_group_id !== undefined || data.group_id !== undefined;
+    if (nextMemberId && hasMemberFields && canEditMembers) {
+      const member = await Member.findByPk(nextMemberId, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!member) throw AppError.notFound("MEMBER_NOT_FOUND", "Linked member profile is unavailable");
+      await member.update({
+        ...(data.first_name && { first_name: data.first_name.trim() }),
+        ...(data.last_name && { last_name: data.last_name.trim() }),
+        ...(data.phone !== undefined && { phone: data.phone || null }),
+        ...(data.gender !== undefined && { gender: data.gender || null }),
+        ...(data.birthdate !== undefined && { birthdate: data.birthdate || null }),
+        ...(data.spiritual_birthday !== undefined && { spiritual_birthday: data.spiritual_birthday || null }),
+        ...(data.address !== undefined && { address: data.address || null }),
+        ...(data.cell_group_id !== undefined && { cell_group_id: data.cell_group_id ? Number(data.cell_group_id) : null }),
+        ...(data.group_id !== undefined && { group_id: data.group_id ? Number(data.group_id) : null }),
+      }, { transaction });
+    }
+
+    await AuditLog.create({
+      user_id: actor.userId,
+      action: changed ? "UPDATE_USER_LEADERSHIP" : "UPDATE_USER",
+      target_table: "users",
+      target_id: user.id,
+      old_values: changed ? {
+        role_id: user.role_id,
+        leadership_revision: user.leadership_revision,
+      } : null,
+      new_values: {
+        role_id: memberRole.id,
+        ...(changed && {
+          leadership_revision: nextLeadershipRevision,
+          assignment_keys: [...desired.entries()].filter(([, value]) => value != null).map(([type, value]) => `${type}:${Number(value)}`),
+          reason,
+        }),
+      },
+    }, { transaction });
+    return user.id;
+  });
+
+  return exports.getUserById(changedId);
 };
 
 // ── Update User ──────────────────────────────────────────────
@@ -207,6 +534,16 @@ exports.updateUser = async (id, data, actor) => {
     ? await Role.findByPk(role_id)
     : await Role.findByPk(user.role_id);
   if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
+
+  const currentRole = await Role.findByPk(user.role_id);
+  const currentRoleIsLeaderProfile = LEADERSHIP_PROFILE_ROLES.has(currentRole?.role_name);
+  const nextRoleIsLeaderProfile = LEADERSHIP_PROFILE_ROLES.has(role.role_name);
+  if (currentRoleIsLeaderProfile || nextRoleIsLeaderProfile || hasLeaderAssignmentInput(data)) {
+    if (!isSystemAdministrator(actor)) {
+      throw AppError.forbidden("Only System Admin can change a leadership role or team assignment");
+    }
+    return updateUserWithLeaderScope(id, data, actor, role);
+  }
 
   const leaderAssignment = await validateLeaderAssignment(role, {
     leads_cell_group_id,
@@ -329,8 +666,9 @@ exports.hardDeleteUser = async (id, requestingUserId) => {
     await sequelize.query("DELETE FROM ministry_memberships WHERE added_by = :userId",          { replacements: { userId: id }, transaction: t });
     await sequelize.query("DELETE FROM ministry_event_invites WHERE invited_by = :userId",      { replacements: { userId: id }, transaction: t });
 
-    // Soft delete the user (set is_deleted = 1)
-    await user.update({ is_deleted: 1, deleted_at: new Date() }, { transaction: t });
+    // Soft-delete and deactivate the user so existing access JWTs fail the
+    // next authorization check even though refresh credentials are removed.
+    await user.update({ is_deleted: 1, is_active: 0, deleted_at: new Date() }, { transaction: t });
 
     // Cascade: soft-delete the linked member (if any)
     if (linkedMemberId) {

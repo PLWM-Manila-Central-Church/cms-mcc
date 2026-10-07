@@ -4,7 +4,7 @@ const servicesService = require("../services/services.service");
 
 exports.getAllServices = async (req, res, next) => {
   try {
-    const result = await servicesService.getAllServices(req.query);
+    const result = await servicesService.getAllServices(req.query, req.user);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

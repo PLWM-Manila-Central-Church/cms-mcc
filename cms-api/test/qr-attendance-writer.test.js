@@ -6,9 +6,11 @@ const mockModels = {
   sequelize: { transaction: jest.fn() },
 };
 const mockAudit = { writeQrAudit: jest.fn() };
+const mockReconciliation = { invalidateSessionFinalization: jest.fn() };
 
 jest.mock("../src/modules/qr-attendance/models", () => mockModels);
 jest.mock("../src/modules/qr-attendance/audit", () => mockAudit);
+jest.mock("../src/modules/qr-attendance/reconciliation.service", () => mockReconciliation);
 jest.mock("../src/helpers/attendanceSummary.helper", () => ({ syncServiceAttendanceSummary: jest.fn() }));
 jest.mock("../src/helpers/cache.helper", () => ({ keys: jest.fn(() => []), del: jest.fn() }));
 
@@ -23,6 +25,7 @@ describe("QR attendance writers", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAudit.writeQrAudit.mockResolvedValue({});
+    mockReconciliation.invalidateSessionFinalization.mockResolvedValue(null);
   });
 
   it("persists a direct Service QR as a QR-sourced barcode record", async () => {
@@ -56,6 +59,11 @@ describe("QR attendance writers", () => {
       action: "QR_SERVICE_CHECK_IN",
       recordId: 101,
       transaction,
+    }));
+    expect(mockReconciliation.invalidateSessionFinalization).toHaveBeenCalledWith(4, expect.objectContaining({
+      transaction,
+      actorId: 7,
+      reason: "service_attendance_added",
     }));
   });
 

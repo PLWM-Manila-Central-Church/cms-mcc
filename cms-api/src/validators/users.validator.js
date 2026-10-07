@@ -34,6 +34,12 @@ exports.createUserSchema = Joi.object({
   leads_cell_group_id: Joi.number().integer().positive().allow(null).optional(),
   leads_group_id:      Joi.number().integer().positive().allow(null).optional(),
   leads_ministry_id:   Joi.number().integer().positive().allow(null).optional(),
+  leader_assignments: Joi.object({
+    cell_group_id: Joi.number().integer().positive().allow(null).optional(),
+    group_id: Joi.number().integer().positive().allow(null).optional(),
+  }).min(1).unknown(false).optional(),
+  leadership_reason: Joi.string().trim().min(5).max(500).allow("").optional(),
+  expected_leadership_revision: Joi.number().integer().min(0).optional(),
   member_ministry_role_id: Joi.number().integer().positive().allow(null).optional(),
 });
 
@@ -57,5 +63,11 @@ exports.updateUserSchema = Joi.object({
   leads_cell_group_id: Joi.number().integer().positive().allow(null).optional(),
   leads_group_id:      Joi.number().integer().positive().allow(null).optional(),
   leads_ministry_id:   Joi.number().integer().positive().allow(null).optional(),
+  leader_assignments: Joi.object({
+    cell_group_id: Joi.number().integer().positive().allow(null).optional(),
+    group_id: Joi.number().integer().positive().allow(null).optional(),
+  }).min(1).unknown(false).optional(),
+  leadership_reason: Joi.string().trim().min(5).max(500).allow("").optional(),
+  expected_leadership_revision: Joi.number().integer().min(0).optional(),
   member_ministry_role_id: Joi.number().integer().positive().allow(null).optional(),
 }).min(1);

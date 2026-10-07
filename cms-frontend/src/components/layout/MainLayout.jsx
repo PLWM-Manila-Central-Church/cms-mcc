@@ -312,8 +312,11 @@ export default function MainLayout({ children }) {
       <main style={{
         ...S.main,
         marginLeft: mainPadLeft,
-        padding: isMobile ? '12px 12px 0' : (isTablet ? '20px' : '28px'),
-        paddingTop: isMobile ? '72px' : '80px',
+        padding: isMobile
+          ? '72px 12px 0'
+          : isTablet
+            ? '80px 20px 20px'
+            : '80px 28px 28px',
         paddingBottom: isMobile ? 'calc(68px + env(safe-area-inset-bottom, 0px))' : (isTablet ? '20px' : '28px'),
       }}>
         {children}

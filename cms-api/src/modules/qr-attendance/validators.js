@@ -78,6 +78,23 @@ exports.listQuerySchema = Joi.object({
   search: Joi.string().trim().max(80).allow("").default(""),
 }).with("target_id", "target_type");
 
+const batchStates = ["draft", "submitted", "approved", "rejected", "withdrawn"];
+exports.batchListQuerySchema = Joi.object({
+  state: Joi.string().valid(...batchStates).optional(),
+  // Accept the early batch-history query spelling, then normalize it to state.
+  status: Joi.string().valid(...batchStates).optional(),
+  limit: Joi.number().integer().min(1).max(100).default(50),
+  page: Joi.number().integer().min(1).default(1),
+  search: Joi.string().trim().max(80).allow("").default(""),
+}).custom((value, helpers) => {
+  if (value.state && value.status && value.state !== value.status) {
+    return helpers.error("any.invalid");
+  }
+  const { status, ...normalized } = value;
+  if (!normalized.state && status) normalized.state = status;
+  return normalized;
+}).messages({ "any.invalid": "state and status must select the same attendance-batch state." });
+
 exports.batchDraftSchema = Joi.object({
   client_request_id: Joi.string().guid({ version: ["uuidv4"] }).required(),
 });
@@ -125,6 +142,11 @@ exports.directCheckInSchema = Joi.object({
 }).xor("member_id", "qr_payload");
 
 exports.cancelSessionSchema = Joi.object({
+  reason: Joi.string().trim().min(5).max(500).required(),
+});
+
+exports.finalizeSessionSchema = Joi.object({
+  expected_activity_revision: Joi.number().integer().min(1).required(),
   reason: Joi.string().trim().min(5).max(500).required(),
 });
 

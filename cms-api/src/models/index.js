@@ -314,6 +314,10 @@ UserLeaderAssignment.belongsTo(User, {
   foreignKey: "assigned_by",
   as: "assignedByUser",
 });
+UserLeaderAssignment.belongsTo(User, {
+  foreignKey: "revoked_by",
+  as: "revokedByUser",
+});
 
 // ── MinistryMembership ───────────────────────────────────────
 MinistryMembership.belongsTo(MinistryRole, { foreignKey: "ministry_role_id", as: "ministryRole"  });

@@ -10,6 +10,7 @@ const {
   ArchiveRecord, InvitedMember, MinistryMembership, MinistryEventInvite,
   Attendance, CellGroup,
 } = require("../models");
+const { getMemberScopeWhere, getScope } = require("../helpers/scopedLeader.helper");
 
 const dateOnly = (date) => date.toISOString().slice(0, 10);
 
@@ -46,6 +47,7 @@ const getRoleSummary = async ({
   leadsCellGroupName,
   leadsGroupId,
   leadsGroupName,
+  user,
   thisMonth,
   AttendanceModel = Attendance,
 }) => {
@@ -120,6 +122,28 @@ const getRoleSummary = async ({
       ]);
       return { scopeName: leadsGroupName || "Assigned group", membersInScope, eligibleCandidates, pendingRequests };
     }
+    case "Leader": {
+      const scope = getScope(user || {});
+      const assignments = scope?.type === "all" ? (scope.assignments || []) : (scope?.id ? [scope] : []);
+      const names = (user?.leaderAssignments || [])
+        .filter((assignment) => assignments.some((scopeRow) =>
+          scopeRow.type === (assignment.scopeType === "group" ? "group" : assignment.scopeType)
+          && Number(scopeRow.id) === Number(assignment.scopeId)))
+        .map((assignment) => assignment.teamName)
+        .filter(Boolean);
+      const memberWhere = await getMemberScopeWhere(user || {});
+      const inScope = { [Op.and]: [{ is_deleted: 0 }, memberWhere || { id: { [Op.in]: [] } }] };
+      const [membersInScope, pendingRequests] = await Promise.all([
+        Member.count({ where: inScope }),
+        userId ? InventoryRequest.count({ where: { requested_by: userId, status: "pending" } }) : 0,
+      ]);
+      const scopeName = scope?.type === "all"
+        ? (names.length ? names.join(" + ") : "All assigned teams")
+        : (names[0] || (scope?.type === "cell_group"
+          ? leadsCellGroupName || "Assigned cell group"
+          : leadsGroupName || "Assigned group"));
+      return { scopeName, membersInScope, pendingRequests, assignedTeamCount: assignments.length };
+    }
     default:
       return { scopeName: roleName || "Dashboard" };
   }
@@ -128,15 +152,24 @@ const getRoleSummary = async ({
 exports.getStats = async ({
   userId, memberId, roleName, leadsMinistryId, leadsMinistryName,
   leadsCellGroupId, leadsCellGroupName, leadsGroupId, leadsGroupName,
+  user = {},
 } = {}) => {
   const now       = new Date();
   const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const isMember  = roleName === "Member";
 
   // Cache key includes role and scope — members get a unique key per memberId
+  const isUnifiedLeader = roleName === "Leader";
+  const leaderScope = isUnifiedLeader ? getScope(user) : null;
+  const leaderScopeSignature = (leaderScope?.assignments || [])
+    .map((assignment) => `${assignment.type}:${assignment.id}`)
+    .sort()
+    .join(",");
   const cacheKey = isMember
     ? `dashboard:member:${memberId}`
-    : `dashboard:${roleName}:${leadsMinistryId || ""}:${leadsCellGroupId || ""}:${leadsGroupId || ""}`;
+    : isUnifiedLeader
+      ? `dashboard:Leader:${userId || ""}:${leaderScope?.type || ""}:${leaderScope?.id || ""}:${leaderScopeSignature}`
+      : `dashboard:${roleName}:${leadsMinistryId || ""}:${leadsCellGroupId || ""}:${leadsGroupId || ""}`;
 
   const cached = cache.get(cacheKey);
   if (cached) return cached;
@@ -146,8 +179,18 @@ exports.getStats = async ({
   if (isMember && memberId) financeWhere.member_id = memberId;
 
   // Build member-appropriate aggregates: Members see scoped data, roles see global
+  const leaderMemberWhere = isUnifiedLeader ? await getMemberScopeWhere(user) : null;
+  const memberScopedWhere = leaderMemberWhere
+    ? { [Op.and]: [{ is_deleted: 0 }, leaderMemberWhere] }
+    : { is_deleted: 0 };
   const memberCounts = isMember
     ? { total: 0, active: 0, newThisMonth: 0 }
+    : isUnifiedLeader
+      ? await Promise.all([
+          Member.count({ where: memberScopedWhere }),
+          Member.count({ where: { [Op.and]: [memberScopedWhere, { status: "Active" }] } }),
+          Member.count({ where: { [Op.and]: [memberScopedWhere, { created_at: { [Op.gte]: thisMonth } }] } }),
+        ]).then(([t, a, n]) => ({ total: t, active: a, newThisMonth: n }))
     : await Promise.all([
         Member.count(),
         Member.count({ where: { status: "Active" } }),
@@ -160,8 +203,8 @@ exports.getStats = async ({
     upcomingEvents,
     pendingRequests, lowStock, recentActivity,
   ] = await Promise.all([
-    FinancialRecord.sum("amount", { where: financeWhere }).then(v => v || 0),
-    FinancialRecord.findAll({
+    isUnifiedLeader ? Promise.resolve(0) : FinancialRecord.sum("amount", { where: financeWhere }).then(v => v || 0),
+    isUnifiedLeader ? Promise.resolve([]) : FinancialRecord.findAll({
       order: [["transaction_date", "DESC"]],
       limit: 5,
       ...(isMember && memberId ? { where: { member_id: memberId } } : {}),
@@ -176,11 +219,13 @@ exports.getStats = async ({
       order: [["start_date", "ASC"]],
       limit: 5,
     }),
-    InventoryRequest.count({ where: { status: "pending" } }),
-    InventoryItem.count({
+    isUnifiedLeader
+      ? InventoryRequest.count({ where: { status: "pending", requested_by: userId } })
+      : InventoryRequest.count({ where: { status: "pending" } }),
+    isUnifiedLeader ? Promise.resolve(0) : InventoryItem.count({
       where: sequelize.literal("low_stock_threshold IS NOT NULL AND quantity <= low_stock_threshold"),
     }),
-    !isMember
+    !isMember && !isUnifiedLeader
       ? AuditLog.findAll({
           order: [["created_at", "DESC"]],
           limit: 10,
@@ -192,6 +237,7 @@ exports.getStats = async ({
   const roleSummary = await getRoleSummary({
     userId, roleName, leadsMinistryId, leadsMinistryName,
     leadsCellGroupId, leadsCellGroupName, leadsGroupId, leadsGroupName, thisMonth,
+    user,
     AttendanceModel,
   });
 

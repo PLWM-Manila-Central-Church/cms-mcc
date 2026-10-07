@@ -44,40 +44,79 @@ const shouldAttemptRefresh = (url = '') => {
   return !noRefreshEndpoints.some((endpoint) => path.endsWith(endpoint));
 };
 
-// ── Request deduplication — prevents double-submits of identical mutating requests ──
+// ── Request scope and deduplication ───────────────────────────────
 const inFlightRequests = new Map();
+let activeLeaderScopeHeader = null;
 
-function buildDedupKey(config) {
+export const setLeaderScopeHeader = (scopeKey) => {
+  activeLeaderScopeHeader = typeof scopeKey === 'string' && scopeKey.length <= 80
+    ? scopeKey
+    : null;
+};
+
+const captureLeaderScope = (config) => {
+  if (config.__mccLeaderScopeCaptured !== true) {
+    config.__mccLeaderScopeKey = activeLeaderScopeHeader;
+    config.__mccLeaderScopeCaptured = true;
+  }
+  return config.__mccLeaderScopeKey || null;
+};
+
+function buildDedupKey(config, scopeKey = captureLeaderScope(config)) {
   const method = (config.method || 'get').toLowerCase();
   if (!['post', 'put', 'patch'].includes(method)) return null;
   const url = config.url || '';
   const bodyHash = config.data ? JSON.stringify(config.data) : '';
-  return `${method}:${url}:${bodyHash}`;
+  return `${method}:${scopeKey || ''}:${url}:${bodyHash}`;
 }
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    const dedupKey = buildDedupKey(config);
-    if (dedupKey && inFlightRequests.has(dedupKey)) {
-      return inFlightRequests.get(dedupKey);
+    const scopeKey = captureLeaderScope(config);
+    if (typeof config.headers?.set === 'function') {
+      config.headers.delete('X-MCC-Leader-Scope');
+      if (scopeKey) config.headers.set('X-MCC-Leader-Scope', scopeKey);
+    } else {
+      config.headers = { ...config.headers };
+      delete config.headers['X-MCC-Leader-Scope'];
+      delete config.headers['x-mcc-leader-scope'];
+      if (scopeKey) config.headers['X-MCC-Leader-Scope'] = scopeKey;
     }
+
+    const method = (config.method || 'get').toLowerCase();
+    if (!['post', 'put', 'patch'].includes(method)) return config;
+
+    // Axios transforms JSON data in dispatchRequest before it invokes the
+    // adapter. Capture the original adapter here, then compute the dedup key
+    // and share the request only when the transformed config reaches it.
+    if (!config.__mccOriginalAdapter) config.__mccOriginalAdapter = axios.getAdapter(config.adapter);
+    const originalAdapter = config.__mccOriginalAdapter;
+    config.adapter = (requestConfig) => {
+      const requestScope = captureLeaderScope(requestConfig);
+      const dedupKey = buildDedupKey(requestConfig, requestScope);
+      if (!dedupKey) return originalAdapter(requestConfig);
+
+      const pending = inFlightRequests.get(dedupKey);
+      if (pending) return pending;
+
+      let requestPromise;
+      requestPromise = Promise.resolve()
+        .then(() => originalAdapter(requestConfig))
+        .finally(() => {
+          if (inFlightRequests.get(dedupKey) === requestPromise) inFlightRequests.delete(dedupKey);
+        });
+      inFlightRequests.set(dedupKey, requestPromise);
+      return requestPromise;
+    };
     return config;
   },
   (error) => Promise.reject(error)
 );
 
 axiosInstance.interceptors.response.use(
-  (response) => {
-    const dedupKey = buildDedupKey(response.config);
-    if (dedupKey) inFlightRequests.delete(dedupKey);
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const original = error.config;
-    if (original) {
-      const dedupKey = buildDedupKey(original);
-      if (dedupKey) inFlightRequests.delete(dedupKey);
-    }
 
     const status = error.response?.status;
     if (status === 401 && original && !original._retry && shouldAttemptRefresh(original.url)) {

@@ -31,6 +31,11 @@ const UserLeaderAssignment = sequelize.define(
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
+    is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    version: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
+    revoked_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    revoked_at: { type: DataTypes.DATE, allowNull: true },
+    revocation_reason: { type: DataTypes.STRING(500), allowNull: true },
   },
   {
     tableName: "user_leader_assignments",

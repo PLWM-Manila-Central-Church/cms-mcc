@@ -6,16 +6,18 @@ const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
 const { Service, ServiceAttendanceSummary, ServiceResponse, Attendance, User } = require("../models");
 const { syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
+const { isScopedLeader } = require("../helpers/scopedLeader.helper");
 
 // ── Get All Services (paginated) ─────────────────────────────
-exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
+exports.getAllServices = async ({ page = 1, limit = 15, status } = {}, user = {}) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where  = {};
+  const hideChurchwideAttendance = isScopedLeader(user);
   if (status) where.status = status;
 
   const { count, rows } = await Service.findAndCountAll({
     where,
-    include: [
+    include: hideChurchwideAttendance ? [] : [
       {
         model: ServiceAttendanceSummary,
         as: "summary",
@@ -31,7 +33,7 @@ exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
   // Fetch ATTENDING pre-registration counts for all services in this page
   const serviceIds = rows.map((r) => r.id);
   const preRegCounts = {};
-  if (serviceIds.length > 0) {
+  if (serviceIds.length > 0 && !hideChurchwideAttendance) {
     const { Op } = require("sequelize");
     const preRegs = await ServiceResponse.findAll({
       where: {
@@ -48,9 +50,13 @@ exports.getAllServices = async ({ page = 1, limit = 15, status } = {}) => {
   // Remap alias "summary" → "ServiceAttendanceSummary" and attach pre_registered_count
   const services = rows.map((row) => {
     const plain = row.toJSON();
-    plain.ServiceAttendanceSummary = plain.summary || null;
+    // Leaders may browse church service details, but a churchwide summary would
+    // reveal attendance outside their assigned scope. Service detail routes
+    // return member-scoped attendance and their own scoped summary.
+    plain.summary = hideChurchwideAttendance ? null : plain.summary || null;
+    plain.ServiceAttendanceSummary = plain.summary;
     // pre_registered_count = ATTENDING responses; used when actual check-ins = 0
-    plain.pre_registered_count = preRegCounts[plain.id] || 0;
+    plain.pre_registered_count = hideChurchwideAttendance ? 0 : preRegCounts[plain.id] || 0;
     return plain;
   });
 

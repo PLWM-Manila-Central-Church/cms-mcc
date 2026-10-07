@@ -3,11 +3,12 @@
 const bcrypt = require("bcrypt");
 const jwt    = require("jsonwebtoken");
 const crypto = require("crypto");
+const { Op } = require("sequelize");
 const logger = require("../helpers/logger");
 const {
   User, Role, Member, PasswordResetToken,
   RefreshToken, UserSession, RolePermission, Permission,
-  MinistryRole, CellGroup, MinistryGroup,
+  MinistryRole, CellGroup, MinistryGroup, UserLeaderAssignment,
 } = require("../models");
 const mailer   = require("../utils/mailer");
 const auditLog = require("../helpers/auditLog.helper");
@@ -55,6 +56,47 @@ const getUserPermissions = async (roleId) => {
 };
 
 exports.getUserPermissionsForRole = getUserPermissions;
+
+const getLeaderAssignmentContext = async (user = {}, suppliedRows) => {
+  if (user.roleName !== "Leader") return [];
+  const rows = suppliedRows || await UserLeaderAssignment.findAll({
+    where: { user_id: user.userId || user.id },
+    attributes: ["id", "scope_type", "scope_id", "legacy_column", "is_active", "version", "revoked_at"],
+    order: [["scope_type", "ASC"], ["scope_id", "ASC"], ["id", "ASC"]],
+  });
+  const activeRows = rows.filter((row) => Number(row.is_active ?? 1) === 1 && !row.revoked_at);
+  const profilePermissions = await require("./leader-access.service").getLeaderPermissionProfiles({
+    roleName: user.roleName,
+    leaderAssignmentsLoaded: true,
+    leaderAssignments: activeRows,
+  });
+  const cellGroupIds = [...new Set(activeRows.filter((row) => row.scope_type === "cell_group").map((row) => Number(row.scope_id)))];
+  const groupIds = [...new Set(activeRows.filter((row) => row.scope_type === "member_group").map((row) => Number(row.scope_id)))];
+  const [cellGroups, groups] = await Promise.all([
+    cellGroupIds.length ? CellGroup.findAll({ where: { id: { [Op.in]: cellGroupIds } }, attributes: ["id", "name"] }) : [],
+    groupIds.length ? MinistryGroup.findAll({ where: { id: { [Op.in]: groupIds } }, attributes: ["id", "name"] }) : [],
+  ]);
+  const cellGroupNames = new Map(cellGroups.map((team) => [Number(team.id), team.name]));
+  const groupNames = new Map(groups.map((team) => [Number(team.id), team.name]));
+  return activeRows.map((row) => {
+    const type = row.scope_type === "member_group" ? "group" : row.scope_type;
+    const scopeId = Number(row.scope_id);
+    const teamName = type === "cell_group"
+      ? cellGroupNames.get(scopeId) || null
+      : groupNames.get(scopeId) || null;
+    return {
+      id: Number(row.id),
+      scopeType: type,
+      scopeId,
+      scopeKey: `${type === "group" ? "member_group" : type}:${scopeId}`,
+      teamName: teamName || `${type === "cell_group" ? "Cell group" : "Group"} #${scopeId}`,
+      version: Number(row.version || 1),
+      permissions: profilePermissions[type] || [],
+    };
+  });
+};
+
+exports.getLeaderAssignmentContext = getLeaderAssignmentContext;
 
 // Revoke every outstanding refresh token for a user (password change/reset,
 // or refresh-token reuse detection). Forces re-login on all devices.
@@ -122,6 +164,10 @@ exports.login = async (email, password, ip, device) => {
   auditLog.log({ userId: user.id, action: "LOGIN", ipAddress: ip });
 
   const permissions = await getUserPermissions(user.role_id);
+  const roleName = user.role.role_name;
+  const leaderAssignments = roleName === "Leader"
+    ? await getLeaderAssignmentContext({ ...user.get({ plain: true }), roleName })
+    : [];
 
   return {
     accessToken,
@@ -130,7 +176,7 @@ exports.login = async (email, password, ip, device) => {
     user: {
       id:             user.id,
       email:          user.email,
-      roleName:       user.role.role_name,
+      roleName,
       memberId:       user.member_id       || null,
       leadsCellGroupId: user.leads_cell_group_id || null,
       leadsGroupId:    user.leads_group_id || null,
@@ -138,6 +184,8 @@ exports.login = async (email, password, ip, device) => {
       leadsCellGroupName: user.leadsCellGroup?.name || null,
       leadsGroupName:     user.leadsGroup?.name || null,
       leadsMinistryName:  user.leadsMinistry?.name || null,
+      leadershipRevision: Number(user.leadership_revision || 0),
+      leaderAssignments,
     },
     permissions,
   };

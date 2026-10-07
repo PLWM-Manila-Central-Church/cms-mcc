@@ -16,11 +16,14 @@ const {
   ensureMemberInScope,
   getMemberScopeWhere,
 } = require("../helpers/scopedLeader.helper");
+const { invalidateServiceFinalization } = require("../modules/qr-attendance/reconciliation.service");
 
-const attendanceIncludes = [
+const attendanceIncludesFor = (user = {}) => [
   {
     model: Member,
-    attributes: ["id", "first_name", "last_name", "barcode"],
+    attributes: user.roleName === "Pastor"
+      ? ["id", "first_name", "last_name", "status"]
+      : ["id", "first_name", "last_name", "barcode"],
     required: false,
   },
   {
@@ -35,7 +38,7 @@ exports.getAllAttendance = async (user = {}) => {
   const AttendanceModel = await getAttendanceModel();
   const memberScopeWhere = await getMemberScopeWhere(user);
   return await AttendanceModel.findAll({
-    include: attendanceIncludes.map((include) => (
+    include: attendanceIncludesFor(user).map((include) => (
       include.model === Member && memberScopeWhere
         ? { ...include, where: memberScopeWhere, required: true }
         : include
@@ -47,7 +50,7 @@ exports.getAllAttendance = async (user = {}) => {
 // ── Get Attendance By ID ─────────────────────────────────────
 exports.getAttendanceById = async (id, user = {}, options = {}) => {
   const AttendanceModel = await getAttendanceModel();
-  const record = await AttendanceModel.findByPk(id, { include: attendanceIncludes, ...options });
+  const record = await AttendanceModel.findByPk(id, { include: attendanceIncludesFor(user), ...options });
   if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
   await ensureMemberInScope(record.member_id, user);
   return record;
@@ -55,8 +58,23 @@ exports.getAttendanceById = async (id, user = {}, options = {}) => {
 
 // ── Create Attendance (Check-in) ─────────────────────────────
 exports.createAttendance = async (data, recordedBy, user = {}, options = {}) => {
+  const incomingOptions = options || {};
+  if (!incomingOptions.transaction) {
+    const result = await sequelize.transaction((transaction) => exports.createAttendance(
+      data,
+      recordedBy,
+      user,
+      { ...incomingOptions, transaction, skipSummary: true },
+    ));
+    try { await syncServiceAttendanceSummary(data.service_id); } catch (err) {
+      logger.error(err, "Failed to sync summary:");
+    }
+    cache.keys("dashboard:*").forEach((key) => cache.del(key));
+    return result;
+  }
+
   const { service_id, member_id, check_in_method, checked_in_at } = data;
-  const internal = options || {};
+  const internal = incomingOptions;
   const {
     transaction, idempotent, trustedCheckInAt,
   } = internal;
@@ -90,6 +108,11 @@ exports.createAttendance = async (data, recordedBy, user = {}, options = {}) => 
         checked_in_at: trustedCheckInAt || checked_in_at || new Date(),
         recorded_by: recordedBy || null,
       }, transaction && { transaction });
+      await invalidateServiceFinalization(service_id, {
+        transaction,
+        actorId: recordedBy,
+        reason: "legacy_service_check_in_added",
+      });
       if (transaction && !internal.skipSummary) {
         await syncServiceAttendanceSummary(service_id, transaction);
       } else if (!transaction) {
@@ -112,6 +135,12 @@ exports.createAttendance = async (data, recordedBy, user = {}, options = {}) => 
     checked_in_at: trustedCheckInAt || checked_in_at || new Date(),
     recorded_by:   recordedBy || null,
   }, transaction && { transaction });
+
+  await invalidateServiceFinalization(service_id, {
+    transaction,
+    actorId: recordedBy,
+    reason: "legacy_service_check_in_added",
+  });
 
   if (transaction && !internal.skipSummary) {
     await syncServiceAttendanceSummary(service_id, transaction);
@@ -138,43 +167,64 @@ exports.createAttendance = async (data, recordedBy, user = {}, options = {}) => 
 
 // ── Update Attendance ────────────────────────────────────────
 exports.updateAttendance = async (id, data, user = {}) => {
-  const AttendanceModel = await getAttendanceModel();
-  const record = await AttendanceModel.findByPk(id);
-  if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
-  if (AttendanceModel !== Attendance && (record.entry_source !== "legacy" || record.voided_at)) {
-    throw AppError.conflict("QR_ATTENDANCE_CORRECTION_REQUIRED", "QR attendance changes must use the audited correction action");
-  }
-  await assertLeaderMayUseLegacyServiceWrite(record.service_id, user, { action: "update" });
-  await ensureMemberInScope(record.member_id, user);
+  await sequelize.transaction(async (transaction) => {
+    const AttendanceModel = await getAttendanceModel();
+    const record = await AttendanceModel.findByPk(id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
+    if (AttendanceModel !== Attendance && (record.entry_source !== "legacy" || record.voided_at)) {
+      throw AppError.conflict("QR_ATTENDANCE_CORRECTION_REQUIRED", "QR attendance changes must use the audited correction action");
+    }
+    await assertLeaderMayUseLegacyServiceWrite(record.service_id, user, { action: "update" });
+    await ensureMemberInScope(record.member_id, user, { transaction });
 
-  const { check_in_method, checked_in_at } = data;
-  await record.update({
-    ...(check_in_method && { check_in_method }),
-    ...(checked_in_at   && { checked_in_at }),
+    const { check_in_method, checked_in_at } = data;
+    await record.update({
+      ...(check_in_method && { check_in_method }),
+      ...(checked_in_at   && { checked_in_at }),
+    }, { transaction });
+    await invalidateServiceFinalization(record.service_id, {
+      transaction,
+      actorId: user.userId,
+      reason: "legacy_service_attendance_corrected",
+    });
   });
 
-  return await exports.getAttendanceById(id, user);
+  cache.keys("dashboard:*").forEach((key) => cache.del(key));
+  return exports.getAttendanceById(id, user);
 };
 
 // ── Delete Attendance ────────────────────────────────────────
 exports.deleteAttendance = async (id, user = {}) => {
-  const AttendanceModel = await getAttendanceModel();
-  const record = await AttendanceModel.findByPk(id);
-  if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
-  if ((AttendanceModel !== Attendance && (record.entry_source !== "legacy" || record.voided_at))
-      || record.check_in_method === "pre-reg") {
-    throw AppError.conflict("QR_ATTENDANCE_CORRECTION_REQUIRED", "This attendance record cannot be deleted through the legacy Undo action");
-  }
-  await assertLeaderMayUseLegacyServiceWrite(record.service_id, user, { action: "delete" });
-  await ensureMemberInScope(record.member_id, user);
+  const serviceId = await sequelize.transaction(async (transaction) => {
+    const AttendanceModel = await getAttendanceModel();
+    const record = await AttendanceModel.findByPk(id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
+    if ((AttendanceModel !== Attendance && (record.entry_source !== "legacy" || record.voided_at))
+        || record.check_in_method === "pre-reg") {
+      throw AppError.conflict("QR_ATTENDANCE_CORRECTION_REQUIRED", "This attendance record cannot be deleted through the legacy Undo action");
+    }
+    await assertLeaderMayUseLegacyServiceWrite(record.service_id, user, { action: "delete" });
+    await ensureMemberInScope(record.member_id, user, { transaction });
 
-  const serviceId = record.service_id;
-  await record.destroy();
+    const currentServiceId = record.service_id;
+    await record.destroy({ transaction });
+    await invalidateServiceFinalization(currentServiceId, {
+      transaction,
+      actorId: user.userId,
+      reason: "legacy_service_attendance_removed",
+    });
+    return currentServiceId;
+  });
 
   try { await syncServiceAttendanceSummary(serviceId); } catch (err) {
     logger.error(err, "Failed to sync summary on delete:");
   }
-
   cache.keys("dashboard:*").forEach(k => cache.del(k));
   return { message: "Attendance record deleted successfully." };
 };

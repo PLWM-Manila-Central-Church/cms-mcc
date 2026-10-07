@@ -35,6 +35,7 @@ const LEGACY_STATUS_MAP = {
 const normalizeStatus = (status) => LEGACY_STATUS_MAP[status] || status;
 
 const REGISTRATION_OPEN_STATUSES = [EVENT_STATUS.UPCOMING, EVENT_STATUS.ONGOING];
+const EVENT_SCOPED_ROLES = new Set(["Leader", "Cell Group Leader", "Group Leader", "Ministry Leader"]);
 
 // ── Shared includes ──────────────────────────────────────────
 const eventIncludes = [
@@ -67,11 +68,23 @@ const remapEvent = (e) => {
 };
 
 // ── Get All Events (paginated + filtered) ───────────────────
-const getRegistrationCounts = async (eventIds) => {
+const getRegistrationCounts = async (eventIds, user = {}) => {
   if (!eventIds.length) return {};
-  const { EventRegistration } = require("../models");
+  let memberIds = null;
+  if (user.roleName === "Member") {
+    memberIds = user.memberId ? [Number(user.memberId)] : [];
+  } else if (EVENT_SCOPED_ROLES.has(user.roleName)) {
+    const memberScopeWhere = await getMemberScopeWhere(user);
+    if (memberScopeWhere) {
+      const scopedMembers = await Member.findAll({ where: memberScopeWhere, attributes: ["id"], raw: true });
+      memberIds = scopedMembers.map((member) => Number(member.id));
+    }
+  }
   const rows = await EventRegistration.findAll({
-    where: { event_id: { [Op.in]: eventIds } },
+    where: {
+      event_id: { [Op.in]: eventIds },
+      ...(memberIds && { member_id: { [Op.in]: memberIds } }),
+    },
     attributes: [
       "event_id",
       [sequelize.fn("COUNT", sequelize.col("EventRegistration.id")), "registration_count"],
@@ -124,7 +137,7 @@ exports.getAllEvents = async ({
     distinct: true,
   });
 
-  const counts = await getRegistrationCounts(rows.map((row) => Number(row.id)));
+  const counts = await getRegistrationCounts(rows.map((row) => Number(row.id)), user);
   return {
     events:      rows.map((event) => ({
       ...remapEvent(event),
@@ -153,7 +166,7 @@ exports.getEventById = async (id, user = {}) => {
     plain.EventRegistrations = (plain.EventRegistrations || [])
       .filter((registration) => registration.member?.id);
   }
-  const counts = await getRegistrationCounts([Number(id)]);
+  const counts = await getRegistrationCounts([Number(id)], user);
   plain.registration_count = counts[Number(id)] || 0;
   return plain;
   };

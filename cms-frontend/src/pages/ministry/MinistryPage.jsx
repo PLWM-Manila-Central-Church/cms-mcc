@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
+import { fetchAllPages } from '../../api/fetchAllPages';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
 import { fullName, ageLabel, dateWithAge, fmtDate } from '../../utils/member';
@@ -798,16 +799,16 @@ function AssignmentsTab() {
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const [aRes, rRes, mRes, sRes] = await Promise.all([
+      const [aRes, rRes, memberRows, serviceRows] = await Promise.all([
         axiosInstance.get('/ministry/assignments'),
         axiosInstance.get('/ministry/roles'),
-        axiosInstance.get('/members?limit=500'),
-        axiosInstance.get('/services?limit=500'),
+        fetchAllPages('/members', 'members'),
+        fetchAllPages('/services', 'services'),
       ]);
       setAssignments(aRes.data.data || []);
       setRoles(rRes.data.data || []);
-      setMembers(mRes.data.data?.members || []);
-      setServices(sRes.data.data?.services || []);
+      setMembers(memberRows);
+      setServices(serviceRows);
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to load assignments.');
     } finally { setLoading(false); }

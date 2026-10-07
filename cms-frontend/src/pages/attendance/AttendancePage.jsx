@@ -14,9 +14,12 @@ const STATUS_META = {
 export default function AttendancePage() {
   const { id: serviceId } = useParams();
   const navigate          = useNavigate();
-  const { hasPermission, user } = useAuth();
-  const isCellGroupLeader = user?.roleName === 'Cell Group Leader';
-  const isQrBatchLeader = ['Cell Group Leader', 'Group Leader'].includes(user?.roleName);
+  const { hasPermission, user, activeLeaderScopeKey } = useAuth();
+  const selectedLeaderScopeType = String(activeLeaderScopeKey || '').split(':')[0];
+  const isCellGroupLeader = user?.roleName === 'Cell Group Leader'
+    || (user?.roleName === 'Leader' && selectedLeaderScopeType === 'cell_group');
+  const isQrBatchLeader = ['Cell Group Leader', 'Group Leader'].includes(user?.roleName)
+    || (user?.roleName === 'Leader' && ['cell_group', 'member_group', 'group'].includes(selectedLeaderScopeType));
   const canRecord         = hasPermission('attendance', 'create');
   const canUndo           = hasPermission('attendance', 'delete');
   const canUseQrAttendance = hasPermission('qr_attendance', 'read');
@@ -28,7 +31,10 @@ export default function AttendancePage() {
   const [error, setError]         = useState('');
   const [scopeMembers, setScopeMembers] = useState([]);
   const [scopeMembersLoading, setScopeMembersLoading] = useState(false);
+  const [scopeMemberPage, setScopeMemberPage] = useState(1);
+  const [scopeMemberTotal, setScopeMemberTotal] = useState(0);
   const [qrSessionConfigured, setQrSessionConfigured] = useState(false);
+  const scopeMemberRequestId = useRef(0);
 
   // Check-in search
   const [search, setSearch]           = useState('');
@@ -54,7 +60,7 @@ export default function AttendancePage() {
     } finally {
       setLoading(false);
     }
-  }, [serviceId]);
+  }, [activeLeaderScopeKey, serviceId]);
 
   useEffect(() => { fetchAttendance(); }, [fetchAttendance]);
 
@@ -72,20 +78,44 @@ export default function AttendancePage() {
       })
       .catch(() => { if (active) setQrSessionConfigured(false); });
     return () => { active = false; };
-  }, [canUseQrAttendance, serviceId]);
+  }, [activeLeaderScopeKey, canUseQrAttendance, serviceId]);
 
-  const fetchScopeMembers = useCallback(async () => {
-    if (!isCellGroupLeader) return;
-    setScopeMembersLoading(true);
-    try {
-      const res = await axiosInstance.get('/members?limit=500&page=1');
-      setScopeMembers(res.data.data.members || []);
-    } catch (err) {
-      setCheckInError(err.response?.data?.message || 'Failed to load cell group members.');
-    } finally {
+  const fetchScopeMembers = useCallback(async ({ page = 1, append = false } = {}) => {
+    const requestId = ++scopeMemberRequestId.current;
+    if (!isCellGroupLeader) {
+      setScopeMembers([]);
+      setScopeMemberPage(1);
+      setScopeMemberTotal(0);
       setScopeMembersLoading(false);
+      return;
     }
-  }, [isCellGroupLeader]);
+    setScopeMembersLoading(true);
+    if (!append) {
+      setScopeMembers([]);
+      setScopeMemberTotal(0);
+      setScopeMemberPage(1);
+    }
+    try {
+      const res = await axiosInstance.get('/members', { params: { page, limit: 100 } });
+      if (requestId !== scopeMemberRequestId.current) return;
+
+      const data = res.data.data || {};
+      const nextMembers = data.members || [];
+      setScopeMembers((current) => {
+        if (!append) return nextMembers;
+        const existingIds = new Set(current.map((member) => member.id));
+        return [...current, ...nextMembers.filter((member) => !existingIds.has(member.id))];
+      });
+      setScopeMemberPage(page);
+      setScopeMemberTotal(Number(data.total) || 0);
+    } catch (err) {
+      if (requestId === scopeMemberRequestId.current) {
+        setCheckInError(err.response?.data?.message || 'Failed to load cell group members.');
+      }
+    } finally {
+      if (requestId === scopeMemberRequestId.current) setScopeMembersLoading(false);
+    }
+  }, [activeLeaderScopeKey, isCellGroupLeader]);
 
   useEffect(() => { fetchScopeMembers(); }, [fetchScopeMembers]);
 
@@ -243,7 +273,7 @@ export default function AttendancePage() {
           <h3 style={styles.checkInTitle}>Cell Group Attendance</h3>
           <p style={styles.checkInHint}>Check each member who attended this service.</p>
 
-          {scopeMembersLoading ? (
+          {scopeMembersLoading && scopeMembers.length === 0 ? (
             <div style={styles.centerCell}>Loading members...</div>
           ) : scopeMembers.length === 0 ? (
             <div style={styles.centerCell}>No members are assigned to your cell group.</div>
@@ -265,6 +295,21 @@ export default function AttendancePage() {
                   </label>
                 );
               })}
+            </div>
+          )}
+
+          {scopeMembersLoading && scopeMembers.length > 0 && (
+            <div style={styles.centerCell}>Loading more members…</div>
+          )}
+          {!scopeMembersLoading && scopeMembers.length < scopeMemberTotal && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+              <button
+                type="button"
+                onClick={() => fetchScopeMembers({ page: scopeMemberPage + 1, append: true })}
+                style={styles.checkInBtn}
+              >
+                Load more members ({scopeMembers.length} of {scopeMemberTotal})
+              </button>
             </div>
           )}
 
