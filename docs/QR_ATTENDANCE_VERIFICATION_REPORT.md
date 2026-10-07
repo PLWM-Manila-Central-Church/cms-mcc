@@ -1,6 +1,6 @@
 # QR Attendance Verification Report
 
-Updated 7 October 2026. This is a verification record for the local QR attendance implementation, not a production-release certificate.
+Updated 7 October 2026. This records local, CI, TiDB QA, and production verification for QR attendance.
 
 ## Test results
 
@@ -12,6 +12,7 @@ Updated 7 October 2026. This is a verification record for the local QR attendanc
 | GitHub Actions QR API persistence integration, run 37561268697 | Pass: 4 integration tests | Fresh MySQL migrations plus real Express routes and persisted writes: member QR issue/PNG, Service/Event direct check-in, Cell/Group leader scope and batch approval, duplicate counts, scoped summaries, event history, CSV, and QR reissue. |
 | GitHub Actions CI, run 37561268697 | Pass | API tests, frontend tests/build, fresh MySQL migrations, API persistence integration, and browser E2E passed on PR head `13a2d05`. |
 | GitHub Actions CI, run 37565377891 | Pass | All three jobs passed on PR head `b1f8493`: API tests, frontend tests/build, fresh MySQL migrations, QR persistence integration, and the uploaded-QR browser flow. |
+| PR merge | Pass | PR #14 was squash-merged to `main` as `bfeb476209682aada3a65d97561379ab0d5ec674`; GitHub used the account's configured noreply commit identity. |
 | GitHub Actions uploaded-QR browser flow, run 37561268697 | Pass | The fixture began with QR attendance disabled. Admin enabled it in Settings, then Chromium drove Service/Event session setup, fixed member QR downloads in separate browser contexts, Registration Team direct uploads, Cell Group/Group Leader batch uploads, Registration Team batch QR upload/approval, counts, and member history against CI MySQL. Camera optics and TiDB were not tested. |
 | `cms-frontend`: `npm test` | Pass: 7 files / 23 tests | Component behavior using mocked APIs. Includes System Admin permission parity, camera result/denial paths, camera-start/upload coordination, image decode fallbacks, Registration Team / leader workspace flows, and a concurrent failed-refresh queue regression. |
 | `cms-frontend`: `npm run build` | Pass with chunk advisory | Production assets compile. Main bundle: 933.19 kB; ZXing: 451.53 kB. The attendance workspace and scanner entry are emitted separately. |
@@ -20,6 +21,11 @@ Updated 7 October 2026. This is a verification record for the local QR attendanc
 | TiDB QA schema isolation | Pass | QA test writes targeted only the new `qr_attendance_qa` schema on `mcc-local-dev` through a TLS-required `qrqa_app` account. Existing `church_cms` tables were not used. |
 | TiDB QA migration chain | Pass: 71 migrations | All migrations applied, including QR schema and the event-registration FK compatibility repair. The second `db:migrate` run was a no-op. |
 | TiDB QA persistence and browser flow | Pass | Four API persistence tests and the local Chromium upload flow passed on TiDB. During the successful E2E run, Service and Event each finished with two confirmed attendance rows, one approved leader batch, and one confirmed batch item. |
+| Render production deployment | Pass | Render auto-deployed the merge commit from `main`, completed migrations, went live, and returned `/health`: `ok`, database connected. |
+| Vercel production deployment | Pass | The `cms-mcc.vercel.app` alias points to a READY production deployment for the merge commit. |
+| Production Admin smoke | Pass | Admin login, reload/session restoration, and read-only Services, Members, and Events pages passed. Admin enabled the QR attendance setting. |
+| Production Member smoke | Pass | Member login, read-only Events, Attendance, and Tithes pages, QR panel visibility, and logout passed. No QR token was issued. |
+| Production attendance data | Untouched | No production attendance session or check-in was created. The setting was enabled, but verification did not generate member QR credentials or attendance records. |
 
 ## Role-flow coverage in frontend tests
 
@@ -33,20 +39,17 @@ Updated 7 October 2026. This is a verification record for the local QR attendanc
 | Camera scan callback and permission-denied upload fallback | Pass | Component tests mock the camera decoder callback and permission failure. This is not a physical camera or optical test. |
 | Concurrent session restore after failed token refresh | Pass | Axios unit regression verifies every queued session request rejects promptly instead of remaining pending. |
 
-These mocked tests prove frontend request sequencing and UI state handling. CI integration/browser flows prove persisted attendance on disposable MySQL; separate TiDB QA runs verify the same APIs and uploaded-QR browser path against TiDB. The final local browser run also verified logout and protected-route handling. Production deployment behavior remains unverified.
+These mocked tests prove frontend request sequencing and UI state handling. CI integration/browser flows prove persisted attendance on disposable MySQL; separate TiDB QA runs verify the same APIs and uploaded-QR browser path against TiDB. Production verification confirms the release is live, Admin/Member login works, representative modules render, and the Member QR panel is available. No production attendance writes were made.
 
 ## End-to-end requirements still pending
 
 - Verify camera operation on physical hardware if available. Component tests cover camera callbacks and permission-denied upload fallback, but no physical optical session is recorded; image upload works on the laptop path.
-- Exercise cross-device member QR redisplay and reasoned QR reissue/revocation, including an earlier PNG after reissue.
-- Verify the full set of malformed, wrong-session, revoked, expired, duplicate, and out-of-scope QR cases leave counts and authentication intact.
-- Verify production login/logout/refresh and representative existing modules after the QR build is deployed to `main`.
-- PR #14 is open from `codex/qr-attendance` to `main`, still draft and unmerged. Run `37565377891` passed on head `b1f8493`; merge and production verification remain pending.
+- Add dedicated tests for malformed, wrong-session, and expired QR payloads, plus scanning an earlier PNG after reissue. Existing integration tests already cover duplicate/idempotent attendance, scope, reissue, and revocation.
 
 ## CI migration repair
 
-The first draft-PR CI run failed the fresh MySQL migration job at `20261007000002-seed-qr-attendance-permissions` with `Unknown column 'created_at'`; the seed now writes only supported `system_settings` columns. TiDB QA then exposed an older `event_registrations.registered_by` inline-FK DDL incompatibility. The historical migration now adds the column and FK separately, with a forward-only idempotent repair migration for databases where either is missing. All 71 migrations applied to `qr_attendance_qa`; a second run was a no-op. The regular API suite passed 12 suites / 57 tests, and the TiDB persistence suite passed 4/4. The local Chromium upload-to-TiDB flow passed for Services and Events, including leader batch approval, counts/history, logout, and protected-route redirect. The auth refresh queue regression also passed in frontend tests. CI run `37565377891` passed all three jobs on head `b1f8493`, including the forward migration on fresh MySQL and the uploaded-QR Service/Event browser flow.
+The first draft-PR CI run failed the fresh MySQL migration job at `20261007000002-seed-qr-attendance-permissions` with `Unknown column 'created_at'`; the seed now writes only supported `system_settings` columns. TiDB QA then exposed an older `event_registrations.registered_by` inline-FK DDL incompatibility. The historical migration now adds the column and FK separately, with a forward-only idempotent repair migration for databases where either is missing. All 71 migrations applied to `qr_attendance_qa`; a second run was a no-op. The regular API suite passed 12 suites / 57 tests, and the TiDB persistence suite passed 4/4. The local Chromium upload-to-TiDB flow passed for Services and Events, including leader batch approval, counts/history, logout, and protected-route redirect. The auth refresh queue regression also passed in frontend tests. CI run `37565761403` passed all three jobs on the final PR head, including the forward migration on fresh MySQL and the uploaded-QR Service/Event browser flow.
 
 ## Review note
 
-No production database connection was made, no production records were modified, and no production QR migration was applied. The original ignored `.env` pointing at `church_cms` was not used. TiDB QA writes were confined to the new `qr_attendance_qa` schema on `mcc-local-dev` through the TLS-required scoped `qrqa_app` account; the root bootstrap credential file was removed after setup. Migrations, QR persistence tests, and Service/Event browser attendance flows now pass on TiDB QA. Production deployment and post-deployment checks remain pending.
+Production Render migrations completed successfully and `/health` reports the database connected. The production QR setting is enabled; Admin and Member smoke checks passed. No production member QR credential, QR attendance session, or check-in record was created. QR QA database writes remained confined to `qr_attendance_qa` on `mcc-local-dev` through the TLS-required scoped `qrqa_app` account; the temporary branch root credential file was removed after setup.
