@@ -7,9 +7,9 @@ Updated 7 October 2026. This is a verification record for the local QR attendanc
 | Environment / test | Result | What it establishes |
 | --- | --- | --- |
 | `cms-api`: `npm test -- --runInBand` | Pass: 10 suites / 44 tests | Unit and contract coverage for QR permissions/policies, payloads, migration shape, schema fallback, attendance writers, and the settings-table timestamp contract. No TiDB connection was made. |
-| GitHub Actions QR API persistence integration, run 37551302510 | Pass: 4 integration tests | Fresh MySQL migrations plus real Express routes and persisted writes: member QR issue/PNG, Service/Event direct check-in, Cell/Group leader scope and batch approval, duplicate counts, scoped summaries, event history, CSV, and QR reissue. |
-| GitHub Actions CI, run 37551302510 | Pass | API tests, frontend tests/build, fresh MySQL migrations, API persistence integration, and browser E2E passed on PR head `a300a78`. |
-| GitHub Actions uploaded-QR browser flow, run 37551302510 | Pass | Chromium drove Admin Service/Event session setup, fixed member QR downloads in separate browser contexts, Registration Team direct Service/Event uploads, Cell Group/Group Leader batch uploads and submissions, Registration Team batch approval, persisted counts, and member history against the CI MySQL database. Camera optics and TiDB were not tested. |
+| GitHub Actions QR API persistence integration, run 37552009704 | Pass: 4 integration tests | Fresh MySQL migrations plus real Express routes and persisted writes: member QR issue/PNG, Service/Event direct check-in, Cell/Group leader scope and batch approval, duplicate counts, scoped summaries, event history, CSV, and QR reissue. |
+| GitHub Actions CI, run 37552009704 | Pass | API tests, frontend tests/build, fresh MySQL migrations, API persistence integration, and browser E2E passed on PR head `985289c`. |
+| GitHub Actions uploaded-QR browser flow, run 37552009704 | Pass | Chromium drove Admin Service/Event session setup, fixed member QR downloads in separate browser contexts, Registration Team direct Service/Event uploads, Cell Group/Group Leader batch uploads and submissions, Registration Team batch approval, persisted counts, and member history against the CI MySQL database. Camera optics and TiDB were not tested. |
 | `cms-frontend`: `npm test` | Pass: 5 files / 15 tests | Component behavior using mocked APIs. Includes the Admin session lifecycle test and Registration Team / Cell Group Leader flows below. |
 | `cms-frontend`: `npm run build` | Pass with chunk advisory | Production assets compile. Main bundle: 933.03 kB; ZXing: 477.54 kB. The attendance workspace and scanner entry are emitted separately. |
 | `git diff --check` | Pass | No whitespace errors in the current local change. |
@@ -29,6 +29,7 @@ These mocked tests prove frontend request sequencing and UI state handling. The 
 ## End-to-end requirements still pending
 
 - Repeat the Service and Event image-upload flows against a dedicated isolated TiDB QA schema/branch. The CI browser E2E currently proves these flows against disposable MySQL only.
+- Repeat the Event leader-batch upload and review in the isolated QA run; one earlier CI attempt timed out waiting for the review panel, and the later diagnostic run passed.
 - On TiDB, verify migration application/readiness, stored member QR identity, approval receipt persistence, duplicate/idempotent outcomes, scope enforcement, timestamps, audit history, session totals, member history, and exported CSV.
 - Exercise cross-device member QR redisplay and reasoned QR reissue/revocation, including an earlier PNG after reissue.
 - Verify the full set of malformed, wrong-session, revoked, expired, duplicate, and out-of-scope QR cases leave counts and authentication intact.
@@ -38,7 +39,7 @@ These mocked tests prove frontend request sequencing and UI state handling. The 
 
 ## CI migration repair
 
-The first draft-PR CI run failed the fresh MySQL migration job at `20261007000002-seed-qr-attendance-permissions` with `Unknown column 'created_at'`. The existing `system_settings` schema has `updated_at` but no `created_at`; the new seed had supplied both. The seed now writes only supported columns, and `cms-api/test/qr-attendance-permissions-migration.test.js` guards this shape. Fix commit `cbd8857` is on the PR branch. The integration review also found and fixed a missing leader-scope helper import in the summary service. The browser E2E initially had an overly strict text selector for history rows that append a `(Service)` or `(Event)` label; the UI and API data were correct, and the selector now matches the displayed row. GitHub Actions run `37551302510` passes all jobs on PR head `a300a78`.
+The first draft-PR CI run failed the fresh MySQL migration job at `20261007000002-seed-qr-attendance-permissions` with `Unknown column 'created_at'`. The existing `system_settings` schema has `updated_at` but no `created_at`; the new seed had supplied both. The seed now writes only supported columns, and `cms-api/test/qr-attendance-permissions-migration.test.js` guards this shape. Fix commit `cbd8857` is on the PR branch. The integration review also found and fixed a missing leader-scope helper import in the summary service. The browser E2E initially had an overly strict text selector for history rows that append a `(Service)` or `(Event)` label; the UI and API data were correct, and the selector now matches the displayed row. A subsequent run timed out while waiting for the Event leader-batch review panel; diagnostics were added, and run `37552009704` passed all jobs on PR head `985289c`.
 
 ## Review note
 
