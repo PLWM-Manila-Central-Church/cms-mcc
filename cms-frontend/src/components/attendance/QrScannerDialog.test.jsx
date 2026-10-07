@@ -114,4 +114,29 @@ describe('QrScannerDialog', () => {
     expect(await screen.findByText('Scanner closed')).toBeInTheDocument();
     expect(mocks.stop).toHaveBeenCalled();
   });
+
+  it('sends a live camera result through the same decode callback and stops scanning', async () => {
+    const onDecode = vi.fn();
+    mocks.decodeFromVideoDevice.mockImplementationOnce(async (_deviceId, _video, onResult) => {
+      onResult({ getText: () => 'MCC:MEMBER:1:123' }, undefined, { stop: mocks.stop });
+      return { stop: mocks.stop };
+    });
+    render(<QrScannerDialog onDecode={onDecode} onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /start camera/i }));
+
+    await waitFor(() => expect(onDecode).toHaveBeenCalledWith('MCC:MEMBER:1:123'));
+    expect(mocks.stop).toHaveBeenCalled();
+    expect(await screen.findByText(/QR code decoded/i)).toBeInTheDocument();
+  });
+
+  it('keeps image upload available when camera startup fails', async () => {
+    mocks.decodeFromVideoDevice.mockRejectedValueOnce(new Error('Camera permission denied.'));
+    render(<QrScannerDialog onDecode={vi.fn()} onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /start camera/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Camera permission denied.');
+    expect(screen.getByLabelText(/upload qr image/i)).toBeEnabled();
+  });
 });
