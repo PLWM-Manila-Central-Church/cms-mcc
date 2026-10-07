@@ -164,7 +164,8 @@ const assertConfirmedCount = async (page, expected) => {
 
 const uploadImage = async (page, buttonName, imagePath) => {
   await page.getByRole('button', { name: buttonName, exact: true }).click();
-  const fileInput = page.locator('input[type="file"]').last();
+  const scannerDialog = page.getByRole('dialog').last();
+  const fileInput = scannerDialog.getByLabel(/Upload QR Image/i);
   await fileInput.waitFor({ state: 'attached', timeout: 15_000 });
   await fileInput.setInputFiles(imagePath);
 };

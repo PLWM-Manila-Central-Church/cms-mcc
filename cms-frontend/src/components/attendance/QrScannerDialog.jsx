@@ -4,6 +4,7 @@ import './qrAttendance.css';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_IMAGE_PIXELS = 16 * 1024 * 1024;
+const IMAGE_DECODE_TIMEOUT = 'Image decoding took too long. Try a smaller image.';
 const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onClose }) {
@@ -11,6 +12,7 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
   const controlsRef = useRef(null);
   const readerRef = useRef(null);
   const retryReaderRef = useRef(null);
+  const pureBarcodeReaderRef = useRef(null);
   const mountedRef = useRef(true);
   const scanFinishedRef = useRef(false);
   const objectUrlRef = useRef(null);
@@ -34,16 +36,21 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
     if (mountedRef.current) setCameraActive(false);
   };
 
-  const loadReader = async (tryHarder = false) => {
-    const targetRef = tryHarder ? retryReaderRef : readerRef;
+  const loadReader = async (mode = 'fast') => {
+    const targetRef = mode === 'pure-barcode'
+      ? pureBarcodeReaderRef
+      : mode === 'try-harder'
+        ? retryReaderRef
+        : readerRef;
     if (!targetRef.current) {
       const { BrowserQRCodeReader } = await import('@zxing/browser');
-      if (tryHarder) {
+      if (mode !== 'fast') {
         const { BarcodeFormat, DecodeHintType } = await import('@zxing/library');
         const hints = new Map([
           [DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]],
           [DecodeHintType.TRY_HARDER, true],
         ]);
+        if (mode === 'pure-barcode') hints.set(DecodeHintType.PURE_BARCODE, true);
         targetRef.current = new BrowserQRCodeReader(hints);
       } else {
         targetRef.current = new BrowserQRCodeReader();
@@ -161,13 +168,13 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
         throw new Error('The image is too large to scan. Choose an image under 16 megapixels.');
       }
       const reader = await loadReader();
-      const decodeWithTimeout = async (activeReader) => {
+      const decodeWithTimeout = async (activeReader, timeoutMs = 10_000) => {
         let timeoutId;
         try {
           return await Promise.race([
             activeReader.decodeFromImageElement(image),
             new Promise((_, reject) => {
-              timeoutId = window.setTimeout(() => reject(new Error('Image decoding took too long. Try a smaller image.')), 10000);
+              timeoutId = window.setTimeout(() => reject(new Error(IMAGE_DECODE_TIMEOUT)), timeoutMs);
             }),
           ]);
         } finally {
@@ -178,9 +185,15 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
       try {
         result = await decodeWithTimeout(reader);
       } catch (firstDecodeError) {
-        if (firstDecodeError?.message === 'Image decoding took too long. Try a smaller image.') throw firstDecodeError;
-        const retryReader = await loadReader(true);
-        result = await decodeWithTimeout(retryReader);
+        if (firstDecodeError?.message === IMAGE_DECODE_TIMEOUT) throw firstDecodeError;
+        const retryReader = await loadReader('try-harder');
+        try {
+          result = await decodeWithTimeout(retryReader);
+        } catch (retryError) {
+          if (retryError?.message === IMAGE_DECODE_TIMEOUT) throw retryError;
+          const pureBarcodeReader = await loadReader('pure-barcode');
+          result = await decodeWithTimeout(pureBarcodeReader, 5_000);
+        }
       }
       if (revision === decodeRevisionRef.current) emitText(result.getText());
     } catch (scanError) {

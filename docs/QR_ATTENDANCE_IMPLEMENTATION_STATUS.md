@@ -12,7 +12,7 @@ The feature implementation and Services/Events browser upload flow are verified 
 - Member portal and operational member QR surfaces; lazy Service/Event workspace; upload and live-camera scanner component; QR image delivery and batch receipt UI.
 - QR feature switch defaults off. Optional QR schema readiness is checked before use; legacy attendance compatibility and authentication files remain separate from QR-only fields and routes.
 - System Admin Settings access now mirrors the API permission bypass; the browser test enables QR from its initially-off state through the actual Settings UI.
-- The scanner prevents the upload input from running concurrently with pending camera startup and retries failed image decodes with QR-only `TRY_HARDER` hints; camera uses the normal fast path.
+- The scanner prevents upload during camera startup. Uploaded images use a bounded decoder sequence: normal QR decode, QR-only `TRY_HARDER`, then `PURE_BARCODE` for clean digital QR images; live camera keeps the normal fast path.
 - Camera callback handling and the upload fallback after a camera permission error have component regression coverage; physical camera optics are still unverified.
 - Local browser upload/decode smoke: generated a synthetic member QR PNG with the project QR library, uploaded it through the actual scanner component, and decoded the expected payload with the real ZXing decoder. This is decoder evidence only.
 - Focused mocked-API workspace coverage for Admin session creation/opening, Registration Team direct check-in confirmation, Cell Group Leader draft/submission, and Registration Team batch approval.
@@ -26,6 +26,7 @@ The feature implementation and Services/Events browser upload flow are verified 
 | --- | --- | --- |
 | API automated tests | Pass | Current local run: 11 Jest suites / 54 tests passed; the TiDB/MySQL persistence integration suite was skipped because no QR QA database is connected. |
 | QR database-target guard and current API suite | Pass, local | 10 target-guard tests pass; the full API run passed 11 suites / 54 tests with one database integration suite skipped. No TiDB connection was made. |
+| Uploaded QR decoder fallback | Pass, local | The real ZXing browser decoder recovered all 100 generated member/batch QR PNGs using the bounded fallback sequence; 13 required the final pure-barcode mode. Scanner component tests verify that fallback wiring. This does not replace the database-backed browser E2E. |
 | Frontend automated tests | Pass | 6 Vitest files, 21 tests, including Admin permission parity, camera success/denial handling, camera-start/upload coordination, and the image decode retry. Role-flow workspace tests mock the API and do not prove persistence. |
 | Frontend production build | Pass with warning | Vite build succeeds. The main bundle is 933.03 kB and ZXing is 477.54 kB; both trigger the configured 500 kB chunk advisory. The workspace is lazy-loaded. |
 | Diff whitespace check | Pass | `git diff --check` is clean. |
