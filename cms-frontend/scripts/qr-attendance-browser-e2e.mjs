@@ -51,12 +51,14 @@ const createMemberQrDownload = async (credentials, label) => {
   const { page, context } = signedIn;
   await page.getByRole('button', { name: 'Attendance', exact: true }).click();
   await page.getByRole('button', { name: 'My Attendance QR', exact: true }).click();
-  const createButton = page.getByRole('button', { name: 'Create My QR', exact: true });
-  if (await createButton.count()) await createButton.click();
+  const dialog = page.getByRole('dialog', { name: 'My Member QR', exact: true });
+  await dialog.getByRole('status').waitFor({ state: 'hidden', timeout: 30_000 });
+  const createButton = dialog.getByRole('button', { name: 'Create My QR', exact: true });
+  if (await createButton.isVisible()) await createButton.click();
   try {
-    await page.locator('img[alt="Your fixed member attendance QR code"]').waitFor({ state: 'visible', timeout: 12_000 });
+    await dialog.locator('img[alt="Your fixed member attendance QR code"]').waitFor({ state: 'visible', timeout: 30_000 });
   } catch {
-    const dialogText = await page.locator('[role="dialog"]').innerText({ timeoutMs: 5_000 }).catch(() => 'QR dialog was not rendered');
+    const dialogText = await dialog.innerText({ timeoutMs: 5_000 }).catch(() => 'QR dialog was not rendered');
     throw new Error(`Member QR image was not available for ${label}. Dialog: ${dialogText}. QR API responses: ${signedIn.qrApiResponses.join(', ')}`);
   }
 
