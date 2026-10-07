@@ -176,11 +176,19 @@ const directCheckIn = async (page, member, imagePath) => {
   await page.getByText(`${member.firstName} ${member.lastName} is checked in.`, { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
 };
 
-const captureAndDownloadBatch = async (page, member, imagePath, label) => {
+const captureAndDownloadBatch = async (page, member, imagePath, label, apiResponses) => {
   await page.getByRole('button', { name: 'Start Leader Batch', exact: true }).click();
   await page.getByRole('button', { name: 'Scan Member into Draft', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
   await uploadImage(page, 'Scan Member into Draft', imagePath);
-  await page.getByText(`${member.firstName} ${member.lastName} saved as pending.`, { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+  try {
+    await page.getByText(`${member.firstName} ${member.lastName} saved as pending.`, { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+  } catch (error) {
+    const visibleText = await page.locator('body').innerText().catch(() => 'Unable to read page text');
+    throw new Error(
+      `${label} leader could not capture ${member.firstName} ${member.lastName}. API: ${apiResponses.join(', ')}. `
+      + `Visible page text: ${visibleText.slice(-2000)}. Cause: ${error.message}`,
+    );
+  }
   await page.getByRole('button', { name: 'Submit Batch for Review', exact: true }).click();
   await page.getByText('Batch submitted. Registration Team must scan or open it and approve the attendance.', { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
 
@@ -237,7 +245,7 @@ try {
 
   const cellLeader = await login(fixture.cellLeader, '/dashboard');
   await openWorkspace(cellLeader.page, 'service', fixture.service.id, serviceSessionId);
-  const serviceBatchPng = await captureAndDownloadBatch(cellLeader.page, fixture.members.cell, memberB.pngPath, 'service');
+  const serviceBatchPng = await captureAndDownloadBatch(cellLeader.page, fixture.members.cell, memberB.pngPath, 'service', cellLeader.qrApiResponses);
   await cellLeader.context.close();
   await openWorkspace(registration.page, 'service', fixture.service.id, serviceSessionId);
   await scanAndApproveBatch(registration.page, serviceBatchPng, registration.qrApiResponses, 'Service');
@@ -249,7 +257,7 @@ try {
 
   const groupLeader = await login(fixture.groupLeader, '/dashboard');
   await openWorkspace(groupLeader.page, 'event', fixture.event.id, eventSessionId);
-  const eventBatchPng = await captureAndDownloadBatch(groupLeader.page, fixture.members.group, memberC.pngPath, 'event');
+  const eventBatchPng = await captureAndDownloadBatch(groupLeader.page, fixture.members.group, memberC.pngPath, 'event', groupLeader.qrApiResponses);
   await groupLeader.context.close();
   await openWorkspace(registration.page, 'event', fixture.event.id, eventSessionId);
   await scanAndApproveBatch(registration.page, eventBatchPng, registration.qrApiResponses, 'Event');
