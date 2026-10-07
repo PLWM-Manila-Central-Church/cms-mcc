@@ -1,12 +1,35 @@
 "use strict";
 
-const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
+const { rateLimit } = require("express-rate-limit");
+const jwt = require("jsonwebtoken");
+const { isIP } = require("node:net");
 
 const QR_API_PREFIXES = ["/api/qr-attendance", "/api/member-portal/attendance-qr"];
 
 const isQrApiPath = (req) => {
   const path = String(req.originalUrl || req.url || "").split("?", 1)[0];
   return QR_API_PREFIXES.some((prefix) => path === prefix || path.startsWith(prefix + "/"));
+};
+
+const getIpRateLimitKey = (req) => {
+  const ip = String(req.ip || "");
+  return `ip:${isIP(ip) ? ip : "unknown"}`;
+};
+
+const getGlobalRateLimitKey = (req) => {
+  const authorization = String(req.headers?.authorization || "");
+  const bearerToken = /^Bearer\s+(.+)$/i.exec(authorization)?.[1] || null;
+  const token = req.cookies?.accessToken || bearerToken;
+  if (token && process.env.JWT_SECRET) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
+      const userId = Number(decoded?.userId);
+      if (Number.isSafeInteger(userId) && userId > 0) return `user:${userId}`;
+    } catch {
+      // Invalid, expired, or unverifiable tokens stay in the shared IP bucket.
+    }
+  }
+  return getIpRateLimitKey(req);
 };
 
 const qrNetworkLimiter = rateLimit({
@@ -22,7 +45,7 @@ const qrUserLimiter = rateLimit({
   max: 120,
   keyGenerator: (req) => (req.user?.userId
     ? "qr-user:" + req.user.userId
-    : "qr-ip:" + ipKeyGenerator(req.ip)),
+    : getIpRateLimitKey(req).replace(/^ip:/, "qr-ip:")),
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: { code: "QR_USER_RATE_LIMIT", message: "Too many QR attendance requests. Please retry shortly." } },
@@ -58,6 +81,7 @@ const refreshLimiter = rateLimit({
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 150,
+  keyGenerator: getGlobalRateLimitKey,
   skip: isQrApiPath,
   standardHeaders: true,
   legacyHeaders: false,
@@ -112,6 +136,8 @@ const mountRateLimiters = (app) => {
 
 module.exports = {
   isQrApiPath,
+  getGlobalRateLimitKey,
+  getIpRateLimitKey,
   mountRateLimiters,
   qrUserLimiter,
 };
