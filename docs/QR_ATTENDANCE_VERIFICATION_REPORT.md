@@ -7,10 +7,10 @@ Updated 7 October 2026. This is a verification record for the local QR attendanc
 | Environment / test | Result | What it establishes |
 | --- | --- | --- |
 | `cms-api`: `npm test -- --runInBand` | Pass: 10 suites / 44 tests | Unit and contract coverage for QR permissions/policies, payloads, migration shape, schema fallback, attendance writers, and the settings-table timestamp contract. No TiDB connection was made. |
-| GitHub Actions QR API persistence integration, run 37552009704 | Pass: 4 integration tests | Fresh MySQL migrations plus real Express routes and persisted writes: member QR issue/PNG, Service/Event direct check-in, Cell/Group leader scope and batch approval, duplicate counts, scoped summaries, event history, CSV, and QR reissue. |
-| GitHub Actions CI, run 37552009704 | Pass | API tests, frontend tests/build, fresh MySQL migrations, API persistence integration, and browser E2E passed on PR head `985289c`. |
-| GitHub Actions uploaded-QR browser flow, run 37552009704 | Pass | Chromium drove Admin Service/Event session setup, fixed member QR downloads in separate browser contexts, Registration Team direct Service/Event uploads, Cell Group/Group Leader batch uploads and submissions, Registration Team batch approval, persisted counts, and member history against the CI MySQL database. Camera optics and TiDB were not tested. |
-| `cms-frontend`: `npm test` | Pass: 5 files / 15 tests | Component behavior using mocked APIs. Includes the Admin session lifecycle test and Registration Team / Cell Group Leader flows below. |
+| GitHub Actions QR API persistence integration, run 37553468457 | Pass: 4 integration tests | Fresh MySQL migrations plus real Express routes and persisted writes: member QR issue/PNG, Service/Event direct check-in, Cell/Group leader scope and batch approval, duplicate counts, scoped summaries, event history, CSV, and QR reissue. |
+| GitHub Actions CI, run 37553468457 | Pass | API tests, frontend tests/build, fresh MySQL migrations, API persistence integration, and browser E2E passed on PR head `c924bdd`. |
+| GitHub Actions uploaded-QR browser flow, run 37553468457 | Pass | The fixture began with QR attendance disabled. Admin enabled it in Settings, then Chromium drove Service/Event session setup, fixed member QR downloads in separate browser contexts, Registration Team direct uploads, Cell Group/Group Leader batch uploads, Registration Team approval, counts, and member history against CI MySQL. Camera optics and TiDB were not tested. |
+| `cms-frontend`: `npm test` | Pass: 6 files / 18 tests | Component behavior using mocked APIs. Includes the System Admin permission bypass regression, scanner camera-start/upload coordination, and Registration Team / leader workspace flows. |
 | `cms-frontend`: `npm run build` | Pass with chunk advisory | Production assets compile. Main bundle: 933.03 kB; ZXing: 477.54 kB. The attendance workspace and scanner entry are emitted separately. |
 | `git diff --check` | Pass | No whitespace errors in the current local change. |
 | Local browser scanner upload smoke | Pass, decode only | A generated synthetic QR PNG was uploaded into the actual scanner component; ZXing decoded the expected versioned payload without browser console errors. No authenticated API or database write was tested. |
@@ -20,6 +20,7 @@ Updated 7 October 2026. This is a verification record for the local QR attendanc
 | Role and flow | Result | Test boundary |
 | --- | --- | --- |
 | Admin creates a draft Event session, then opens check-in as a separate action | Pass | Mocked API; validates request shape and UI state transitions. |
+| Admin enables QR attendance from Settings before session setup | Pass | Real browser flow; fixture starts disabled, Settings API saves the Admin toggle, and the subsequent QR sessions open. |
 | Registration Team scans a member QR, reviews the member, and explicitly confirms check-in | Pass | Mocked API; verifies preview happens before the check-in request. |
 | Cell Group Leader captures an assigned member into a draft and submits it | Pass | Mocked API; verifies saved pending entry and batch QR download request. |
 | Registration Team reviews a submitted leader batch and approves it | Pass | Mocked API; verifies scope/submitter display, digest/revision submission, and approval receipt. |
@@ -35,11 +36,11 @@ These mocked tests prove frontend request sequencing and UI state handling. The 
 - Verify the full set of malformed, wrong-session, revoked, expired, duplicate, and out-of-scope QR cases leave counts and authentication intact.
 - Verify login, logout, refresh/session persistence, and representative existing modules on the QA deployment after the QR build is deployed.
 - Camera optical verification is optional for the laptop path: uploaded PNG scanning is covered end-to-end, while physical camera success/fallback remains unverified.
-- Draft PR #14 is open from `codex/qr-attendance` to `main`, unmerged. CI run `37551302510` passed on head `a300a78`, including the browser upload flow. Keep the PR draft until review and isolated TiDB QA pass. The existing `mcc-local-dev` branch was not used for QR writes; no TiDB migration or attendance write has occurred.
+- Draft PR #14 is open from `codex/qr-attendance` to `main`, unmerged. CI run `37553468457` passed on head `c924bdd`, including Admin Settings enablement and the browser upload flow. Keep the PR draft until review and isolated TiDB QA pass. The existing `mcc-local-dev` branch was not used for QR writes; no TiDB migration or attendance write has occurred.
 
 ## CI migration repair
 
-The first draft-PR CI run failed the fresh MySQL migration job at `20261007000002-seed-qr-attendance-permissions` with `Unknown column 'created_at'`. The existing `system_settings` schema has `updated_at` but no `created_at`; the new seed had supplied both. The seed now writes only supported columns, and `cms-api/test/qr-attendance-permissions-migration.test.js` guards this shape. Fix commit `cbd8857` is on the PR branch. The integration review also found and fixed a missing leader-scope helper import in the summary service. The browser E2E initially had an overly strict text selector for history rows that append a `(Service)` or `(Event)` label; the UI and API data were correct, and the selector now matches the displayed row. A subsequent run timed out while waiting for the Event leader-batch review panel; diagnostics were added, and run `37552009704` passed all jobs on PR head `985289c`.
+The first draft-PR CI run failed the fresh MySQL migration job at `20261007000002-seed-qr-attendance-permissions` with `Unknown column 'created_at'`. The seed now writes only supported `system_settings` columns, with a regression test. The integration review also fixed a missing leader-scope helper in summaries. Browser E2E fixes include matching history rows with appended `(Service)`/`(Event)` labels and diagnostics for an intermittent Event batch review timeout. The Admin Settings flow then exposed that frontend `hasPermission` did not mirror the API's System Admin bypass; `AuthContext` now grants the same Admin UI access, with a regression test. Run `37553468457` passes the full suite on PR head `c924bdd`, including a browser flow that enables QR from Settings before use.
 
 ## Review note
 
