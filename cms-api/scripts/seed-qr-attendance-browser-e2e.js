@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const bcrypt = require("bcrypt");
 const sequelize = require("../src/config/db");
+const { assertSafeQrTestTarget } = require("./qr-test-target");
 const {
   CellGroup,
   Event,
@@ -18,8 +19,7 @@ const {
 const run = async () => {
   assert.equal(process.env.NODE_ENV, "test", "Refusing to seed outside test mode");
   assert.equal(process.env.QR_ATTENDANCE_BROWSER_E2E, "true", "Refusing to seed outside the isolated browser E2E job");
-  assert.equal(process.env.DB_HOST, "127.0.0.1", "Refusing to seed a non-local CI database host");
-  assert.equal(process.env.DB_NAME, "plwm_mcc", "Refusing to seed an unexpected CI database name");
+  assertSafeQrTestTarget(process.env);
   assert.ok(process.env.QR_E2E_FIXTURE_PATH, "QR_E2E_FIXTURE_PATH is required");
 
   await sequelize.authenticate();

@@ -1,6 +1,10 @@
 "use strict";
 
+require("dotenv").config();
+
+const { assertSafeQrTestTarget } = require("../scripts/qr-test-target");
 const integrationEnabled = process.env.QR_ATTENDANCE_INTEGRATION_DB === "true";
+if (integrationEnabled) assertSafeQrTestTarget(process.env);
 const describeDatabase = integrationEnabled ? describe : describe.skip;
 
 describeDatabase("QR attendance API persistence integration", () => {

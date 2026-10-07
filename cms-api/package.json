@@ -23,6 +23,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "db:migrate": "sequelize-cli db:migrate",
+    "db:bootstrap-qr-qa": "node scripts/bootstrap-qr-attendance-tidb-qa.js",
     "db:seed": "sequelize-cli db:seed:all",
     "db:validate:3nf": "node scripts/validate-3nf-compatibility.js",
     "test:qr-integration": "jest --detectOpenHandles --forceExit --testTimeout=60000 --runInBand test/qr-attendance.integration.test.js",
