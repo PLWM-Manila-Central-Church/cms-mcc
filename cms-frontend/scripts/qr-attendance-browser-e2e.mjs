@@ -213,7 +213,7 @@ try {
   await memberA.page.reload({ waitUntil: 'domcontentloaded' });
   await memberA.page.getByRole('button', { name: 'Attendance', exact: true }).click();
   try {
-    await memberA.page.getByText(fixture.event.title, { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+    await memberA.page.locator('tr').filter({ hasText: fixture.event.title }).last().waitFor({ state: 'visible', timeout: 30_000 });
   } catch (error) {
     const visibleText = await memberA.page.locator('body').innerText().catch(() => 'Unable to read page text');
     throw new Error(
@@ -221,7 +221,7 @@ try {
       + `Visible page text: ${visibleText.slice(-2500)}. Cause: ${error.message}`,
     );
   }
-  await memberA.page.getByText(fixture.service.title, { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+  await memberA.page.locator('tr').filter({ hasText: fixture.service.title }).last().waitFor({ state: 'visible', timeout: 30_000 });
 
   assert.deepEqual(browserErrors, [], `Browser errors: ${browserErrors.join('; ')}`);
   console.log('QR browser E2E passed: fixed member QR upload, Service/Event direct check-in, scoped leader batches, approval, counts, and member history.');
