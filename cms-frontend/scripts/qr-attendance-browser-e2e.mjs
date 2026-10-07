@@ -35,7 +35,9 @@ const login = async (credentials, destination) => {
   logPageErrors(page, credentials.email);
   page.on('response', async (response) => {
     const url = new URL(response.url());
-    if (url.pathname.includes('/attendance-qr')) qrApiResponses.push(`${response.status()} ${url.pathname}`);
+    if (url.pathname.includes('/attendance-qr') || url.pathname.includes('/qr-attendance/')) {
+      qrApiResponses.push(`${response.status()} ${url.pathname}`);
+    }
     if (url.pathname === '/api/member-portal/attendance-qr/history') {
       const body = await response.json().catch(() => null);
       historyApiResponses.push({
@@ -158,9 +160,17 @@ const captureAndDownloadBatch = async (page, member, imagePath, label) => {
   return target;
 };
 
-const scanAndApproveBatch = async (page, imagePath) => {
+const scanAndApproveBatch = async (page, imagePath, apiResponses, label) => {
   await uploadImage(page, 'Scan Leader Batch QR', imagePath);
-  await page.getByRole('heading', { name: /Review Batch #/ }).waitFor({ state: 'visible', timeout: 30_000 });
+  try {
+    await page.getByRole('heading', { name: /Review Batch #/ }).waitFor({ state: 'visible', timeout: 30_000 });
+  } catch (error) {
+    const visibleText = await page.locator('body').innerText().catch(() => 'Unable to read page text');
+    throw new Error(
+      `${label} batch QR did not open for review. API: ${apiResponses.join(', ')}. `
+      + `Visible page text: ${visibleText.slice(-2500)}. Cause: ${error.message}`,
+    );
+  }
   await page.getByRole('button', { name: 'Approve Attendance', exact: true }).click();
   await page.getByText('Approved: 1 new check-ins, 0 already confirmed.', { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
 };
@@ -194,7 +204,7 @@ try {
   const serviceBatchPng = await captureAndDownloadBatch(cellLeader.page, fixture.members.cell, memberB.pngPath, 'service');
   await cellLeader.context.close();
   await openWorkspace(registration.page, 'service', fixture.service.id, serviceSessionId);
-  await scanAndApproveBatch(registration.page, serviceBatchPng);
+  await scanAndApproveBatch(registration.page, serviceBatchPng, registration.qrApiResponses, 'Service');
   await assertConfirmedCount(registration.page, 2);
 
   await openWorkspace(registration.page, 'event', fixture.event.id, eventSessionId);
@@ -206,7 +216,7 @@ try {
   const eventBatchPng = await captureAndDownloadBatch(groupLeader.page, fixture.members.group, memberC.pngPath, 'event');
   await groupLeader.context.close();
   await openWorkspace(registration.page, 'event', fixture.event.id, eventSessionId);
-  await scanAndApproveBatch(registration.page, eventBatchPng);
+  await scanAndApproveBatch(registration.page, eventBatchPng, registration.qrApiResponses, 'Event');
   await assertConfirmedCount(registration.page, 2);
   await registration.context.close();
 
