@@ -59,6 +59,22 @@ describe('QrScannerDialog', () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:qr-test');
   });
 
+  it('disables image upload while camera startup is pending', async () => {
+    let finishCameraStart;
+    mocks.decodeFromVideoDevice.mockImplementationOnce(() => new Promise((resolve) => {
+      finishCameraStart = resolve;
+    }));
+    render(<QrScannerDialog onDecode={vi.fn()} onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /start camera/i }));
+    const uploadInput = screen.getByLabelText(/upload qr image/i);
+    await waitFor(() => expect(uploadInput).toBeDisabled());
+    expect(screen.getByRole('button', { name: /starting camera/i })).toBeDisabled();
+
+    finishCameraStart({ stop: mocks.stop });
+    await waitFor(() => expect(uploadInput).toBeEnabled());
+  });
+
   it('rejects an oversized upload before asking the QR decoder to read it', async () => {
     render(<QrScannerDialog onDecode={vi.fn()} onClose={vi.fn()} />);
     const file = new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'large.png', { type: 'image/png' });

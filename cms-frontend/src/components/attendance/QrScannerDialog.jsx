@@ -194,9 +194,9 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
             {cameraStarting ? 'Starting camera…' : cameraActive ? 'Camera running' : 'Start Camera'}
           </button>
           {cameraActive && videoDevices.length > 1 && <button type="button" className="qr-secondary-button" onClick={switchCamera}>Switch Camera</button>}
-          <label className="qr-secondary-button qr-file-button">
+          <label className="qr-secondary-button qr-file-button" aria-disabled={cameraStarting || imageDecoding}>
             {imageDecoding ? 'Decoding image…' : 'Upload QR Image'}
-            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImage} disabled={imageDecoding} />
+            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImage} disabled={imageDecoding || cameraStarting} />
           </label>
         </div>
         <p className="qr-scanner-message" role="status" aria-live="polite">{message}</p>
