@@ -506,7 +506,7 @@ describeDatabase("QR attendance API persistence integration", () => {
         event_id: fixture.event.id,
         unique_participants: 2,
         session_visits: 2,
-        qr_session_count: 1,
+        qr_session_count: 2,
       }),
     ]));
 
