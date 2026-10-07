@@ -30,7 +30,12 @@ const login = async (credentials, destination) => {
   });
   contexts.push(context);
   const page = await context.newPage();
+  const qrApiResponses = [];
   logPageErrors(page, credentials.email);
+  page.on('response', (response) => {
+    const url = new URL(response.url());
+    if (url.pathname.includes('/attendance-qr')) qrApiResponses.push(`${response.status()} ${url.pathname}`);
+  });
   await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded' });
   await page.locator('input[name="email"]').fill(credentials.email);
   await page.locator('input[name="password"]').fill(credentials.password);
@@ -38,7 +43,7 @@ const login = async (credentials, destination) => {
     page.waitForURL((url) => url.pathname === destination, { timeout: 45_000 }),
     page.getByRole('button', { name: /Sign In/ }).click(),
   ]);
-  return { context, page };
+  return { context, page, qrApiResponses };
 };
 
 const createMemberQrDownload = async (credentials, label) => {
@@ -46,7 +51,14 @@ const createMemberQrDownload = async (credentials, label) => {
   const { page, context } = signedIn;
   await page.getByRole('button', { name: 'Attendance', exact: true }).click();
   await page.getByRole('button', { name: 'My Attendance QR', exact: true }).click();
-  await page.getByRole('button', { name: 'Create My QR', exact: true }).click();
+  const createButton = page.getByRole('button', { name: 'Create My QR', exact: true });
+  try {
+    await createButton.waitFor({ state: 'visible', timeout: 8_000 });
+  } catch {
+    const dialogText = await page.locator('[role="dialog"]').innerText({ timeoutMs: 5_000 }).catch(() => 'QR dialog was not rendered');
+    throw new Error(`Member QR create action was not available for ${label}. Dialog: ${dialogText}. QR API responses: ${signedIn.qrApiResponses.join(', ')}`);
+  }
+  await createButton.click();
   await page.locator('img[alt="Your fixed member attendance QR code"]').waitFor({ state: 'visible', timeout: 30_000 });
 
   const [download] = await Promise.all([
