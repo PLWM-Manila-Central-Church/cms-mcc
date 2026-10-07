@@ -18,6 +18,17 @@ describeDatabase("QR attendance API persistence integration", () => {
   let actors;
   let fixture;
 
+  const dateOnlyInManila = () => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Manila",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
+  };
+
   const api = (method, path, token) =>
     request(app)[method](path).set("Authorization", `Bearer ${token}`);
 
@@ -216,9 +227,10 @@ describeDatabase("QR attendance API persistence integration", () => {
     const availability = await api("get", "/api/qr-attendance/capabilities", actors.admin.token);
     expect(expectData(availability)).toMatchObject({ enabled: true, schemaReady: true });
 
+    const activityDate = dateOnlyInManila();
     const service = await models.Service.create({
       title: `QR CI Service ${suffix}`,
-      service_date: new Date().toISOString().slice(0, 10),
+      service_date: activityDate,
       service_time: "10:00:00",
       capacity: 20,
       total_parking_slots: 0,
@@ -226,8 +238,8 @@ describeDatabase("QR attendance API persistence integration", () => {
     });
     const event = await models.Event.create({
       title: `QR CI Event ${suffix}`,
-      start_date: new Date().toISOString().slice(0, 10),
-      end_date: new Date().toISOString().slice(0, 10),
+      start_date: activityDate,
+      end_date: activityDate,
       status: "Upcoming",
       created_by: actors.admin.user.id,
     });
@@ -579,9 +591,10 @@ describeDatabase("QR attendance API persistence integration", () => {
   });
 
   it("finalizes expected rosters for Service and Event sessions and reopens reconciliation after corrections", async () => {
+    const activityDate = dateOnlyInManila();
     const service = await models.Service.create({
       title: `QR CI finalize service ${Date.now()}`,
-      service_date: new Date().toISOString().slice(0, 10),
+      service_date: activityDate,
       service_time: "10:00:00",
       capacity: 40,
       total_parking_slots: 0,
@@ -589,8 +602,8 @@ describeDatabase("QR attendance API persistence integration", () => {
     });
     const event = await models.Event.create({
       title: `QR CI finalize event ${Date.now()}`,
-      start_date: new Date().toISOString().slice(0, 10),
-      end_date: new Date().toISOString().slice(0, 10),
+      start_date: activityDate,
+      end_date: activityDate,
       status: "Upcoming",
       created_by: actors.admin.user.id,
     });
