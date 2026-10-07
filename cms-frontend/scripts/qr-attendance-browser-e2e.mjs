@@ -87,6 +87,10 @@ const createAndOpenSession = async (page, targetType, targetId, title, sessionKe
   await page.getByText('Draft attendance session created. Open it when check-in is ready.', { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
   const sessionSelect = page.locator('#qr-session-select');
   await sessionSelect.waitFor({ state: 'visible', timeout: 30_000 });
+  await page.waitForFunction(() => {
+    const select = document.querySelector('#qr-session-select');
+    return Boolean(select?.value);
+  }, undefined, { timeout: 30_000 });
   const sessionId = Number(await sessionSelect.inputValue());
   assert.ok(Number.isSafeInteger(sessionId) && sessionId > 0, `No ${targetType} session was selected after creation`);
   await page.getByRole('button', { name: 'Open Check-in', exact: true }).click();
