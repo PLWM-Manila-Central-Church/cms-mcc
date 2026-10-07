@@ -31,10 +31,21 @@ const login = async (credentials, destination) => {
   contexts.push(context);
   const page = await context.newPage();
   const qrApiResponses = [];
+  const historyApiResponses = [];
   logPageErrors(page, credentials.email);
-  page.on('response', (response) => {
+  page.on('response', async (response) => {
     const url = new URL(response.url());
     if (url.pathname.includes('/attendance-qr')) qrApiResponses.push(`${response.status()} ${url.pathname}`);
+    if (url.pathname === '/api/member-portal/attendance-qr/history') {
+      const body = await response.json().catch(() => null);
+      historyApiResponses.push({
+        status: response.status(),
+        records: Array.isArray(body?.data?.records)
+          ? body.data.records.map((record) => ({ event_id: record.event_id, event_title: record.event_title, status: record.status }))
+          : null,
+        message: body?.message || body?.error?.message || null,
+      });
+    }
   });
   await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded' });
   await page.locator('input[name="email"]').fill(credentials.email);
@@ -43,7 +54,7 @@ const login = async (credentials, destination) => {
     page.waitForURL((url) => url.pathname === destination, { timeout: 45_000 }),
     page.getByRole('button', { name: /Sign In/ }).click(),
   ]);
-  return { context, page, qrApiResponses };
+  return { context, page, qrApiResponses, historyApiResponses };
 };
 
 const createMemberQrDownload = async (credentials, label) => {
@@ -201,7 +212,15 @@ try {
 
   await memberA.page.reload({ waitUntil: 'domcontentloaded' });
   await memberA.page.getByRole('button', { name: 'Attendance', exact: true }).click();
-  await memberA.page.getByText(fixture.event.title, { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+  try {
+    await memberA.page.getByText(fixture.event.title, { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+  } catch (error) {
+    const visibleText = await memberA.page.locator('body').innerText().catch(() => 'Unable to read page text');
+    throw new Error(
+      `Event attendance history did not render. API: ${JSON.stringify(memberA.historyApiResponses)}. `
+      + `Visible page text: ${visibleText.slice(-2500)}. Cause: ${error.message}`,
+    );
+  }
   await memberA.page.getByText(fixture.service.title, { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
 
   assert.deepEqual(browserErrors, [], `Browser errors: ${browserErrors.join('; ')}`);
