@@ -91,4 +91,19 @@ describe("QR attendance request validation", () => {
     expect(validators.approveBatchSchema.validate(base).error).toBeDefined();
     expect(validators.approveBatchSchema.validate({ ...base, late_approval_reason: "Reviewed after the event" }).error).toBeUndefined();
   });
+
+  it("keeps the submitted-batch state filter after validated query normalization", () => {
+    const result = validators.batchListQuerySchema.validate({ state: "submitted", page: "2", limit: "25" }, { stripUnknown: true, convert: true });
+    expect(result.error).toBeUndefined();
+    expect(result.value).toMatchObject({ state: "submitted", page: 2, limit: 25 });
+    expect(result.value.status).toBeUndefined();
+  });
+
+  it("normalizes the early status spelling but rejects conflicting filters", () => {
+    const legacy = validators.batchListQuerySchema.validate({ status: "approved" }, { stripUnknown: true, convert: true });
+    expect(legacy.error).toBeUndefined();
+    expect(legacy.value.state).toBe("approved");
+    expect(validators.batchListQuerySchema.validate({ state: "submitted", status: "rejected" }).error).toBeDefined();
+    expect(validators.batchListQuerySchema.validate({ state: "open" }).error).toBeDefined();
+  });
 });

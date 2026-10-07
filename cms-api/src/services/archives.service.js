@@ -61,6 +61,7 @@ const RESTRICTED_ALLOWED = [
   "Ministry Leader",
   "Cell Group Leader",
   "Group Leader",
+  "Leader",
 ];
 
 const visibilityFilter = (roleName) => {

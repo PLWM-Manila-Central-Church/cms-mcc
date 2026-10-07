@@ -14,7 +14,7 @@ const REQUIRED_TABLES = [
   "event_attendances",
 ];
 const REQUIRED_COLUMNS = {
-  attendance_sessions: ["service_id", "event_id", "session_key", "title", "starts_at", "ends_at", "check_in_opens_at", "check_in_closes_at", "approval_deadline", "time_zone", "status", "expected_basis", "registration_required", "leader_confirmation_mode", "expected_roster_frozen_at", "created_by", "created_at", "updated_at"],
+  attendance_sessions: ["service_id", "event_id", "session_key", "title", "starts_at", "ends_at", "check_in_opens_at", "check_in_closes_at", "approval_deadline", "time_zone", "status", "expected_basis", "registration_required", "leader_confirmation_mode", "expected_roster_frozen_at", "config_revision", "activity_revision", "capture_closed_at", "finalized_at", "finalized_by", "finalized_revision", "created_by", "created_at", "updated_at"],
   member_qr_credentials: ["member_id", "public_id", "version", "status", "issued_by", "issued_at", "revoked_by", "revoked_at", "revoke_reason", "created_at", "updated_at"],
   attendance_expected_members: ["session_id", "member_id", "source", "cell_group_id_at_freeze", "group_id_at_freeze", "created_at"],
   attendance_batches: ["session_id", "public_id", "submitted_by", "cell_group_id", "group_id", "state", "revision", "content_digest", "idempotency_key", "supersedes_batch_id", "submitted_at", "approval_deadline", "reviewed_by", "reviewed_at", "decision_reason", "created_at", "updated_at"],

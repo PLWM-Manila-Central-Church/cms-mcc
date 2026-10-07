@@ -10,7 +10,7 @@ const AppError = require("../helpers/AppError");
 // ── Attendance Summary ───────────────────────────────────────
 exports.getSummaryByService = async (req, res, next) => {
   try {
-    const data = await serviceExtrasService.getSummaryByService(req.params.serviceId);
+    const data = await serviceExtrasService.getSummaryByService(req.params.serviceId, req.user);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -29,7 +29,7 @@ exports.upsertSummary = async (req, res, next) => {
 // ── Service Responses ────────────────────────────────────────
 exports.getResponsesByService = async (req, res, next) => {
   try {
-    const data = await serviceExtrasService.getResponsesByService(req.params.serviceId);
+    const data = await serviceExtrasService.getResponsesByService(req.params.serviceId, req.user);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -132,7 +132,9 @@ exports.getAttendanceByService = async (req, res, next) => {
     const memberScopeWhere = await getMemberScopeWhere(req.user);
     const memberInclude = {
       model: Member,
-      attributes: ["id", "first_name", "last_name", "barcode"],
+      attributes: req.user?.roleName === "Pastor"
+        ? ["id", "first_name", "last_name", "status"]
+        : ["id", "first_name", "last_name", "barcode"],
       required: !!memberScopeWhere,
       ...(memberScopeWhere && { where: memberScopeWhere }),
     };
@@ -177,7 +179,21 @@ exports.getAttendanceByService = async (req, res, next) => {
         Member:          pr.Member,
       }));
 
-    res.json({ success: true, data: { service, records: [...recordsWithStatus, ...preRegRows], summary: summary || null } });
+    const scopedCheckInCount = recordsWithStatus.filter((record) => !record.is_voided).length;
+    const visibleSummary = memberScopeWhere
+      ? {
+        ...(summary?.toJSON() || {}),
+        service_id: Number(service.id),
+        total_expected: Number(service.capacity || 0),
+        total_attended: scopedCheckInCount,
+        total_absent: Math.max(
+          0,
+          Number(service.capacity || 0) - scopedCheckInCount,
+        ),
+      }
+      : summary || null;
+
+    res.json({ success: true, data: { service, records: [...recordsWithStatus, ...preRegRows], summary: visibleSummary } });
   } catch (err) { next(err); }
 };
 
@@ -212,7 +228,7 @@ exports.deleteAttendanceForService = async (req, res, next) => {
 // ── Service Responses alias (:id/responses) ─────────────────
 exports.getResponsesByServiceAlias = async (req, res, next) => {
   try {
-    const responses = await serviceExtrasService.getResponsesByService(req.params.id);
+    const responses = await serviceExtrasService.getResponsesByService(req.params.id, req.user);
     res.json({ success: true, data: { responses } });
   } catch (err) { next(err); }
 };

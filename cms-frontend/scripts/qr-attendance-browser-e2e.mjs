@@ -9,6 +9,7 @@ const fixturePath = process.env.QR_E2E_FIXTURE_PATH;
 const baseUrl = process.env.QR_E2E_BASE_URL || 'http://127.0.0.1:3000';
 assert.ok(fixturePath && fs.existsSync(fixturePath), 'QR_E2E_FIXTURE_PATH must point to synthetic CI fixture data');
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+const runSuffix = Date.now().toString(36);
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcc-qr-browser-e2e-'));
 const browserErrors = [];
 const browser = await chromium.launch({
@@ -35,11 +36,30 @@ const login = async (credentials, destination) => {
   contexts.push(context);
   const page = await context.newPage();
   const qrApiResponses = [];
+  const authApiResponses = [];
+  const authApiFailures = [];
   const historyApiResponses = [];
   const settingsApiResponses = [];
+  const leaderScopeHeaders = [];
+  page.qrApiResponses = qrApiResponses;
+  page.authApiResponses = authApiResponses;
+  page.authApiFailures = authApiFailures;
   logPageErrors(page, credentials.email);
+  page.on('request', (request) => {
+    const scope = request.headers()['x-mcc-leader-scope'];
+    if (scope) leaderScopeHeaders.push(scope);
+  });
+  page.on('requestfailed', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith('/api/auth/')) {
+      authApiFailures.push(`${request.method()} ${url.pathname} ${request.failure()?.errorText || 'request failed'}`);
+    }
+  });
   page.on('response', async (response) => {
     const url = new URL(response.url());
+    if (url.pathname.startsWith('/api/auth/')) {
+      authApiResponses.push(`${response.status()} ${response.request().method()} ${url.pathname}`);
+    }
     if (url.pathname.includes('/attendance-qr') || url.pathname.includes('/qr-attendance/')) {
       qrApiResponses.push(`${response.status()} ${url.pathname}`);
     }
@@ -70,7 +90,60 @@ const login = async (credentials, destination) => {
     page.waitForURL((url) => url.pathname === destination, { timeout: 45_000 }),
     page.getByRole('button', { name: /Sign In/ }).click(),
   ]);
-  return { context, page, qrApiResponses, historyApiResponses, settingsApiResponses };
+  return { context, page, qrApiResponses, authApiResponses, authApiFailures, historyApiResponses, settingsApiResponses, leaderScopeHeaders };
+};
+
+const createUnifiedLeaderFromAdmin = async (page, fixture) => {
+  await page.goto(`${baseUrl}/users/new`, { waitUntil: 'domcontentloaded' });
+  await page.locator('input[name="first_name"]').fill('Browser');
+  await page.locator('input[name="last_name"]').fill('E2E Leader');
+  await page.locator('input[name="email"]').fill(fixture.unifiedLeader.email);
+  await page.locator('input[name="password"]').fill(fixture.password);
+  await page.locator('select[name="role_id"]').selectOption({ label: 'Leader' });
+  await page.locator('#leader-cell-group').selectOption(String(fixture.leaderScopes.cellGroupId));
+  await page.locator('#leader-group').selectOption(String(fixture.leaderScopes.groupId));
+  await page.locator('#leadership-reason').fill('Assigned as the QR attendance flow test leader');
+  const responsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === '/api/users' && response.request().method() === 'POST';
+  }, { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Create User', exact: true }).click();
+  const response = await responsePromise;
+  assert.equal(response.status(), 201, 'Admin UI should create a unified Leader with both assignments');
+  await page.waitForURL((url) => url.pathname === '/users', { timeout: 30_000 });
+};
+
+const completeForcedPasswordChange = async ({ page }, password) => {
+  await page.locator('input[name="current_password"]').fill(password);
+  await page.locator('input[name="new_password"]').fill(password);
+  await page.locator('input[name="confirm_password"]').fill(password);
+  await page.getByRole('button', { name: 'Update Password', exact: true }).click();
+  await page.waitForURL((url) => url.pathname === '/dashboard', { timeout: 30_000 });
+};
+
+const selectLeaderScope = async (page, scopeKey) => {
+  await page.getByLabel('Active leadership team').selectOption(scopeKey);
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForFunction((value) => document.querySelector('[aria-label="Active leadership team"]')?.value === value, scopeKey, { timeout: 30_000 });
+};
+
+const assertCombinedLeaderViewIsReadOnly = async (page) => {
+  await page.getByText(/Combined team attendance is read-only\./).waitFor({ state: 'visible', timeout: 30_000 });
+  assert.equal(await page.getByRole('button', { name: 'Start Leader Batch', exact: true }).count(), 0,
+    'A Leader in combined scope must not be offered batch write actions');
+};
+
+const assertResponsiveNoHorizontalOverflow = async (page, label) => {
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1024, height: 900 },
+    { width: 1365, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const fits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+    assert.equal(fits, true, `${label} should not overflow at ${viewport.width}px`);
+  }
 };
 
 const enableQrAttendanceInAdminSettings = async ({ page, settingsApiResponses }) => {
@@ -86,6 +159,7 @@ const enableQrAttendanceInAdminSettings = async ({ page, settingsApiResponses })
     );
   }
   const settingRow = page.getByText('qr_attendance_enabled', { exact: true }).locator('xpath=../..');
+  if (await settingRow.getByText('Enabled', { exact: true }).isVisible().catch(() => false)) return;
   await settingRow.getByText('Disabled', { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
   const [response] = await Promise.all([
     page.waitForResponse((candidate) => {
@@ -152,7 +226,18 @@ const createAndOpenSession = async (page, targetType, targetId, title, sessionKe
 
 const openWorkspace = async (page, targetType, targetId, sessionId) => {
   await page.goto(`${baseUrl}/attendance/qr?target_type=${targetType}&target_id=${targetId}&session_id=${sessionId}`, { waitUntil: 'domcontentloaded' });
-  await page.locator('#qr-session-select').waitFor({ state: 'visible', timeout: 30_000 });
+  try {
+    await page.locator('#qr-session-select').waitFor({ state: 'visible', timeout: 30_000 });
+  } catch (error) {
+    const diagnostics = await page.evaluate(() => ({
+      path: `${location.pathname}${location.search}`,
+      headings: [...document.querySelectorAll('h1, h2')].map((element) => element.innerText.trim().slice(0, 100)),
+      alerts: [...document.querySelectorAll('[role="alert"], [role="status"]')]
+        .map((element) => element.innerText.trim().slice(0, 160)).filter(Boolean).slice(-8),
+      selectorPresent: Boolean(document.querySelector('#qr-session-select')),
+    })).catch(() => ({ path: page.url(), headings: [], alerts: [], selectorPresent: false }));
+    throw new Error(`QR session selector did not render: ${JSON.stringify({ diagnostics, authApiResponses: page.authApiResponses || [], authApiFailures: page.authApiFailures || [], qrApiResponses: page.qrApiResponses || [] })}. ${error.message}`);
+  }
   await page.waitForFunction((id) => document.querySelector('#qr-session-select')?.value === String(id), sessionId, { timeout: 30_000 });
   await page.locator('.qr-session-status').filter({ hasText: 'open' }).waitFor({ state: 'visible', timeout: 30_000 });
 };
@@ -245,8 +330,11 @@ const scanAndApproveBatch = async (page, imagePath, apiResponses, label) => {
 try {
   const admin = await login(fixture.admin, '/dashboard');
   await enableQrAttendanceInAdminSettings(admin);
-  const serviceSessionId = await createAndOpenSession(admin.page, 'service', fixture.service.id, 'Browser E2E Service', 'primary');
-  const eventSessionId = await createAndOpenSession(admin.page, 'event', fixture.event.id, 'Browser E2E Event', 'browser-e2e');
+  const serviceSessionId = await createAndOpenSession(admin.page, 'service', fixture.service.id, `Browser E2E Service ${runSuffix}`, `primary-${runSuffix}`);
+  const eventSessionId = await createAndOpenSession(admin.page, 'event', fixture.event.id, `Browser E2E Event ${runSuffix}`, `browser-e2e-${runSuffix}`);
+  if (process.env.QR_E2E_REUSE_LEADER !== 'true') {
+    await createUnifiedLeaderFromAdmin(admin.page, fixture);
+  }
   await admin.context.close();
 
   const memberA = await createMemberQrDownload(fixture.members.direct, 'direct');
@@ -258,6 +346,7 @@ try {
   );
   const memberB = await createMemberQrDownload(fixture.members.cell, 'cell-leader-member');
   const memberC = await createMemberQrDownload(fixture.members.group, 'group-leader-member');
+  const memberD = await createMemberQrDownload(fixture.members.unified, 'unified-leader-member');
   await memberASecondDevice.context.close();
   await memberB.context.close();
   await memberC.context.close();
@@ -276,6 +365,40 @@ try {
   await scanAndApproveBatch(registration.page, serviceBatchPng, registration.qrApiResponses, 'Service');
   await assertConfirmedCount(registration.page, 2);
 
+  const forcedLeader = await login(
+    fixture.unifiedLeader,
+    process.env.QR_E2E_REUSE_LEADER === 'true' ? '/dashboard' : '/force-change-password',
+  );
+  if (process.env.QR_E2E_REUSE_LEADER !== 'true') {
+    await completeForcedPasswordChange(forcedLeader, fixture.password);
+  }
+  const unifiedLeader = forcedLeader;
+  await unifiedLeader.page.setViewportSize({ width: 390, height: 844 });
+  await unifiedLeader.page.goto(`${baseUrl}/leader/teams`, { waitUntil: 'domcontentloaded' });
+  await unifiedLeader.page.getByRole('heading', { name: 'My Teams', exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+  await unifiedLeader.page.getByLabel('Active leadership team').waitFor({ state: 'visible', timeout: 15_000 });
+  await assertResponsiveNoHorizontalOverflow(unifiedLeader.page, 'Leader team page');
+  await unifiedLeader.page.setViewportSize({ width: 390, height: 844 });
+  await openWorkspace(unifiedLeader.page, 'service', fixture.service.id, serviceSessionId);
+  assert.equal(await unifiedLeader.page.getByLabel('Active leadership team').inputValue(), 'all');
+  await assertCombinedLeaderViewIsReadOnly(unifiedLeader.page);
+  await assertResponsiveNoHorizontalOverflow(unifiedLeader.page, 'Combined QR attendance workspace');
+  await unifiedLeader.page.setViewportSize({ width: 390, height: 844 });
+  await selectLeaderScope(unifiedLeader.page, `cell_group:${fixture.leaderScopes.cellGroupId}`);
+  await openWorkspace(unifiedLeader.page, 'service', fixture.service.id, serviceSessionId);
+  const unifiedServiceBatch = await captureAndDownloadBatch(
+    unifiedLeader.page,
+    fixture.members.unified,
+    memberD.pngPath,
+    'unified-service',
+    unifiedLeader.qrApiResponses,
+  );
+  assert.ok(unifiedLeader.leaderScopeHeaders.includes(`cell_group:${fixture.leaderScopes.cellGroupId}`),
+    'Selected cell-group scope must be sent with API requests');
+  await openWorkspace(registration.page, 'service', fixture.service.id, serviceSessionId);
+  await scanAndApproveBatch(registration.page, unifiedServiceBatch, registration.qrApiResponses, 'Unified Leader Service');
+  await assertConfirmedCount(registration.page, 3);
+
   await openWorkspace(registration.page, 'event', fixture.event.id, eventSessionId);
   await directCheckIn(registration.page, fixture.members.direct, memberASecondDevice.pngPath);
   await assertConfirmedCount(registration.page, 1);
@@ -287,7 +410,33 @@ try {
   await openWorkspace(registration.page, 'event', fixture.event.id, eventSessionId);
   await scanAndApproveBatch(registration.page, eventBatchPng, registration.qrApiResponses, 'Event');
   await assertConfirmedCount(registration.page, 2);
+
+  await selectLeaderScope(unifiedLeader.page, `member_group:${fixture.leaderScopes.groupId}`);
+  await openWorkspace(unifiedLeader.page, 'event', fixture.event.id, eventSessionId);
+  const unifiedEventBatch = await captureAndDownloadBatch(
+    unifiedLeader.page,
+    fixture.members.cell,
+    memberB.pngPath,
+    'unified-event',
+    unifiedLeader.qrApiResponses,
+  );
+  assert.ok(unifiedLeader.leaderScopeHeaders.includes(`member_group:${fixture.leaderScopes.groupId}`),
+    'Selected group scope must be sent with API requests');
+  await openWorkspace(registration.page, 'event', fixture.event.id, eventSessionId);
+  await scanAndApproveBatch(registration.page, unifiedEventBatch, registration.qrApiResponses, 'Unified Leader Event');
+  await assertConfirmedCount(registration.page, 3);
   await registration.context.close();
+
+  await selectLeaderScope(unifiedLeader.page, 'all');
+  await openWorkspace(unifiedLeader.page, 'event', fixture.event.id, eventSessionId);
+  await assertCombinedLeaderViewIsReadOnly(unifiedLeader.page);
+  await assertConfirmedCount(unifiedLeader.page, 3);
+  assert.ok(unifiedLeader.leaderScopeHeaders.includes('all'), 'Combined read-only scope must be sent with API requests');
+  await selectLeaderScope(unifiedLeader.page, 'all');
+  await openWorkspace(unifiedLeader.page, 'service', fixture.service.id, serviceSessionId);
+  await assertCombinedLeaderViewIsReadOnly(unifiedLeader.page);
+  await assertConfirmedCount(unifiedLeader.page, 3);
+  await unifiedLeader.context.close();
 
   await memberA.page.reload({ waitUntil: 'domcontentloaded' });
   await memberA.page.getByRole('button', { name: 'Attendance', exact: true }).click();

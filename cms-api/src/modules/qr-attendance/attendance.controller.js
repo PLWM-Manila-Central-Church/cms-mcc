@@ -16,6 +16,7 @@ const batches = require("./batches.service");
 const summaries = require("./summary.service");
 const { getQrAttendanceAvailability } = require("./featureSettings");
 const { writeQrAudit } = require("./audit");
+const { invalidateSessionFinalization } = require("./reconciliation.service");
 const { createEventAttendance, createServiceAttendance } = require("./attendanceWriter");
 const {
   assertParentAllowsCapture,
@@ -103,6 +104,12 @@ exports.openSession = async (req, res, next) => {
 
 exports.closeSession = async (req, res, next) => {
   try { respond(res, await sessions.closeSession(req.params.sessionId, req.user)); } catch (error) { next(error); }
+};
+
+exports.finalizeSession = async (req, res, next) => {
+  try {
+    respond(res, await sessions.finalizeSession(req.params.sessionId, req.body, req.user));
+  } catch (error) { next(error); }
 };
 
 exports.cancelSession = async (req, res, next) => {
@@ -353,6 +360,11 @@ exports.correctAttendance = async (req, res, next) => {
         newValues: { ...correction, reason: reason.trim(), session_id: session.id, member_id: Number(memberId) },
         ipAddress: req.ip,
         transaction,
+      });
+      await invalidateSessionFinalization(session.id, {
+        transaction,
+        actorId: req.user.userId,
+        reason: action === "void" ? "attendance_voided" : "attendance_reinstated",
       });
       return record;
     });

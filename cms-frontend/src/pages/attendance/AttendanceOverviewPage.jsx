@@ -1,13 +1,18 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import MonoIcon from '../../components/common/MonoIcon';
+const PastorAttendanceReport = lazy(() => import('./PastorAttendanceReport'));
 
-export default function AttendanceOverviewPage() {
+function SharedAttendanceOverviewPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const isCellGroupLeader = user?.roleName === 'Cell Group Leader';
+  const { user, activeLeaderScopeKey } = useAuth();
+  const isScopedLeader = ['Ministry Leader', 'Cell Group Leader', 'Group Leader', 'Leader']
+    .includes(user?.roleName);
+  const isCellGroupLeader = user?.roleName === 'Cell Group Leader'
+    || (user?.roleName === 'Leader' && String(activeLeaderScopeKey || '').startsWith('cell_group:'));
+  const isPastor = user?.roleName === 'Pastor';
 
   // ── Recent check-ins across all services ─────────────────
   const [services, setServices]         = useState([]);
@@ -103,19 +108,21 @@ export default function AttendanceOverviewPage() {
 
   return (
     <div style={s.page}>
-      <div style={s.pageHeader}>
+      {!isPastor && <div style={s.pageHeader}>
         <div>
           <h1 style={s.title}>Attendance</h1>
           <p style={s.subtitle}>
             {isCellGroupLeader
-              ? 'Open a service to mark attendance for your cell group'
-              : 'Overview of recent services and member attendance history'}
+              ? 'Open a service to view attendance for your selected cell group'
+              : isScopedLeader
+                ? 'Open a service to view attendance for your selected team'
+                : 'Overview of recent services and member attendance history'}
           </p>
         </div>
-      </div>
+      </div>}
 
       {/* ── Member Attendance History Search ─────────────── */}
-      {!isCellGroupLeader && <div style={s.section}>
+      {!isCellGroupLeader && !isPastor && <div style={s.section}>
         <h2 style={s.sectionTitle}><MonoIcon name="search" size={18} /> Member Attendance History</h2>
         <p style={s.sectionSub}>Search a member to see which services they attended</p>
 
@@ -201,7 +208,11 @@ export default function AttendanceOverviewPage() {
       {/* ── Recent Services ───────────────────────────────── */}
       <div style={s.section}>
         <h2 style={s.sectionTitle}><MonoIcon name="clipboard" size={18} /> Recent Services</h2>
-        <p style={s.sectionSub}>Click a service to view its full attendance sheet</p>
+        <p style={s.sectionSub}>
+          {isScopedLeader
+            ? 'Attendance records open within your current team scope.'
+            : 'Click a service to view its full attendance sheet'}
+        </p>
 
         {loadingServices ? (
           <div style={s.centerCell}>Loading...</div>
@@ -211,8 +222,8 @@ export default function AttendanceOverviewPage() {
           <div style={s.serviceGrid}>
             {services.map(svc => {
               const meta       = STATUS_META[svc.status] || STATUS_META.draft;
-              const attended   = svc.ServiceAttendanceSummary?.total_attended ?? 0;
-              const preReg     = svc.pre_registered_count ?? 0;
+              const attended   = isScopedLeader ? 0 : svc.ServiceAttendanceSummary?.total_attended ?? 0;
+              const preReg     = isScopedLeader ? 0 : svc.pre_registered_count ?? 0;
               const display    = attended > 0 ? attended : preReg;
               const isPreReg   = attended === 0 && preReg > 0;
               const pct        = svc.capacity ? Math.round((display / svc.capacity) * 100) : 0;
@@ -235,16 +246,23 @@ export default function AttendanceOverviewPage() {
                     <MonoIcon name="calendar" size={13} /> {formatDate(svc.service_date)} · <MonoIcon name="clock" size={13} /> {formatTime(svc.service_time)}
                   </div>
 
-                  {/* Attendance bar */}
-                  <div style={s.barWrap}>
-                    <div style={{ ...s.bar, width: `${Math.min(pct, 100)}%`,
-                      background: pct >= 90 ? '#dc2626' : pct >= 70 ? '#d97706' : '#16a34a' }} />
-                  </div>
-                  <div style={s.serviceCardStats}>
-                    <span style={{ fontWeight: '700', color: isPreReg ? '#d97706' : '#0f172a' }}>{display}</span>
-                    <span style={{ color: '#94a3b8' }}> / {svc.capacity} &nbsp;({pct}%)</span>
-                    {isPreReg && <span style={{ fontSize: 11, color: '#d97706', fontWeight: 600, marginLeft: 6 }}>pre-reg</span>}
-                  </div>
+                  {isScopedLeader ? (
+                    <div style={{ ...s.serviceCardStats, color: '#64748b' }}>
+                      Open to view your team’s attendance
+                    </div>
+                  ) : (
+                    <>
+                      <div style={s.barWrap}>
+                        <div style={{ ...s.bar, width: `${Math.min(pct, 100)}%`,
+                          background: pct >= 90 ? '#dc2626' : pct >= 70 ? '#d97706' : '#16a34a' }} />
+                      </div>
+                      <div style={s.serviceCardStats}>
+                        <span style={{ fontWeight: '700', color: isPreReg ? '#d97706' : '#0f172a' }}>{display}</span>
+                        <span style={{ color: '#94a3b8' }}> / {svc.capacity} &nbsp;({pct}%)</span>
+                        {isPreReg && <span style={{ fontSize: 11, color: '#d97706', fontWeight: 600, marginLeft: 6 }}>pre-reg</span>}
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -296,3 +314,15 @@ const s = {
   bar:                { height: '100%', borderRadius: '99px', transition: 'width 0.4s ease' },
   serviceCardStats:   { fontSize: '13px' },
 };
+
+export default function AttendanceOverviewPage() {
+  const { user } = useAuth();
+  return user?.roleName === 'Pastor'
+    ? <>
+      <Suspense fallback={<div style={{ padding: 24 }} role="status">Loading Pastor attendance report…</div>}>
+        <PastorAttendanceReport />
+      </Suspense>
+      <div style={{ marginTop: 28 }}><SharedAttendanceOverviewPage /></div>
+    </>
+    : <SharedAttendanceOverviewPage />;
+}

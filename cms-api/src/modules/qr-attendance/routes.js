@@ -49,6 +49,12 @@ router.post(
   ctrl.closeSession,
 );
 router.post(
+  "/sessions/:sessionId/finalize",
+  authorize("qr_attendance", "finalize"),
+  validate(validators.finalizeSessionSchema),
+  ctrl.finalizeSession,
+);
+router.post(
   "/sessions/:sessionId/cancel",
   authorize("qr_attendance", "configure_session"),
   validate(validators.cancelSessionSchema),
@@ -77,7 +83,7 @@ router.post(
 router.get(
   "/sessions/:sessionId/batches",
   authorize("qr_attendance", "read"),
-  validateQuery(validators.listQuerySchema),
+  validateQuery(validators.batchListQuerySchema),
   ctrl.listBatches,
 );
 router.post("/batches/resolve", authorize("qr_attendance", "review_batch"), validate(validators.resolveBatchQrSchema), ctrl.resolveBatchQr);

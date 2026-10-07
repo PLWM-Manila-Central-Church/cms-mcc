@@ -1,5 +1,7 @@
 "use strict";
 
+const { Op } = require("sequelize");
+
 const {
   Attendance,
   ServiceAttendanceSummary,
@@ -12,7 +14,8 @@ const {
 } = require("../models");
 const logger   = require("../helpers/logger");
 const AppError = require("../helpers/AppError");
-const { syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
+const { getAttendanceModel, syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
+const { getMemberScopeWhere } = require("../helpers/scopedLeader.helper");
 
 // ── Helpers ──────────────────────────────────────────────────
 const syncSummary = async (serviceId) => {
@@ -24,7 +27,7 @@ const syncSummary = async (serviceId) => {
 };
 
 // ── Service Attendance Summary ───────────────────────────────
-exports.getSummaryByService = async (serviceId) => {
+exports.getSummaryByService = async (serviceId, user = {}) => {
   const service = await Service.findByPk(serviceId);
   if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
@@ -32,7 +35,26 @@ exports.getSummaryByService = async (serviceId) => {
     where: { service_id: serviceId },
   });
   if (!summary) throw AppError.notFound("RECORD_NOT_FOUND", "Attendance summary not found");
-  return summary;
+
+  const memberScopeWhere = await getMemberScopeWhere(user);
+  if (!memberScopeWhere) return summary;
+
+  const AttendanceModel = await getAttendanceModel();
+  const totalAttended = await AttendanceModel.count({
+    where: {
+      service_id: serviceId,
+      check_in_method: { [Op.ne]: "pre-reg" },
+      ...(AttendanceModel !== Attendance && { voided_at: null }),
+    },
+    include: [{ model: Member, attributes: [], where: memberScopeWhere, required: true }],
+  });
+
+  return {
+    ...summary.toJSON(),
+    total_expected: Number(service.capacity || 0),
+    total_attended: totalAttended,
+    total_absent: Math.max(0, Number(service.capacity || 0) - totalAttended),
+  };
 };
 
 exports.upsertSummary = async (serviceId, data) => {
@@ -52,9 +74,11 @@ exports.upsertSummary = async (serviceId, data) => {
 };
 
 // ── Service Responses ────────────────────────────────────────
-exports.getResponsesByService = async (serviceId) => {
+exports.getResponsesByService = async (serviceId, user = {}) => {
   const service = await Service.findByPk(serviceId);
   if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+
+  const memberScopeWhere = await getMemberScopeWhere(user);
 
   return await ServiceResponse.findAll({
     where: { service_id: serviceId },
@@ -62,7 +86,8 @@ exports.getResponsesByService = async (serviceId) => {
       {
         model: Member,
         attributes: ["id", "first_name", "last_name"],
-        required: false,
+        required: Boolean(memberScopeWhere),
+        ...(memberScopeWhere && { where: memberScopeWhere }),
       },
     ],
     order: [["created_at", "ASC"]],

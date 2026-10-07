@@ -1,7 +1,7 @@
 "use strict";
 
 const jwt = require("jsonwebtoken");
-const { User, Role, Member, MinistryRole, CellGroup, MinistryGroup } = require("../models");
+const { User, Role, Member, MinistryRole, CellGroup, MinistryGroup, UserLeaderAssignment } = require("../models");
 
 module.exports = async (req, res, next) => {
   // Read token from cookie first, then fall back to Authorization header
@@ -15,8 +15,10 @@ module.exports = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
 
-    const user = await User.findByPk(decoded.userId, {
-      attributes: ["id", "email", "role_id", "member_id", "is_active", "force_password_change", "leads_cell_group_id", "leads_group_id", "leads_ministry_id"],
+    let user;
+    try {
+      user = await User.findByPk(decoded.userId, {
+      attributes: ["id", "email", "role_id", "member_id", "is_active", "is_deleted", "force_password_change", "leads_cell_group_id", "leads_group_id", "leads_ministry_id", "leadership_revision"],
       include: [
         { model: Role, as: "role", attributes: ["id", "role_name", "is_system"] },
         { model: Member, as: "member", attributes: ["id", "cell_group_id", "group_id"], required: false },
@@ -24,10 +26,28 @@ module.exports = async (req, res, next) => {
         { model: CellGroup, as: "leadsCellGroup", attributes: ["id", "name"], required: false },
         { model: MinistryGroup, as: "leadsGroup", attributes: ["id", "name"], required: false },
       ],
-    });
+      });
+    } catch (databaseError) {
+      return next(databaseError);
+    }
 
     if (!user) return res.status(401).json({ message: "User not found" });
+    if (Number(user.is_deleted) === 1) return res.status(401).json({ message: "Account deleted" });
     if (!user.is_active) return res.status(401).json({ message: "Account deactivated" });
+
+    let leaderAssignments = [];
+    if (user.role.role_name === "Leader") {
+      try {
+        const rows = await UserLeaderAssignment.findAll({
+          where: { user_id: user.id },
+          attributes: ["id", "scope_type", "scope_id", "legacy_column", "assigned_by", "is_active", "version", "revoked_by", "revoked_at", "revocation_reason"],
+          order: [["scope_type", "ASC"], ["scope_id", "ASC"], ["id", "ASC"]],
+        });
+        leaderAssignments = rows.map((row) => row.get({ plain: true }));
+      } catch (databaseError) {
+        return next(databaseError);
+      }
+    }
 
     // ── Force password change: block all endpoints except change-password and logout ──
     if (user.force_password_change === 1) {
@@ -63,6 +83,12 @@ module.exports = async (req, res, next) => {
       leadsCellGroupName: user.leadsCellGroup?.name || null,
       leadsGroupName:     user.leadsGroup?.name     || null,
       leadsMinistryName:  user.leadsMinistry?.name  || null,
+      leadershipRevision: Number(user.leadership_revision || 0),
+      leaderAssignments,
+      leaderAssignmentsLoaded: user.role.role_name === "Leader",
+      leaderScopeKey: typeof req.headers["x-mcc-leader-scope"] === "string"
+        ? req.headers["x-mcc-leader-scope"].slice(0, 80)
+        : null,
     };
 
     // ── Set Sentry user context for error correlation ──────────

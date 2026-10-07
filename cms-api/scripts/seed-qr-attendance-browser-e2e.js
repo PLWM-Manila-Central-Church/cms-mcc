@@ -23,13 +23,13 @@ const run = async () => {
   assert.ok(process.env.QR_E2E_FIXTURE_PATH, "QR_E2E_FIXTURE_PATH is required");
 
   await sequelize.authenticate();
-  const roleNames = ["System Admin", "Registration Team", "Cell Group Leader", "Group Leader", "Member"];
+  const roleNames = ["System Admin", "Registration Team", "Cell Group Leader", "Group Leader", "Leader", "Member"];
   const roleRows = await Role.findAll({ where: { role_name: roleNames } });
   const roles = new Map(roleRows.map((role) => [role.role_name, role]));
   for (const roleName of roleNames) assert.ok(roles.has(roleName), `Missing seeded role: ${roleName}`);
 
   const suffix = `${Date.now()}-${process.pid}`;
-  const password = "QR-E2E-Only-2026!";
+  const password = process.env.QR_E2E_PASSWORD || "QR-E2E-Only-2026!";
   const passwordHash = await bcrypt.hash(password, 10);
   const cell = await CellGroup.create({ name: `QR Browser E2E Cell ${suffix}`, area: "CI" });
   const outsideCell = await CellGroup.create({ name: `QR Browser E2E Other Cell ${suffix}`, area: "CI" });
@@ -38,6 +38,7 @@ const run = async () => {
   const memberA = await Member.create({ first_name: "CI Member", last_name: `Direct-${suffix}`, status: "Active", cell_group_id: cell.id, group_id: group.id });
   const memberB = await Member.create({ first_name: "CI Member", last_name: `Cell-${suffix}`, status: "Active", cell_group_id: cell.id, group_id: group.id });
   const memberC = await Member.create({ first_name: "CI Member", last_name: `Group-${suffix}`, status: "Active", cell_group_id: outsideCell.id, group_id: group.id });
+  const memberD = await Member.create({ first_name: "CI Member", last_name: `Unified-${suffix}`, status: "Active", cell_group_id: cell.id, group_id: group.id });
 
   const makeUser = async (roleName, username, memberId = null, scope = {}) => {
     const email = `qr-browser-${username}-${suffix}@example.com`;
@@ -61,6 +62,8 @@ const run = async () => {
   const memberAUser = await makeUser("Member", "member-a", memberA.id);
   const memberBUser = await makeUser("Member", "member-b", memberB.id);
   const memberCUser = await makeUser("Member", "member-c", memberC.id);
+  const memberDUser = await makeUser("Member", "member-d", memberD.id);
+  const unifiedLeader = { email: `qr-browser-unified-leader-${suffix}@example.com`, password };
 
   await SystemSetting.update(
     { value: "false", updated_by: adminUser.id },
@@ -89,10 +92,13 @@ const run = async () => {
     registration,
     cellLeader,
     groupLeader,
+    unifiedLeader,
+    leaderScopes: { cellGroupId: cell.id, groupId: group.id },
     members: {
       direct: { ...memberAUser, firstName: memberA.first_name, lastName: memberA.last_name },
       cell: { ...memberBUser, firstName: memberB.first_name, lastName: memberB.last_name },
       group: { ...memberCUser, firstName: memberC.first_name, lastName: memberC.last_name },
+      unified: { ...memberDUser, firstName: memberD.first_name, lastName: memberD.last_name },
     },
     service: { id: service.id, title: service.title },
     event: { id: event.id, title: event.title },

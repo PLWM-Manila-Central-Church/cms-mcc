@@ -8,6 +8,7 @@ const PERMISSIONS = [
   { module: "qr_attendance", action: "review_batch", description: "Approve or reject leader attendance batches" },
   { module: "qr_attendance", action: "correct", description: "Void or reinstate a confirmed attendance record with a reason" },
   { module: "qr_attendance", action: "configure_session", description: "Configure QR attendance sessions" },
+  { module: "qr_attendance", action: "finalize", description: "Finalize reconciled attendance sessions" },
   { module: "member_qr", action: "manage", description: "Issue or reissue member QR codes within operational member access" },
 ];
 
@@ -20,6 +21,7 @@ const ROLE_GRANTS = {
     ["qr_attendance", "review_batch"],
     ["qr_attendance", "correct"],
     ["qr_attendance", "configure_session"],
+    ["qr_attendance", "finalize"],
     ["member_qr", "manage"],
   ],
   Pastor: [["qr_attendance", "read"]],
@@ -30,6 +32,7 @@ const ROLE_GRANTS = {
     ["qr_attendance", "review_batch"],
     ["qr_attendance", "correct"],
     ["qr_attendance", "configure_session"],
+    ["qr_attendance", "finalize"],
     ["member_qr", "manage"],
   ],
   "Cell Group Leader": [
@@ -38,6 +41,13 @@ const ROLE_GRANTS = {
     ["qr_attendance", "submit_batch"],
   ],
   "Group Leader": [
+    ["qr_attendance", "read"],
+    ["qr_attendance", "record_batch"],
+    ["qr_attendance", "submit_batch"],
+  ],
+  // Team access and member-management grants are resolved from the
+  // corresponding cell_group/member_group assignment profile.
+  Leader: [
     ["qr_attendance", "read"],
     ["qr_attendance", "record_batch"],
     ["qr_attendance", "submit_batch"],

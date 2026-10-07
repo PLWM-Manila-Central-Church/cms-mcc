@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
@@ -10,9 +10,10 @@ const EMPTY_FORM = { name: '', area: '' };
 
 export default function CellGroupsPage() {
   const navigate = useNavigate();
-  const { hasPermission, user } = useAuth();
+  const { hasPermission, user, activeLeaderScopeKey } = useAuth();
   const isMobile = useIsMobile();
-  const isCellGroupLeader = user?.roleName === 'Cell Group Leader';
+  const isCellGroupLeader = user?.roleName === 'Cell Group Leader'
+    || (user?.roleName === 'Leader' && String(activeLeaderScopeKey || '').startsWith('cell_group:'));
   const canCreate = hasPermission('cell_groups', 'create') && !isCellGroupLeader;
   const canUpdate = hasPermission('cell_groups', 'update') && !isCellGroupLeader;
   const canDelete = hasPermission('cell_groups', 'delete') && !isCellGroupLeader;
@@ -21,6 +22,8 @@ export default function CellGroupsPage() {
   const [members,   setMembers]   = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [memberLoading, setMemberLoading] = useState(false);
+  const [memberPage, setMemberPage] = useState(1);
+  const [memberTotal, setMemberTotal] = useState(0);
   const [search,    setSearch]    = useState('');
   const [memberSearch, setMemberSearch] = useState('');
   const [memberAction, setMemberAction] = useState('');
@@ -43,6 +46,7 @@ export default function CellGroupsPage() {
 
   // Toast
   const [toast,     setToast]     = useState(null);
+  const memberRequestId = useRef(0);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -59,25 +63,55 @@ export default function CellGroupsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeLeaderScopeKey]);
 
   useEffect(() => { load(); }, [load]);
 
-  const loadMembers = useCallback(async () => {
-    if (!isCellGroupLeader) return;
+  const loadMembers = useCallback(async ({ page = 1, append = false } = {}) => {
+    const requestId = ++memberRequestId.current;
+    if (!isCellGroupLeader) {
+      setMembers([]);
+      setMemberTotal(0);
+      setMemberPage(1);
+      setMemberLoading(false);
+      return;
+    }
     setMemberLoading(true);
     setMemberAction('');
-    try {
-      const res = await axiosInstance.get('/members?limit=500&page=1');
-      setMembers(res.data.data.members || []);
-    } catch (err) {
-      setMemberAction(err.response?.data?.message || 'Failed to load cell group members.');
-    } finally {
-      setMemberLoading(false);
+    if (!append) {
+      setMembers([]);
+      setMemberTotal(0);
+      setMemberPage(1);
     }
-  }, [isCellGroupLeader]);
+    try {
+      const params = { page, limit: 100 };
+      const normalizedSearch = memberSearch.trim();
+      if (normalizedSearch) params.search = normalizedSearch;
+      const res = await axiosInstance.get('/members', { params });
+      if (requestId !== memberRequestId.current) return;
 
-  useEffect(() => { loadMembers(); }, [loadMembers]);
+      const data = res.data.data || {};
+      const nextMembers = data.members || [];
+      setMembers((current) => {
+        if (!append) return nextMembers;
+        const existingIds = new Set(current.map((member) => member.id));
+        return [...current, ...nextMembers.filter((member) => !existingIds.has(member.id))];
+      });
+      setMemberPage(page);
+      setMemberTotal(Number(data.total) || 0);
+    } catch (err) {
+      if (requestId === memberRequestId.current) {
+        setMemberAction(err.response?.data?.message || 'Failed to load cell group members.');
+      }
+    } finally {
+      if (requestId === memberRequestId.current) setMemberLoading(false);
+    }
+  }, [activeLeaderScopeKey, isCellGroupLeader, memberSearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => loadMembers(), memberSearch.trim() ? 250 : 0);
+    return () => clearTimeout(timer);
+  }, [loadMembers]);
 
   const handleUnassignMember = async (member) => {
     const name = `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'this member';
@@ -198,12 +232,13 @@ export default function CellGroupsPage() {
     g.name?.toLowerCase().includes(search.toLowerCase()) ||
     g.area?.toLowerCase().includes(search.toLowerCase())
   );
-  const filteredMembers = members.filter(m =>
-    `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase().includes(memberSearch.toLowerCase()) ||
-    (m.email || '').toLowerCase().includes(memberSearch.toLowerCase())
-  );
+  const filteredMembers = members;
 
-  const cgTitle = cellGroupPageTitle(user?.leadsCellGroupName || groups[0]?.name);
+  const activeCellGroupId = String(activeLeaderScopeKey || '').startsWith('cell_group:')
+    ? Number(String(activeLeaderScopeKey).slice('cell_group:'.length))
+    : null;
+  const activeCellGroup = groups.find((group) => Number(group.id) === activeCellGroupId);
+  const cgTitle = cellGroupPageTitle(activeCellGroup?.name || user?.leadsCellGroupName || groups[0]?.name);
 
   if (isCellGroupLeader) {
     return (
@@ -214,7 +249,7 @@ export default function CellGroupsPage() {
             <p style={S.pageSubtitle}>Manage your assigned cell group roster</p>
           </div>
           <div style={S.statCard}>
-            <span style={S.statNum}>{members.length}</span>
+            <span style={S.statNum}>{memberTotal}</span>
             <span style={S.statLabel}>Members</span>
           </div>
         </div>
@@ -277,7 +312,7 @@ export default function CellGroupsPage() {
               style={{ ...S.search, paddingLeft: 14 }}
             />
           </div>
-          <span style={S.resultCount}>{filteredMembers.length} of {members.length} members</span>
+          <span style={S.resultCount}>Showing {filteredMembers.length} of {memberTotal} members</span>
         </div>
 
         <div style={S.tableWrap}>
@@ -293,7 +328,7 @@ export default function CellGroupsPage() {
                 </tr>
               </thead>
               <tbody>
-                {memberLoading ? (
+                {memberLoading && members.length === 0 ? (
                   <tr><td colSpan={5} style={S.centerCell}>Loading members...</td></tr>
                 ) : filteredMembers.length === 0 ? (
                   <tr><td colSpan={5} style={S.centerCell}>No members found.</td></tr>
@@ -314,6 +349,21 @@ export default function CellGroupsPage() {
             </table>
           </div>
         </div>
+
+        {memberLoading && members.length > 0 && (
+          <div style={{ ...S.centerCell, marginTop: 12 }}>Loading more members…</div>
+        )}
+        {!memberLoading && members.length < memberTotal && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+            <button
+              type="button"
+              onClick={() => loadMembers({ page: memberPage + 1, append: true })}
+              style={S.editBtn}
+            >
+              Load more members
+            </button>
+          </div>
+        )}
 
         {toast && (
           <div style={{ ...S.toast, background: toast.type === 'error' ? '#dc2626' : '#005599' }}>

@@ -9,6 +9,12 @@ export const NAV_ITEMS = [
     permissions: null
   },
   {
+    label: 'My Teams',
+    path: '/leader/teams',
+    icon: 'cellgroups',
+    permissions: null
+  },
+  {
     label: 'Members',
     path: '/members',
     icon: 'members',

@@ -12,6 +12,7 @@ const ROLE_COLORS = {
   'Finance Team':      { bg: '#f0fdf4', color: '#16a34a' },
   'Cell Group Leader': { bg: '#fffbeb', color: '#d97706' },
   'Group Leader':      { bg: '#ecfeff', color: '#0891b2' },
+  'Leader':             { bg: '#e0f2fe', color: '#075985' },
   'Ministry Leader':  { bg: '#fdf4ff', color: '#c026d3' },
   'Member':            { bg: '#f8fafc', color: '#64748b' },
 };
@@ -23,6 +24,24 @@ const getLeaderAssignmentLabel = (u) => {
     return `${u.leadsCellGroup.name}${u.leadsCellGroup.area ? ` (${u.leadsCellGroup.area})` : ''}`;
   }
   if (u.role?.role_name === 'Group Leader') return u.leadsGroup?.name || null;
+  if (u.role?.role_name === 'Leader') {
+    const active = (u.leaderAssignments || []).filter((assignment) =>
+      Number(assignment.is_active ?? 1) === 1 && !assignment.revoked_at);
+    const labels = active.map((assignment) => {
+      const type = assignment.scope_type;
+      const id = Number(assignment.scope_id);
+      if (type === 'cell_group') {
+        return Number(u.leadsCellGroup?.id) === id
+          ? `${u.leadsCellGroup.name}${u.leadsCellGroup.area ? ` (${u.leadsCellGroup.area})` : ''}`
+          : `Cell group #${id}`;
+      }
+      if (type === 'member_group') {
+        return Number(u.leadsGroup?.id) === id ? u.leadsGroup.name : `Group #${id}`;
+      }
+      return null;
+    }).filter(Boolean);
+    return labels.length ? labels.join(' · ') : 'No active team assignment';
+  }
   return null;
 };
 
@@ -69,6 +88,7 @@ export default function UsersPage() {
     setFiltered(users.filter(u =>
       u.email.toLowerCase().includes(q) ||
       u.role?.role_name?.toLowerCase().includes(q) ||
+      String(getLeaderAssignmentLabel(u) || '').toLowerCase().includes(q) ||
       (u.member && `${u.member.first_name} ${u.member.last_name}`.toLowerCase().includes(q))
     ));
   }, [users, search]);

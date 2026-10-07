@@ -14,6 +14,7 @@ const User = sequelize.define(
     role_id:           { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
     member_id:         { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     invited_member_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    leadership_revision: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0 },
     leads_cell_group_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: null },
     leads_group_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: null },
     leads_ministry_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: null },

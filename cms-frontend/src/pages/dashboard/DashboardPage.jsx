@@ -13,6 +13,7 @@ const R = {
   CG: 'Cell Group Leader',
   GROUP: 'Group Leader',
   MINISTRY: 'Ministry Leader',
+  LEADER: 'Leader',
   MEMBER: 'Member',
 };
 
@@ -24,6 +25,7 @@ const ACCENTS = {
   [R.CG]: '#b76b16',
   [R.GROUP]: '#12748a',
   [R.MINISTRY]: '#0f6aa3',
+  [R.LEADER]: '#075985',
   [R.MEMBER]: '#64748b',
 };
 
@@ -33,6 +35,7 @@ const ROLE_SUBTITLE = {
   [R.REG]: 'Member onboarding, services, and event operations.',
   [R.FINANCE]: 'Giving records, monthly totals, and finance archives.',
   [R.MINISTRY]: 'Your ministry roster, event invites, and requests.',
+  [R.LEADER]: 'Your assigned cell groups and groups, with scoped attendance tools.',
   [R.CG]: 'Your cell group members and attendance tasks.',
   [R.GROUP]: 'Your group members, services, events, and requests.',
   [R.MEMBER]: 'Your personal church activity.',
@@ -461,6 +464,7 @@ function getDashboardConfig({ role, stats, hasPermission }) {
           metric('Pending archives', fmtNumber(summary.pendingArchives), 'Approval queue', '/archives'),
         ],
         primary: [
+          row('Attendance report', 'Review church-wide Service and Event attendance, pending reviews, team breakdowns and reconciliation.', '/attendance'),
           row('Members', 'View member profiles and church groups.', '/members'),
           row('Events', 'Read event details and registrations.', '/events'),
           row('Archives', 'Review and approve documents.', '/archives'),
@@ -564,6 +568,27 @@ function getDashboardConfig({ role, stats, hasPermission }) {
           row('Attendance', 'View scoped attendance.', '/attendance'),
           row('Inventory', 'Request needed items.', canInventory ? '/inventory' : null, fmtNumber(summary.pendingRequests)),
           row('Archives', 'Read public and restricted documents.', canArchives ? '/archives' : null),
+        ],
+        secondaryTitle: 'Upcoming Events',
+        secondaryRows: commonEvents,
+      };
+    case R.LEADER:
+      return {
+        metrics: [
+          metric('Assigned teams', fmtNumber(summary.assignedTeamCount), summary.scopeName || 'Active assignments', '/leader/teams'),
+          metric('Members in scope', fmtNumber(stats.members.total), `${fmtNumber(stats.members.active)} active`, '/leader/teams'),
+          metric('Upcoming events', fmtNumber(stats.events.upcoming.length), 'Read-only event view', canEvents ? '/events' : null),
+          metric('Attendance', 'Open', 'Select one team to record attendance', hasPermission('qr_attendance', 'read') ? '/attendance/qr' : null),
+        ],
+        primary: [
+          row('My teams', 'Choose a cell group or group and open its workspace.', '/leader/teams'),
+          row('Attendance', 'Combined results are read-only; choose one team to record or submit.', hasPermission('qr_attendance', 'read') ? '/attendance/qr' : null),
+          row('QR attendance', 'Scan member QR codes or submit team attendance for review.', '/attendance/qr'),
+        ],
+        watch: [
+          row('Events', 'Read events and team-scoped registration details.', canEvents ? '/events' : null),
+          row('Inventory', 'View inventory available to your team role.', canInventory ? '/inventory' : null),
+          row('Archives', 'Read available church documents.', canArchives ? '/archives' : null),
         ],
         secondaryTitle: 'Upcoming Events',
         secondaryRows: commonEvents,

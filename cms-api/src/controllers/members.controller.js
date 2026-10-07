@@ -1,7 +1,9 @@
 "use strict";
 
+const { Op } = require("sequelize");
 const membersService = require("../services/members.service");
 const AppError       = require("../helpers/AppError");
+const { getScope, getUnifiedAssignments } = require("../helpers/scopedLeader.helper");
 
 exports.getAllMembers = async (req, res, next) => {
   try {
@@ -111,6 +113,20 @@ exports.linkMemberAccount = async (req, res, next) => {
 // Scoped leaders only see the group they lead; everyone else sees all.
 
 const assignedOnlyWhere = (req, roleName, fieldName) => {
+  if (req.user?.roleName === "Leader") {
+    const requiredType = roleName === "Cell Group Leader" ? "cell_group" : "group";
+    const selectedScope = getScope(req.user);
+    if (
+      selectedScope.type !== "all"
+      && selectedScope.type !== requiredType
+    ) {
+      return { id: null };
+    }
+    const ids = getUnifiedAssignments(req.user)
+      .filter((assignment) => assignment.type === requiredType)
+      .map((assignment) => assignment.id);
+    return ids.length ? { id: { [Op.in]: ids } } : { id: null };
+  }
   if (req.user?.roleName !== roleName) return {};
   const id = req.user?.[fieldName];
   return id ? { id } : { id: null };

@@ -1,6 +1,7 @@
 "use strict";
 
 const { Op } = require("sequelize");
+const sequelize = require("../config/db");
 const { Member, CellGroup, MinistryGroup, EmergencyContact, User, Role,
   MinistryMembership } = require("../models");
 const cache    = require("../helpers/cache.helper");
@@ -13,6 +14,7 @@ const {
   filterMemberUpdateForScopedLeader,
   getScope,
   isScopedLeader,
+  requireLeaderScope,
 } = require("../helpers/scopedLeader.helper");
 
 const memberIncludes = [
@@ -79,6 +81,7 @@ const youngAdultBirthdateRange = () => {
 };
 
 const ensureScopeForAssignment = (user = {}) => {
+  if (user.roleName === "Leader") return requireLeaderScope(user);
   const scope = getScope(user);
   return scope;
 };
@@ -99,9 +102,9 @@ const buildSearchWhere = (search = "") => {
   return where;
 };
 
-const getGroupForScope = async (scope) => {
+const getGroupForScope = async (scope, { transaction } = {}) => {
   if (scope.type !== "group") return null;
-  const group = await MinistryGroup.findByPk(scope.id, { attributes: ["id", "name"] });
+  const group = await MinistryGroup.findByPk(scope.id, { attributes: ["id", "name"], ...(transaction && { transaction }) });
   if (!group) throw AppError.notFound("RECORD_NOT_FOUND", "Assigned group not found");
   return group;
 };
@@ -420,46 +423,55 @@ exports.searchAssignableForScope = async ({ search = "", limit = 20 } = {}, user
 
 exports.assignMemberToScope = async (memberId, updatedBy, user = {}) => {
   const scope = ensureScopeForAssignment(user);
+  const result = await sequelize.transaction(async (transaction) => {
+    // Serialize competing assignments on the member row so two leaders
+    // cannot both claim a currently unassigned member.
+    const member = await Member.findOne({
+      where: { id: memberId, is_deleted: 0 },
+      attributes: ["id", "birthdate", "cell_group_id", "group_id"],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
-  const member = await Member.findOne({
-    where: { id: memberId, is_deleted: 0 },
-    include: memberIncludes,
+    if (scope.type === "ministry") {
+      const anyMembership = await MinistryMembership.findOne({
+        where: { member_id: memberId },
+        attributes: ["id", "ministry_role_id"],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (anyMembership) throw AppError.conflict("DUPLICATE", "Member is already assigned to a ministry");
+
+      const row = await MinistryMembership.create({
+        ministry_role_id: scope.id,
+        member_id: memberId,
+        added_by: updatedBy,
+      }, { transaction });
+      return { row, auditAction: "ASSIGN_MEMBER_MINISTRY", targetTable: "ministry_memberships" };
+    }
+
+    if (scope.type === "cell_group") {
+      if (member.cell_group_id) throw AppError.conflict("DUPLICATE", "Member already belongs to a cell group");
+      await member.update({ cell_group_id: scope.id }, { transaction });
+      return { auditAction: "ASSIGN_MEMBER_CELL_GROUP", targetTable: "members" };
+    }
+
+    if (scope.type === "group") {
+      if (member.group_id) throw AppError.conflict("DUPLICATE", "Member already belongs to a group");
+      const group = await getGroupForScope(scope, { transaction });
+      assertGroupEligibility(member, group);
+      await member.update({ group_id: scope.id }, { transaction });
+      return { auditAction: "ASSIGN_MEMBER_GROUP", targetTable: "members" };
+    }
+
+    throw AppError.badRequest("VALIDATION", "Unsupported leader scope");
   });
-  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
-  if (scope.type === "ministry") {
-    const anyMembership = await MinistryMembership.findOne({
-      where: { member_id: memberId },
-      attributes: ["id", "ministry_role_id"],
-    });
-    if (anyMembership) throw AppError.conflict("DUPLICATE", "Member is already assigned to a ministry");
-
-    const row = await MinistryMembership.create({
-      ministry_role_id: scope.id,
-      member_id: memberId,
-      added_by: updatedBy,
-    });
-    auditLog.log({ userId: updatedBy, action: "ASSIGN_MEMBER_MINISTRY", targetTable: "ministry_memberships", targetId: memberId });
-    return row;
-  }
-
-  if (scope.type === "cell_group") {
-    if (member.cell_group_id) throw AppError.conflict("DUPLICATE", "Member already belongs to a cell group");
-    await member.update({ cell_group_id: scope.id });
-    auditLog.log({ userId: updatedBy, action: "ASSIGN_MEMBER_CELL_GROUP", targetTable: "members", targetId: memberId });
-    return await exports.getMemberById(memberId, user);
-  }
-
-  if (scope.type === "group") {
-    if (member.group_id) throw AppError.conflict("DUPLICATE", "Member already belongs to a group");
-    const group = await getGroupForScope(scope);
-    assertGroupEligibility(member, group);
-    await member.update({ group_id: scope.id });
-    auditLog.log({ userId: updatedBy, action: "ASSIGN_MEMBER_GROUP", targetTable: "members", targetId: memberId });
-    return await exports.getMemberById(memberId, user);
-  }
-
-  throw AppError.badRequest("VALIDATION", "Unsupported leader scope");
+  auditLog.log({ userId: updatedBy, action: result.auditAction, targetTable: result.targetTable, targetId: memberId });
+  cache.keys("dashboard:*").forEach((key) => cache.del(key));
+  if (result.row) return result.row;
+  return exports.getMemberById(memberId, user);
 };
 
 // ── Bulk Create Members from CSV ─────────────────────────────

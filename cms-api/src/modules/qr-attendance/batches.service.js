@@ -27,6 +27,15 @@ const getBatchScopeWhere = (user = {}) => {
   if (!scope) return null;
   if (scope.type === "cell_group" && scope.id) return { cell_group_id: scope.id };
   if (scope.type === "group" && scope.id) return { group_id: scope.id };
+  if (scope.type === "all") {
+    const clauses = (scope.assignments || []).flatMap((assignment) => {
+      if (!assignment.id) return [];
+      if (assignment.type === "cell_group") return [{ cell_group_id: assignment.id }];
+      if (assignment.type === "group") return [{ group_id: assignment.id }];
+      return [];
+    });
+    return clauses.length ? { [Op.or]: clauses } : { id: -1 };
+  }
   return { id: -1 };
 };
 
@@ -358,14 +367,11 @@ const listSessionsBatches = async (sessionId, { state, limit = 50, page = 1 } = 
   const where = { session_id: sessionId };
   if (state) where.state = state;
   const scope = getScope(user);
-  if (scope?.type === "cell_group") {
-    where.cell_group_id = scope.id || -1;
-    where.submitted_by = user.userId;
-  } else if (scope?.type === "group") {
-    where.group_id = scope.id || -1;
+  if (scope?.type === "ministry") return { batches: [], total: 0 };
+  if (scope) {
+    Object.assign(where, getBatchScopeWhere(user) || { id: -1 });
     where.submitted_by = user.userId;
   }
-  else if (scope?.type === "ministry") return { batches: [], total: 0 };
   const pageNumber = Math.max(Number(page) || 1, 1);
   const pageSize = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const result = await QrAttendanceBatch.findAndCountAll({

@@ -5,6 +5,7 @@ export const ROLE_ALLOWED_PATHS = {
   'Ministry Leader': ['/dashboard', '/ministry', '/events', '/attendance', '/inventory', '/archives', '/my-settings'],
   'Cell Group Leader': ['/dashboard', '/cell-groups', '/attendance', '/events', '/inventory', '/archives', '/my-settings'],
   'Group Leader': ['/dashboard', '/members', '/attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
+  Leader: ['/dashboard', '/leader/teams', '/cell-groups', '/members', '/attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
 };
 
 export const ROLE_TAB_SETS = {
@@ -17,8 +18,8 @@ export const ROLE_TAB_SETS = {
   Pastor: [
     { label: 'Home', path: '/dashboard', icon: 'dashboard' },
     { label: 'Members', path: '/members', icon: 'members' },
+    { label: 'Attendance', path: '/attendance', icon: 'attendance' },
     { label: 'Events', path: '/events', icon: 'events' },
-    { label: 'Archives', path: '/archives', icon: 'archives' },
   ],
   'Registration Team': [
     { label: 'Home', path: '/dashboard', icon: 'dashboard' },
@@ -50,6 +51,12 @@ export const ROLE_TAB_SETS = {
     { label: 'Events', path: '/events', icon: 'events' },
     { label: 'Attendance', path: '/attendance', icon: 'attendance' },
   ],
+  Leader: [
+    { label: 'Home', path: '/dashboard', icon: 'dashboard' },
+    { label: 'My Teams', path: '/leader/teams', icon: 'cellgroups' },
+    { label: 'Attendance', path: '/attendance', icon: 'attendance', permissions: { module: 'attendance', action: 'read' } },
+    { label: 'Events', path: '/events', icon: 'events', permissions: { module: 'events', action: 'read' } },
+  ],
 };
 
 export const DEFAULT_TABS = [
@@ -59,18 +66,50 @@ export const DEFAULT_TABS = [
   { label: 'Finance', path: '/finance', icon: 'finance' },
 ];
 
-export const isAllowedForRolePath = (roleName, pathname) => {
+export const isAllowedForRolePath = (roleName, pathname, leaderAssignments = [], leaderScopeKey = null) => {
   const allowed = ROLE_ALLOWED_PATHS[roleName];
   if (!allowed) return true;
   if (pathname === '/force-change-password' || pathname === '/unauthorized') return true;
   if (roleName === 'Member') return pathname === '/portal' || pathname.startsWith('/portal/');
+  if (roleName === 'Leader') {
+    const hasCell = leaderAssignments.some((assignment) => (assignment.scopeType || assignment.scope_type) === 'cell_group');
+    const hasGroup = leaderAssignments.some((assignment) => ['group', 'member_group'].includes(assignment.scopeType || assignment.scope_type));
+    const selectedType = leaderScopeKey === 'all' ? 'all' : String(leaderScopeKey || '').split(':')[0];
+    if (pathname.startsWith('/cell-groups')) return selectedType === 'all' ? hasCell : selectedType === 'cell_group' && hasCell;
+    if (pathname.startsWith('/members')) return selectedType === 'all'
+      ? hasGroup
+      : ['member_group', 'group'].includes(selectedType) && hasGroup;
+    if (!hasCell && !hasGroup && pathname !== '/dashboard' && pathname !== '/my-settings' && pathname !== '/leader/teams') return false;
+    return allowed.some(path => pathname === path || pathname.startsWith(path + '/'));
+  }
   if (roleName === 'Ministry Leader' && pathname.startsWith('/services/')) return true;
   if (roleName === 'Cell Group Leader' && /^\/services\/[^/]+\/attendance$/.test(pathname)) return true;
   return allowed.some(path => pathname === path || pathname.startsWith(`${path}/`));
 };
 
 export const isVisibleNavItem = (item, user, hasPermission) => {
+  if (item.path === '/leader/teams') return user?.roleName === 'Leader';
+  if (user?.roleName === 'Leader' && item.path === '/cell-groups') {
+    const selectedType = user.activeLeaderScopeKey === 'all' ? 'all' : String(user.activeLeaderScopeKey || '').split(':')[0];
+    const assigned = selectedType === 'all'
+      ? user.leaderAssignments?.some((assignment) => (assignment.scopeType || assignment.scope_type) === 'cell_group') || false
+      : selectedType === 'cell_group';
+    return Boolean(assigned && (!item.permissions || hasPermission(item.permissions.module, item.permissions.action)));
+  }
+  if (user?.roleName === 'Leader' && item.path === '/members') {
+    const selectedType = user.activeLeaderScopeKey === 'all' ? 'all' : String(user.activeLeaderScopeKey || '').split(':')[0];
+    const assigned = selectedType === 'all'
+      ? user.leaderAssignments?.some((assignment) => ['group', 'member_group'].includes(assignment.scopeType || assignment.scope_type)) || false
+      : ['group', 'member_group'].includes(selectedType);
+    return Boolean(assigned && (!item.permissions || hasPermission(item.permissions.module, item.permissions.action)));
+  }
   const rolePaths = ROLE_ALLOWED_PATHS[user?.roleName];
-  if (rolePaths) return rolePaths.includes(item.path);
+  if (rolePaths) {
+    if (!rolePaths.includes(item.path)) return false;
+    if (user?.roleName === 'Leader' && item.permissions) {
+      return hasPermission(item.permissions.module, item.permissions.action);
+    }
+    return true;
+  }
   return !item.permissions || hasPermission(item.permissions.module, item.permissions.action);
 };

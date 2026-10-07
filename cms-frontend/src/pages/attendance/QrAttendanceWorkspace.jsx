@@ -26,7 +26,7 @@ const makeInitialTimes = () => {
 };
 
 export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targetId: targetIdProp }) {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, activeLeaderScopeKey } = useAuth();
   const [searchParams] = useSearchParams();
   const targetType = targetTypeProp || searchParams.get('target_type') || '';
   const targetId = targetIdProp || searchParams.get('target_id') || '';
@@ -36,7 +36,13 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
   const canSubmitBatch = hasPermission('qr_attendance', 'submit_batch');
   const canReviewBatch = hasPermission('qr_attendance', 'review_batch');
   const canCorrect = hasPermission('qr_attendance', 'correct');
-  const isGroupLeader = ['Cell Group Leader', 'Group Leader'].includes(user?.roleName);
+  const canFinalize = hasPermission('qr_attendance', 'finalize');
+  const isUnifiedLeader = user?.roleName === 'Leader';
+  const selectedLeaderScopeType = activeLeaderScopeKey === 'all'
+    ? 'all'
+    : String(activeLeaderScopeKey || '').split(':')[0];
+  const isGroupLeader = ['Cell Group Leader', 'Group Leader'].includes(user?.roleName)
+    || (isUnifiedLeader && ['cell_group', 'member_group', 'group'].includes(selectedLeaderScopeType));
 
   const [availability, setAvailability] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -66,6 +72,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
   const [lateReason, setLateReason] = useState('');
   const [forceLateApproval, setForceLateApproval] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [finalizationReason, setFinalizationReason] = useState('');
   const [form, setForm] = useState(() => ({
     ...makeInitialTimes(),
     title: 'Main Session',
@@ -293,6 +300,25 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
       await loadSessionData(session.id);
     } catch (requestError) { setError(apiError(requestError, 'Could not update this attendance session.')); }
     finally { setBusy(false); }
+  };
+
+  const finalizeAttendance = async (event) => {
+    event.preventDefault();
+    if (!session || !summary || !finalizationReason.trim()) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await axiosInstance.post(`/qr-attendance/sessions/${session.id}/finalize`, {
+        expected_activity_revision: Number(summary.activity_revision),
+        reason: finalizationReason.trim(),
+      });
+      setNotice(response.data.data.already_finalized
+        ? 'This attendance session is already finalized.'
+        : 'Attendance reconciliation finalized.');
+      setFinalizationReason('');
+      await loadSessionData(session.id);
+    } catch (requestError) {
+      setError(apiError(requestError, 'Could not finalize this attendance session.'));
+    } finally { setBusy(false); }
   };
 
   const addExpectedMember = async (member) => {
@@ -524,6 +550,11 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
         </div>
         {error && <div className="qr-inline-error" role="alert">{error}</div>}
         {notice && <div className="qr-success-box" role="status">{notice}</div>}
+        {isUnifiedLeader && selectedLeaderScopeType === 'all' && (
+          <div className="qr-muted-box" role="status">
+            Combined team attendance is read-only. Select one team in the header before starting a batch, scanning members, or submitting attendance.
+          </div>
+        )}
 
         {!targetType || !targetId ? (
           <div className="qr-muted-box">Open QR attendance from a specific Service or Event to manage its sessions.</div>
@@ -601,9 +632,54 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
             <div className="qr-summary-tile"><strong>{summary.confirmed_count}</strong><span>Confirmed</span></div>
             <div className="qr-summary-tile"><strong>{summary.expected_count ?? '—'}</strong><span>Expected</span></div>
             <div className="qr-summary-tile"><strong>{summary.registered_count}</strong><span>Registered / RSVP</span></div>
-            <div className="qr-summary-tile"><strong>{summary.pending_members_count}</strong><span>Pending leader entries</span></div>
-            <div className="qr-summary-tile"><strong>{summary.absent_count ?? '—'}</strong><span>Absent after close</span></div>
+            <div className="qr-summary-tile"><strong>{summary.pending_members_count}</strong><span>Awaiting approval</span></div>
+            <div className="qr-summary-tile"><strong>{summary.already_confirmed_pending_count || 0}</strong><span>Submitted duplicates</span></div>
+            <div className="qr-summary-tile">
+              <strong>{summary.finalization_status === 'finalized'
+                ? summary.final_absent_count ?? '—'
+                : summary.finalization_status === 'provisional'
+                  ? summary.provisional_missing_count ?? '—'
+                  : '—'}</strong>
+              <span>{summary.finalization_status === 'finalized'
+                ? 'Final absent'
+                : summary.finalization_status === 'provisional'
+                  ? 'Provisional missing'
+                  : 'Missing after close'}</span>
+            </div>
           </div>}
+
+          {canFinalize && session.status === 'closed' && summary?.expected_count !== null && summary?.finalization_status !== 'finalized' && (
+            <form className="qr-section" onSubmit={finalizeAttendance}>
+              <div className="qr-muted-box">
+                Finalize only after every saved draft and submitted batch is resolved. Any later attendance correction reopens reconciliation.
+              </div>
+              <label className="qr-form-field">Reconciliation reason
+                <textarea
+                  className="qr-search-input"
+                  value={finalizationReason}
+                  onChange={(event) => setFinalizationReason(event.target.value)}
+                  minLength={5}
+                  maxLength={500}
+                  required
+                  placeholder="Record why this attendance is ready to finalize"
+                />
+              </label>
+              <button
+                type="submit"
+                className="qr-primary-button"
+                disabled={busy || finalizationReason.trim().length < 5}
+              >
+                {busy ? 'Finalizing…' : 'Finalize attendance'}
+              </button>
+            </form>
+          )}
+
+          {summary?.finalization_status === 'finalized' && (
+            <div className="qr-success-box" role="status">
+              Reconciled {summary.finalized_at ? `on ${new Date(summary.finalized_at).toLocaleString()}` : 'and finalized'}.
+              {summary.final_absent_count != null ? ` Final absent: ${summary.final_absent_count}.` : ''}
+            </div>
+          )}
 
           {canConfigure && <div className="qr-action-row">
             {session.status === 'draft' && <button type="button" className="qr-primary-button" disabled={busy} onClick={() => updateSession('open')}>Open Check-in</button>}

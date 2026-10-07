@@ -6,6 +6,7 @@ const { EventAttendance, QrServiceAttendance } = require("./models");
 const { writeQrAudit } = require("./audit");
 const { syncServiceAttendanceSummary } = require("../../helpers/attendanceSummary.helper");
 const { sequelize } = require("./models");
+const { invalidateSessionFinalization } = require("./reconciliation.service");
 
 const createServiceAttendance = async ({
   session,
@@ -68,6 +69,11 @@ const createServiceAttendance = async ({
           batch_id: batchId,
         },
         transaction,
+      });
+      await invalidateSessionFinalization(session.id, {
+        transaction,
+        actorId: confirmedBy || recordedBy,
+        reason: "service_attendance_added",
       });
     }
     return { record, created: true, outcome: "confirmed" };
@@ -133,6 +139,11 @@ const createEventAttendance = async ({
         confirmed_by: confirmedBy,
       },
       transaction,
+    });
+    await invalidateSessionFinalization(session.id, {
+      transaction,
+      actorId: confirmedBy || recordedBy,
+      reason: "event_attendance_added",
     });
     return { record, created: true, outcome: "confirmed" };
   };

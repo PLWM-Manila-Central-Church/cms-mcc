@@ -18,10 +18,12 @@ const STATUS_STYLE = {
 
 export default function InventoryPage() {
   const { hasPermission, user } = useAuth();
-  const scopedRequestOnly = ['Ministry Leader', 'Cell Group Leader', 'Group Leader'].includes(user?.roleName);
+  const scopedRequestOnly = ['Ministry Leader', 'Cell Group Leader', 'Group Leader', 'Leader'].includes(user?.roleName);
   const canManage = hasPermission('inventory', 'create') && !scopedRequestOnly;
   const canDelete = hasPermission('inventory', 'delete') && !scopedRequestOnly;
-  const canRequest = hasPermission('inventory', 'create') || !canManage;
+  const canRequest = user?.roleName === 'Leader'
+    ? hasPermission('inventory', 'create')
+    : hasPermission('inventory', 'create') || !canManage;
 
   const [tab, setTab] = useState('items'); // items | requests
 

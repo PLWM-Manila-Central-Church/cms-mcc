@@ -8,6 +8,7 @@ const fixture = vi.hoisted(() => ({
   delete: vi.fn(),
   user: null,
   permissions: new Set(),
+  summary: null,
 }));
 
 vi.mock('../../api/axiosInstance', () => ({ default: { get: fixture.get, post: fixture.post, delete: fixture.delete } }));
@@ -45,7 +46,7 @@ function mockScenario() {
     if (url === '/qr-attendance/capabilities') return { data: { data: { enabled: true, schemaReady: true, reason: null } } };
     if (url === '/qr-attendance/sessions') return { data: { data: { sessions: currentSession ? [currentSession] : [] } } };
     if (url === `/qr-attendance/sessions/${currentSession?.id}`) return { data: { data: currentSession } };
-    if (url.endsWith('/summary')) return { data: { data: { confirmed_count: 0, expected_count: null, registered_count: 0, pending_members_count: 0, absent_count: null } } };
+    if (url.endsWith('/summary')) return { data: { data: fixture.summary || { confirmed_count: 0, expected_count: null, registered_count: 0, pending_members_count: 0, absent_count: null } } };
     if (url.endsWith('/attendance')) return { data: { data: { records: [], count: 0, page: 1, limit: 100 } } };
     if (url.endsWith('/batches')) return { data: { data: { batches: batchRows } } };
     if (url === '/qr-attendance/batches/8') return { data: { data: batchDetail } };
@@ -69,9 +70,10 @@ describe('QR attendance workspace role flows', () => {
       items: [],
     };
     fixture.user = { userId: 2, roleName: 'Registration Team' };
+    fixture.summary = null;
     fixture.permissions = new Set([
       'qr_attendance:read', 'qr_attendance:check_in', 'qr_attendance:review_batch',
-      'qr_attendance:correct', 'qr_attendance:configure_session', 'member_qr:manage',
+      'qr_attendance:correct', 'qr_attendance:configure_session', 'qr_attendance:finalize', 'member_qr:manage',
     ]);
     mockScenario();
   });
@@ -206,5 +208,77 @@ describe('QR attendance workspace role flows', () => {
       expected_revision: 2, content_digest: 'b'.repeat(64), late_approval: false,
     }));
     expect(await screen.findByText(/Approved: 1 new check-ins, 0 already confirmed/)).toBeInTheDocument();
+  });
+
+  it('lets Registration finalize a closed expected roster and renders the persisted final state', async () => {
+    currentSession = {
+      ...session,
+      status: 'closed',
+      expected_basis: 'explicit_roster',
+      expected_roster_frozen_at: '2026-10-07T02:00:00.000Z',
+    };
+    fixture.summary = {
+      confirmed_count: 1,
+      expected_count: 2,
+      checked_expected_count: 1,
+      registered_count: 2,
+      pending_members_count: 0,
+      already_confirmed_pending_count: 0,
+      provisional_missing_count: 1,
+      final_absent_count: null,
+      finalization_status: 'provisional',
+      activity_revision: 4,
+      absent_count: 1,
+    };
+    fixture.post.mockImplementation(async (url, payload) => {
+      if (url === '/qr-attendance/sessions/1/finalize') {
+        expect(payload).toEqual({ expected_activity_revision: 4, reason: 'Reviewed the expected roster' });
+        fixture.summary = {
+          ...fixture.summary,
+          provisional_missing_count: null,
+          final_absent_count: 1,
+          finalization_status: 'finalized',
+          finalized_at: '2026-10-07T03:00:00.000Z',
+          finalized_by: 2,
+        };
+        return { data: { data: { finalized: true, final_absent_count: 1 } } };
+      }
+      throw new Error(`Unexpected POST ${url}`);
+    });
+
+    renderWorkspace();
+    fireEvent.change(await screen.findByLabelText('Reconciliation reason'), { target: { value: 'Reviewed the expected roster' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Finalize attendance' }));
+
+    expect(await screen.findByText(/Final absent: 1\./)).toBeInTheDocument();
+    expect(screen.getByText('Final absent')).toBeInTheDocument();
+  });
+
+  it('keeps Pastor QR attendance read-only with no finalization control', async () => {
+    fixture.user = { userId: 2, roleName: 'Pastor' };
+    fixture.permissions = new Set(['qr_attendance:read']);
+    currentSession = {
+      ...session,
+      status: 'closed',
+      expected_basis: 'explicit_roster',
+      expected_roster_frozen_at: '2026-10-07T02:00:00.000Z',
+    };
+    fixture.summary = {
+      confirmed_count: 1,
+      expected_count: 2,
+      registered_count: 2,
+      pending_members_count: 0,
+      already_confirmed_pending_count: 0,
+      provisional_missing_count: 1,
+      final_absent_count: null,
+      finalization_status: 'provisional',
+      activity_revision: 4,
+      absent_count: 1,
+    };
+
+    renderWorkspace();
+    expect(await screen.findByText('Provisional missing')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Finalize attendance' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Close Check-in' })).not.toBeInTheDocument();
   });
 });

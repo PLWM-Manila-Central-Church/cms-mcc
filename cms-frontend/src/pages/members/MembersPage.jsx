@@ -136,11 +136,12 @@ const actionBtnSm = (bg, color) => ({ background: bg, color, border: 'none', bor
 /* ════════════════════════════════════════════════════════════════ */
 export default function MembersPage() {
   const navigate    = useNavigate();
-  const { hasPermission, user } = useAuth();
+  const { hasPermission, user, activeLeaderScopeKey } = useAuth();
   const isMobile    = useIsMobile();
   const isMember    = user?.roleName === 'Member';
   const isScopedLeader = isScopedLeaderRole(user?.roleName);
-  const isGroupLeader = user?.roleName === 'Group Leader';
+  const isGroupLeader = user?.roleName === 'Group Leader'
+    || (user?.roleName === 'Leader' && ['member_group:', 'group:'].some((prefix) => String(activeLeaderScopeKey || '').startsWith(prefix)));
   const canCreate   = hasPermission('members', 'create') && !isScopedLeader;
   const canEdit     = hasPermission('members', 'update') && !isScopedLeader;
   const canBulkDelete = hasPermission('members', 'delete') && !isScopedLeader;

@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
 import { useAuth } from '../../context/AuthContext';
+import { isScopedLeaderRole } from '../../utils/roleDisplay';
+import { fetchAllPages } from '../../api/fetchAllPages';
 
 export default function MemberFormPage() {
   const { id } = useParams();
@@ -10,7 +12,7 @@ export default function MemberFormPage() {
   const isEdit = Boolean(id);
   const isMobile = useIsMobile();
   const { user } = useAuth();
-  const isScopedLeader = ['Cell Group Leader', 'Group Leader', 'Ministry Leader'].includes(user?.roleName);
+  const isScopedLeader = isScopedLeaderRole(user?.roleName);
 
   const [form, setForm] = useState({
     first_name: '', last_name: '', email: '', phone: '',
@@ -31,15 +33,15 @@ export default function MemberFormPage() {
     if (isScopedLeader) return;
     const loadDropdowns = async () => {
       try {
-        const [cgRes, grRes, memRes, mrRes] = await Promise.all([
+        const [cgRes, grRes, memberRows, mrRes] = await Promise.all([
           axiosInstance.get('/members/dropdowns/cell-groups'),
           axiosInstance.get('/members/dropdowns/groups'),
-          axiosInstance.get('/members?limit=500&page=1'),
+          fetchAllPages('/members', 'members'),
           axiosInstance.get('/ministry/roles'),
         ]);
         setCellGroups(cgRes.data.data || []);
         setGroups(grRes.data.data || []);
-        setMembers(memRes.data.data.members || []);
+        setMembers(memberRows);
         setMinistryRoles(mrRes.data.data || []);
       } catch {}
     };

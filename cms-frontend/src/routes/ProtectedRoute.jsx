@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { isAllowedForRolePath } from '../utils/roleAccess';
 
 const ProtectedRoute = ({ children, module, action }) => {
-  const { user, loading, hasPermission } = useAuth();
+  const { user, loading, hasPermission, activeLeaderScopeKey } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -19,7 +19,7 @@ const ProtectedRoute = ({ children, module, action }) => {
     return <Navigate to="/force-change-password" replace />;
   }
 
-  if (!isAllowedForRolePath(user.roleName, location.pathname)) {
+  if (!isAllowedForRolePath(user.roleName, location.pathname, user.leaderAssignments, activeLeaderScopeKey)) {
     return <Navigate to={user.roleName === 'Member' ? '/portal' : '/dashboard'} replace />;
   }
 

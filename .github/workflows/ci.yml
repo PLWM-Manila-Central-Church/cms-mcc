@@ -112,7 +112,9 @@ jobs:
         run: npm ci
         working-directory: cms-frontend
       - name: Install Chromium for browser flow
-        run: npx playwright install --with-deps chromium
+        # Ubuntu hosted runners already provide the system libraries; this
+        # headless flow needs only Playwright's Chromium headless shell.
+        run: npx playwright install chromium --only-shell
         working-directory: cms-frontend
       - name: Start frontend for browser flow
         env:
