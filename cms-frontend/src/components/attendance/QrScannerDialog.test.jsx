@@ -11,10 +11,15 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@zxing/browser', () => ({
   BrowserQRCodeReader: class {
-    constructor() { mocks.readerCreated(); }
+    constructor(hints) { mocks.readerCreated(hints); }
     decodeFromImageElement(...args) { return mocks.decodeFromImageElement(...args); }
     decodeFromVideoDevice(...args) { return mocks.decodeFromVideoDevice(...args); }
   },
+}));
+
+vi.mock('@zxing/library', () => ({
+  BarcodeFormat: { QR_CODE: 'qr-code' },
+  DecodeHintType: { POSSIBLE_FORMATS: 'possible-formats', TRY_HARDER: 'try-harder' },
 }));
 
 import QrScannerDialog from './QrScannerDialog';
@@ -57,6 +62,23 @@ describe('QrScannerDialog', () => {
     expect(mocks.decodeFromImageElement).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('Scanner closed')).toBeInTheDocument();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:qr-test');
+  });
+
+  it('retries an image miss with ZXing try-harder QR hints', async () => {
+    const onDecode = vi.fn();
+    mocks.decodeFromImageElement
+      .mockRejectedValueOnce({ name: 'NotFoundException' })
+      .mockResolvedValueOnce({ getText: () => 'MCC:BATCH:1:123' });
+    render(<QrScannerDialog onDecode={onDecode} onClose={vi.fn()} />);
+
+    const file = new File(['test image bytes'], 'batch.png', { type: 'image/png' });
+    fireEvent.change(screen.getByLabelText(/upload qr image/i), { target: { files: [file] } });
+
+    await waitFor(() => expect(onDecode).toHaveBeenCalledWith('MCC:BATCH:1:123'));
+    expect(mocks.readerCreated).toHaveBeenCalledTimes(2);
+    const retryHints = mocks.readerCreated.mock.calls[1][0];
+    expect(retryHints.get('try-harder')).toBe(true);
+    expect(retryHints.get('possible-formats')).toEqual(['qr-code']);
   });
 
   it('disables image upload while camera startup is pending', async () => {

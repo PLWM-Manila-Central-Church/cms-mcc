@@ -10,6 +10,7 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
   const videoRef = useRef(null);
   const controlsRef = useRef(null);
   const readerRef = useRef(null);
+  const retryReaderRef = useRef(null);
   const mountedRef = useRef(true);
   const scanFinishedRef = useRef(false);
   const objectUrlRef = useRef(null);
@@ -33,12 +34,22 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
     if (mountedRef.current) setCameraActive(false);
   };
 
-  const loadReader = async () => {
-    if (!readerRef.current) {
+  const loadReader = async (tryHarder = false) => {
+    const targetRef = tryHarder ? retryReaderRef : readerRef;
+    if (!targetRef.current) {
       const { BrowserQRCodeReader } = await import('@zxing/browser');
-      readerRef.current = new BrowserQRCodeReader();
+      if (tryHarder) {
+        const { BarcodeFormat, DecodeHintType } = await import('@zxing/library');
+        const hints = new Map([
+          [DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]],
+          [DecodeHintType.TRY_HARDER, true],
+        ]);
+        targetRef.current = new BrowserQRCodeReader(hints);
+      } else {
+        targetRef.current = new BrowserQRCodeReader();
+      }
     }
-    return readerRef.current;
+    return targetRef.current;
   };
 
   const emitText = (text) => {
@@ -150,11 +161,27 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
         throw new Error('The image is too large to scan. Choose an image under 16 megapixels.');
       }
       const reader = await loadReader();
-      let timeoutId;
-      const result = await Promise.race([
-        reader.decodeFromImageElement(image),
-        new Promise((_, reject) => { timeoutId = window.setTimeout(() => reject(new Error('Image decoding took too long. Try a smaller image.')), 10000); }),
-      ]).finally(() => window.clearTimeout(timeoutId));
+      const decodeWithTimeout = async (activeReader) => {
+        let timeoutId;
+        try {
+          return await Promise.race([
+            activeReader.decodeFromImageElement(image),
+            new Promise((_, reject) => {
+              timeoutId = window.setTimeout(() => reject(new Error('Image decoding took too long. Try a smaller image.')), 10000);
+            }),
+          ]);
+        } finally {
+          window.clearTimeout(timeoutId);
+        }
+      };
+      let result;
+      try {
+        result = await decodeWithTimeout(reader);
+      } catch (firstDecodeError) {
+        if (firstDecodeError?.name !== 'NotFoundException' && firstDecodeError?.message) throw firstDecodeError;
+        const retryReader = await loadReader(true);
+        result = await decodeWithTimeout(retryReader);
+      }
       if (revision === decodeRevisionRef.current) emitText(result.getText());
     } catch (scanError) {
       if (mountedRef.current && revision === decodeRevisionRef.current) {
