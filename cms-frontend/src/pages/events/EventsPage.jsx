@@ -386,7 +386,7 @@ export default function EventsPage() {
             const status       = normalizeEventStatus(ev.status);
             const meta         = STATUS_META[status] || STATUS_META.Upcoming;
             const nextStatuses = (canUpdate && !isMember) ? (STATUS_FLOW[status] ?? []) : [];
-            const regCount     = ev.EventRegistrations?.length ?? 0;
+            const regCount     = Number(ev.registration_count ?? ev.EventRegistrations?.length ?? 0);
 
             return (
               <div key={ev.id} style={s.card}>

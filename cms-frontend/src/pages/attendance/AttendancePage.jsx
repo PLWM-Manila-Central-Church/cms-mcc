@@ -16,8 +16,10 @@ export default function AttendancePage() {
   const navigate          = useNavigate();
   const { hasPermission, user } = useAuth();
   const isCellGroupLeader = user?.roleName === 'Cell Group Leader';
+  const isQrBatchLeader = ['Cell Group Leader', 'Group Leader'].includes(user?.roleName);
   const canRecord         = hasPermission('attendance', 'create');
   const canUndo           = hasPermission('attendance', 'delete');
+  const canUseQrAttendance = hasPermission('qr_attendance', 'read');
 
   const [service, setService]     = useState(null);
   const [records, setRecords]     = useState([]);
@@ -26,6 +28,7 @@ export default function AttendancePage() {
   const [error, setError]         = useState('');
   const [scopeMembers, setScopeMembers] = useState([]);
   const [scopeMembersLoading, setScopeMembersLoading] = useState(false);
+  const [qrSessionConfigured, setQrSessionConfigured] = useState(false);
 
   // Check-in search
   const [search, setSearch]           = useState('');
@@ -54,6 +57,22 @@ export default function AttendancePage() {
   }, [serviceId]);
 
   useEffect(() => { fetchAttendance(); }, [fetchAttendance]);
+
+  useEffect(() => {
+    let active = true;
+    if (!canUseQrAttendance || !serviceId) return () => { active = false; };
+    axiosInstance.get('/qr-attendance/capabilities')
+      .then(async (capabilityResponse) => {
+        if (!capabilityResponse.data.data.enabled) return;
+        const response = await axiosInstance.get('/qr-attendance/sessions', {
+          params: { target_type: 'service', target_id: Number(serviceId), limit: 100 },
+        });
+        const configured = (response.data.data.sessions || []).some((session) => session.leader_confirmation_mode === 'batch_review');
+        if (active) setQrSessionConfigured(configured);
+      })
+      .catch(() => { if (active) setQrSessionConfigured(false); });
+    return () => { active = false; };
+  }, [canUseQrAttendance, serviceId]);
 
   const fetchScopeMembers = useCallback(async () => {
     if (!isCellGroupLeader) return;
@@ -150,7 +169,8 @@ export default function AttendancePage() {
   const formatCheckedIn = (dt) => new Date(dt).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
 
   const isPublished = service?.status === 'published';
-  const alreadyCheckedIn = (memberId) => records.some(r => r.member_id === memberId);
+  const alreadyCheckedIn = (memberId) => records.some(r => Number(r.member_id) === Number(memberId) && !r.is_pre_reg && !r.is_voided);
+  const activeCheckIns = records.filter(r => !r.is_pre_reg && !r.is_voided).length;
 
   if (loading) return <div style={styles.loading}>Loading attendance...</div>;
   if (error)   return <div style={styles.errorBox}>{error}</div>;
@@ -176,7 +196,7 @@ export default function AttendancePage() {
       {/* Summary Cards */}
       <div style={styles.summaryRow}>
         <div style={styles.summaryCard}>
-          <div style={styles.summaryNum}>{records.filter(r => !r.is_pre_reg).length}</div>
+          <div style={styles.summaryNum}>{activeCheckIns}</div>
           <div style={styles.summaryLabel}>Checked In</div>
         </div>
         <div style={{ ...styles.summaryCard, borderTop: '3px solid #7c3aed' }}>
@@ -189,20 +209,36 @@ export default function AttendancePage() {
         </div>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryNum, color: '#16a34a' }}>
-            {service?.capacity ? Math.round(((records.filter(r => !r.is_pre_reg).length) / service.capacity) * 100) : 0}%
+            {service?.capacity ? Math.round((activeCheckIns / service.capacity) * 100) : 0}%
           </div>
           <div style={styles.summaryLabel}>Fill Rate</div>
         </div>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryNum, color: '#d97706' }}>
-            {Math.max(0, (service?.capacity ?? 0) - records.filter(r => !r.is_pre_reg).length)}
+            {Math.max(0, (service?.capacity ?? 0) - activeCheckIns)}
           </div>
           <div style={styles.summaryLabel}>Remaining</div>
         </div>
       </div>
 
+      {canUseQrAttendance && <div style={{ marginBottom: 20 }}>
+        <button
+          type="button"
+          onClick={() => navigate(`/attendance/qr?target_type=service&target_id=${serviceId}`)}
+          style={{ background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', border: 0, borderRadius: 9, padding: '11px 16px', fontWeight: 700, cursor: 'pointer' }}
+        >Open QR Attendance Workspace</button>
+      </div>}
+
       {/* Check-in Panel (only for published services) */}
-      {isCellGroupLeader && isPublished && (
+      {qrSessionConfigured && isPublished && (
+        <div style={styles.warningBox}>
+          {isQrBatchLeader
+            ? 'Leader check-ins for this session are submitted as a batch for Registration Team approval.'
+            : 'Check-ins for this session must be recorded in the QR Attendance Workspace.'} Use the QR Attendance Workspace above.
+        </div>
+      )}
+
+      {isCellGroupLeader && isPublished && !qrSessionConfigured && (
         <div style={styles.checkInCard}>
           <h3 style={styles.checkInTitle}>Cell Group Attendance</h3>
           <p style={styles.checkInHint}>Check each member who attended this service.</p>
@@ -214,7 +250,7 @@ export default function AttendancePage() {
           ) : (
             <div style={styles.checkboxGrid}>
               {scopeMembers.map(member => {
-                const checked = records.some(r => Number(r.member_id) === Number(member.id) && !r.is_pre_reg);
+                const checked = records.some(r => Number(r.member_id) === Number(member.id) && !r.is_pre_reg && !r.is_voided);
                 return (
                   <label key={member.id} style={{ ...styles.checkboxRow, opacity: checkingIn === member.id ? 0.7 : 1 }}>
                     <input
@@ -237,7 +273,7 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {canRecord && isPublished && !isCellGroupLeader && (
+      {canRecord && isPublished && !isCellGroupLeader && !qrSessionConfigured && (
         <div style={styles.checkInCard}>
           <h3 style={styles.checkInTitle}>Manual Check-In</h3>
           <p style={styles.checkInHint}>Search by name, email, phone, or barcode</p>
@@ -349,7 +385,7 @@ export default function AttendancePage() {
                 </td>
                 <td style={styles.td}>
                   <span style={{ ...styles.methodBadge, ...METHOD_STYLE[r.check_in_method] }}>
-                    {r.check_in_method === 'pre-reg' ? 'pre-reg' : r.check_in_method}
+                    {r.check_in_method === 'pre-reg' ? 'pre-reg' : r.entry_source !== 'legacy' && r.check_in_method === 'barcode' ? 'QR' : r.check_in_method}
                   </span>
                 </td>
                 <td style={{ ...styles.td, color: '#64748b' }}>
@@ -357,7 +393,7 @@ export default function AttendancePage() {
                 </td>
                 {canUndo && isPublished && (
                   <td style={styles.td}>
-                    {!r.is_pre_reg && (
+                    {!r.is_pre_reg && r.entry_source === 'legacy' && !r.is_voided && (
                       <button
                         onClick={() => handleUndoCheckIn(r.member_id, `${r.Member?.first_name} ${r.Member?.last_name}`)}
                         style={styles.undoBtn}
@@ -365,6 +401,10 @@ export default function AttendancePage() {
                         Undo
                       </button>
                     )}
+                    {!r.is_pre_reg && r.entry_source !== 'legacy' && (
+                      <button onClick={() => navigate(`/attendance/qr?target_type=service&target_id=${serviceId}`)} style={styles.undoBtn}>Manage QR record</button>
+                    )}
+                    {r.is_voided && <span style={{ fontSize: 12, color: '#b91c1c', fontWeight: 700 }}>Voided</span>}
                   </td>
                 )}
               </tr>

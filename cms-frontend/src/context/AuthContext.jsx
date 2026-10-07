@@ -87,7 +87,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const hasPermission = (module, action) => permSet.has(`${module}:${action}`);
+  const hasPermission = (module, action) =>
+    user?.roleName === 'System Admin' || permSet.has(`${module}:${action}`);
 
   return (
     <AuthContext.Provider

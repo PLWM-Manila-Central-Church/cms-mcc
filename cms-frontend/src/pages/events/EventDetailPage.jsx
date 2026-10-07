@@ -19,9 +19,11 @@ export default function EventDetailPage() {
   const canDelete    = hasPermission('events', 'delete');
   const canViewRegistrations = hasPermission('events', 'read') && user?.roleName !== 'Member';
   const isCellGroupLeader = user?.roleName === 'Cell Group Leader';
+  const isScopedRegistrationViewer = ['Cell Group Leader', 'Group Leader', 'Ministry Leader'].includes(user?.roleName);
   // Self-registration requires events:create; self-unregister requires events:delete
   const canSelfRegister   = hasPermission('events', 'create');
   const canSelfUnregister = hasPermission('events', 'delete');
+  const canUseQrAttendance = hasPermission('qr_attendance', 'read');
 
   const [event, setEvent]           = useState(null);
   const [loading, setLoading]       = useState(true);
@@ -32,7 +34,6 @@ export default function EventDetailPage() {
 
   const [removingId, setRemovingId] = useState(null);
   const [removeMsg, setRemoveMsg]   = useState('');
-  const [attendeeFilter, setAttendeeFilter] = useState('mine');
 
   // ── Ministry Invite Panel (Ministry Leaders only) ────────────
   const [invites,         setInvites]         = useState([]);
@@ -77,7 +78,7 @@ export default function EventDetailPage() {
   }, [id, user?.leadsMinistryId]);
 
   const isRegistered   = event?.EventRegistrations?.some(r => r.member_id === user?.memberId);
-  const regCount       = event?.EventRegistrations?.length ?? 0;
+  const regCount       = Number(event?.registration_count ?? event?.EventRegistrations?.length ?? 0);
   const isFull         = event?.capacity && regCount >= event.capacity;
   const deadlinePassed = event?.registration_deadline && new Date() > new Date(event.registration_deadline);
   const eventStatus = normalizeEventStatus(event?.status);
@@ -161,9 +162,7 @@ export default function EventDetailPage() {
   const status = normalizeEventStatus(event.status);
   const meta = STATUS_META[status] || STATUS_META.Upcoming;
   const registrations = event.EventRegistrations || [];
-  const visibleRegistrations = isCellGroupLeader && attendeeFilter === 'mine'
-    ? registrations.filter(r => Number(r.member?.cell_group_id) === Number(user?.leadsCellGroupId))
-    : registrations;
+  const visibleRegistrations = registrations;
 
   return (
     <div style={s.page}>
@@ -265,29 +264,23 @@ export default function EventDetailPage() {
         )}
       </div>
 
+      {canUseQrAttendance && <div style={{ ...s.regSection, marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <h2 style={{ ...s.regTitle, marginBottom: 4 }}>Event Attendance</h2>
+            <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>Manage a separate attendance session and review leader batch check-ins.</p>
+          </div>
+          <button type="button" style={s.registerBtn} onClick={() => navigate(`/attendance/qr?target_type=event&target_id=${id}`)}>Open QR Attendance</button>
+        </div>
+      </div>}
+
       {/* Registrations list */}
       {canViewRegistrations && (
         <div style={s.regSection}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
             <h2 style={{ ...s.regTitle, margin: 0 }}>
-              Registrations ({isCellGroupLeader ? `${visibleRegistrations.length} of ${regCount}` : regCount})
+              Registrations ({isScopedRegistrationViewer ? `${visibleRegistrations.length} shown of ${regCount}` : regCount})
             </h2>
-            {isCellGroupLeader && (
-              <div style={s.filterTabs}>
-                <button
-                  onClick={() => setAttendeeFilter('mine')}
-                  style={{ ...s.filterTab, ...(attendeeFilter === 'mine' ? s.filterTabActive : {}) }}
-                >
-                  My CG
-                </button>
-                <button
-                  onClick={() => setAttendeeFilter('all')}
-                  style={{ ...s.filterTab, ...(attendeeFilter === 'all' ? s.filterTabActive : {}) }}
-                >
-                  Everyone
-                </button>
-              </div>
-            )}
           </div>
 
           {removeMsg && <div style={s.successBox}>{removeMsg}</div>}

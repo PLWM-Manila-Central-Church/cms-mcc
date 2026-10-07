@@ -3,6 +3,7 @@
 const { Op, fn, col, literal } = require("sequelize");
 const sequelize = require("../config/db");
 const cache = require("../helpers/cache.helper");
+const { getAttendanceModel } = require("../helpers/attendanceSummary.helper");
 const {
   Member, FinancialRecord, FinancialCategory, Service, Event,
   InventoryItem, InventoryRequest, AuditLog, User,
@@ -46,6 +47,7 @@ const getRoleSummary = async ({
   leadsGroupId,
   leadsGroupName,
   thisMonth,
+  AttendanceModel = Attendance,
 }) => {
   switch (roleName) {
     case "System Admin": {
@@ -67,7 +69,13 @@ const getRoleSummary = async ({
       const [pendingInvites, newMembers, todayAttendance, activeCount, newCount, semiActiveCount, inactiveCount] = await Promise.all([
         InvitedMember.count({ where: { status: "pending" } }),
         Member.count({ where: { created_at: { [Op.gte]: thisMonth } } }),
-        Attendance.count({ where: { checked_in_at: { [Op.between]: [todayStart, todayEnd] } } }),
+        AttendanceModel.count({
+          where: {
+            checked_in_at: { [Op.between]: [todayStart, todayEnd] },
+            check_in_method: { [Op.ne]: "pre-reg" },
+            ...(AttendanceModel !== Attendance && { voided_at: null }),
+          },
+        }),
         Member.count({ where: { status: "Active" } }),
         Member.count({ where: { status: "New" } }),
         Member.count({ where: { status: "Semi-Active" } }),
@@ -132,6 +140,7 @@ exports.getStats = async ({
 
   const cached = cache.get(cacheKey);
   if (cached) return cached;
+  const AttendanceModel = roleName === "Registration Team" ? await getAttendanceModel() : Attendance;
 
   const financeWhere = { transaction_date: { [Op.gte]: thisMonth } };
   if (isMember && memberId) financeWhere.member_id = memberId;
@@ -183,6 +192,7 @@ exports.getStats = async ({
   const roleSummary = await getRoleSummary({
     userId, roleName, leadsMinistryId, leadsMinistryName,
     leadsCellGroupId, leadsCellGroupName, leadsGroupId, leadsGroupName, thisMonth,
+    AttendanceModel,
   });
 
   // ── Registration Team extras: attendance trend + cell group absences ──
@@ -202,17 +212,29 @@ exports.getStats = async ({
       attendanceTrend = await Promise.all(
         recentServices.map(async (svc) => {
           const [active, newC, semiActive] = await Promise.all([
-            Attendance.count({
+            AttendanceModel.count({
               include: [{ model: Member, where: { status: "Active" }, required: true, attributes: [] }],
-              where: { service_id: svc.id },
+              where: {
+                service_id: svc.id,
+                check_in_method: { [Op.ne]: "pre-reg" },
+                ...(AttendanceModel !== Attendance && { voided_at: null }),
+              },
             }),
-            Attendance.count({
+            AttendanceModel.count({
               include: [{ model: Member, where: { status: "New" }, required: true, attributes: [] }],
-              where: { service_id: svc.id },
+              where: {
+                service_id: svc.id,
+                check_in_method: { [Op.ne]: "pre-reg" },
+                ...(AttendanceModel !== Attendance && { voided_at: null }),
+              },
             }),
-            Attendance.count({
+            AttendanceModel.count({
               include: [{ model: Member, where: { status: "Semi-Active" }, required: true, attributes: [] }],
-              where: { service_id: svc.id },
+              where: {
+                service_id: svc.id,
+                check_in_method: { [Op.ne]: "pre-reg" },
+                ...(AttendanceModel !== Attendance && { voided_at: null }),
+              },
             }),
           ]);
           return {
@@ -243,14 +265,18 @@ exports.getStats = async ({
       cellGroupAbsences = await Promise.all(
         cellGroups.map(async (cg) => {
           const totalMembers = await Member.count({ where: { cell_group_id: cg.id } });
-          const attended = await Attendance.count({
+          const attended = await AttendanceModel.count({
             include: [{
               model: Member,
               where: { cell_group_id: cg.id },
               required: true,
               attributes: [],
             }],
-            where: { service_id: latestService.id },
+            where: {
+              service_id: latestService.id,
+              check_in_method: { [Op.ne]: "pre-reg" },
+              ...(AttendanceModel !== Attendance && { voided_at: null }),
+            },
           });
           return {
             cellGroupId: cg.id,

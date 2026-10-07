@@ -1,6 +1,32 @@
 "use strict";
 
-const rateLimit = require("express-rate-limit");
+const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
+
+const QR_API_PREFIXES = ["/api/qr-attendance", "/api/member-portal/attendance-qr"];
+
+const isQrApiPath = (req) => {
+  const path = String(req.originalUrl || req.url || "").split("?", 1)[0];
+  return QR_API_PREFIXES.some((prefix) => path === prefix || path.startsWith(prefix + "/"));
+};
+
+const qrNetworkLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: "QR_NETWORK_RATE_LIMIT", message: "Too many QR attendance requests from this network. Please retry shortly." } },
+});
+
+const qrUserLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  keyGenerator: (req) => (req.user?.userId
+    ? "qr-user:" + req.user.userId
+    : "qr-ip:" + ipKeyGenerator(req.ip)),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: "QR_USER_RATE_LIMIT", message: "Too many QR attendance requests. Please retry shortly." } },
+});
 
 // ── Auth endpoint limiters ────────────────────────────────────
 const loginLimiter = rateLimit({
@@ -32,6 +58,7 @@ const refreshLimiter = rateLimit({
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 150,
+  skip: isQrApiPath,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests. Please slow down." },
@@ -71,6 +98,8 @@ const mountRateLimiters = (app) => {
   app.use("/api/auth/refresh",         refreshLimiter);
 
   app.use("/api/", globalLimiter);
+  app.use("/api/qr-attendance", qrNetworkLimiter);
+  app.use("/api/member-portal/attendance-qr", qrNetworkLimiter);
 
   app.use("/api/members/bulk",         bulkImportLimiter);
   app.use("/api/members/scope/search", searchLimiter);
@@ -81,4 +110,8 @@ const mountRateLimiters = (app) => {
   app.use("/api/users", userDetailLimiter);
 };
 
-module.exports = { mountRateLimiters };
+module.exports = {
+  isQrApiPath,
+  mountRateLimiters,
+  qrUserLimiter,
+};

@@ -3,6 +3,7 @@
 const { Op } = require("sequelize");
 const sequelize = require("../config/db");
 const AppError    = require("../helpers/AppError");
+const { getMemberScopeWhere } = require("../helpers/scopedLeader.helper");
 const cache       = require("../helpers/cache.helper");
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
@@ -66,9 +67,40 @@ const remapEvent = (e) => {
 };
 
 // ── Get All Events (paginated + filtered) ───────────────────
+const getRegistrationCounts = async (eventIds) => {
+  if (!eventIds.length) return {};
+  const { EventRegistration } = require("../models");
+  const rows = await EventRegistration.findAll({
+    where: { event_id: { [Op.in]: eventIds } },
+    attributes: [
+      "event_id",
+      [sequelize.fn("COUNT", sequelize.col("EventRegistration.id")), "registration_count"],
+    ],
+    group: ["event_id"],
+    raw: true,
+  });
+  return Object.fromEntries(rows.map((row) => [Number(row.event_id), Number(row.registration_count)]));
+};
+
+const registrationListInclude = async (user = {}) => {
+  const memberScopeWhere = await getMemberScopeWhere(user);
+  const registrationsWhere = user.roleName === "Member"
+    ? { member_id: Number(user.memberId) || -1 }
+    : {};
+  return {
+    model: EventRegistration,
+    where: registrationsWhere,
+    attributes: ["id", "member_id", "registered_at", "registered_by"],
+    include: registrationIncludes.map((include) => memberScopeWhere
+      ? { ...include, where: memberScopeWhere, required: true }
+      : include),
+    required: false,
+  };
+};
+
 exports.getAllEvents = async ({
   page = 1, limit = 15, status, search, category_id, start_from, start_to,
-} = {}) => {
+} = {}, user = {}) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where  = { is_deleted: 0 };
 
@@ -85,7 +117,6 @@ exports.getAllEvents = async ({
     where,
     include: [
       ...eventIncludes,
-      { model: EventRegistration, attributes: ["id", "member_id"], required: false },
     ],
     order: [["start_date", "ASC"]],
     limit: parseInt(limit),
@@ -93,29 +124,38 @@ exports.getAllEvents = async ({
     distinct: true,
   });
 
+  const counts = await getRegistrationCounts(rows.map((row) => Number(row.id)));
   return {
-    events:      rows.map(remapEvent),
+    events:      rows.map((event) => ({
+      ...remapEvent(event),
+      registration_count: counts[Number(event.id)] || 0,
+      EventRegistrations: [],
+    })),
     total:       count,
     total_pages: Math.ceil(count / parseInt(limit)),
   };
 };
 
 // ── Get Event By ID ──────────────────────────────────────────
-exports.getEventById = async (id) => {
+exports.getEventById = async (id, user = {}) => {
+  const registrationsInclude = await registrationListInclude(user);
   const event = await Event.findOne({
     where: { id },
     include: [
       ...eventIncludes,
-      {
-        model: EventRegistration,
-        attributes: ["id", "member_id", "registered_at", "registered_by"],
-        include: registrationIncludes,
-        required: false,
-      },
+      registrationsInclude,
     ],
   });
   if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
-    return remapEvent(event);
+  const plain = remapEvent(event);
+  const memberScopeWhere = await getMemberScopeWhere(user);
+  if (memberScopeWhere) {
+    plain.EventRegistrations = (plain.EventRegistrations || [])
+      .filter((registration) => registration.member?.id);
+  }
+  const counts = await getRegistrationCounts([Number(id)]);
+  plain.registration_count = counts[Number(id)] || 0;
+  return plain;
   };
 
 // ── Create Event ─────────────────────────────────────────────
@@ -314,12 +354,15 @@ exports.deleteCategory = async (id) => {
 };
 
 // ── Get Event Registrations ──────────────────────────────────
-exports.getEventRegistrations = async (eventId) => {
+exports.getEventRegistrations = async (eventId, user = {}) => {
   const event = await Event.findOne({ where: { id: eventId } });
   if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  const memberScopeWhere = await getMemberScopeWhere(user);
   return await EventRegistration.findAll({
     where: { event_id: eventId },
-    include: registrationIncludes,
+    include: registrationIncludes.map((include) => memberScopeWhere
+      ? { ...include, where: memberScopeWhere, required: true }
+      : include),
     order: [["registered_at", "ASC"]],
   });
 };

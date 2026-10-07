@@ -136,6 +136,13 @@ app.use("/api/settings",      require("./routes/settings.routes"));
 app.use("/api/audit",         require("./routes/audit.routes"));
 app.use("/api/audit-logs",    require("./routes/audit.routes"));
 app.use("/api/member-portal", require("./routes/member-portal.routes"));
+try {
+  const { memberQrSelfRoutes } = require("./modules/qr-attendance/memberQr.routes");
+  app.use("/api/member-portal/attendance-qr", memberQrSelfRoutes);
+  app.use("/api/qr-attendance", require("./modules/qr-attendance/routes"));
+} catch (error) {
+  logger.warn(error, "QR attendance routes could not be loaded; legacy routes remain available.");
+}
 app.use("/api/reports",       require("./routes/reports.routes"));
 
 // ── Authenticated file serving for archive uploads ────────────

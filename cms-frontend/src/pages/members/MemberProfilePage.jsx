@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
+const OperationalMemberQrPanel = lazy(() => import('../../components/attendance/OperationalMemberQrPanel'));
 
 const STATUS_COLORS = {
   New:         { bg: '#eff6ff', color: '#3b82f6' },
@@ -96,6 +97,7 @@ export default function MemberProfilePage() {
           ← Back to Members
         </button>
         <div style={styles.topActions}>
+          {hasPermission('member_qr', 'manage') && <Suspense fallback={<span>Loading QR…</span>}><OperationalMemberQrPanel memberId={id} memberName={fullName} /></Suspense>}
           {hasPermission('members', 'update') && (
             <button onClick={() => navigate(`/members/${id}/edit`)} style={styles.editBtn}>
               Edit Member

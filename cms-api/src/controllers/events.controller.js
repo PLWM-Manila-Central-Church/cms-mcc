@@ -14,14 +14,14 @@ const forbidMinistryLeaderEventManage = (req, res) => {
 // ── Events ───────────────────────────────────────────────────
 exports.getAllEvents = async (req, res, next) => {
   try {
-    const result = await eventsService.getAllEvents(req.query);
+    const result = await eventsService.getAllEvents(req.query, req.user);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
 
 exports.getEventById = async (req, res, next) => {
   try {
-    const result = await eventsService.getEventById(req.params.id);
+    const result = await eventsService.getEventById(req.params.id, req.user);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -101,7 +101,7 @@ exports.deleteCategory = async (req, res, next) => {
 // ── Event Registrations ──────────────────────────────────────
 exports.getEventRegistrations = async (req, res, next) => {
   try {
-    const result = await eventsService.getEventRegistrations(req.params.id);
+    const result = await eventsService.getEventRegistrations(req.params.id, req.user);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };

@@ -35,6 +35,7 @@ const SETTING_META = {
   max_parking_slots:        { label: "Max Parking Slots",         group: "Services",        type: "number" },
   default_service_status:   { label: "Default Service Status",    group: "Services",        type: "select", options: ["draft","published"] },
   attendance_barcode_mode:  { label: "Attendance Barcode Mode",   group: "Services",        type: "select", options: ["0","1"] },
+  qr_attendance_enabled:   { label: "QR Attendance",              group: "Services",        type: "boolean" },
   // Events
   default_event_visibility: { label: "Default Event Visibility",  group: "Events",          type: "select", options: ["public","private","members_only"] },
   // Notifications

@@ -16,13 +16,20 @@ const axiosInstance = axios.create({
 let isRefreshing = false;
 let refreshSubscribers = [];
 
-function subscribeToRefresh(cb) {
-  refreshSubscribers.push(cb);
+function subscribeToRefresh(resolve, reject) {
+  refreshSubscribers.push({ resolve, reject });
 }
 
-function onRefreshed(newToken) {
-  refreshSubscribers.forEach(cb => cb(newToken));
+function onRefreshed() {
+  const subscribers = refreshSubscribers;
   refreshSubscribers = [];
+  subscribers.forEach(({ resolve }) => resolve());
+}
+
+function onRefreshFailed(error) {
+  const subscribers = refreshSubscribers;
+  refreshSubscribers = [];
+  subscribers.forEach(({ reject }) => reject(error));
 }
 
 const shouldAttemptRefresh = (url = '') => {
@@ -76,8 +83,8 @@ axiosInstance.interceptors.response.use(
     if (status === 401 && original && !original._retry && shouldAttemptRefresh(original.url)) {
       original._retry = true;
       if (isRefreshing) {
-        return new Promise((resolve) => {
-          subscribeToRefresh(() => resolve(axiosInstance(original)));
+        return new Promise((resolve, reject) => {
+          subscribeToRefresh(() => resolve(axiosInstance(original)), reject);
         });
       }
 
@@ -88,6 +95,7 @@ axiosInstance.interceptors.response.use(
         onRefreshed(null);
         return axiosInstance(original);
       } catch (refreshError) {
+        onRefreshFailed(refreshError);
         if (!original._skipAuthRedirect) window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {

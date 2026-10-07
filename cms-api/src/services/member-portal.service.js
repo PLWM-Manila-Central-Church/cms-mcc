@@ -7,6 +7,7 @@ const path     = require("path");
 const fs       = require("fs");
 const logger   = require("../helpers/logger");
 const AppError = require("../helpers/AppError");
+const { getAttendanceModel, syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
 const {
   Member, CellGroup, Group, EmergencyContact,
   Attendance, Service, ServiceResponse, ServiceAttendanceSummary,
@@ -21,11 +22,7 @@ const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
 // ── Sync ServiceAttendanceSummary after pre-reg changes ──────
 const syncAttendanceSummary = async (serviceId) => {
   try {
-    const total_attended = await Attendance.count({ where: { service_id: serviceId } });
-    const service = await Service.findByPk(serviceId, { attributes: ["capacity"] });
-    const total_expected = service?.capacity || 0;
-    const total_absent   = Math.max(0, total_expected - total_attended);
-    await ServiceAttendanceSummary.upsert({ service_id: serviceId, total_attended, total_expected, total_absent });
+    await syncServiceAttendanceSummary(serviceId);
   } catch (err) {
     logger.warn(err, "syncAttendanceSummary failed:")
   }
@@ -99,7 +96,8 @@ exports.updateMyProfile = async (memberId, data) => {
 
 // ── Get My Attendance ────────────────────────────────────────
 exports.getMyAttendance = async (memberId) => {
-  const records = await Attendance.findAll({
+  const AttendanceModel = await getAttendanceModel();
+  const records = await AttendanceModel.findAll({
     where: { member_id: memberId },
     include: [
       {
@@ -134,7 +132,11 @@ exports.getMyAttendance = async (memberId) => {
   });
 
   const attended = records.filter(
-    (r) => r.Service && new Date(r.Service.service_date) >= effectiveSince
+    (r) => r.Service
+      && r.Service.status === "completed"
+      && r.check_in_method !== "pre-reg"
+      && !r.voided_at
+      && new Date(r.Service.service_date) >= effectiveSince
   ).length;
 
   const attendanceRate = totalServices > 0
@@ -146,9 +148,14 @@ exports.getMyAttendance = async (memberId) => {
       id:              r.id,
       date:            r.Service?.service_date   || null,
       service_title:   r.Service?.title          || "—",
-      check_in_time:   r.checked_in_at           || null,
+      check_in_time:   r.check_in_method === "pre-reg" ? null : (r.checked_in_at || null),
       check_in_method: r.check_in_method         || null,
-      status:          r.check_in_method === "pre-reg" ? "Pre-registered" : "Present",
+      status:          r.voided_at
+        ? "Voided"
+        : r.check_in_method === "pre-reg"
+          ? "Pre-registered"
+          : "Present",
+      voided_at:       r.voided_at                || null,
     })),
     attendanceRate,
     totalServices,

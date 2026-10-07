@@ -1,10 +1,17 @@
 "use strict";
 
-const { Attendance, Member, Service, ServiceAttendanceSummary, User } = require("../models");
+const { Attendance, Member, Service, User } = require("../models");
 const cache    = require("../helpers/cache.helper");
 const auditLog = require("../helpers/auditLog.helper");
 const logger   = require("../helpers/logger");
 const AppError = require("../helpers/AppError");
+const { getAttendanceModel, syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
+let assertLeaderMayUseLegacyServiceWrite = async () => {};
+try {
+  ({ assertLeaderMayUseLegacyServiceWrite } = require("../modules/qr-attendance/legacyWriteGuard"));
+} catch {
+  // The optional QR module must not prevent legacy attendance or login startup.
+}
 const {
   ensureMemberInScope,
   getMemberScopeWhere,
@@ -23,27 +30,11 @@ const attendanceIncludes = [
   },
 ];
 
-// ── Helper: recount actual attendance rows and sync the summary table ────────
-// Called after every check-in and undo so the summary is always accurate.
-const syncSummary = async (serviceId) => {
-  const total_attended = await Attendance.count({ where: { service_id: serviceId } });
-
-  const service = await Service.findByPk(serviceId, { attributes: ["capacity"] });
-  const total_expected = service?.capacity || 0;
-  const total_absent   = Math.max(0, total_expected - total_attended);
-
-  await ServiceAttendanceSummary.upsert({
-    service_id:    serviceId,
-    total_attended,
-    total_expected,
-    total_absent,
-  });
-};
-
 // ── Get All Attendance Records ───────────────────────────────
 exports.getAllAttendance = async (user = {}) => {
+  const AttendanceModel = await getAttendanceModel();
   const memberScopeWhere = await getMemberScopeWhere(user);
-  return await Attendance.findAll({
+  return await AttendanceModel.findAll({
     include: attendanceIncludes.map((include) => (
       include.model === Member && memberScopeWhere
         ? { ...include, where: memberScopeWhere, required: true }
@@ -54,35 +45,63 @@ exports.getAllAttendance = async (user = {}) => {
 };
 
 // ── Get Attendance By ID ─────────────────────────────────────
-exports.getAttendanceById = async (id, user = {}) => {
-  const record = await Attendance.findByPk(id, { include: attendanceIncludes });
+exports.getAttendanceById = async (id, user = {}, options = {}) => {
+  const AttendanceModel = await getAttendanceModel();
+  const record = await AttendanceModel.findByPk(id, { include: attendanceIncludes, ...options });
   if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
   await ensureMemberInScope(record.member_id, user);
   return record;
 };
 
 // ── Create Attendance (Check-in) ─────────────────────────────
-exports.createAttendance = async (data, recordedBy, user = {}) => {
+exports.createAttendance = async (data, recordedBy, user = {}, options = {}) => {
   const { service_id, member_id, check_in_method, checked_in_at } = data;
+  const internal = options || {};
+  const {
+    transaction, idempotent, trustedCheckInAt,
+  } = internal;
+  await assertLeaderMayUseLegacyServiceWrite(service_id, user, {
+    approvedBatch: Boolean(internal.approvedBatch),
+    qrSessionWrite: Boolean(internal.qrSessionWrite),
+    action: "create",
+  });
   await ensureMemberInScope(member_id, user);
 
-  const service = await Service.findByPk(service_id);
+  const service = await Service.findByPk(service_id, transaction && { transaction });
   if (!service) throw AppError.notFound("SERVICE_NOT_FOUND", "Service not found");
 
   if (service.status === "cancelled")
     throw AppError.badRequest("SERVICE_CANCELLED", "Cannot check in to a cancelled service");
 
-  const member = await Member.findByPk(member_id);
+  const member = await Member.findByPk(member_id, transaction && { transaction });
   if (!member) throw AppError.notFound("MEMBER_NOT_FOUND", "Member not found");
 
-  const existing = await Attendance.findOne({ where: { service_id, member_id } });
+  const existing = await Attendance.findOne({
+    where: { service_id, member_id },
+    ...(transaction && { transaction, lock: transaction.LOCK.UPDATE }),
+  });
   if (existing) {
-    // Allow converting a pre-reg record to manual check-in (member physically arrived)
-    if (existing.check_in_method === "pre-reg") {
-      await existing.update({ check_in_method: "manual", recorded_by: recordedBy || null });
-      await syncSummary(service_id);
-      return await exports.getAttendanceById(existing.id, user);
+    if (existing.voided_at) {
+      throw AppError.conflict("ATTENDANCE_VOIDED", "This service check-in needs an authorized correction before it can be confirmed again");
     }
+    if (existing.check_in_method === "pre-reg") {
+      await existing.update({
+        check_in_method: check_in_method || "manual",
+        checked_in_at: trustedCheckInAt || checked_in_at || new Date(),
+        recorded_by: recordedBy || null,
+      }, transaction && { transaction });
+      if (transaction && !internal.skipSummary) {
+        await syncServiceAttendanceSummary(service_id, transaction);
+      } else if (!transaction) {
+        try { await syncServiceAttendanceSummary(service_id); } catch (err) {
+          logger.error(err, "Failed to sync summary:");
+        }
+      }
+      const updated = await exports.getAttendanceById(existing.id, user, transaction && { transaction });
+      if (idempotent) return { record: updated, created: true };
+      return updated;
+    }
+    if (idempotent) return { record: existing, created: false };
     throw AppError.conflict("ALREADY_CHECKED_IN", "Member already checked in to this service");
   }
 
@@ -90,29 +109,42 @@ exports.createAttendance = async (data, recordedBy, user = {}) => {
     service_id,
     member_id,
     check_in_method: check_in_method || "manual",
-    checked_in_at: checked_in_at || new Date(),
+    checked_in_at: trustedCheckInAt || checked_in_at || new Date(),
     recorded_by:   recordedBy || null,
-  });
+  }, transaction && { transaction });
 
-  // FIX BUG 2: sync summary so attendance bars reflect real data
-  try { await syncSummary(service_id); } catch (err) {
-    logger.error(err, "Failed to sync summary:")
+  if (transaction && !internal.skipSummary) {
+    await syncServiceAttendanceSummary(service_id, transaction);
+  } else if (!transaction) {
+    try { await syncServiceAttendanceSummary(service_id); } catch (err) {
+      logger.error(err, "Failed to sync summary:");
+    }
   }
 
-  const created = await exports.getAttendanceById(record.id, user);
-  auditLog.log({
+  const created = await exports.getAttendanceById(record.id, user, transaction && { transaction });
+  if (!internal.skipAudit) {
+    auditLog.log({
       userId: recordedBy, action: "CHECK_IN",
       targetTable: "attendances", targetId: created.id,
       newValues: { service_id, member_id },
-    });
+    }, transaction ? { transaction } : undefined);
+  }
+  if (idempotent) return { record: created, created: true };
+  if (!transaction) {
     cache.keys("dashboard:*").forEach(k => cache.del(k));
-    return created;
+  }
+  return created;
 };
 
 // ── Update Attendance ────────────────────────────────────────
 exports.updateAttendance = async (id, data, user = {}) => {
-  const record = await Attendance.findByPk(id);
+  const AttendanceModel = await getAttendanceModel();
+  const record = await AttendanceModel.findByPk(id);
   if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
+  if (AttendanceModel !== Attendance && (record.entry_source !== "legacy" || record.voided_at)) {
+    throw AppError.conflict("QR_ATTENDANCE_CORRECTION_REQUIRED", "QR attendance changes must use the audited correction action");
+  }
+  await assertLeaderMayUseLegacyServiceWrite(record.service_id, user, { action: "update" });
   await ensureMemberInScope(record.member_id, user);
 
   const { check_in_method, checked_in_at } = data;
@@ -126,18 +158,23 @@ exports.updateAttendance = async (id, data, user = {}) => {
 
 // ── Delete Attendance ────────────────────────────────────────
 exports.deleteAttendance = async (id, user = {}) => {
-  const record = await Attendance.findByPk(id);
+  const AttendanceModel = await getAttendanceModel();
+  const record = await AttendanceModel.findByPk(id);
   if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
+  if ((AttendanceModel !== Attendance && (record.entry_source !== "legacy" || record.voided_at))
+      || record.check_in_method === "pre-reg") {
+    throw AppError.conflict("QR_ATTENDANCE_CORRECTION_REQUIRED", "This attendance record cannot be deleted through the legacy Undo action");
+  }
+  await assertLeaderMayUseLegacyServiceWrite(record.service_id, user, { action: "delete" });
   await ensureMemberInScope(record.member_id, user);
 
   const serviceId = record.service_id;
   await record.destroy();
 
-  // FIX BUG 2: sync summary after undo so the count decrements correctly
-    try { await syncSummary(serviceId); } catch (err) {
-      logger.error(err, "Failed to sync summary on delete:")
-    }
+  try { await syncServiceAttendanceSummary(serviceId); } catch (err) {
+    logger.error(err, "Failed to sync summary on delete:");
+  }
 
-    cache.keys("dashboard:*").forEach(k => cache.del(k));
-    return { message: "Attendance record deleted successfully." };
+  cache.keys("dashboard:*").forEach(k => cache.del(k));
+  return { message: "Attendance record deleted successfully." };
 };

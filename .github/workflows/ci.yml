@@ -58,6 +58,9 @@ jobs:
         working-directory: cms-api
     env:
       NODE_ENV: test
+      JWT_SECRET: qr-attendance-ci-integration-secret-only
+      REFRESH_TOKEN_SECRET: qr-attendance-ci-refresh-secret-only
+      ALLOWED_ORIGIN: http://127.0.0.1:3000
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
       DB_NAME: plwm_mcc
@@ -77,6 +80,70 @@ jobs:
         run: npm ci
       - name: Apply all migrations to a fresh database
         run: npm run db:migrate
+      - name: Run QR attendance persistence integration tests
+        env:
+          QR_ATTENDANCE_INTEGRATION_DB: "true"
+        run: npm run test:qr-integration
+      - name: Seed synthetic browser flow fixtures
+        env:
+          QR_ATTENDANCE_BROWSER_E2E: "true"
+          QR_E2E_FIXTURE_PATH: ${{ runner.temp }}/qr-attendance-browser-e2e.json
+        run: npm run seed:qr-browser-e2e
+      - name: Start API for browser flow
+        env:
+          PORT: "5000"
+          MIGRATE_ON_START: "false"
+        run: |
+          npm start > "$RUNNER_TEMP/qr-attendance-api.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/qr-attendance-api.pid"
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:5000/health > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/qr-attendance-api.log"
+          exit 1
+      - name: Set up Node.js 24 for the frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: cms-frontend/package-lock.json
+      - name: Install frontend dependencies for browser flow
+        run: npm ci
+        working-directory: cms-frontend
+      - name: Install Chromium for browser flow
+        run: npx playwright install --with-deps chromium
+        working-directory: cms-frontend
+      - name: Start frontend for browser flow
+        env:
+          REACT_APP_API_URL: http://127.0.0.1:5000/api
+        run: |
+          npm start -- --host 127.0.0.1 > "$RUNNER_TEMP/qr-attendance-web.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/qr-attendance-web.pid"
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:3000/login > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/qr-attendance-web.log"
+          exit 1
+        working-directory: cms-frontend
+      - name: Run uploaded-QR browser flow against MySQL
+        env:
+          QR_E2E_FIXTURE_PATH: ${{ runner.temp }}/qr-attendance-browser-e2e.json
+          QR_E2E_BASE_URL: http://127.0.0.1:3000
+        run: npm run test:e2e:qr
+        working-directory: cms-frontend
+      - name: Stop QR browser flow services
+        if: always()
+        run: |
+          for service in api web; do
+            pid_file="$RUNNER_TEMP/qr-attendance-$service.pid"
+            if [ -f "$pid_file" ]; then
+              service_pid="$(cat "$pid_file")"
+              pkill -TERM -P "$service_pid" || true
+              kill "$service_pid" || true
+            fi
+          done
 
   frontend-build:
     name: Frontend production build
