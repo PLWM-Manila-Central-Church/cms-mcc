@@ -7,6 +7,7 @@ const { writeQrAudit } = require("./audit");
 const { syncServiceAttendanceSummary } = require("../../helpers/attendanceSummary.helper");
 const { sequelize } = require("./models");
 const { invalidateSessionFinalization } = require("./reconciliation.service");
+const notifications = require("../../services/notifications.service");
 
 const createServiceAttendance = async ({
   session,
@@ -79,10 +80,17 @@ const createServiceAttendance = async ({
     return { record, created: true, outcome: "confirmed" };
   };
 
-  if (outerTransaction) return write(outerTransaction);
+  if (outerTransaction) {
+    const result = await write(outerTransaction);
+    if (result.created && typeof outerTransaction.afterCommit === "function") {
+      outerTransaction.afterCommit(() => notifications.notifyAttendanceRecorded({ memberId: member.id, activityType: "service", activityId: session.service_id, activityTitle: session.title }));
+    }
+    return result;
+  }
   const result = await sequelize.transaction((transaction) => write(transaction));
   await syncServiceAttendanceSummary(session.service_id);
   cache.keys("dashboard:*").forEach((key) => cache.del(key));
+  if (result.created) await notifications.notifyAttendanceRecorded({ memberId: member.id, activityType: "service", activityId: session.service_id, activityTitle: session.title });
   return result;
 };
 
@@ -148,7 +156,16 @@ const createEventAttendance = async ({
     return { record, created: true, outcome: "confirmed" };
   };
 
-  return outerTransaction ? write(outerTransaction) : sequelize.transaction(write);
+  if (outerTransaction) {
+    const result = await write(outerTransaction);
+    if (result.created && typeof outerTransaction.afterCommit === "function") {
+      outerTransaction.afterCommit(() => notifications.notifyAttendanceRecorded({ memberId: member.id, activityType: "event", activityId: session.event_id, activityTitle: session.title }));
+    }
+    return result;
+  }
+  const result = await sequelize.transaction(write);
+  if (result.created) await notifications.notifyAttendanceRecorded({ memberId: member.id, activityType: "event", activityId: session.event_id, activityTitle: session.title });
+  return result;
 };
 
 module.exports = { createEventAttendance, createServiceAttendance };

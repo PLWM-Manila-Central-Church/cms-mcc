@@ -23,6 +23,11 @@ const InventoryItem = sequelize.define(
       type: DataTypes.ENUM("Good", "Fair", "Poor", "For Disposal"),
       allowNull: true,
     },
+    status: {
+      type: DataTypes.ENUM("Available", "Under Repair"),
+      allowNull: false,
+      defaultValue: "Available",
+    },
     low_stock_threshold: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     notes: { type: DataTypes.TEXT, allowNull: true },
   },

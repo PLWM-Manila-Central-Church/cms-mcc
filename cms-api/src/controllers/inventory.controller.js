@@ -23,7 +23,7 @@ const scopedRequestsResponse = async (req, res) => {
 };
 
 const ensureOwnInventoryRequest = (request, userId) => {
-  if (request.requested_by !== userId) {
+  if (Number(request.requested_by) !== Number(userId)) {
     throw AppError.forbidden("This inventory request is outside your account");
   }
 };
@@ -89,6 +89,15 @@ exports.getAllCategories = async (req, res, next) => {
   }
 };
 
+exports.getRequestContexts = async (req, res, next) => {
+  try {
+    const data = await inventoryService.getRequestContexts();
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getCategoryById = async (req, res, next) => {
   try {
     const data = await inventoryService.getCategoryById(req.params.id);
@@ -131,7 +140,7 @@ exports.deleteCategory = async (req, res, next) => {
 // ── Requests ─────────────────────────────────────────────────
 exports.getAllRequests = async (req, res, next) => {
   try {
-    if (isScopedLeader(req.user)) {
+    if (isScopedLeader(req.user) || !(await canReviewInventory(req))) {
       await scopedRequestsResponse(req, res);
       return;
     }
@@ -145,7 +154,7 @@ exports.getAllRequests = async (req, res, next) => {
 // Alias used by frontend: GET /inventory/requests/all
 exports.getAllRequestsPaginated = async (req, res, next) => {
   try {
-    if (isScopedLeader(req.user)) {
+    if (isScopedLeader(req.user) || !(await canReviewInventory(req))) {
       await scopedRequestsResponse(req, res);
       return;
     }
@@ -159,7 +168,7 @@ exports.getAllRequestsPaginated = async (req, res, next) => {
 exports.getMyRequests = async (req, res, next) => {
   try {
     const requests = await inventoryService.getMyRequests(req.user.userId);
-    res.json({ success: true, data: { requests } });
+    res.json({ success: true, data: { requests, total: requests.length, total_pages: 1 } });
   } catch (err) {
     next(err);
   }

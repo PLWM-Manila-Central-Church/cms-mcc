@@ -119,6 +119,7 @@ exports.getRecordById = async (id) => {
 exports.createRecord = async (data, recordedBy) => {
   const {
     member_id,
+    is_anonymous = false,
     category_id,
     receipt_number,
     amount,
@@ -127,8 +128,17 @@ exports.createRecord = async (data, recordedBy) => {
     notes,
   } = data;
 
-  const member = await Member.findByPk(member_id);
-  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+  const anonymous = is_anonymous === true;
+  if (anonymous && member_id) {
+    throw AppError.badRequest("ANONYMOUS_MEMBER_CONFLICT", "Anonymous records cannot be linked to a member");
+  }
+  if (!anonymous && !member_id) {
+    throw AppError.badRequest("MEMBER_REQUIRED", "Select a member or mark this record as anonymous");
+  }
+  if (member_id) {
+    const member = await Member.findByPk(member_id);
+    if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+  }
 
   const category = await FinancialCategory.findByPk(category_id);
   if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Financial category not found");
@@ -138,7 +148,8 @@ exports.createRecord = async (data, recordedBy) => {
 
   const record = await sequelize.transaction(async (t) => {
     const r = await FinancialRecord.create({
-      member_id,
+      member_id: anonymous ? null : member_id,
+      is_anonymous: anonymous ? 1 : 0,
       category_id,
       receipt_number: receipt_number || null,
       amount,
@@ -165,6 +176,7 @@ exports.updateRecord = async (id, data, updatedBy) => {
 
   const {
     member_id,
+    is_anonymous,
     category_id,
     receipt_number,
     amount,
@@ -173,8 +185,16 @@ exports.updateRecord = async (id, data, updatedBy) => {
     notes,
   } = data;
 
-  if (member_id) {
-    const member = await Member.findByPk(member_id);
+  const nextAnonymous = is_anonymous === undefined ? Boolean(record.is_anonymous) : is_anonymous === true;
+  const nextMemberId = nextAnonymous ? null : (member_id !== undefined ? member_id : record.member_id);
+  if (nextAnonymous && member_id) {
+    throw AppError.badRequest("ANONYMOUS_MEMBER_CONFLICT", "Anonymous records cannot be linked to a member");
+  }
+  if (!nextAnonymous && !nextMemberId) {
+    throw AppError.badRequest("MEMBER_REQUIRED", "Select a member or keep this record anonymous");
+  }
+  if (nextMemberId) {
+    const member = await Member.findByPk(nextMemberId);
     if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
   }
 
@@ -186,7 +206,10 @@ exports.updateRecord = async (id, data, updatedBy) => {
 
   await sequelize.transaction(async (t) => {
     await record.update({
-      ...(member_id           && { member_id }),
+      ...((member_id !== undefined || is_anonymous !== undefined) && {
+        member_id: nextMemberId,
+        is_anonymous: nextAnonymous ? 1 : 0,
+      }),
       ...(category_id         && { category_id }),
       ...(receipt_number !== undefined && { receipt_number }),
       ...(amount         !== undefined && { amount }),
@@ -646,6 +669,9 @@ exports.createExpense = async (data, userId) => {
 
   const category = await ExpenseCategory.findByPk(category_id);
   if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Expense category not found");
+  if (Number(category.account_id) !== Number(account_id)) {
+    throw AppError.badRequest("CATEGORY_ACCOUNT_MISMATCH", "The expense category does not belong to the selected account");
+  }
 
   const payMethod = await PaymentMethod.findByPk(payment_method_id);
   if (!payMethod) throw AppError.notFound("RECORD_NOT_FOUND", "Payment method not found");
@@ -674,14 +700,16 @@ exports.updateExpense = async (id, data, userId) => {
 
   const { account_id, category_id, date, amount, description, payment_method_id } = data;
 
-  if (account_id) {
-    const account = await Account.findByPk(account_id);
-    if (!account) throw AppError.notFound("RECORD_NOT_FOUND", "Account not found");
-  }
-
-  if (category_id) {
-    const category = await ExpenseCategory.findByPk(category_id);
-    if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Expense category not found");
+  const nextAccountId = account_id ?? expense.account_id;
+  const nextCategoryId = category_id ?? expense.category_id;
+  const [account, category] = await Promise.all([
+    Account.findByPk(nextAccountId),
+    ExpenseCategory.findByPk(nextCategoryId),
+  ]);
+  if (!account) throw AppError.notFound("RECORD_NOT_FOUND", "Account not found");
+  if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Expense category not found");
+  if (Number(category.account_id) !== Number(nextAccountId)) {
+    throw AppError.badRequest("CATEGORY_ACCOUNT_MISMATCH", "The expense category does not belong to the selected account");
   }
 
   if (payment_method_id) {

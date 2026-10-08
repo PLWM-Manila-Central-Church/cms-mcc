@@ -72,7 +72,7 @@ export default function FinancePage() {
   const [incForm, setIncForm] = useState({
     member_id: '', category_id: '', amount: '',
     transaction_date: new Date().toISOString().slice(0, 10),
-    receipt_number: '', notes: ''
+    receipt_number: '', notes: '', is_anonymous: false,
   });
   const [incSaving, setIncSaving] = useState(false);
   const [incFormError, setIncFormError] = useState('');
@@ -127,13 +127,13 @@ export default function FinancePage() {
   };
 
   const selectIncMember = (m) => {
-    setIncForm(f => ({ ...f, member_id: m.id }));
+    setIncForm(f => ({ ...f, member_id: m.id, is_anonymous: false }));
     setIncMemberSearch(`${m.last_name}, ${m.first_name}`);
     setIncMemberResults([]);
   };
 
   const resetIncForm = () => {
-    setIncForm({ member_id: '', category_id: '', amount: '', transaction_date: new Date().toISOString().slice(0, 10), receipt_number: '', notes: '' });
+    setIncForm({ member_id: '', category_id: '', amount: '', transaction_date: new Date().toISOString().slice(0, 10), receipt_number: '', notes: '', is_anonymous: false });
     setIncMemberSearch('');
     setIncMemberResults([]);
     setEditIncRecord(null);
@@ -142,11 +142,12 @@ export default function FinancePage() {
 
   const handleIncSubmit = async (e) => {
     e.preventDefault();
-    if (!incForm.member_id) { setIncFormError('Please select a member.'); return; }
+    if (!incForm.is_anonymous && !incForm.member_id) { setIncFormError('Select a member or mark this record as anonymous.'); return; }
     setIncSaving(true); setIncFormError('');
     try {
       const payload = {
-        member_id: incForm.member_id,
+        member_id: incForm.is_anonymous ? null : incForm.member_id,
+        is_anonymous: Boolean(incForm.is_anonymous),
         category_id: incForm.category_id,
         amount: parseFloat(incForm.amount),
         payment_method: 'cash',
@@ -227,11 +228,14 @@ export default function FinancePage() {
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', margin: 0 }}>Finance Records</h1>
           <p style={{ fontSize: 14, color: '#64748b', margin: '4px 0 0' }}>Record and monitor offerings, tithes, donations, and other church income in one place.</p>
         </div>
-        {canCreate && (
-          <button onClick={() => { resetIncForm(); setShowIncForm(true); }} style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 8px rgba(5,150,105,0.3)' }}>
-            <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Add Financial Record
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => navigate('/finance/expenses')} style={{ background: '#fff', color: '#334155', border: '1px solid #dbe4ee', borderRadius: 10, padding: '11px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Expenses</button>
+          {canCreate && (
+            <button onClick={() => { resetIncForm(); setShowIncForm(true); }} style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 8px rgba(5,150,105,0.3)' }}>
+              <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Add Financial Record
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -363,7 +367,9 @@ export default function FinancePage() {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No records match your search.</td></tr>
             ) : filtered.map((r, i) => {
-              const memberName = `${r.Member?.last_name || ''}, ${r.Member?.first_name || ''}`;
+              const memberName = r.is_anonymous
+                ? 'Anonymous giving'
+                : `${r.Member?.last_name || ''}, ${r.Member?.first_name || ''}`;
               const badge = TYPE_BADGE[r.category?.name] || TYPE_BADGE.default;
               return (
                 <tr key={r.id} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
@@ -400,8 +406,8 @@ export default function FinancePage() {
                         <button
                           onClick={() => {
                             setEditIncRecord(r);
-                            setIncForm({ member_id: r.member_id, category_id: r.category_id, amount: r.amount, transaction_date: r.transaction_date, receipt_number: r.receipt_number || '', notes: r.notes || '' });
-                            setIncMemberSearch(memberName);
+                            setIncForm({ member_id: r.member_id || '', is_anonymous: Boolean(r.is_anonymous), category_id: r.category_id, amount: r.amount, transaction_date: r.transaction_date, receipt_number: r.receipt_number || '', notes: r.notes || '' });
+                            setIncMemberSearch(r.is_anonymous ? '' : memberName);
                             setShowIncForm(true);
                           }}
                           style={{ background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
@@ -495,21 +501,37 @@ export default function FinancePage() {
             </div>
             {incFormError && <div className="cms-error-box">{incFormError}</div>}
             <form onSubmit={handleIncSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={F.label}>Search Giver (Member) *</label>
-                <div style={{ position: 'relative' }}>
-                  <input value={incMemberSearch} onChange={e => handleIncMemberSearch(e.target.value)} placeholder="Type name..." style={F.input} />
-                  {incMemberResults.length > 0 && (
-                    <div style={{ position: 'absolute', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, left: 0, right: 0, zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                      {incMemberResults.map(m => (
-                        <div key={m.id} onClick={() => selectIncMember(m)} style={{ padding: 10, cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
-                          <strong>{m.last_name}, {m.first_name}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 12px', border: '1px solid #dbe4ee', borderRadius: 9, background: '#f8fafc', fontSize: 14, color: '#334155' }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(incForm.is_anonymous)}
+                  onChange={(event) => {
+                    const enabled = event.target.checked;
+                    setIncForm((current) => ({ ...current, is_anonymous: enabled, member_id: enabled ? '' : current.member_id }));
+                    setIncMemberSearch('');
+                    setIncMemberResults([]);
+                    setIncFormError('');
+                  }}
+                />
+                Record as anonymous giving
+              </label>
+              {!incForm.is_anonymous && (
+                <div>
+                  <label style={F.label}>Search Giver (Member) *</label>
+                  <div style={{ position: 'relative' }}>
+                    <input value={incMemberSearch} onChange={e => handleIncMemberSearch(e.target.value)} placeholder="Type name..." style={F.input} />
+                    {incMemberResults.length > 0 && (
+                      <div style={{ position: 'absolute', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, left: 0, right: 0, zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                        {incMemberResults.map(m => (
+                          <div key={m.id} onClick={() => selectIncMember(m)} style={{ padding: 10, cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
+                            <strong>{m.last_name}, {m.first_name}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={F.label}>Income Category *</label>

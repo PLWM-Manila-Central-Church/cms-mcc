@@ -6,6 +6,7 @@ import { fetchAllPages } from '../../api/fetchAllPages';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
 import { fullName, ageLabel, dateWithAge, fmtDate } from '../../utils/member';
+import { MinistryApplicationQueue } from './MinistryApplications';
 
 function ministryPageTitle(name = '') {
   const value = String(name || '').trim();
@@ -17,9 +18,9 @@ function ministryPageTitle(name = '') {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const isMember = user?.roleName === 'Member';
+  const isAdmin = user?.roleName === 'System Admin';
 
-  // Ministry Leader = user with role_name 'Ministry Leader' and leadsMinistryId.
-  // They see ONLY the roster — no tabs, no Assignments, Roles, or Substitutes.
+  // Ministry Leaders see their roster and application review queue without system-wide tabs.
   const isMinistryLeader = user?.roleName === 'Ministry Leader' && !!user?.leadsMinistryId;
 
   const [ministryName, setMinistryName] = useState(user?.leadsMinistryName || 'Ministry');
@@ -49,6 +50,7 @@ function ministryPageTitle(name = '') {
         { key: 'assignments', label: 'Assignments' },
         { key: 'roles',       label: 'Roles' },
         { key: 'substitutes', label: 'Substitute Requests' },
+        ...(isAdmin ? [{ key: 'applications', label: 'Applications' }] : []),
       ];
 
   const defaultTab = isMember ? 'substitutes' : 'assignments';
@@ -70,7 +72,7 @@ function ministryPageTitle(name = '') {
         </div>
       </div>
 
-      {/* Tabs — hidden for ministry leaders (they only see the roster) */}
+      {/* Ministry leaders get their scoped roster and application queue below. */}
       {!isMinistryLeader && (
         <div style={S.tabs}>
           {tabs.map(t => (
@@ -85,10 +87,11 @@ function ministryPageTitle(name = '') {
         </div>
       )}
 
-      {isMinistryLeader && <ScopedRosterTab />}
+      {isMinistryLeader && <><ScopedRosterTab /><MinistryApplicationQueue /></>}
       {!isMinistryLeader && tab === 'assignments' && <AssignmentsTab />}
       {!isMinistryLeader && tab === 'roles'       && <RolesTab />}
       {!isMinistryLeader && tab === 'substitutes' && <SubstituteRequestsTab />}
+      {!isMinistryLeader && isAdmin && tab === 'applications' && <MinistryApplicationQueue />}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }
         table { width: 100%; border-collapse: collapse; }

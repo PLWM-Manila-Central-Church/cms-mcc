@@ -9,7 +9,12 @@ exports.createRecordSchema = Joi.object({
   transaction_date: Joi.date().iso().required(),
   payment_method:   Joi.string().max(100).allow(null, "").optional(),
   receipt_number:   Joi.string().max(100).allow(null, "").optional(),
-  member_id:        Joi.number().integer().positive().allow(null).optional(),
+  is_anonymous:     Joi.boolean().optional(),
+  member_id:        Joi.when("is_anonymous", {
+    is: true,
+    then: Joi.valid(null).optional(),
+    otherwise: Joi.number().integer().positive().required(),
+  }),
   notes:            Joi.string().max(1000).allow(null, "").optional(),
 });
 
@@ -21,6 +26,7 @@ exports.updateRecordSchema = Joi.object({
   payment_method:   Joi.string().max(100).allow(null, "").optional(),
   receipt_number:   Joi.string().max(100).allow(null, "").optional(),
   member_id:        Joi.number().integer().positive().allow(null).optional(),
+  is_anonymous:     Joi.boolean().optional(),
   notes:            Joi.string().max(1000).allow(null, "").optional(),
 }).min(1);
 

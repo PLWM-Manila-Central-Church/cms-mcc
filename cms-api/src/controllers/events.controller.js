@@ -1,6 +1,25 @@
 "use strict";
 
 const eventsService = require("../services/events.service");
+const permissionCache = require("../helpers/permissionCache.helper");
+const { Event } = require("../models");
+
+exports.authorizeEventImageUpload = async (req, res, next) => {
+  try {
+    if (req.user?.roleName === "System Admin") return next();
+    if (req.user?.roleName === "Ministry Leader" || req.user?.roleName === "Leader") {
+      return res.status(403).json({ success: false, message: "This role cannot upload event images." });
+    }
+    const event = await Event.findOne({ where: { id: req.params.id, is_deleted: 0 }, attributes: ["created_by"] });
+    if (!event) return res.status(404).json({ success: false, message: "Event not found" });
+    const permissions = await permissionCache.get(req.user.roleId);
+    if (permissions.has("events:update")) return next();
+    if (permissions.has("events:create")) {
+      if (event && Number(event.created_by) === Number(req.user.userId)) return next();
+    }
+    return res.status(403).json({ success: false, message: "Access forbidden" });
+  } catch (error) { next(error); }
+};
 
 const forbidMinistryLeaderEventManage = (req, res) => {
   if (req.user?.roleName !== "Ministry Leader") return false;
@@ -56,6 +75,36 @@ exports.deleteEvent = async (req, res, next) => {
     if (forbidMinistryLeaderEventManage(req, res)) return;
     const result = await eventsService.deleteEvent(req.params.id, req.user.userId);
     res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
+exports.uploadEventImage = async (req, res, next) => {
+  try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
+    const data = await eventsService.setEventImage(req.params.id, req.file, req.user.userId);
+    res.json({ success: true, data });
+  } catch (err) {
+    if (req.file) {
+      const key = req.file.key || `event-images/${req.file.filename}`;
+      try { await require("../middlewares/upload-s3").deleteStoredFile(key); }
+      catch (cleanupError) { require("../helpers/logger").error(cleanupError, "Failed to remove an unused event image upload"); }
+    }
+    next(err);
+  }
+};
+
+exports.deleteEventImage = async (req, res, next) => {
+  try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
+    const data = await eventsService.removeEventImage(req.params.id, req.user.userId);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.getEventImage = async (req, res, next) => {
+  try {
+    const imageKey = await eventsService.getEventImageKey(req.params.id);
+    await require("../middlewares/upload-s3").sendStoredFile(imageKey, res);
   } catch (err) { next(err); }
 };
 

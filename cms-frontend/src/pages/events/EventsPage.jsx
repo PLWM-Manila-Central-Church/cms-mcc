@@ -4,6 +4,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import MonoIcon from '../../components/common/MonoIcon';
 import { normalizeEventStatus } from '../../utils/eventStatus';
+import { eventImageSrc } from '../../utils/eventImage';
 
 const STATUS_META = {
   Upcoming:  { bg: '#dcfce7', color: '#16a34a', label: 'Upcoming' },
@@ -48,6 +49,9 @@ export default function EventsPage() {
   const [categories, setCategories] = useState([]);
   const [showForm, setShowForm]     = useState(false);
   const [editEvent, setEditEvent]   = useState(null);
+  const [imageFile, setImageFile]   = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [removeImage, setRemoveImage] = useState(false);
   const [form, setForm] = useState({
     category_id: '', title: '', description: '', start_date: '',
     end_date: '', start_time: '', location: '', capacity: '',
@@ -58,6 +62,13 @@ export default function EventsPage() {
   const [statusUpdating, setStatusUpdating] = useState(null);
 
   const limit = 15;
+
+  useEffect(() => {
+    if (!imageFile) { setImagePreview(''); return undefined; }
+    const previewUrl = URL.createObjectURL(imageFile);
+    setImagePreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [imageFile]);
 
   const fetchCategories = async () => {
     try {
@@ -103,10 +114,12 @@ export default function EventsPage() {
       registration_deadline: '', status: 'Upcoming',
     });
     setEditEvent(null); setFormError('');
+    setImageFile(null); setRemoveImage(false);
   };
 
   const openEdit = (ev) => {
     setEditEvent(ev);
+    setImageFile(null); setRemoveImage(false);
     setForm({
       category_id:           ev.category_id || '',
       title:                 ev.title || '',
@@ -148,10 +161,22 @@ export default function EventsPage() {
       if (!payload.location)              delete payload.location;
       if (!payload.category_id)           delete payload.category_id;
 
-      if (editEvent) {
-        await axiosInstance.put(`/events/${editEvent.id}`, payload);
-      } else {
-        await axiosInstance.post('/events', payload);
+      const savedResponse = editEvent
+        ? await axiosInstance.put(`/events/${editEvent.id}`, payload)
+        : await axiosInstance.post('/events', payload);
+      const savedEvent = savedResponse.data.data;
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        try {
+          await axiosInstance.post(`/events/${savedEvent.id}/image`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        } catch (imageError) {
+          setFormError(imageError.response?.data?.message || 'Event details were saved, but the image could not be uploaded. Edit the event to retry.');
+          fetchEvents();
+          return;
+        }
+      } else if (removeImage && editEvent?.image_key) {
+        await axiosInstance.delete(`/events/${savedEvent.id}/image`);
       }
       setShowForm(false); resetForm(); fetchEvents();
     } catch (err) {
@@ -251,6 +276,18 @@ export default function EventsPage() {
                 rows={3} placeholder="Optional description"
                 style={{ ...s.input, resize: 'vertical', fontFamily: 'inherit' }}
               />
+            </div>
+
+            <div style={s.field}>
+              <label htmlFor="event-photo-upload" style={s.label}>Event Photo</label>
+              <input id="event-photo-upload" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { setImageFile(e.target.files?.[0] || null); setRemoveImage(false); }} style={s.input} />
+              <small style={{ color: '#64748b' }}>JPG, PNG, or WebP. Maximum 5 MB.</small>
+              {(imageFile || (editEvent?.image_url && !removeImage)) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <img src={imageFile ? imagePreview : eventImageSrc(editEvent)} alt="Event preview" style={{ width: 120, height: 72, objectFit: 'cover', borderRadius: 8 }} />
+                  {editEvent?.image_url && <button type="button" onClick={() => { setImageFile(null); setRemoveImage(true); }} style={s.cancelBtn}>Remove current photo</button>}
+                </div>
+              )}
             </div>
 
             <div style={s.formRow}>
@@ -390,6 +427,7 @@ export default function EventsPage() {
 
             return (
               <div key={ev.id} style={s.card}>
+                {ev.image_url && <img src={eventImageSrc(ev)} alt={`${ev.title} event`} loading="lazy" style={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: '12px 12px 0 0', marginBottom: 12 }} />}
                 <div style={s.cardTop}>
                   <span style={{ ...s.badge, background: meta.bg, color: meta.color }}>
                     {meta.label}

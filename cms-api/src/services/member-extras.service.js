@@ -106,20 +106,27 @@ exports.createMemberStatusHistory = async (memberId, data, changedBy) => {
   const member = await Member.findByPk(memberId);
   if (!member) throw AppError.notFound("MEMBER_NOT_FOUND", "Member not found");
 
-  const { new_status, reason } = data;
+  const new_status = data.status || data.new_status;
+  const reason = data.reason ?? data.remarks;
+  const MEMBER_STATUSES = require("../constants/memberStatus");
+  if (!MEMBER_STATUSES.includes(new_status)) {
+    throw AppError.badRequest("VALIDATION", "Member status must be Active or Inactive");
+  }
   const old_status = member.status;
 
   if (old_status === new_status)
     throw AppError.badRequest("VALIDATION", "New status is the same as current status");
 
-  await member.update({ status: new_status });
-
-  return await MemberStatusHistory.create({
-    member_id:  memberId,
-    old_status,
-    new_status,
-    changed_by: changedBy,
-    reason:     reason || null,
+  const sequelize = require("../config/db");
+  return await sequelize.transaction(async (transaction) => {
+    await member.update({ status: new_status }, { transaction });
+    return MemberStatusHistory.create({
+      member_id:  memberId,
+      old_status,
+      new_status,
+      changed_by: changedBy,
+      reason:     reason || null,
+    }, { transaction });
   });
 };
 

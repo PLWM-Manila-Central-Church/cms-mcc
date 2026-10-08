@@ -1,6 +1,7 @@
 "use strict";
 
 const { Op } = require("sequelize");
+const sequelize = require("../config/db");
 
 const {
   Attendance,
@@ -14,6 +15,8 @@ const {
 } = require("../models");
 const logger   = require("../helpers/logger");
 const AppError = require("../helpers/AppError");
+const notifications = require("./notifications.service");
+const auditLog = require("../helpers/auditLog.helper");
 const { getAttendanceModel, syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
 const { getMemberScopeWhere } = require("../helpers/scopedLeader.helper");
 
@@ -242,26 +245,51 @@ exports.getSubstituteRequestById = async (id, user = {}) => {
   });
   if (!request) throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
   ensureSubstituteInScope(request, user);
+  return request;
+};
 
-  if (request.status !== "pending")
-    throw AppError.badRequest("VALIDATION", "Request has already been resolved");
-
+exports.resolveSubstituteRequest = async (id, status, resolvedBy, user = {}) => {
   if (!["approved", "rejected"].includes(status))
     throw AppError.badRequest("VALIDATION", "Status must be approved or rejected");
+  const requestId = await sequelize.transaction(async (transaction) => {
+    const request = await SubstituteRequest.findByPk(id, {
+      include: scopeSubstituteIncludes(user),
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!request) throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
+    ensureSubstituteInScope(request, user);
+    if (request.status !== "pending") throw AppError.badRequest("VALIDATION", "Request has already been resolved");
 
-  // On approval, update the assignment's member to the proposed substitute's linked member
-  if (status === "approved" && request.proposed_substitute) {
-    const proposedMemberId = request.proposedSubstituteUser?.member_id;
-    if (proposedMemberId) {
-      await MinistryAssignment.update(
-        { member_id: proposedMemberId },
-        { where: { id: request.assignment_id } },
-      );
+    // On approval, replace the assignment's current member in the same transaction.
+    if (status === "approved" && request.proposed_substitute) {
+      const proposedMemberId = request.proposedSubstituteUser?.member_id;
+      if (proposedMemberId) {
+        const assignment = await MinistryAssignment.findByPk(request.assignment_id, { transaction, lock: transaction.LOCK.UPDATE });
+        if (!assignment) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry assignment not found");
+        await assignment.update({ member_id: proposedMemberId }, { transaction });
+      }
     }
-  }
 
-  await request.update({ status, resolved_by: resolvedBy });
-  return await exports.getSubstituteRequestById(id, user);
+    await request.update({ status, resolved_by: resolvedBy }, { transaction });
+    auditLog.log({ userId: resolvedBy, action: `RESOLVE_SUBSTITUTE_${status.toUpperCase()}`, targetTable: "substitute_requests", targetId: id }, { transaction });
+    return request.id;
+  });
+  try {
+    await notifications.bulkCreateNotifications(
+      await SubstituteRequest.findByPk(requestId, { attributes: ["requested_by", "proposed_substitute"] }).then((request) =>
+        [...new Set([request?.requested_by, request?.proposed_substitute].filter(Boolean))]),
+      {
+        type: `substitute_request_${status}`,
+        message: status === "approved" ? "Your substitute request was approved." : "Your substitute request was rejected.",
+        reference_id: requestId,
+        reference_type: "substitute_request",
+      },
+    );
+  } catch (error) {
+    logger.error(error, "Substitute decision notification failed");
+  }
+  return await exports.getSubstituteRequestById(requestId, user);
 };
 
 exports.deleteSubstituteRequest = async (id, user = {}) => {

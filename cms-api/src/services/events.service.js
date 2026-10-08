@@ -252,6 +252,41 @@ exports.updateEvent = async (id, data, updatedBy) => {
   return await exports.getEventById(id);
 };
 
+exports.setEventImage = async (id, uploadedFile, updatedBy) => {
+  if (!uploadedFile) throw AppError.badRequest("IMAGE_REQUIRED", "Choose an event image to upload");
+  const event = await Event.findOne({ where: { id, is_deleted: 0 } });
+  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  const imageKey = uploadedFile.key || `event-images/${uploadedFile.filename}`;
+  const oldKey = event.image_key;
+  await event.update({ image_key: imageKey, image_url: `/events/${event.id}/image` });
+  auditLog.log({ userId: updatedBy, action: "UPDATE_EVENT_IMAGE", targetTable: "events", targetId: event.id });
+  if (oldKey && oldKey !== imageKey) {
+    try { await require("../middlewares/upload-s3").deleteStoredFile(oldKey); }
+    catch (error) { logger.error(error, "Failed to remove replaced event image"); }
+  }
+  return event;
+};
+
+exports.removeEventImage = async (id, updatedBy) => {
+  const event = await Event.findOne({ where: { id, is_deleted: 0 } });
+  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  const oldKey = event.image_key;
+  await event.update({ image_key: null, image_url: null });
+  auditLog.log({ userId: updatedBy, action: "DELETE_EVENT_IMAGE", targetTable: "events", targetId: event.id });
+  if (oldKey) {
+    try { await require("../middlewares/upload-s3").deleteStoredFile(oldKey); }
+    catch (error) { logger.error(error, "Failed to remove event image"); }
+  }
+  return exports.getEventById(event.id);
+};
+
+exports.getEventImageKey = async (id) => {
+  const event = await Event.findOne({ where: { id, is_deleted: 0 }, attributes: ["id", "image_key"] });
+  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  if (!event.image_key) throw AppError.notFound("IMAGE_NOT_FOUND", "This event does not have an image");
+  return event.image_key;
+};
+
 // ── Update Event Status ──────────────────────────────────────
 exports.updateEventStatus = async (id, newStatus, updatedBy) => {
   const event = await Event.findOne({ where: { id } });

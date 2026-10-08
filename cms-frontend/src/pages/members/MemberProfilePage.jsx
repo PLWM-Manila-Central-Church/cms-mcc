@@ -7,9 +7,7 @@ import MonoIcon from '../../components/common/MonoIcon';
 const OperationalMemberQrPanel = lazy(() => import('../../components/attendance/OperationalMemberQrPanel'));
 
 const STATUS_COLORS = {
-  New:         { bg: '#eff6ff', color: '#3b82f6' },
   Active:      { bg: '#dcfce7', color: '#16a34a' },
-  'Semi-Active': { bg: '#fef9c3', color: '#ca8a04' },
   Inactive:    { bg: '#f3f4f6', color: '#6b7280' },
 };
 

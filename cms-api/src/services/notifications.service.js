@@ -1,7 +1,8 @@
 "use strict";
 
-const { Notification } = require("../models");
+const { Notification, User } = require("../models");
 const AppError = require("../helpers/AppError");
+const logger = require("../helpers/logger");
 
 // ── Get All Notifications for User ──────────────────────────
 exports.getUserNotifications = async (userId) => {
@@ -62,6 +63,21 @@ exports.bulkCreateNotifications = async (
     created_at:     now,
   }));
   return await Notification.bulkCreate(records, { ignoreDuplicates: true });
+};
+
+exports.notifyAttendanceRecorded = async ({ memberId, activityType, activityId, activityTitle }) => {
+  try {
+    const users = await User.findAll({ where: { member_id: memberId, is_active: 1, is_deleted: 0 }, attributes: ["id"] });
+    const label = activityType === "event" ? "event" : "service";
+    await exports.bulkCreateNotifications(users.map((user) => user.id), {
+      type: `attendance_${label}_recorded`,
+      message: `Your attendance was recorded for ${activityTitle || `this ${label}`}.`,
+      reference_id: activityId,
+      reference_type: label,
+    });
+  } catch (error) {
+    logger.error(error, "Attendance notification failed");
+  }
 };
 
 // ── Mark Notification as Read ────────────────────────────────

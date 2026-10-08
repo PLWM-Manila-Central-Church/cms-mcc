@@ -43,6 +43,7 @@ const AuditLog = require("./AuditLog.model");
 const SystemSetting = require("./SystemSetting.model");
 const MinistryMembership  = require("./MinistryMembership.model");
 const MinistryEventInvite = require("./MinistryEventInvite.model");
+const MinistryApplication = require("./MinistryApplication.model");
 const UserLeaderAssignment = require("./UserLeaderAssignment.model");
 
 // New Capstone Financial Models
@@ -251,6 +252,9 @@ InventoryTransaction.belongsTo(User, {
 });
 InventoryItem.hasMany(InventoryRequest, { foreignKey: "item_id" });
 InventoryRequest.belongsTo(InventoryItem, { foreignKey: "item_id", as: "item" });
+InventoryRequest.belongsTo(Event, { foreignKey: "event_id", as: "event" });
+InventoryRequest.belongsTo(Service, { foreignKey: "service_id", as: "service" });
+InventoryRequest.belongsTo(MinistryRole, { foreignKey: "ministry_role_id", as: "ministryRole" });
 InventoryRequest.belongsTo(User, {
   foreignKey: "requested_by",
   as: "requestedByUser",
@@ -325,6 +329,14 @@ MinistryMembership.belongsTo(Member,       { foreignKey: "member_id",        as:
 MinistryMembership.belongsTo(User,         { foreignKey: "added_by",         as: "addedByUser"   });
 MinistryRole.hasMany(MinistryMembership,   { foreignKey: "ministry_role_id"                      });
 Member.hasMany(MinistryMembership,         { foreignKey: "member_id", as: "MinistryMemberships"  });
+
+// ── Ministry applications ───────────────────────────────────
+MinistryApplication.belongsTo(MinistryRole, { foreignKey: "ministry_role_id", as: "ministryRole" });
+MinistryRole.hasMany(MinistryApplication, { foreignKey: "ministry_role_id", as: "applications" });
+MinistryApplication.belongsTo(Member, { foreignKey: "member_id", as: "member" });
+Member.hasMany(MinistryApplication, { foreignKey: "member_id", as: "ministryApplications" });
+MinistryApplication.belongsTo(User, { foreignKey: "reviewed_by", as: "reviewedByUser" });
+User.hasMany(MinistryApplication, { foreignKey: "reviewed_by", as: "reviewedMinistryApplications" });
 
 // ── MinistryEventInvite ──────────────────────────────────────
 MinistryEventInvite.belongsTo(Event,        { foreignKey: "event_id"                                        });
@@ -421,6 +433,7 @@ module.exports = {
   SystemSetting,
   MinistryMembership,
   MinistryEventInvite,
+  MinistryApplication,
   UserLeaderAssignment,
   Fund,
   Account,

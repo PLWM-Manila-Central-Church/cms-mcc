@@ -30,9 +30,9 @@ const session = {
   service_id: null,
   title: 'Main Gathering',
   session_key: 'morning',
-  starts_at: '2026-10-07T02:00:00.000Z',
+  starts_at: '2099-10-07T02:00:00.000Z',
   status: 'open',
-  approval_deadline: '2026-10-08T02:00:00.000Z',
+  approval_deadline: '2099-12-31T00:00:00.000Z',
   target: { title: 'Test Event', status: 'Ongoing' },
 };
 const member = { id: 10, first_name: 'Jordan', last_name: 'Test', status: 'Active' };
@@ -66,7 +66,7 @@ describe('QR attendance workspace role flows', () => {
     batchRows = [];
     currentSession = { ...session };
     batchDetail = {
-      batch: { id: 8, state: 'draft', revision: 1, submitted_by: 2, approval_deadline: '2026-10-08T02:00:00.000Z' },
+      batch: { id: 8, state: 'draft', revision: 1, submitted_by: 2, approval_deadline: '2099-01-01T00:00:00.000Z' },
       items: [],
     };
     fixture.user = { userId: 2, roleName: 'Registration Team' };
@@ -86,7 +86,7 @@ describe('QR attendance workspace role flows', () => {
     });
 
     renderWorkspace();
-    fireEvent.click(await screen.findByRole('button', { name: 'Scan Member QR' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Scan Member QR' }, { timeout: 5000 }));
     fireEvent.click(screen.getByRole('button', { name: 'Simulate QR scan' }));
     expect(await screen.findByText('Jordan Test')).toBeInTheDocument();
     expect(fixture.post).toHaveBeenCalledWith('/qr-attendance/sessions/1/member-preview', { qr_payload: 'MCC:MEMBER:1:123' });

@@ -3,19 +3,28 @@
 const Joi = require("joi");
 
 exports.createItemSchema = Joi.object({
-  name:        Joi.string().max(200).required(),
+  name:        Joi.string().max(150).required(),
   category_id: Joi.number().integer().positive().allow(null).optional(),
   quantity:    Joi.number().integer().min(0).required(),
   unit:        Joi.string().max(50).allow(null, "").optional(),
+  condition:   Joi.string().valid("Good", "Fair", "Poor", "For Disposal").allow(null, "").optional(),
+  status:      Joi.string().valid("Available", "Under Repair").optional(),
+  low_stock_threshold: Joi.number().integer().min(0).allow(null).optional(),
+  notes:       Joi.string().max(5000).allow(null, "").optional(),
+  // Accepted for legacy clients; these values are not inventory-item columns.
   description: Joi.string().max(500).allow(null, "").optional(),
   location:    Joi.string().max(200).allow(null, "").optional(),
 });
 
 exports.updateItemSchema = Joi.object({
-  name:        Joi.string().max(200).optional(),
+  name:        Joi.string().max(150).optional(),
   category_id: Joi.number().integer().positive().allow(null).optional(),
   quantity:    Joi.number().integer().min(0).optional(),
   unit:        Joi.string().max(50).allow(null, "").optional(),
+  condition:   Joi.string().valid("Good", "Fair", "Poor", "For Disposal").allow(null, "").optional(),
+  status:      Joi.string().valid("Available", "Under Repair").optional(),
+  low_stock_threshold: Joi.number().integer().min(0).allow(null).optional(),
+  notes:       Joi.string().max(5000).allow(null, "").optional(),
   description: Joi.string().max(500).allow(null, "").optional(),
   location:    Joi.string().max(200).allow(null, "").optional(),
 }).min(1);
@@ -23,9 +32,11 @@ exports.updateItemSchema = Joi.object({
 exports.createRequestSchema = Joi.object({
   item_id:     Joi.number().integer().positive().required(),
   quantity:    Joi.number().integer().positive().required(),
-  reason:      Joi.string().max(500).allow(null, "").optional(),
-  needed_date: Joi.date().iso().allow(null).optional(),
-});
+  purpose:     Joi.string().max(255).allow(null, "").optional(),
+  event_id:    Joi.number().integer().positive().optional(),
+  service_id:  Joi.number().integer().positive().optional(),
+  ministry_role_id: Joi.number().integer().positive().optional(),
+}).oxor("event_id", "service_id", "ministry_role_id");
 
 exports.reviewRequestSchema = Joi.object({
   status:      Joi.string().valid("approved", "rejected").required(),
@@ -55,4 +66,5 @@ exports.getItemsQuerySchema = Joi.object({
   limit:       Joi.number().integer().min(1).max(100).default(15),
   search:      Joi.string().max(200).allow("").optional(),
   category_id: Joi.number().integer().positive().optional(),
+  status:      Joi.string().valid("pending", "approved", "rejected").optional(),
 });

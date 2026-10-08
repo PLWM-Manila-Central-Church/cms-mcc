@@ -2,6 +2,7 @@
 
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
+const MEMBER_STATUSES = require("../constants/memberStatus");
 
 const Member = sequelize.define(
   "Member",
@@ -23,7 +24,7 @@ const Member = sequelize.define(
       allowNull: true,
     },
     status: {
-      type: DataTypes.ENUM("New", "Active", "Semi-Active", "Inactive"),
+      type: DataTypes.ENUM(...MEMBER_STATUSES),
       allowNull: false,
       defaultValue: "Active",
     },

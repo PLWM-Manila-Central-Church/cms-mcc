@@ -26,7 +26,7 @@ const SETTING_META = {
   // Members
   allow_self_register:      { label: "Allow Self Registration",   group: "Members",         type: "boolean" },
   require_approval:         { label: "Require Approval",          group: "Members",         type: "boolean" },
-  default_member_status:    { label: "Default Member Status",     group: "Members",         type: "select", options: ["Active","Inactive","Visitor"] },
+  default_member_status:    { label: "Default Member Status",     group: "Members",         type: "select", options: ["Active","Inactive"] },
   barcode_auto_generate:    { label: "Barcode Auto Generate",     group: "Members",         type: "boolean" },
   invite_expiry_hours:      { label: "Invite Expiry Hours",       group: "Members",         type: "number" },
   // Services
