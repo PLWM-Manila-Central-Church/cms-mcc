@@ -133,10 +133,7 @@ function AttendanceTrendChart({ data, accent, onNavigate }) {
           <span style={{ width: 10, height: 10, borderRadius: 2, background: '#16a34a' }} /> Active
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#0066b3' }} /> New
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#d97706' }} /> Semi-Active
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#64748b' }} /> Inactive
         </span>
         <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94a3b8' }}>
           Max: {maxTotal}
@@ -178,12 +175,11 @@ function AttendanceTrendChart({ data, accent, onNavigate }) {
             {data.map((item) => {
               const barW = data.length > 8 ? 'calc(100% / ' + data.length + ' - 2px)' : `min(48px, calc(100% / ${data.length} - 6px))`;
               const hActive = maxTotal > 0 ? (item.active / maxTotal) * chartHeight : 0;
-              const hNew = maxTotal > 0 ? (item.new / maxTotal) * chartHeight : 0;
-              const hSemi = maxTotal > 0 ? (item.semiActive / maxTotal) * chartHeight : 0;
+              const hInactive = maxTotal > 0 ? (item.inactive / maxTotal) * chartHeight : 0;
               return (
                 <button key={item.service_id}
                   onClick={() => onNavigate(`/services/${item.service_id}/attendance`)}
-                  title={`${item.title} — ${item.total} total\nActive: ${item.active} | New: ${item.new} | Semi-Active: ${item.semiActive}`}
+                  title={`${item.title} — ${item.total} total\nActive: ${item.active} | Inactive: ${item.inactive}`}
                   style={{
                     flex: '0 0 auto', width: barW, display: 'flex', flexDirection: 'column',
                     alignItems: 'stretch', justifyContent: 'flex-end', gap: 0,
@@ -191,8 +187,7 @@ function AttendanceTrendChart({ data, accent, onNavigate }) {
                     position: 'relative', fontFamily: 'inherit',
                   }}>
                   <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: chartHeight }}>
-                    {hSemi > 0 && <div style={{ height: hSemi, background: '#d97706', borderRadius: '3px 3px 0 0', transition: 'height 0.3s' }} />}
-                    {hNew > 0 && <div style={{ height: hNew, background: '#0066b3', transition: 'height 0.3s' }} />}
+                    {hInactive > 0 && <div style={{ height: hInactive, background: '#64748b', borderRadius: '3px 3px 0 0', transition: 'height 0.3s' }} />}
                     {hActive > 0 && <div style={{ height: hActive, background: '#16a34a', borderRadius: '0 0 3px 3px', transition: 'height 0.3s' }} />}
                   </div>
                 </button>
@@ -620,6 +615,7 @@ export default function DashboardPage() {
   const isMobile = useIsMobile();
 
   const role = user?.roleName || '';
+  const canOpenAnalytics = [R.ADMIN, R.PASTOR, R.REG, R.FINANCE].includes(role);
   const accent = ACCENTS[role] || ACCENTS[R.MEMBER];
   const displayName = greetingTarget(user || {});
 
@@ -661,6 +657,7 @@ export default function DashboardPage() {
         <div style={S.headerMeta}>
           <span>{new Date().toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
           <strong style={{ color: accent }}>{role}</strong>
+          {canOpenAnalytics && <button type="button" onClick={() => navigate('/reports/analytics')} style={{ border: 0, borderRadius: 7, padding: '8px 12px', background: accent, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Open analytics</button>}
         </div>
       </header>
 

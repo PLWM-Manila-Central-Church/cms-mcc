@@ -4,6 +4,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import MonoIcon from '../../components/common/MonoIcon';
 import { normalizeEventStatus } from '../../utils/eventStatus';
+import { eventImageSrc } from '../../utils/eventImage';
 
 const STATUS_META = {
   Upcoming:  { bg: '#dcfce7', color: '#16a34a', label: 'Upcoming' },
@@ -171,6 +172,7 @@ export default function EventDetailPage() {
 
       {/* Header card */}
       <div style={s.headerCard}>
+        {event.image_url && <img src={eventImageSrc(event)} alt={`${event.title} event`} style={{ width: '100%', maxHeight: 360, objectFit: 'cover', borderRadius: 12, marginBottom: 18 }} />}
         <div style={s.headerTop}>
           <div>
             <span style={{ ...s.badge, background: meta.bg, color: meta.color }}>{meta.label}</span>

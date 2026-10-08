@@ -2,7 +2,7 @@
 
 const { Op } = require("sequelize");
 const sequelize = require("../config/db");
-const { Member, CellGroup, MinistryGroup, EmergencyContact, User, Role,
+const { Member, MemberStatusHistory, CellGroup, MinistryGroup, EmergencyContact, User, Role,
   MinistryMembership } = require("../models");
 const cache    = require("../helpers/cache.helper");
 const auditLog = require("../helpers/auditLog.helper");
@@ -284,7 +284,10 @@ exports.updateMember = async (id, data, updatedBy, user = {}) => {
     if (!group) throw AppError.notFound("RECORD_NOT_FOUND", "Group not found");
   }
 
-  await member.update({
+  const statusChanged = status !== undefined && status !== member.status;
+  const oldStatus = member.status;
+  await sequelize.transaction(async (transaction) => {
+    await member.update({
     ...(first_name          && { first_name }),
     ...(last_name           && { last_name }),
     ...(email               !== undefined && { email }),
@@ -299,11 +302,20 @@ exports.updateMember = async (id, data, updatedBy, user = {}) => {
     ...(referred_by         !== undefined && { referred_by }),
     ...(profile_photo_url   !== undefined && { profile_photo_url }),
     ...(barcode             !== undefined && { barcode }),
+    }, { transaction });
+    if (statusChanged) {
+      await MemberStatusHistory.create({
+        member_id: id,
+        old_status: oldStatus,
+        new_status: status,
+        changed_by: updatedBy,
+        reason: "Member status changed through the member record form.",
+      }, { transaction });
+    }
+    auditLog.log({ userId: updatedBy, action: "UPDATE_MEMBER", targetTable: "members", targetId: id }, { transaction });
   });
-
-  auditLog.log({ userId: updatedBy, action: "UPDATE_MEMBER", targetTable: "members", targetId: id });
-    cache.keys("dashboard:*").forEach(k => cache.del(k));
-    return await exports.getMemberById(id, user);
+  cache.keys("dashboard:*").forEach(k => cache.del(k));
+  return await exports.getMemberById(id, user);
 };
 
 // ── Soft Delete Member ───────────────────────────────────────
@@ -497,7 +509,7 @@ exports.bulkCreateMembers = async (csvBuffer, createdBy) => {
         email: row.email || null,
         phone: row.phone || null,
         gender: row.gender || null,
-        status: row.status || "New",
+        status: row.status || "Active",
         cell_group_id: row.cell_group_id ? parseInt(row.cell_group_id) : null,
         group_id: row.group_id ? parseInt(row.group_id) : null,
       }, createdBy);

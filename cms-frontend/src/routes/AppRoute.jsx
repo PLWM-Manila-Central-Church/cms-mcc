@@ -4,48 +4,49 @@ import { useAuth } from '../context/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
 import MainLayout from '../components/layout/MainLayout';
 
-// Auth
-import LoginPage from '../pages/auth/LoginPage';
-import ForceChangePassword from '../pages/auth/ForceChangePassword';
-import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
-import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
-
-// CMS (protected)
-import MembersPage       from '../pages/members/MembersPage';
-import MemberFormPage    from '../pages/members/MemberFormPage';
-import MemberPortal      from '../pages/members/MemberPortal';
-import MemberPortalSettings from '../pages/members/MemberPortalSettings';
-import MemberProfilePage from '../pages/members/MemberProfilePage';
-import CellGroupsPage    from '../pages/cellgroups/CellGroupsPage';
-import MinistryPage      from '../pages/ministry/MinistryPage';
-import UsersPage         from '../pages/users/UsersPage';
-import UserFormPage      from '../pages/users/UserFormPage';
-import ServicesPage      from '../pages/services/ServicesPage';
-import AttendancePage    from '../pages/attendance/AttendancePage';
+// Load route screens on demand so public, member, and CMS routes do not share one oversized entry chunk.
+const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
+const ForceChangePassword = lazy(() => import('../pages/auth/ForceChangePassword'));
+const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('../pages/auth/ResetPasswordPage'));
+const MembersPage = lazy(() => import('../pages/members/MembersPage'));
+const MemberFormPage = lazy(() => import('../pages/members/MemberFormPage'));
+const MemberPortal = lazy(() => import('../pages/members/MemberPortal'));
+const MemberPortalSettings = lazy(() => import('../pages/members/MemberPortalSettings'));
+const MemberProfilePage = lazy(() => import('../pages/members/MemberProfilePage'));
+const CellGroupsPage = lazy(() => import('../pages/cellgroups/CellGroupsPage'));
+const MinistryPage = lazy(() => import('../pages/ministry/MinistryPage'));
+const UsersPage = lazy(() => import('../pages/users/UsersPage'));
+const UserFormPage = lazy(() => import('../pages/users/UserFormPage'));
+const ServicesPage = lazy(() => import('../pages/services/ServicesPage'));
+const AttendancePage = lazy(() => import('../pages/attendance/AttendancePage'));
 const QrAttendancePage = lazy(() => import('../pages/attendance/QrAttendancePage'));
-import FinancePage       from '../pages/finance/FinancePage';
-import MyGivingPage      from '../pages/finance/MyGivingPage';
-import AttendanceOverviewPage from '../pages/attendance/AttendanceOverviewPage';
-import EventsPage        from '../pages/events/EventsPage';
-import EventDetailPage   from '../pages/events/EventDetailPage';
-import InventoryPage     from '../pages/inventory/InventoryPage';
-import ArchivesPage      from '../pages/archives/ArchivesPage';
-import AuditLogPage      from '../pages/audit/AuditLogPage';
-import SettingsPage      from '../pages/settings/SettingsPage';
-import MySettingsPage    from '../pages/settings/MySettingsPage';
-import DashboardPage     from '../pages/dashboard/DashboardPage';
-import LeaderTeamsPage from '../pages/leaders/LeaderTeamsPage';
-
-// Public site (no auth)
-import HomePage                 from '../pages/public/HomePage';
-import BibleSeminarPage         from '../pages/public/BibleSeminarPage';
-import BibleSeminarAdultsPage   from '../pages/public/BibleSeminarAdultsPage';
-import LatestSermonPage         from '../pages/public/LatestSermonPage';
-import {
-  SermonPage, SundaySermonPage, ChristianLifePage,
-  WorldMissionPage, MissionStatusPage,
-  IntroductionPage, WhatWeBelievePage, CIPage,
-} from '../pages/public/OtherPages';
+const FinancePage = lazy(() => import('../pages/finance/FinancePage'));
+const ExpensesPage = lazy(() => import('../pages/finance/ExpensesPage'));
+const AnalyticsReportPage = lazy(() => import('../pages/reports/AnalyticsReportPage'));
+const MyGivingPage = lazy(() => import('../pages/finance/MyGivingPage'));
+const AttendanceOverviewPage = lazy(() => import('../pages/attendance/AttendanceOverviewPage'));
+const EventsPage = lazy(() => import('../pages/events/EventsPage'));
+const EventDetailPage = lazy(() => import('../pages/events/EventDetailPage'));
+const InventoryPage = lazy(() => import('../pages/inventory/InventoryPage'));
+const ArchivesPage = lazy(() => import('../pages/archives/ArchivesPage'));
+const AuditLogPage = lazy(() => import('../pages/audit/AuditLogPage'));
+const SettingsPage = lazy(() => import('../pages/settings/SettingsPage'));
+const MySettingsPage = lazy(() => import('../pages/settings/MySettingsPage'));
+const DashboardPage = lazy(() => import('../pages/dashboard/DashboardPage'));
+const LeaderTeamsPage = lazy(() => import('../pages/leaders/LeaderTeamsPage'));
+const HomePage = lazy(() => import('../pages/public/HomePage'));
+const BibleSeminarPage = lazy(() => import('../pages/public/BibleSeminarPage'));
+const BibleSeminarAdultsPage = lazy(() => import('../pages/public/BibleSeminarAdultsPage'));
+const LatestSermonPage = lazy(() => import('../pages/public/LatestSermonPage'));
+const SermonPage = lazy(() => import('../pages/public/OtherPages').then((pages) => ({ default: pages.SermonPage })));
+const SundaySermonPage = lazy(() => import('../pages/public/OtherPages').then((pages) => ({ default: pages.SundaySermonPage })));
+const ChristianLifePage = lazy(() => import('../pages/public/OtherPages').then((pages) => ({ default: pages.ChristianLifePage })));
+const WorldMissionPage = lazy(() => import('../pages/public/OtherPages').then((pages) => ({ default: pages.WorldMissionPage })));
+const MissionStatusPage = lazy(() => import('../pages/public/OtherPages').then((pages) => ({ default: pages.MissionStatusPage })));
+const IntroductionPage = lazy(() => import('../pages/public/OtherPages').then((pages) => ({ default: pages.IntroductionPage })));
+const WhatWeBelievePage = lazy(() => import('../pages/public/OtherPages').then((pages) => ({ default: pages.WhatWeBelievePage })));
+const CIPage = lazy(() => import('../pages/public/OtherPages').then((pages) => ({ default: pages.CIPage })));
 
 const UnauthorizedPage = () => (
   <div style={{ padding: 48, textAlign: 'center' }}>
@@ -84,6 +85,7 @@ const AppRoutes = () => {
   const homeRedirect = user?.roleName === 'Member' ? '/portal' : '/dashboard';
 
   return (
+    <Suspense fallback={<div style={{ minHeight: 160, padding: 32, color: '#64748b' }}>Loading page…</div>}>
     <Routes>
       {/* ── Public Church Website (no auth) ── */}
       <Route path="/"                         element={<HomePage />} />
@@ -122,6 +124,8 @@ const AppRoutes = () => {
       <Route path="/attendance" element={<ProtectedRoute module="attendance" action="read"><MainLayout><AttendanceOverviewPage /></MainLayout></ProtectedRoute>} />
       <Route path="/attendance/qr" element={<ProtectedRoute module="qr_attendance" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading attendance tools…</div>}><QrAttendancePage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/finance"    element={<ProtectedRoute module="finance" action="read"><MainLayout><FinancePage /></MainLayout></ProtectedRoute>} />
+      <Route path="/finance/expenses" element={<ProtectedRoute module="finance" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading expenses…</div>}><ExpensesPage /></Suspense></MainLayout></ProtectedRoute>} />
+      <Route path="/reports/analytics" element={<ProtectedRoute module="dashboard" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading analytics…</div>}><AnalyticsReportPage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/finance/my-giving" element={<ProtectedRoute module="finance" action="read"><MainLayout><MyGivingPage /></MainLayout></ProtectedRoute>} />
       <Route path="/services"          element={<ProtectedRoute module="services" action="read"><MainLayout><ServicesPage /></MainLayout></ProtectedRoute>} />
       <Route path="/services/:id/attendance" element={<ProtectedRoute module="attendance" action="read"><MainLayout><AttendancePage /></MainLayout></ProtectedRoute>} />
@@ -147,6 +151,7 @@ const AppRoutes = () => {
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 };
 

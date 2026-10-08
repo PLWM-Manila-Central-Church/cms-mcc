@@ -4,6 +4,7 @@ const { Attendance, Member, Service, User } = require("../models");
 const cache    = require("../helpers/cache.helper");
 const auditLog = require("../helpers/auditLog.helper");
 const logger   = require("../helpers/logger");
+const notifications = require("./notifications.service");
 const AppError = require("../helpers/AppError");
 const { getAttendanceModel, syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
 let assertLeaderMayUseLegacyServiceWrite = async () => {};
@@ -68,6 +69,10 @@ exports.createAttendance = async (data, recordedBy, user = {}, options = {}) => 
     ));
     try { await syncServiceAttendanceSummary(data.service_id); } catch (err) {
       logger.error(err, "Failed to sync summary:");
+    }
+    if (result?.created !== false) {
+      const service = await Service.findByPk(data.service_id, { attributes: ["title"] }).catch(() => null);
+      await notifications.notifyAttendanceRecorded({ memberId: data.member_id, activityType: "service", activityId: data.service_id, activityTitle: service?.title });
     }
     cache.keys("dashboard:*").forEach((key) => cache.del(key));
     return result;

@@ -418,7 +418,7 @@ const seedDemoData = async (transaction) => {
       birthdate,
       spiritual_birthday: spiritualBirthday,
       gender,
-      status: (i % 8 === 0) ? "Semi-Active" : (i % 12 === 0) ? "New" : "Active",
+      status: (i % 8 === 0) ? "Inactive" : "Active",
       address: demoNote("Simulated address for local community QA testing."),
       cell_group_id: cellGroup ? cellGroup.id : null,
       group_id: fellowshipGroup ? fellowshipGroup.id : null,
@@ -438,7 +438,7 @@ const seedDemoData = async (transaction) => {
     // 8. Seed status and cell histories
     await MemberStatusHistory.create({
       member_id: member.id,
-      old_status: "New",
+      old_status: "Active",
       new_status: member.status,
       changed_by: 1, // System admin
       reason: demoNote("Initial member seeding."),

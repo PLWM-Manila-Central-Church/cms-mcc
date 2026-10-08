@@ -2,7 +2,7 @@
 
 const multer = require("multer");
 const multerS3 = require("multer-s3");
-const { S3Client } = require("@aws-sdk/client-s3");
+const { S3Client, DeleteObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 const path = require("path");
 const crypto = require("crypto");
 const fs = require("fs");
@@ -33,6 +33,7 @@ if (s3Enabled) {
 const ALLOWED_ARCHIVE_EXT  = [".pdf", ".docx", ".xlsx", ".jpg", ".jpeg", ".png", ".mp4", ".mp3"];
 const ALLOWED_RECEIPT_EXT  = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
 const ALLOWED_PROFILE_EXT  = [".jpg", ".jpeg", ".png", ".webp"];
+const ALLOWED_EVENT_IMAGE_EXT = [".jpg", ".jpeg", ".png", ".webp"];
 
 // Declared MIME types must match the extension allowlist — extension-only
 // checks accept renamed polyglot/HTML payloads.
@@ -44,6 +45,7 @@ const ALLOWED_ARCHIVE_MIME = [
 ];
 const ALLOWED_RECEIPT_MIME = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 const ALLOWED_PROFILE_MIME = ["image/jpeg", "image/png", "image/webp"];
+const ALLOWED_EVENT_IMAGE_MIME = ["image/jpeg", "image/png", "image/webp"];
 
 const createS3Storage = (folder) =>
   multerS3({
@@ -119,10 +121,52 @@ exports.profileUpload = s3Enabled
       limits: { fileSize: 5 * 1024 * 1024 },
     });
 
+exports.eventImageUpload = s3Enabled
+  ? multer({
+      storage: createS3Storage("event-images"),
+      fileFilter: fileFilter(ALLOWED_EVENT_IMAGE_EXT, ALLOWED_EVENT_IMAGE_MIME),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    })
+  : multer({
+      storage: createDiskFallback("event-images"),
+      fileFilter: fileFilter(ALLOWED_EVENT_IMAGE_EXT, ALLOWED_EVENT_IMAGE_MIME),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    });
+
 exports.getFileUrl = (key) => {
   if (CDN_URL) return `${CDN_URL.replace(/\/$/, "")}/${key}`;
   if (s3Enabled) return `${S3_ENDPOINT}/${S3_BUCKET}/${key}`;
   return `/uploads/${key}`;
+};
+
+exports.deleteStoredFile = async (key) => {
+  if (!key) return;
+  if (s3Enabled) {
+    await s3Client.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+    return;
+  }
+  const filePath = path.resolve(__dirname, "../..", "uploads", key);
+  const uploadsRoot = path.resolve(__dirname, "../..", "uploads") + path.sep;
+  if (!filePath.startsWith(uploadsRoot)) throw new Error("Invalid upload key");
+  await fs.promises.rm(filePath, { force: true });
+};
+
+exports.sendStoredFile = async (key, res) => {
+  if (!key) return res.status(404).json({ message: "File not found" });
+  const contentTypes = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
+  const contentType = contentTypes[path.extname(key).toLowerCase()];
+  if (!contentType) return res.status(415).json({ message: "Unsupported image type" });
+  res.set("Content-Type", contentType);
+  res.set("Cache-Control", "private, max-age=3600");
+  if (s3Enabled) {
+    const object = await s3Client.send(new GetObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+    object.Body.pipe(res);
+    return;
+  }
+  const filePath = path.resolve(__dirname, "../..", "uploads", key);
+  const uploadsRoot = path.resolve(__dirname, "../..", "uploads") + path.sep;
+  if (!filePath.startsWith(uploadsRoot) || !fs.existsSync(filePath)) return res.status(404).json({ message: "File not found" });
+  return res.sendFile(filePath);
 };
 
 exports.s3Enabled = s3Enabled;

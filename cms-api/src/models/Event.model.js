@@ -14,6 +14,8 @@ const Event = sequelize.define(
     category_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     title: { type: DataTypes.STRING(150), allowNull: false },
     description: { type: DataTypes.TEXT, allowNull: true },
+    image_url: { type: DataTypes.STRING(1000), allowNull: true },
+    image_key: { type: DataTypes.STRING(255), allowNull: true },
     start_date: { type: DataTypes.DATEONLY, allowNull: false },
     end_date: { type: DataTypes.DATEONLY, allowNull: true },
     start_time: { type: DataTypes.TIME, allowNull: true },

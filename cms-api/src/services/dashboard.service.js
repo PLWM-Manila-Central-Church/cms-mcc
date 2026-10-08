@@ -68,7 +68,7 @@ const getRoleSummary = async ({
     }
     case "Registration Team": {
       const { start: todayStart, end: todayEnd } = todayRange();
-      const [pendingInvites, newMembers, todayAttendance, activeCount, newCount, semiActiveCount, inactiveCount] = await Promise.all([
+      const [pendingInvites, newMembers, todayAttendance, activeCount, inactiveCount] = await Promise.all([
         InvitedMember.count({ where: { status: "pending" } }),
         Member.count({ where: { created_at: { [Op.gte]: thisMonth } } }),
         AttendanceModel.count({
@@ -79,8 +79,6 @@ const getRoleSummary = async ({
           },
         }),
         Member.count({ where: { status: "Active" } }),
-        Member.count({ where: { status: "New" } }),
-        Member.count({ where: { status: "Semi-Active" } }),
         Member.count({ where: { status: "Inactive" } }),
       ]);
       return {
@@ -88,7 +86,7 @@ const getRoleSummary = async ({
         pendingInvites,
         newMembers,
         todayAttendance,
-        memberStatusCounts: { active: activeCount, new: newCount, semiActive: semiActiveCount, inactive: inactiveCount },
+        memberStatusCounts: { active: activeCount, inactive: inactiveCount },
       };
     }
     case "Finance Team": {
@@ -257,7 +255,7 @@ exports.getStats = async ({
     if (recentServices.length > 0) {
       attendanceTrend = await Promise.all(
         recentServices.map(async (svc) => {
-          const [active, newC, semiActive] = await Promise.all([
+          const [active, inactive] = await Promise.all([
             AttendanceModel.count({
               include: [{ model: Member, where: { status: "Active" }, required: true, attributes: [] }],
               where: {
@@ -267,15 +265,7 @@ exports.getStats = async ({
               },
             }),
             AttendanceModel.count({
-              include: [{ model: Member, where: { status: "New" }, required: true, attributes: [] }],
-              where: {
-                service_id: svc.id,
-                check_in_method: { [Op.ne]: "pre-reg" },
-                ...(AttendanceModel !== Attendance && { voided_at: null }),
-              },
-            }),
-            AttendanceModel.count({
-              include: [{ model: Member, where: { status: "Semi-Active" }, required: true, attributes: [] }],
+              include: [{ model: Member, where: { status: "Inactive" }, required: true, attributes: [] }],
               where: {
                 service_id: svc.id,
                 check_in_method: { [Op.ne]: "pre-reg" },
@@ -287,8 +277,8 @@ exports.getStats = async ({
             service_id: svc.id,
             title: svc.title,
             service_date: svc.service_date,
-            active, new: newC, semiActive,
-            total: active + newC + semiActive,
+            active, inactive,
+            total: active + inactive,
           };
         })
       );

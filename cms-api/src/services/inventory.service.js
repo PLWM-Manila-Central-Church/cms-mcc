@@ -2,6 +2,7 @@
 
 const cache       = require("../helpers/cache.helper");
 const sequelize   = require("../config/db");
+const { Op }      = require("sequelize");
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
@@ -12,7 +13,24 @@ const {
   InventoryRequest,
   InventoryUsage,
   User,
+  Role,
+  Event,
+  Service,
+  MinistryRole,
 } = require("../models");
+
+const notifyInventoryManagers = async (payload) => {
+  try {
+    const roles = await Role.findAll({ where: { role_name: { [Op.in]: ["System Admin", "Inventory Manager"] } }, attributes: ["id"] });
+    const roleIds = roles.map((role) => role.id);
+    const users = roleIds.length
+      ? await User.findAll({ where: { role_id: { [Op.in]: roleIds }, is_active: 1, is_deleted: 0 }, attributes: ["id"] })
+      : [];
+    await notifService.bulkCreateNotifications(users.map((user) => user.id), payload);
+  } catch (error) {
+    logger.error(error, "Inventory notification failed");
+  }
+};
 
 const itemIncludes = [
   {
@@ -25,7 +43,6 @@ const itemIncludes = [
 
 // ── Get All Items (paginated) ────────────────────────────────
 exports.getAllItems = async ({ page = 1, limit = 15, search, category_id } = {}) => {
-  const { Op } = require("sequelize");
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where = {};
 
@@ -57,7 +74,7 @@ exports.getItemById = async (id) => {
 
 // ── Create Item ──────────────────────────────────────────────
 exports.createItem = async (data, createdBy) => {
-  const { name, category_id, quantity, unit, condition, low_stock_threshold, notes } = data;
+  const { name, category_id, quantity, unit, condition, status = "Available", low_stock_threshold, notes } = data;
 
   const qty = parseInt(quantity, 10) || 0;
   if (qty < 0)
@@ -74,12 +91,16 @@ exports.createItem = async (data, createdBy) => {
     quantity:            qty,
     unit:                unit                 || null,
     condition:           condition            || null,
+    status,
     low_stock_threshold: low_stock_threshold  || null,
     notes:               notes               || null,
   });
 
   const created = await exports.getItemById(item.id);
   auditLog.log({ userId: createdBy, action: "CREATE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: created.id });
+  if (created.status === "Under Repair") {
+    await notifyInventoryManagers({ type: "inventory_item_under_repair", message: `Inventory item "${created.name}" was added as Under Repair.`, reference_id: created.id, reference_type: "inventory_item" });
+  }
   return created;
 };
 
@@ -88,7 +109,9 @@ exports.updateItem = async (id, data, updatedBy) => {
   const item = await InventoryItem.findByPk(id);
   if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
-  const { name, category_id, quantity, unit, condition, low_stock_threshold, notes } = data;
+  const { name, category_id, quantity, unit, condition, status, low_stock_threshold, notes } = data;
+  const wasLow = item.low_stock_threshold != null && item.quantity <= item.low_stock_threshold;
+  const previousStatus = item.status || "Available";
 
   if (category_id) {
     const category = await InventoryCategory.findByPk(category_id);
@@ -101,12 +124,39 @@ exports.updateItem = async (id, data, updatedBy) => {
     ...(quantity            !== undefined && { quantity: Math.max(0, parseInt(quantity, 10) || 0) }),
     ...(unit                !== undefined && { unit }),
     ...(condition           !== undefined && { condition }),
+    ...(status              !== undefined && { status }),
     ...(low_stock_threshold !== undefined && { low_stock_threshold }),
     ...(notes               !== undefined && { notes }),
   });
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: id });
-  return await exports.getItemById(id);
+  const updated = await exports.getItemById(id);
+  if (previousStatus !== updated.status) {
+    const underRepair = updated.status === "Under Repair";
+    await notifyInventoryManagers({
+      type: underRepair ? "inventory_item_under_repair" : "inventory_item_available",
+      message: underRepair ? `Inventory item "${updated.name}" was placed Under Repair.` : `Inventory item "${updated.name}" is available again.`,
+      reference_id: updated.id,
+      reference_type: "inventory_item",
+    });
+    try {
+      const pendingRequests = await InventoryRequest.findAll({ where: { item_id: updated.id, status: "pending" }, attributes: ["requested_by"] });
+      const recipients = [...new Set(pendingRequests.map((request) => Number(request.requested_by)).filter(Boolean))];
+      await notifService.bulkCreateNotifications(recipients, {
+        type: underRepair ? "inventory_request_item_unavailable" : "inventory_request_item_available",
+        message: underRepair ? `The requested item "${updated.name}" is under repair; your pending request remains open.` : `The requested item "${updated.name}" is available again; your pending request remains open.`,
+        reference_id: updated.id,
+        reference_type: "inventory_item",
+      });
+    } catch (error) {
+      logger.error(error, "Inventory availability notification failed");
+    }
+  }
+  const isLow = updated.low_stock_threshold != null && updated.quantity <= updated.low_stock_threshold;
+  if (!wasLow && isLow) {
+    await notifyInventoryManagers({ type: "inventory_item_low_stock", message: `Inventory item "${updated.name}" reached its low-stock threshold (${updated.quantity} ${updated.unit || "units"} remaining).`, reference_id: updated.id, reference_type: "inventory_item" });
+  }
+  return updated;
 };
 
 // ── Delete Item ──────────────────────────────────────────────
@@ -122,6 +172,15 @@ exports.deleteItem = async (id, deletedBy) => {
 // ── Get All Categories ───────────────────────────────────────
 exports.getAllCategories = async () => {
   return await InventoryCategory.findAll({ order: [["name", "ASC"]] });
+};
+
+exports.getRequestContexts = async () => {
+  const [events, services, ministries] = await Promise.all([
+    Event.findAll({ where: { is_deleted: 0, status: { [Op.in]: ["Upcoming", "Ongoing"] } }, attributes: ["id", "title", "start_date"], order: [["start_date", "ASC"]], limit: 100 }),
+    Service.findAll({ where: { status: "published" }, attributes: ["id", "title", "service_date"], order: [["service_date", "DESC"]], limit: 100 }),
+    MinistryRole.findAll({ attributes: ["id", "name"], order: [["name", "ASC"]] }),
+  ]);
+  return { events, services, ministries };
 };
 
 exports.getCategoryById = async (id) => {
@@ -173,6 +232,9 @@ exports.getAllRequests = async ({ page = 1, limit = 15, status } = {}) => {
     where,
     include: [
       { model: InventoryItem, as: "item",             attributes: ["id", "name", "unit"], required: false },
+      { model: Event, as: "event", attributes: ["id", "title"], required: false },
+      { model: Service, as: "service", attributes: ["id", "title"], required: false },
+      { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"], required: false },
       { model: User,          as: "requestedByUser",  attributes: ["id", "email"],        required: false },
     ],
     order: [["created_at", "DESC"]],
@@ -191,7 +253,12 @@ exports.getAllRequests = async ({ page = 1, limit = 15, status } = {}) => {
 exports.getMyRequests = async (userId) => {
   return await InventoryRequest.findAll({
     where: { requested_by: userId },
-    include: [{ model: InventoryItem, as: "item", attributes: ["id", "name", "unit"], required: false }],
+    include: [
+      { model: InventoryItem, as: "item", attributes: ["id", "name", "unit", "status"], required: false },
+      { model: Event, as: "event", attributes: ["id", "title"], required: false },
+      { model: Service, as: "service", attributes: ["id", "title"], required: false },
+      { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"], required: false },
+    ],
     order: [["created_at", "DESC"]],
   });
 };
@@ -200,6 +267,9 @@ exports.getRequestById = async (id) => {
   const request = await InventoryRequest.findByPk(id, {
     include: [
       { model: InventoryItem, as: "item", attributes: ["id", "name", "unit"], required: false },
+      { model: Event, as: "event", attributes: ["id", "title"], required: false },
+      { model: Service, as: "service", attributes: ["id", "title"], required: false },
+      { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"], required: false },
     ],
   });
   if (!request) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory request not found");
@@ -208,7 +278,10 @@ exports.getRequestById = async (id) => {
 
 // ── Create Request ───────────────────────────────────────────
 exports.createRequest = async (data, requestedBy) => {
-  const { item_id, quantity, purpose } = data;
+  const { item_id, quantity, purpose, event_id, service_id, ministry_role_id } = data;
+
+  const linkedContexts = [event_id, service_id, ministry_role_id].filter((value) => value != null);
+  if (linkedContexts.length > 1) throw AppError.badRequest("INVALID_REQUEST_CONTEXT", "Link a request to only one event, service, or ministry");
 
   const qty = parseInt(quantity, 10);
   if (!Number.isInteger(qty) || qty <= 0)
@@ -216,9 +289,21 @@ exports.createRequest = async (data, requestedBy) => {
 
   const item = await InventoryItem.findByPk(item_id);
   if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
+  if (item.status === "Under Repair") throw AppError.badRequest("ITEM_UNDER_REPAIR", "This item is under repair and cannot be requested");
+  const [event, service, ministryRole] = await Promise.all([
+    event_id ? Event.findByPk(event_id) : null,
+    service_id ? Service.findByPk(service_id) : null,
+    ministry_role_id ? MinistryRole.findByPk(ministry_role_id) : null,
+  ]);
+  if (event_id && !event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  if (service_id && !service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+  if (ministry_role_id && !ministryRole) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry not found");
 
   const request = await InventoryRequest.create({
     item_id,
+    event_id: event_id || null,
+    service_id: service_id || null,
+    ministry_role_id: ministry_role_id || null,
     requested_by: requestedBy,
     quantity: qty,
     purpose: purpose || null,
@@ -228,6 +313,7 @@ exports.createRequest = async (data, requestedBy) => {
   const created = await exports.getRequestById(request.id);
     auditLog.log({ userId: requestedBy, action: "CREATE_INVENTORY_REQUEST", targetTable: "inventory_requests", targetId: created.id });
     cache.keys("dashboard:*").forEach(k => cache.del(k));
+  await notifyInventoryManagers({ type: "inventory_request_submitted", message: `A new request was submitted for ${item.name}.`, reference_id: created.id, reference_type: "inventory_request" });
     return created;
 };
 
@@ -237,6 +323,7 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
   if (!["approved", "rejected"].includes(normalized))
     throw AppError.badRequest("VALIDATION", "Status must be approved or rejected");
 
+  let stockNotice = null;
   await sequelize.transaction(async (t) => {
     // Lock the request row for update to prevent concurrent reviews
     const request = await InventoryRequest.findOne({
@@ -257,8 +344,13 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
         transaction: t,
       });
       if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
+      if (item.status === "Under Repair") throw AppError.badRequest("ITEM_UNDER_REPAIR", "This item is under repair and cannot be issued");
       if (item.quantity < request.quantity)
         throw AppError.badRequest("VALIDATION", "Insufficient inventory quantity");
+      const nextQuantity = Number(item.quantity) - Number(request.quantity);
+      if (item.low_stock_threshold != null && item.quantity > item.low_stock_threshold && nextQuantity <= item.low_stock_threshold) {
+        stockNotice = { name: item.name, quantity: nextQuantity, unit: item.unit || "units", id: item.id };
+      }
       await item.decrement("quantity", { by: request.quantity, transaction: t });
     }
 
@@ -278,6 +370,10 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
     }, { transaction: t });
   });
 
+  if (stockNotice) {
+    await notifyInventoryManagers({ type: "inventory_item_low_stock", message: `Inventory item "${stockNotice.name}" reached its low-stock threshold (${stockNotice.quantity} ${stockNotice.unit} remaining).`, reference_id: stockNotice.id, reference_type: "inventory_item" });
+  }
+
   // Notify requester (outside transaction — non-fatal if it fails)
   try {
     const request = await InventoryRequest.findByPk(id, { attributes: ["requested_by", "item_id"] });
@@ -291,6 +387,8 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
           user_id: requester.id,
           type:    "inventory_request_reviewed",
           message: `Your inventory request for "${itemName}" has been ${normalized}.`,
+          reference_id: id,
+          reference_type: "inventory_request",
         });
       }
     }
@@ -335,16 +433,23 @@ exports.createUsage = async (data, usedBy) => {
 
   // Same pattern as reviewRequest: lock the item row so concurrent usage
   // records cannot both pass the sufficiency check and drive stock negative.
-  return await sequelize.transaction(async (t) => {
+  let stockNotice = null;
+  const usage = await sequelize.transaction(async (t) => {
     const item = await InventoryItem.findOne({
       where: { id: item_id },
       lock: t.LOCK.UPDATE,
       transaction: t,
     });
     if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
+    if (item.status === "Under Repair") throw AppError.badRequest("ITEM_UNDER_REPAIR", "This item is under repair and cannot be used");
 
     if (item.quantity < qty)
       throw AppError.badRequest("VALIDATION", "Insufficient inventory quantity");
+
+    const nextQuantity = Number(item.quantity) - qty;
+    if (item.low_stock_threshold != null && item.quantity > item.low_stock_threshold && nextQuantity <= item.low_stock_threshold) {
+      stockNotice = { name: item.name, quantity: nextQuantity, unit: item.unit || "units", id: item.id };
+    }
 
     await item.decrement("quantity", { by: qty, transaction: t });
 
@@ -356,6 +461,10 @@ exports.createUsage = async (data, usedBy) => {
       used_at:  used_at  || new Date(),
     }, { transaction: t });
   });
+  if (stockNotice) {
+    await notifyInventoryManagers({ type: "inventory_item_low_stock", message: `Inventory item "${stockNotice.name}" reached its low-stock threshold (${stockNotice.quantity} ${stockNotice.unit} remaining).`, reference_id: stockNotice.id, reference_type: "inventory_item" });
+  }
+  return usage;
 };
 
 // ── Delete Usage Record ──────────────────────────────────────

@@ -6,6 +6,7 @@ const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
 const validateQuery = require("../middlewares/validateQuery");
+const { eventImageUpload } = require("../middlewares/upload-s3");
 const {
   createEventSchema, updateEventSchema, updateEventStatusSchema,
   registerMemberSchema, bulkRegisterSchema, getEventsQuerySchema,
@@ -19,6 +20,9 @@ router.put("/categories/:id",    auth, authorize("events", "update"), ctrl.updat
 router.delete("/categories/:id", auth, authorize("events", "delete"), ctrl.deleteCategory);
 
 // ── Events ───────────────────────────────────────────────────
+router.get("/:id/image", auth, authorize("events", "read"), ctrl.getEventImage);
+router.post("/:id/image", auth, ctrl.authorizeEventImageUpload, eventImageUpload.single("image"), ctrl.uploadEventImage);
+router.delete("/:id/image", auth, authorize("events", "update"), ctrl.deleteEventImage);
 router.get("/",    auth, authorize("events", "read"), validateQuery(getEventsQuerySchema), ctrl.getAllEvents);
 router.get("/:id", auth, authorize("events", "read"),   ctrl.getEventById);
 router.post("/",   auth, authorize("events", "create"), validate(createEventSchema),       ctrl.createEvent);

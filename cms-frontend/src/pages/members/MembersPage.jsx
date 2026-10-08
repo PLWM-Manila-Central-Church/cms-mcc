@@ -8,9 +8,7 @@ import MonoIcon from '../../components/common/MonoIcon';
 
 /* ── Status colours (admin view only) ─────────────────────────── */
 const STATUS_COLORS = {
-  New:           { bg: '#eff6ff', color: '#3b82f6' },
   Active:        { bg: '#dcfce7', color: '#16a34a' },
-  'Semi-Active': { bg: '#fef9c3', color: '#ca8a04' },
   Inactive:      { bg: '#f3f4f6', color: '#6b7280' },
 };
 
@@ -522,9 +520,7 @@ export default function MembersPage() {
           style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: statusFilter ? '#005599' : '#64748b', fontWeight: statusFilter ? 600 : 400, minHeight: 38 }}
         >
           <option value="">All Status</option>
-          <option value="New">New</option>
           <option value="Active">Active</option>
-          <option value="Semi-Active">Semi-Active</option>
           <option value="Inactive">Inactive</option>
         </select>
 

@@ -22,6 +22,7 @@ router.put("/items/:id",    auth, authorize("inventory", "update"), validate(upd
 router.delete("/items/:id", auth, authorize("inventory", "delete"), ctrl.deleteItem);
 
 // ── Categories ───────────────────────────────────────────────
+router.get("/request-contexts", auth, authorize("inventory", "read"), ctrl.getRequestContexts);
 router.get("/categories",        auth, authorize("inventory", "read"),   ctrl.getAllCategories);
 router.get("/categories/:id",    auth, authorize("inventory", "read"),   ctrl.getCategoryById);
 router.post("/categories",       auth, authorize("inventory", "create"), validate(createCategorySchema), ctrl.createCategory);

@@ -19,11 +19,11 @@ const STATUS_STYLE = {
 export default function InventoryPage() {
   const { hasPermission, user } = useAuth();
   const scopedRequestOnly = ['Ministry Leader', 'Cell Group Leader', 'Group Leader', 'Leader'].includes(user?.roleName);
-  const canManage = hasPermission('inventory', 'create') && !scopedRequestOnly;
+  const canCreate = hasPermission('inventory', 'create') && !scopedRequestOnly;
+  const canUpdate = hasPermission('inventory', 'update') && !scopedRequestOnly;
+  const canManage = canUpdate;
   const canDelete = hasPermission('inventory', 'delete') && !scopedRequestOnly;
-  const canRequest = user?.roleName === 'Leader'
-    ? hasPermission('inventory', 'create')
-    : hasPermission('inventory', 'create') || !canManage;
+  const canRequest = !canManage;
 
   const [tab, setTab] = useState('items'); // items | requests
 
@@ -43,7 +43,7 @@ export default function InventoryPage() {
   // ── Item form ─────────────────────────────────────────────
   const [showItemForm, setShowItemForm] = useState(false);
   const [editItem, setEditItem]         = useState(null);
-  const [itemForm, setItemForm] = useState({ name: '', category_id: '', quantity: '', unit: '', condition: 'Good', low_stock_threshold: '' });
+  const [itemForm, setItemForm] = useState({ name: '', category_id: '', quantity: '', unit: '', condition: 'Good', status: 'Available', low_stock_threshold: '' });
   const [savingItem, setSavingItem]     = useState(false);
   const [itemFormErr, setItemFormErr]   = useState('');
 
@@ -60,7 +60,8 @@ export default function InventoryPage() {
 
   // ── Request form ──────────────────────────────────────────
   const [showReqForm, setShowReqForm] = useState(false);
-  const [reqForm, setReqForm]         = useState({ item_id: '', quantity: '', purpose: '' });
+  const [reqForm, setReqForm]         = useState({ item_id: '', quantity: '', purpose: '', context_type: '', context_id: '' });
+  const [requestContexts, setRequestContexts] = useState({ events: [], services: [], ministries: [] });
   const [savingReq, setSavingReq]     = useState(false);
   const [reqFormErr, setReqFormErr]   = useState('');
 
@@ -71,6 +72,15 @@ export default function InventoryPage() {
       const res = await axiosInstance.get('/inventory/categories');
       setCategories(res.data.data);
     } catch {}
+  }, []);
+
+  const fetchRequestContexts = useCallback(async () => {
+    try {
+      const res = await axiosInstance.get('/inventory/request-contexts');
+      setRequestContexts(res.data.data || { events: [], services: [], ministries: [] });
+    } catch {
+      setRequestContexts({ events: [], services: [], ministries: [] });
+    }
   }, []);
 
   const fetchItems = useCallback(async () => {
@@ -105,11 +115,12 @@ export default function InventoryPage() {
   }, [canManage, reqPage, reqFilter]);
 
   useEffect(() => { fetchCategories(); }, [fetchCategories]);
+  useEffect(() => { fetchRequestContexts(); }, [fetchRequestContexts]);
   useEffect(() => { if (tab === 'items') fetchItems(); }, [tab, fetchItems]);
   useEffect(() => { if (tab === 'requests') fetchRequests(); }, [tab, fetchRequests]);
 
   const resetItemForm = () => {
-    setItemForm({ name: '', category_id: '', quantity: '', unit: '', condition: 'Good', low_stock_threshold: '' });
+    setItemForm({ name: '', category_id: '', quantity: '', unit: '', condition: 'Good', status: 'Available', low_stock_threshold: '' });
     setEditItem(null); setItemFormErr('');
   };
 
@@ -121,6 +132,7 @@ export default function InventoryPage() {
       quantity:            item.quantity,
       unit:                item.unit || '',
       condition:           item.condition || 'Good',
+      status:              item.status || 'Available',
       low_stock_threshold: item.low_stock_threshold || ''
     });
     setShowItemForm(true);
@@ -131,7 +143,7 @@ export default function InventoryPage() {
     e.preventDefault(); setSavingItem(true); setItemFormErr('');
     try {
       const payload = { ...itemForm, quantity: parseInt(itemForm.quantity) };
-      if (!payload.low_stock_threshold) delete payload.low_stock_threshold;
+      payload.low_stock_threshold = itemForm.low_stock_threshold === '' ? null : parseInt(itemForm.low_stock_threshold, 10);
       if (editItem) await axiosInstance.put(`/inventory/items/${editItem.id}`, payload);
       else          await axiosInstance.post('/inventory/items', payload);
       setShowItemForm(false); resetItemForm(); fetchItems();
@@ -158,9 +170,13 @@ export default function InventoryPage() {
   const handleSubmitRequest = async (e) => {
     e.preventDefault(); setSavingReq(true); setReqFormErr('');
     try {
-      await axiosInstance.post('/inventory/requests', { ...reqForm, quantity: parseInt(reqForm.quantity) });
+      const contextKey = reqForm.context_type === 'ministry' ? 'ministry_role_id' : `${reqForm.context_type}_id`;
+      const contextPayload = reqForm.context_type && reqForm.context_id ? { [contextKey]: Number(reqForm.context_id) } : {};
+      await axiosInstance.post('/inventory/requests', {
+        item_id: Number(reqForm.item_id), quantity: parseInt(reqForm.quantity, 10), purpose: reqForm.purpose, ...contextPayload,
+      });
       setShowReqForm(false);
-      setReqForm({ item_id: '', quantity: '', purpose: '' });
+      setReqForm({ item_id: '', quantity: '', purpose: '', context_type: '', context_id: '' });
       fetchRequests();
     } catch (err) { setReqFormErr(err.response?.data?.message || 'Failed to submit request.'); }
     finally { setSavingReq(false); }
@@ -176,7 +192,7 @@ export default function InventoryPage() {
           <p style={s.subtitle}>{totalItems} items in stock</p>
         </div>
         <div style={s.headerActions}>
-          {tab === 'items' && canManage && (
+          {tab === 'items' && canCreate && (
             <button onClick={() => { setShowItemForm(!showItemForm); if (showItemForm) resetItemForm(); }} style={s.addBtn}>
               {showItemForm ? <><MonoIcon name="close" size={14} /> Cancel</> : '+ Add Item'}
             </button>
@@ -240,6 +256,12 @@ export default function InventoryPage() {
                     </select>
                   </div>
                   <div style={s.field}>
+                    <label htmlFor="inventory-item-status" style={s.label}>Availability</label>
+                    <select id="inventory-item-status" value={itemForm.status} onChange={e => setItemForm(f => ({ ...f, status: e.target.value }))} style={s.select}>
+                      <option value="Available">Available</option><option value="Under Repair">Under Repair</option>
+                    </select>
+                  </div>
+                  <div style={s.field}>
                     <label style={s.label}>Low Stock Alert</label>
                     <input type="number" min="0" value={itemForm.low_stock_threshold}
                       onChange={e => setItemForm(f => ({ ...f, low_stock_threshold: e.target.value }))}
@@ -279,6 +301,7 @@ export default function InventoryPage() {
                   <th style={s.th}>Unit</th>
                   <th style={s.th}>Type</th>
                   <th style={s.th}>Condition</th>
+                  <th style={s.th}>Availability</th>
                   {(canManage || canDelete) && <th style={s.th}>Actions</th>}
                 </tr>
               </thead>
@@ -311,10 +334,15 @@ export default function InventoryPage() {
                       <td style={s.td}>
                         {item.condition && <span style={{ ...s.badge, background: condStyle.bg, color: condStyle.color }}>{item.condition}</span>}
                       </td>
+                      <td style={s.td}>
+                        <span style={{ ...s.badge, background: item.status === 'Under Repair' ? '#fff7ed' : '#f0fdf4', color: item.status === 'Under Repair' ? '#c2410c' : '#15803d' }}>
+                          {item.status || 'Available'}
+                        </span>
+                      </td>
                       {(canManage || canDelete) && (
                         <td style={s.td}>
                           <div style={{ display: 'flex', gap: 6 }}>
-                            {canManage && <button onClick={() => openEditItem(item)} style={s.editBtn}>Edit</button>}
+                            {canUpdate && <button onClick={() => openEditItem(item)} style={s.editBtn}>Edit</button>}
                             {canDelete && <button onClick={() => handleDeleteItem(item)} style={{ ...s.editBtn, background: '#fef2f2', color: '#dc2626' }}>Delete</button>}
                           </div>
                         </td>
@@ -350,7 +378,7 @@ export default function InventoryPage() {
                     <label style={s.label}>Item *</label>
                     <select value={reqForm.item_id} onChange={e => setReqForm(f => ({ ...f, item_id: e.target.value }))} required style={s.select}>
                       <option value="">— Select Item —</option>
-                      {items.map(item => <option key={item.id} value={item.id}>{item.name} ({item.quantity} {item.unit || 'available'})</option>)}
+                      {items.map(item => <option key={item.id} value={item.id} disabled={item.status === 'Under Repair'}>{item.name} ({item.status === 'Under Repair' ? 'Under Repair' : `${item.quantity} ${item.unit || 'available'}`})</option>)}
                     </select>
                   </div>
                   <div style={s.field}>
@@ -358,6 +386,25 @@ export default function InventoryPage() {
                     <input type="number" min="1" value={reqForm.quantity}
                       onChange={e => setReqForm(f => ({ ...f, quantity: e.target.value }))} required style={s.input} />
                   </div>
+                </div>
+                <div style={s.formRow}>
+                  <div style={s.field}>
+                    <label htmlFor="inventory-request-context-type" style={s.label}>Link to event, service, or ministry</label>
+                    <select id="inventory-request-context-type" value={reqForm.context_type} onChange={e => setReqForm(f => ({ ...f, context_type: e.target.value, context_id: '' }))} style={s.select}>
+                      <option value="">General request</option><option value="event">Event</option><option value="service">Service</option><option value="ministry">Ministry</option>
+                    </select>
+                  </div>
+                  {reqForm.context_type && (() => {
+                    const choices = reqForm.context_type === 'event' ? requestContexts.events : reqForm.context_type === 'service' ? requestContexts.services : requestContexts.ministries;
+                    const title = reqForm.context_type === 'ministry' ? 'name' : 'title';
+                    return <div style={s.field}>
+                      <label htmlFor="inventory-request-context" style={s.label}>{reqForm.context_type === 'ministry' ? 'Ministry' : `${reqForm.context_type[0].toUpperCase()}${reqForm.context_type.slice(1)}`} *</label>
+                      <select id="inventory-request-context" value={reqForm.context_id} onChange={e => setReqForm(f => ({ ...f, context_id: e.target.value }))} required style={s.select}>
+                        <option value="">— Select —</option>
+                        {choices.map(choice => <option key={choice.id} value={choice.id}>{choice[title]}{choice.start_date ? ` · ${choice.start_date}` : choice.service_date ? ` · ${choice.service_date}` : ''}</option>)}
+                      </select>
+                    </div>;
+                  })()}
                 </div>
                 <div style={s.field}>
                   <label style={s.label}>Purpose</label>
@@ -396,7 +443,7 @@ export default function InventoryPage() {
                   <th style={s.th}>Item</th>
                   <th style={s.th}>Requested By</th>
                   <th style={s.th}>Qty</th>
-                  <th style={s.th}>Purpose</th>
+                  <th style={s.th}>Purpose / Context</th>
                   <th style={s.th}>Status</th>
                   <th style={s.th}>Date</th>
                   {canManage && <th style={s.th}>Actions</th>}
@@ -404,9 +451,9 @@ export default function InventoryPage() {
               </thead>
               <tbody>
                 {loadingReqs ? (
-                  <tr><td colSpan={7} style={s.centerCell}>Loading...</td></tr>
+                  <tr><td colSpan={8} style={s.centerCell}>Loading...</td></tr>
                 ) : (canManage ? requests : myRequests).length === 0 ? (
-                  <tr><td colSpan={7} style={s.centerCell}>No requests found.</td></tr>
+                  <tr><td colSpan={8} style={s.centerCell}>No requests found.</td></tr>
                 ) : (canManage ? requests : myRequests).map((r, i) => {
                   const stStyle = STATUS_STYLE[r.status] || STATUS_STYLE.pending;
                   return (
@@ -418,7 +465,10 @@ export default function InventoryPage() {
                       <td style={{ ...s.td, fontWeight: '600', color: '#0f172a' }}>{r.item?.name}</td>
                       <td style={{ ...s.td, fontSize: '13px', color: '#64748b' }}>{r.requestedByUser?.email}</td>
                       <td style={s.td}>{r.quantity} {r.item?.unit || ''}</td>
-                      <td style={{ ...s.td, color: '#64748b', fontSize: '13px' }}>{r.purpose || '—'}</td>
+                      <td style={{ ...s.td, color: '#64748b', fontSize: '13px' }}>
+                        <div>{r.purpose || '—'}</div>
+                        {(r.event || r.service || r.ministryRole) && <small style={{ color: '#005599' }}>{r.event ? `Event: ${r.event.title}` : r.service ? `Service: ${r.service.title}` : `Ministry: ${r.ministryRole.name}`}</small>}
+                      </td>
                       <td style={s.td}>
                         <span style={{ ...s.badge, background: stStyle.bg, color: stStyle.color }}>
                           {r.status.charAt(0).toUpperCase() + r.status.slice(1)}

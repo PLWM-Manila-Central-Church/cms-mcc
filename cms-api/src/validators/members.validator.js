@@ -1,6 +1,7 @@
 "use strict";
 
 const Joi = require("joi");
+const MEMBER_STATUSES = require("../constants/memberStatus");
 
 const memberBody = {
   first_name:         Joi.string().max(100).required(),
@@ -13,7 +14,7 @@ const memberBody = {
   address:            Joi.string().max(500).allow(null, "").optional(),
   cell_group_id:      Joi.number().integer().positive().allow(null).optional(),
   group_id:           Joi.number().integer().positive().allow(null).optional(),
-  status:             Joi.string().valid("New", "Active", "Semi-Active", "Inactive").optional(),
+  status:             Joi.string().valid(...MEMBER_STATUSES).optional(),
   notes:              Joi.string().max(2000).allow(null, "").optional(),
 };
 
@@ -44,7 +45,7 @@ exports.createMemberNoteSchema = Joi.object({
 });
 
 exports.createMemberStatusHistorySchema = Joi.object({
-  status:      Joi.string().valid("New", "Active", "Semi-Active", "Inactive").required(),
+  status:      Joi.string().valid(...MEMBER_STATUSES).required(),
   change_date: Joi.date().iso().optional(),
   remarks:     Joi.string().max(500).allow(null, "").optional(),
 });
@@ -64,7 +65,7 @@ exports.getMembersQuerySchema = Joi.object({
   page:         Joi.number().integer().min(1).default(1),
   limit:        Joi.number().integer().min(1).max(100).default(20),
   search:       Joi.string().max(200).allow("").optional(),
-  status:       Joi.string().valid("New", "Active", "Semi-Active", "Inactive").optional(),
+  status:       Joi.string().valid(...MEMBER_STATUSES).optional(),
   cell_group_id: Joi.number().integer().positive().optional(),
   group_id:     Joi.number().integer().positive().optional(),
 });

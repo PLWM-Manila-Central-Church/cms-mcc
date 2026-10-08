@@ -46,7 +46,10 @@ const assertSecretStrength = (name) => {
         });
         logger.info("Migrations completed");
       } catch (migErr) {
-        logger.error(migErr.stderr?.toString() || migErr.message, "Migration warning");
+        logger.error(migErr.stderr?.toString() || migErr.message, "Database migrations failed; refusing to start the API");
+        await sequelize.close().catch((closeErr) => logger.error(closeErr, "Failed to close the database connection after migration failure"));
+        process.exit(1);
+        return;
       }
     }
 
