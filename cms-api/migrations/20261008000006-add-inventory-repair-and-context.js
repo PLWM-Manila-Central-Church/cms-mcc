@@ -22,7 +22,25 @@ module.exports = {
         await queryInterface.addColumn("inventory_requests", column, {
           type: Sequelize.INTEGER.UNSIGNED,
           allowNull: true,
-          references: { model: table, key: "id" },
+        });
+      }
+      const foreignKeys = await queryInterface.sequelize.query(
+        `SELECT CONSTRAINT_NAME
+         FROM information_schema.KEY_COLUMN_USAGE
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'inventory_requests'
+           AND COLUMN_NAME = :column
+           AND REFERENCED_TABLE_NAME = :table
+           AND REFERENCED_COLUMN_NAME = 'id'
+         LIMIT 1`,
+        { type: queryInterface.sequelize.QueryTypes.SELECT, replacements: { column, table } },
+      );
+      if (foreignKeys.length === 0) {
+        await queryInterface.addConstraint("inventory_requests", {
+          fields: [column],
+          type: "foreign key",
+          name: `fk_inventory_requests_${column}`,
+          references: { table, field: "id" },
           onUpdate: "CASCADE",
           onDelete: "SET NULL",
         });

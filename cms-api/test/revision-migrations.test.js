@@ -52,12 +52,15 @@ describe("revision migrations", () => {
       showIndex: jest.fn(async () => []),
       addColumn: jest.fn(),
       addIndex: jest.fn(),
+      addConstraint: jest.fn(),
+      sequelize: { QueryTypes: { SELECT: "SELECT" }, query: jest.fn(async () => []) },
     };
     await inventoryMigration.up(queryInterface, Sequelize);
     expect(queryInterface.addColumn).toHaveBeenCalledWith("inventory_items", "status", expect.objectContaining({ defaultValue: "Available" }));
     expect(queryInterface.addColumn).toHaveBeenCalledWith("inventory_requests", "event_id", expect.objectContaining({ allowNull: true }));
     expect(queryInterface.addColumn).toHaveBeenCalledWith("inventory_requests", "service_id", expect.objectContaining({ allowNull: true }));
     expect(queryInterface.addColumn).toHaveBeenCalledWith("inventory_requests", "ministry_role_id", expect.objectContaining({ allowNull: true }));
+    expect(queryInterface.addConstraint).toHaveBeenCalledTimes(3);
 
     const eventQueryInterface = {
       describeTable: jest.fn(async () => ({})),
