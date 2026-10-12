@@ -162,8 +162,20 @@ exports.registerMember = async (req, res, next) => {
     const memberId = req.body.member_id || req.user.memberId;
     if (!memberId)
       return res.status(400).json({ success: false, message: "No member profile linked to this account" });
-    const result = await eventsService.registerMember(req.params.id, memberId, req.user.userId);
+    const result = await eventsService.registerMember(req.params.id, memberId, req.user.userId, req.body || {});
     res.status(201).json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
+exports.updateRegistrationReservation = async (req, res, next) => {
+  try {
+    if (forbidMinistryLeaderEventManage(req, res)) return;
+    const memberId = parseInt(req.params.memberId, 10);
+    if (!memberId) return res.status(400).json({ success: false, message: "Invalid member ID" });
+    const result = await eventsService.updateRegistrationReservation(
+      req.params.id, memberId, req.body, req.user.userId,
+    );
+    res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
 

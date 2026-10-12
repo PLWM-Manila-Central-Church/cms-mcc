@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import MonoIcon from '../../components/common/MonoIcon';
 import { normalizeEventStatus } from '../../utils/eventStatus';
 import { eventImageSrc } from '../../utils/eventImage';
+import { apiErrorMessage } from '../../utils/apiErrorMessage';
+import { toLocalDateTimeInput } from '../../utils/localDateTimeInput';
 
 const STATUS_META = {
   Upcoming:  { bg: '#dcfce7', color: '#16a34a', label: 'Upcoming' },
@@ -30,6 +33,7 @@ const STATUS_ACTION_STYLE = {
 export default function EventsPage() {
   const navigate = useNavigate();
   const { hasPermission, user } = useAuth();
+  const { confirm } = useConfirmation();
   const canCreate = hasPermission('events', 'create');
   const canUpdate = hasPermission('events', 'update');
   const canDelete = hasPermission('events', 'delete');
@@ -54,7 +58,7 @@ export default function EventsPage() {
   const [removeImage, setRemoveImage] = useState(false);
   const [form, setForm] = useState({
     category_id: '', title: '', description: '', start_date: '',
-    end_date: '', start_time: '', location: '', capacity: '',
+    end_date: '', start_time: '', location: '', capacity: '', total_parking_slots: '0',
     registration_deadline: '', status: 'Upcoming',
   });
   const [formError, setFormError]   = useState('');
@@ -110,7 +114,7 @@ export default function EventsPage() {
   const resetForm = () => {
     setForm({
       category_id: '', title: '', description: '', start_date: '',
-      end_date: '', start_time: '', location: '', capacity: '',
+      end_date: '', start_time: '', location: '', capacity: '', total_parking_slots: '0',
       registration_deadline: '', status: 'Upcoming',
     });
     setEditEvent(null); setFormError('');
@@ -129,8 +133,8 @@ export default function EventsPage() {
       start_time:            ev.start_time || '',
       location:              ev.location || '',
       capacity:              ev.capacity || '',
-      registration_deadline: ev.registration_deadline
-        ? ev.registration_deadline.slice(0, 16) : '',
+      total_parking_slots:   String(ev.total_parking_slots ?? 0),
+      registration_deadline: toLocalDateTimeInput(ev.registration_deadline),
       status: normalizeEventStatus(ev.status),
     });
     setShowForm(true);
@@ -156,6 +160,7 @@ export default function EventsPage() {
       if (!payload.end_date)              delete payload.end_date;
       if (!payload.start_time)            delete payload.start_time;
       if (!payload.capacity)              delete payload.capacity;
+      payload.total_parking_slots = Number(payload.total_parking_slots || 0);
       if (!payload.registration_deadline) delete payload.registration_deadline;
       if (!payload.description)           delete payload.description;
       if (!payload.location)              delete payload.location;
@@ -171,7 +176,7 @@ export default function EventsPage() {
         try {
           await axiosInstance.post(`/events/${savedEvent.id}/image`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
         } catch (imageError) {
-          setFormError(imageError.response?.data?.message || 'Event details were saved, but the image could not be uploaded. Edit the event to retry.');
+          setFormError(apiErrorMessage(imageError, 'Event details were saved, but the image could not be uploaded. Edit the event to retry.'));
           fetchEvents();
           return;
         }
@@ -180,7 +185,7 @@ export default function EventsPage() {
       }
       setShowForm(false); resetForm(); fetchEvents();
     } catch (err) {
-      setFormError(err.response?.data?.message || 'Failed to save event.');
+      setFormError(apiErrorMessage(err, 'Failed to save event.'));
     } finally { setSaving(false); }
   };
 
@@ -189,16 +194,21 @@ export default function EventsPage() {
     try {
       await axiosInstance.patch(`/events/${eventId}/status`, { status: newStatus });
       fetchEvents();
-    } catch (err) { setError(err.response?.data?.message || 'Failed to update status.'); }
+    } catch (err) { setError(apiErrorMessage(err, 'Failed to update status.')); }
     finally { setStatusUpdating(null); }
   };
 
   const handleDelete = async (eventId) => {
-    if (!window.confirm('Delete this event?')) return;
+    if (!(await confirm({
+      title: 'Delete event?',
+      message: 'This event will be deleted. This action cannot be undone.',
+      confirmLabel: 'Delete event',
+      tone: 'danger',
+    }))) return;
     try {
       await axiosInstance.delete(`/events/${eventId}`);
       fetchEvents();
-    } catch (err) { setError(err.response?.data?.message || 'Failed to delete event.'); }
+    } catch (err) { setError(apiErrorMessage(err, 'Failed to delete event.')); }
   };
 
   const formatDate = (d) =>
@@ -341,11 +351,19 @@ export default function EventsPage() {
                 />
               </div>
               <div style={s.field}>
-                <label style={s.label}>Capacity</label>
+                <label style={s.label}>Registration / seat capacity</label>
                 <input
                   type="number" min="1" value={form.capacity}
                   onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))}
                   placeholder="Optional" style={s.input}
+                />
+              </div>
+              <div style={s.field}>
+                <label style={s.label}>Parking slots</label>
+                <input
+                  type="number" min="0" step="1" value={form.total_parking_slots}
+                  onChange={e => setForm(f => ({ ...f, total_parking_slots: e.target.value }))}
+                  placeholder="0" style={s.input}
                 />
               </div>
               <div style={s.field}>
@@ -451,6 +469,8 @@ export default function EventsPage() {
                 <div style={s.cardMeta}>
                   <MonoIcon name="members" size={14} /> {regCount} registered{ev.capacity ? ` / ${ev.capacity}` : ''}
                 </div>
+                {Number(ev.capacity)>0&&<div style={s.cardMeta}>Seats assigned: {ev.seat_reserved_count||0} / {ev.capacity}</div>}
+                {Number(ev.total_parking_slots)>0&&<div style={s.cardMeta}>Parking reserved: {ev.parking_reserved_count||0} / {ev.total_parking_slots}</div>}
                 {ev.registration_deadline && (
                   <div style={{
                     ...s.cardMeta,

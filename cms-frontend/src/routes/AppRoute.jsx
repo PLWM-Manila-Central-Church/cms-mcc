@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ConfirmationProvider } from '../context/ConfirmationContext';
 import ProtectedRoute from './ProtectedRoute';
 import MainLayout from '../components/layout/MainLayout';
 
@@ -85,6 +86,7 @@ const AppRoutes = () => {
   const homeRedirect = user?.roleName === 'Member' ? '/portal' : '/dashboard';
 
   return (
+    <ConfirmationProvider>
     <Suspense fallback={<div style={{ minHeight: 160, padding: 32, color: '#64748b' }}>Loading page…</div>}>
     <Routes>
       {/* ── Public Church Website (no auth) ── */}
@@ -152,6 +154,7 @@ const AppRoutes = () => {
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </Suspense>
+    </ConfirmationProvider>
   );
 };
 

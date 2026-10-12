@@ -95,6 +95,8 @@ User.hasMany(PasswordResetToken, { foreignKey: "user_id" });
 PasswordResetToken.belongsTo(User, { foreignKey: "user_id" });
 User.hasMany(RefreshToken, { foreignKey: "user_id" });
 RefreshToken.belongsTo(User, { foreignKey: "user_id" });
+UserSession.hasMany(RefreshToken, { foreignKey: "user_session_id", as: "refreshTokens" });
+RefreshToken.belongsTo(UserSession, { foreignKey: "user_session_id", as: "userSession" });
 
 // ── Member ───────────────────────────────────────────────────
 Member.belongsTo(CellGroup, { foreignKey: "cell_group_id", as: "cellGroup" });

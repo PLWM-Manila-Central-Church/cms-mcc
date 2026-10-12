@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), setLeaderScopeHeader: vi.fn() }));
@@ -9,6 +10,19 @@ vi.mock('../api/axiosInstance', () => ({
 }));
 
 import { AuthProvider, useAuth } from './AuthContext';
+
+const createTestQueryClient = () => new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+const renderWithAuth = (children, queryClient = createTestQueryClient()) => ({
+  queryClient,
+  ...render(
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>,
+  ),
+});
 
 function PermissionProbe({ module, action }) {
   const { hasPermission, loading } = useAuth();
@@ -29,11 +43,7 @@ function SessionProbe() {
 
 const renderPermission = async ({ user, permissions, module, action }) => {
   mocks.get.mockResolvedValueOnce({ data: { data: { user, permissions } } });
-  render(
-    <AuthProvider>
-      <PermissionProbe module={module} action={action} />
-    </AuthProvider>,
-  );
+  renderWithAuth(<PermissionProbe module={module} action={action} />);
   return screen.findByTestId('permission-result');
 };
 
@@ -137,16 +147,20 @@ describe('AuthContext permissions', () => {
         data: { data: { user: { id: 6, roleName: 'Member' }, permissions: [], forcePasswordChange: false } },
       });
 
-    render(<AuthProvider><SessionProbe /></AuthProvider>);
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryData(['dashboard', 'stats', 5, 'Leader'], { roleSummary: { scopeName: 'private leader data' } });
+    renderWithAuth(<SessionProbe />, queryClient);
     await waitFor(() => expect(screen.getByTestId('current-role')).toHaveTextContent('Leader'));
     expect(screen.getByTestId('current-scope')).toHaveTextContent('all');
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
     await waitFor(() => expect(screen.getByTestId('current-role')).toHaveTextContent('signed-out'));
     expect(window.sessionStorage.getItem('mcc-leader-scope')).toBeNull();
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign in member' }));
     await waitFor(() => expect(screen.getByTestId('current-role')).toHaveTextContent('Member'));
     expect(screen.getByTestId('current-scope')).toHaveTextContent('none');
     expect(mocks.setLeaderScopeHeader).toHaveBeenLastCalledWith(null);
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
   });
 });

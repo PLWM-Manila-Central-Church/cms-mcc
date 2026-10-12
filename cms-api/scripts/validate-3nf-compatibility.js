@@ -147,6 +147,9 @@ const run = async () => {
 
   await checkPlannedColumn("archive_versions", "file_size");
   await checkPlannedColumn("archive_records", "current_version_id");
+  await checkPlannedColumn("events", "total_parking_slots");
+  await checkPlannedColumn("event_registrations", "seat_number");
+  await checkPlannedColumn("event_registrations", "parking_slot");
 
   await checkDuplicates(
     "duplicate attendances by service/member",
@@ -180,6 +183,63 @@ const run = async () => {
       LIMIT 20
     `,
   );
+
+  if (await columnExists("event_registrations", "seat_number")) {
+    await checkDuplicates(
+      "duplicate event seat reservations",
+      `
+        SELECT event_id, seat_number, COUNT(*) AS count
+        FROM event_registrations
+        WHERE seat_number IS NOT NULL
+        GROUP BY event_id, seat_number
+        HAVING COUNT(*) > 1
+        LIMIT 20
+      `,
+    );
+  }
+
+  if (await columnExists("event_registrations", "parking_slot")) {
+    await checkDuplicates(
+      "duplicate event parking reservations",
+      `
+        SELECT event_id, parking_slot, COUNT(*) AS count
+        FROM event_registrations
+        WHERE parking_slot IS NOT NULL
+        GROUP BY event_id, parking_slot
+        HAVING COUNT(*) > 1
+        LIMIT 20
+      `,
+    );
+  }
+
+  if (await columnExists("event_registrations", "seat_number")) {
+    await checkOrphans(
+      "event seat reservations outside capacity",
+      `
+        SELECT er.id, er.event_id, er.seat_number, e.capacity
+        FROM event_registrations er
+        JOIN events e ON e.id = er.event_id
+        WHERE er.seat_number IS NOT NULL
+          AND (e.capacity IS NULL OR er.seat_number > e.capacity)
+        LIMIT 20
+      `,
+    );
+  }
+
+  if (await columnExists("event_registrations", "parking_slot")
+      && await columnExists("events", "total_parking_slots")) {
+    await checkOrphans(
+      "event parking reservations outside configured slots",
+      `
+        SELECT er.id, er.event_id, er.parking_slot, e.total_parking_slots
+        FROM event_registrations er
+        JOIN events e ON e.id = er.event_id
+        WHERE er.parking_slot IS NOT NULL
+          AND (e.total_parking_slots < 1 OR er.parking_slot > e.total_parking_slots)
+        LIMIT 20
+      `,
+    );
+  }
 
   await checkOrphans(
     "members with missing cell group",

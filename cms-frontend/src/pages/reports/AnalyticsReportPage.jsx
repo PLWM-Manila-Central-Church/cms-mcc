@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
+import { buildAnalyticsCsvRows, getAnalyticsReportScope } from '../../utils/analyticsReport';
+import { toCsv } from '../../utils/csv';
 
 const manilaDate = () => {
   const values = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
@@ -12,7 +15,6 @@ const today = manilaDate;
 const yearStart = () => `${manilaDate().slice(0, 4)}-01-01`;
 const number = (value) => Number(value || 0).toLocaleString('en-PH');
 const money = (value) => `PHP ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
 function BarList({ title, rows = [], color = '#0f6aa3' }) {
   const max = Math.max(1, ...rows.map((item) => Number(item.total || 0)));
   return (
@@ -52,6 +54,13 @@ function TrendBars({ title, rows = [], firstKey, secondKey, firstLabel, secondLa
 }
 
 export default function AnalyticsReportPage() {
+  const { user } = useAuth();
+  const reportScope = getAnalyticsReportScope(user?.roleName);
+  const { canSeeFinance, canSeeMembersAndAttendance, description: reportDescription } = reportScope;
+  const dateFilteredSections = canSeeFinance
+    ? 'member growth, attendance, and finance summaries'
+    : 'member growth and attendance summaries';
+  const demographicDateNote = `Member totals and demographics use the current non-deleted roster; the selected date range applies to ${dateFilteredSections}.`;
   const isMobile = useIsMobile();
   const [dateFrom, setDateFrom] = useState(yearStart());
   const [dateTo, setDateTo] = useState(today());
@@ -74,32 +83,22 @@ export default function AnalyticsReportPage() {
 
   const downloadCsv = () => {
     if (!data) return;
-    const rows = [['Section', 'Measure', 'Value']];
-    if (data.members) {
-      rows.push(['Members', 'Total', data.members.total], ['Members', 'Active', data.members.active], ['Members', 'Inactive', data.members.inactive], ['Members', 'New in range', data.members.new_in_range]);
-      for (const [key, title] of [['age_bands', 'Age'], ['gender', 'Gender'], ['cell_groups', 'Cell group'], ['groups', 'Group']]) {
-        for (const item of data.demographics?.[key] || []) rows.push(['Demographics', `${title}: ${item.label}`, item.total]);
-      }
-      for (const item of data.member_growth || []) rows.push(['Member growth', item.period, item.total]);
-    }
-    if (data.attendance) {
-      rows.push(['Attendance', 'Service check-ins', data.attendance.service_checkins], ['Attendance', 'Event check-ins', data.attendance.event_checkins]);
-      for (const item of data.attendance.monthly || []) rows.push(['Attendance', item.period, `Services ${item.service}; events ${item.events}`]);
-    }
-    if (data.finance) rows.push(['Finance', 'Income', data.finance.income], ['Finance', 'Expenses', data.finance.expenses], ['Finance', 'Net', data.finance.net]);
-    const csv = rows.map((row) => row.map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\r\n');
+    const csv = toCsv(buildAnalyticsCsvRows(data, reportScope));
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const blobUrl = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
+    link.href = blobUrl;
     link.download = `plwm-mcc-analytics-${dateFrom}-to-${dateTo}.csv`;
+    document.body.appendChild(link);
     link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 0);
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
   };
 
   const maxGrowth = Math.max(1, ...(data?.member_growth || []).map((row) => Number(row.total || 0)));
   return (
     <main style={{ ...S.page, padding: isMobile ? 14 : 28 }}>
       <header style={S.header}>
-        <div><h1 style={S.title}>Consolidated Analytics</h1><p style={S.subtitle}>Member population, attendance, and finance summaries for the selected period.</p></div>
+        <div><h1 style={S.title}>Consolidated Analytics</h1><p style={S.subtitle}>{reportDescription}</p></div>
         <button type="button" onClick={downloadCsv} disabled={!data || loading} style={{ ...S.download, opacity: !data || loading ? 0.6 : 1 }}>Download CSV</button>
       </header>
       <section style={{ ...S.filters, flexDirection: isMobile ? 'column' : 'row' }}>
@@ -108,10 +107,11 @@ export default function AnalyticsReportPage() {
         <button type="button" onClick={loadReport} disabled={loading || dateFrom > dateTo} style={{ ...S.refresh, opacity: loading ? 0.7 : 1 }}>{loading ? 'Updating…' : 'Refresh report'}</button>
         {data?.range && <span style={S.muted}>{data.range.from} to {data.range.to}</span>}
       </section>
+      {canSeeMembersAndAttendance && <p style={S.footnote}>{demographicDateNote}</p>}
       {error && <div role="alert" style={S.error}>{error}</div>}
       {loading && !data ? <div style={S.state}>Loading report…</div> : data && (
         <>
-          {data.members && <>
+          {canSeeMembersAndAttendance && data.members && <>
             <section style={S.metricGrid}>
               {[
                 ['Members', data.members.total], ['Active', data.members.active], ['Inactive', data.members.inactive], ['Joined in range', data.members.new_in_range],
@@ -125,19 +125,20 @@ export default function AnalyticsReportPage() {
               <BarList title="Cell group population" rows={data.demographics?.cell_groups} color="#0f7a55" />
               <BarList title="Group population" rows={data.demographics?.groups} color="#b76b16" />
             </section>
+            <p style={S.footnote}>Group charts show the 20 largest categories and combine the remaining categories in an Other total.</p>
             <section style={S.panel}>
               <h2 style={S.panelTitle}>Member growth by month</h2>
               <div style={S.growth}>{(data.member_growth || []).map((row) => <div key={row.period} style={S.growthCol} title={`${row.period}: ${row.total}`}><span style={{ ...S.growthBar, height: `${Math.max(2, Number(row.total || 0) / maxGrowth * 100)}%` }} /><small>{row.period.slice(2)}</small></div>)}</div>
             </section>
           </>}
-          {data.attendance && <>
+          {canSeeMembersAndAttendance && data.attendance && <>
             <section style={S.metricGrid}>
               <article style={S.metric}><span>Service check-ins</span><strong>{number(data.attendance.service_checkins)}</strong></article>
               <article style={S.metric}><span>Event check-ins</span><strong>{number(data.attendance.event_checkins)}</strong></article>
             </section>
             <TrendBars title="Attendance by month" rows={data.attendance.monthly} firstKey="service" secondKey="events" firstLabel="Services" secondLabel="Events" />
           </>}
-          {data.finance && <section style={S.metricGrid}>
+          {canSeeFinance && data.finance && <section style={S.metricGrid}>
             <article style={S.metric}><span>Income</span><strong>{money(data.finance.income)}</strong></article>
             <article style={S.metric}><span>Expenses</span><strong>{money(data.finance.expenses)}</strong></article>
             <article style={S.metric}><span>Net</span><strong>{money(data.finance.net)}</strong></article>

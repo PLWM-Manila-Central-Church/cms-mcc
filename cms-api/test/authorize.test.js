@@ -45,6 +45,35 @@ describe("authorize middleware", () => {
     expect(res.status).not.toHaveBeenCalled();
   });
 
+  it("keeps attendee removal separate from deleting the event record", async () => {
+    permissionCache.get.mockResolvedValue(new Set(["event_registrations:delete"]));
+    const req = { user: { userId: 14, roleId: 3, roleName: "Registration Team" } };
+    const denied = createResponse();
+    const deniedNext = jest.fn();
+
+    await authorize("events", "delete")(req, denied, deniedNext);
+    expect(denied.status).toHaveBeenCalledWith(403);
+    expect(deniedNext).not.toHaveBeenCalled();
+
+    const allowed = createResponse();
+    const allowedNext = jest.fn();
+    await authorize("event_registrations", "delete")(req, allowed, allowedNext);
+    expect(allowedNext).toHaveBeenCalledTimes(1);
+    expect(allowed.status).not.toHaveBeenCalled();
+  });
+
+  it("denies Pastor inventory creation without an inventory write grant", async () => {
+    permissionCache.get.mockResolvedValue(new Set(["dashboard:read", "attendance:read"]));
+    const req = { user: { userId: 14, roleId: 6, roleName: "Pastor" } };
+    const res = createResponse();
+    const next = jest.fn();
+
+    await authorize("inventory", "create")(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it("keeps the System Admin permission bypass", async () => {
     const req = { user: { userId: 1, roleId: 1, roleName: "System Admin" } };
     const res = createResponse();

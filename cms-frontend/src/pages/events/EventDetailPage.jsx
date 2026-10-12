@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import MonoIcon from '../../components/common/MonoIcon';
 import { normalizeEventStatus } from '../../utils/eventStatus';
 import { eventImageSrc } from '../../utils/eventImage';
+import { apiErrorMessage } from '../../utils/apiErrorMessage';
+import EventReservationFields from '../../components/events/EventReservationFields';
 
 const STATUS_META = {
   Upcoming:  { bg: '#dcfce7', color: '#16a34a', label: 'Upcoming' },
@@ -17,14 +20,16 @@ export default function EventDetailPage() {
   const { id }   = useParams();
   const navigate = useNavigate();
   const { user, hasPermission, activeLeaderScopeKey } = useAuth();
-  const canDelete    = hasPermission('events', 'delete');
+  const { confirm } = useConfirmation();
+  const canManageRegistrations = hasPermission('event_registrations', 'delete');
+  const canUpdateReservations = hasPermission('event_registrations', 'update');
   const canViewRegistrations = hasPermission('events', 'read') && user?.roleName !== 'Member';
   const isCellGroupLeader = user?.roleName === 'Cell Group Leader'
     || (user?.roleName === 'Leader' && String(activeLeaderScopeKey || '').startsWith('cell_group:'));
   const isScopedRegistrationViewer = ['Cell Group Leader', 'Group Leader', 'Ministry Leader', 'Leader'].includes(user?.roleName);
-  // Self-registration requires events:create; self-unregister requires events:delete
-  const canSelfRegister   = hasPermission('events', 'create');
-  const canSelfUnregister = hasPermission('events', 'delete');
+  // Event attendance and event-record permissions are independent from attendee management.
+  const canSelfRegister   = hasPermission('event_registrations', 'create');
+  const canSelfUnregister = hasPermission('event_registrations', 'delete');
   const canUseQrAttendance = hasPermission('qr_attendance', 'read');
 
   const [event, setEvent]           = useState(null);
@@ -36,6 +41,11 @@ export default function EventDetailPage() {
 
   const [removingId, setRemovingId] = useState(null);
   const [removeMsg, setRemoveMsg]   = useState('');
+  const [editingReservationMemberId, setEditingReservationMemberId] = useState(null);
+  const [reservationForm, setReservationForm] = useState({ seat_number: '', parking_slot: '' });
+  const [reservationSaving, setReservationSaving] = useState(false);
+  const [reservationError, setReservationError] = useState('');
+  const [reservationMessage, setReservationMessage] = useState('');
 
   // ── Ministry Invite Panel (Ministry Leaders only) ────────────
   const [invites,         setInvites]         = useState([]);
@@ -104,7 +114,12 @@ export default function EventDetailPage() {
   };
 
   const handleRemoveReg = async (memberId, name) => {
-    if (!window.confirm(`Remove registration for ${name}?`)) return;
+    if (!(await confirm({
+      title: 'Remove event registration?',
+      message: `Remove the registration for ${name}?`,
+      confirmLabel: 'Remove registration',
+      tone: 'warning',
+    }))) return;
     setRemovingId(memberId); setRemoveMsg('');
     try {
       await axiosInstance.delete(`/events/${id}/registrations/${memberId}`);
@@ -113,6 +128,36 @@ export default function EventDetailPage() {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to remove registration.');
     } finally { setRemovingId(null); }
+  };
+
+  const openReservationEditor = (registration) => {
+    setEditingReservationMemberId(Number(registration.member_id));
+    setReservationForm({
+      seat_number: registration.seat_number ?? '',
+      parking_slot: registration.parking_slot ?? '',
+    });
+    setReservationError('');
+    setReservationMessage('');
+  };
+
+  const saveRegistrationReservation = async () => {
+    if (!editingReservationMemberId) return;
+    setReservationSaving(true);
+    setReservationError('');
+    setReservationMessage('');
+    try {
+      await axiosInstance.put(`/events/${id}/registrations/${editingReservationMemberId}/reservation`, {
+        seat_number: reservationForm.seat_number === '' ? null : Number(reservationForm.seat_number),
+        parking_slot: reservationForm.parking_slot === '' ? null : Number(reservationForm.parking_slot),
+      });
+      setReservationMessage('Event seat and parking reservation updated.');
+      setEditingReservationMemberId(null);
+      await fetchEvent();
+    } catch (requestError) {
+      setReservationError(apiErrorMessage(requestError, 'Failed to update the event reservation.'));
+    } finally {
+      setReservationSaving(false);
+    }
   };
 
   const toggleMember = (memberId) =>
@@ -165,6 +210,10 @@ export default function EventDetailPage() {
   const meta = STATUS_META[status] || STATUS_META.Upcoming;
   const registrations = event.EventRegistrations || [];
   const visibleRegistrations = registrations;
+  const canManageEventReservation = canUpdateReservations
+    && ['Upcoming', 'Ongoing'].includes(eventStatus)
+    && (Number(event.capacity) > 0 || Number(event.total_parking_slots) > 0);
+  const hasRegistrationActions = canManageRegistrations || canManageEventReservation;
 
   return (
     <div style={s.page}>
@@ -234,6 +283,24 @@ export default function EventDetailPage() {
               </div>
             </div>
           )}
+          {Number(event.capacity)>0 && (
+            <div style={s.detailItem}>
+              <span style={s.detailIcon}><MonoIcon name="members" size={18} /></span>
+              <div>
+                <div style={s.detailLabel}>{isScopedRegistrationViewer ? 'Seats assigned in your scope' : 'Seats assigned'}</div>
+                <div style={s.detailValue}>{event.seat_reserved_count||0} / {event.capacity}</div>
+              </div>
+            </div>
+          )}
+          {Number(event.total_parking_slots)>0 && (
+            <div style={s.detailItem}>
+              <span style={s.detailIcon}><MonoIcon name="location" size={18} /></span>
+              <div>
+                <div style={s.detailLabel}>{isScopedRegistrationViewer ? 'Parking reserved in your scope' : 'Parking reserved'}</div>
+                <div style={s.detailValue}>{event.parking_reserved_count||0} / {event.total_parking_slots}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Member self-register / self-unregister
@@ -287,6 +354,8 @@ export default function EventDetailPage() {
           </div>
 
           {removeMsg && <div style={s.successBox}>{removeMsg}</div>}
+          {reservationMessage && <div style={s.successBox}>{reservationMessage}</div>}
+          {reservationError && <div role="alert" style={s.errorBox}>{reservationError}</div>}
 
           {visibleRegistrations.length === 0 ? (
             <div style={s.emptyReg}>No registrations yet.</div>
@@ -300,8 +369,10 @@ export default function EventDetailPage() {
                     <th style={s.th}>Email</th>
                     <th style={s.th}>Phone</th>
                     <th style={s.th}>Barcode</th>
+                    <th style={s.th}>Seat</th>
+                    <th style={s.th}>Parking</th>
                     <th style={s.th}>Registered At</th>
-                    {canDelete && <th style={s.th}>Action</th>}
+                    {hasRegistrationActions && <th style={s.th}>Action</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -323,6 +394,8 @@ export default function EventDetailPage() {
                       <td style={{ ...s.td, fontFamily: 'monospace', fontSize: '12px', color: '#64748b' }}>
                         {r.member?.barcode || '—'}
                       </td>
+                      <td style={s.td}>{r.seat_number ?? '—'}</td>
+                      <td style={s.td}>{r.parking_slot ?? '—'}</td>
                       <td style={{ ...s.td, color: '#64748b' }}>
                         {r.registered_at
                           ? new Date(r.registered_at).toLocaleDateString('en-PH', {
@@ -330,28 +403,61 @@ export default function EventDetailPage() {
                             })
                           : '—'}
                       </td>
-                      {canDelete && (
+                    {hasRegistrationActions && (
                         <td style={s.td}>
-                          <button
-                            onClick={() => handleRemoveReg(
-                              r.member_id,
-                              `${r.member?.first_name} ${r.member?.last_name}`
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 150 }}>
+                            {canManageEventReservation && (
+                              <button
+                                type="button"
+                                onClick={() => openReservationEditor(r)}
+                                disabled={reservationSaving}
+                                style={{ ...s.removeBtn, background: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8' }}
+                              >
+                                Manage seat/parking
+                              </button>
                             )}
-                            disabled={removingId === r.member_id}
-                            style={{
-                              ...s.removeBtn,
-                              opacity: removingId === r.member_id ? 0.6 : 1,
-                              cursor: removingId === r.member_id ? 'not-allowed' : 'pointer',
-                            }}
-                          >
-                            {removingId === r.member_id ? '...' : 'Remove'}
-                          </button>
+                            {canManageRegistrations && <button
+                              onClick={() => handleRemoveReg(
+                                r.member_id,
+                                `${r.member?.first_name} ${r.member?.last_name}`
+                              )}
+                              disabled={removingId === r.member_id}
+                              style={{
+                                ...s.removeBtn,
+                                opacity: removingId === r.member_id ? 0.6 : 1,
+                                cursor: removingId === r.member_id ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              {removingId === r.member_id ? '...' : 'Remove'}
+                            </button>}
+                          </div>
                         </td>
                       )}
                     </tr>
                   ))}
                 </tbody>
               </table></div>
+            </div>
+          )}
+          {editingReservationMemberId && canManageEventReservation && (
+            <div style={{ ...s.regSection, marginTop: 16 }}>
+              <h3 style={{ ...s.regTitle, margin: '0 0 8px' }}>Change seat and parking assignment</h3>
+              <p style={{ ...s.muted, margin: 0 }}>Leave either field blank to clear that reservation.</p>
+              <EventReservationFields
+                capacity={event.capacity}
+                totalParkingSlots={event.total_parking_slots}
+                seatNumber={reservationForm.seat_number}
+                parkingSlot={reservationForm.parking_slot}
+                onSeatNumberChange={(value) => { setReservationError(''); setReservationForm((current) => ({ ...current, seat_number: value })); }}
+                onParkingSlotChange={(value) => { setReservationError(''); setReservationForm((current) => ({ ...current, parking_slot: value })); }}
+                disabled={reservationSaving}
+              />
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button type="button" style={s.cancelBtn} disabled={reservationSaving} onClick={() => setEditingReservationMemberId(null)}>Cancel</button>
+                <button type="button" style={s.registerBtn} disabled={reservationSaving} onClick={saveRegistrationReservation}>
+                  {reservationSaving ? 'Saving…' : 'Save reservation'}
+                </button>
+              </div>
             </div>
           )}
         </div>

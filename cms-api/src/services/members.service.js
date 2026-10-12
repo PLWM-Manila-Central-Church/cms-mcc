@@ -175,6 +175,31 @@ exports.getMemberById = async (id, user = {}) => {
   return member;
 };
 
+exports.getMemberStatusHistory = async (id, user = {}) => {
+  const member = await exports.getMemberById(id, user);
+  const history = await MemberStatusHistory.findAll({
+    where: { member_id: member.id },
+    attributes: ["id", "old_status", "new_status", "reason", "created_at"],
+    include: [{
+      model: User,
+      as: "changedByUser",
+      attributes: ["id", "email"],
+      required: false,
+    }],
+    order: [["created_at", "DESC"], ["id", "DESC"]],
+    limit: 50,
+  });
+
+  return history.map((record) => ({
+    id: record.id,
+    old_status: record.old_status,
+    new_status: record.new_status,
+    reason: record.reason,
+    changed_at: record.createdAt || record.getDataValue("createdAt") || record.getDataValue("created_at"),
+    changed_by: record.changedByUser?.email || null,
+  }));
+};
+
 // ── Create Member ────────────────────────────────────────────
 exports.createMember = async (data, createdBy, user = {}) => {
   const {
@@ -312,7 +337,7 @@ exports.updateMember = async (id, data, updatedBy, user = {}) => {
         reason: "Member status changed through the member record form.",
       }, { transaction });
     }
-    auditLog.log({ userId: updatedBy, action: "UPDATE_MEMBER", targetTable: "members", targetId: id }, { transaction });
+    await auditLog.log({ userId: updatedBy, action: "UPDATE_MEMBER", targetTable: "members", targetId: id }, { transaction });
   });
   cache.keys("dashboard:*").forEach(k => cache.del(k));
   return await exports.getMemberById(id, user);

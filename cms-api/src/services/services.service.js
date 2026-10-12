@@ -1,12 +1,27 @@
 "use strict";
 
 const { Op }       = require("sequelize");
+const sequelize    = require("../config/db");
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
 const { Service, ServiceAttendanceSummary, ServiceResponse, Attendance, User } = require("../models");
 const { syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
 const { isScopedLeader } = require("../helpers/scopedLeader.helper");
+const AppError = require("../helpers/AppError");
+
+const SERVICE_STATUS_FLOW = Object.freeze({
+  draft: ["published", "cancelled"],
+  published: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+});
+
+const ensureStatusTransition = (current, next) => {
+  if (current !== next && !SERVICE_STATUS_FLOW[current]?.includes(next)) {
+    throw AppError.badRequest("INVALID_STATUS_TRANSITION", `Cannot change service status from '${current}' to '${next}'`);
+  }
+};
 
 // ── Get All Services (paginated) ─────────────────────────────
 exports.getAllServices = async ({ page = 1, limit = 15, status } = {}, user = {}) => {
@@ -70,7 +85,7 @@ exports.getAllServices = async ({ page = 1, limit = 15, status } = {}, user = {}
 // ── Get Service By ID ────────────────────────────────────────
 exports.getServiceById = async (id) => {
   const service = await Service.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
   return service;
 };
 
@@ -102,12 +117,6 @@ exports.createService = async (data, createdBy) => {
 
 // ── Update Service ───────────────────────────────────────────
 exports.updateService = async (id, data, updatedBy) => {
-  const service = await Service.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
-
-  if (service.status === "completed" || service.status === "cancelled")
-    throw AppError.badRequest("VALIDATION", "Cannot update a completed or cancelled service");
-
   const {
     title,
     service_date,
@@ -117,17 +126,57 @@ exports.updateService = async (id, data, updatedBy) => {
     response_deadline,
     status,
   } = data;
+  const service = await sequelize.transaction(async (transaction) => {
+    const lockedService = await Service.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!lockedService) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+    if (lockedService.status === "completed" || lockedService.status === "cancelled") {
+      throw AppError.badRequest("VALIDATION", "Cannot update a completed or cancelled service");
+    }
 
-  await service.update({
-    ...(title               && { title }),
-    ...(service_date        && { service_date }),
-    // FIX BUG 8: coerce empty string to null so clearing a time field stores NULL,
-    // not an empty string that corrupts the date/time column.
-    ...(service_time        !== undefined && { service_time:        service_time        || null }),
-    ...(capacity            !== undefined && { capacity }),
-    ...(total_parking_slots !== undefined && { total_parking_slots }),
-    ...(response_deadline   !== undefined && { response_deadline:   response_deadline   || null }),
-    ...(status              && { status }),
+    if (status !== undefined) ensureStatusTransition(lockedService.status, status);
+
+    const nextCapacity = capacity === undefined ? Number(lockedService.capacity) : Number(capacity);
+    const nextParkingLimit = total_parking_slots === undefined
+      ? Number(lockedService.total_parking_slots)
+      : Number(total_parking_slots);
+    if (capacity !== undefined || total_parking_slots !== undefined) {
+      const reservations = await ServiceResponse.findAll({
+        where: { service_id: id, attendance_status: "ATTENDING" },
+        attributes: ["seat_number", "parking_slot"],
+        transaction,
+      });
+      if (reservations.length > nextCapacity) {
+        throw AppError.conflict("CAPACITY_BELOW_CURRENT_RSVPS", `Capacity cannot be less than the ${reservations.length} current attending RSVPs`);
+      }
+      const invalidSeat = reservations.some((row) => {
+        if (!row.seat_number) return false;
+        const value = Number(row.seat_number);
+        return !Number.isSafeInteger(value) || value < 1 || value > nextCapacity;
+      });
+      if (invalidSeat) {
+        throw AppError.conflict("CAPACITY_BELOW_RESERVED_SEAT", "Capacity cannot be reduced below an already reserved seat number");
+      }
+      const invalidParking = reservations.some((row) => {
+        if (!row.parking_slot) return false;
+        const value = Number(row.parking_slot);
+        return !Number.isSafeInteger(value) || value < 1 || value > nextParkingLimit;
+      });
+      if (invalidParking) {
+        throw AppError.conflict("PARKING_LIMIT_BELOW_RESERVED_SLOT", "Parking slots cannot be reduced below an already reserved slot number");
+      }
+    }
+
+    await lockedService.update({
+      ...(title               && { title }),
+      ...(service_date        && { service_date }),
+      // Coerce empty strings to null so clearing these fields stores NULL.
+      ...(service_time        !== undefined && { service_time: service_time || null }),
+      ...(capacity            !== undefined && { capacity }),
+      ...(total_parking_slots !== undefined && { total_parking_slots }),
+      ...(response_deadline   !== undefined && { response_deadline: response_deadline || null }),
+      ...(status              && { status }),
+    }, { transaction });
+    return lockedService;
   });
 
   // Re-sync summary if capacity changed
@@ -144,7 +193,7 @@ exports.updateService = async (id, data, updatedBy) => {
 // ── Delete Service ───────────────────────────────────────────
 exports.deleteService = async (id, deletedBy) => {
   const service = await Service.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
   // Completed services can be deleted (admin request)
   await service.destroy();
   auditLog.log({ userId: deletedBy, action: "DELETE_SERVICE", targetTable: "services", targetId: id });
@@ -158,20 +207,8 @@ exports.updateStatus = async (id, status, updatedBy) => {
     throw AppError.badRequest("VALIDATION", "Invalid status value");
 
   const service = await Service.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
-
-  const flow = {
-    draft:     ["published", "cancelled"],
-    published: ["completed", "cancelled"],
-    completed: [],
-    cancelled: [],
-  };
-
-  if (!flow[service.status]?.includes(status))
-    throw {
-      status: 400,
-      message: `Cannot transition from '${service.status}' to '${status}'`,
-    };
+  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+  ensureStatusTransition(service.status, status);
 
   await service.update({ status });
 

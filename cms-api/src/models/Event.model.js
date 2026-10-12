@@ -21,6 +21,7 @@ const Event = sequelize.define(
     start_time: { type: DataTypes.TIME, allowNull: true },
     location: { type: DataTypes.STRING(255), allowNull: true },
     capacity: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    total_parking_slots: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0 },
     registration_deadline: { type: DataTypes.DATE, allowNull: true },
     status: {
       type: DataTypes.ENUM("Upcoming", "Ongoing", "Completed", "Cancelled"),

@@ -5,6 +5,7 @@ import './qrAttendance.css';
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_IMAGE_PIXELS = 16 * 1024 * 1024;
 const IMAGE_DECODE_TIMEOUT = 'Image decoding took too long. Try a smaller image.';
+const CAMERA_START_TIMEOUT_MS = 10_000;
 const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 const cameraStartErrorMessage = (error) => {
@@ -21,6 +22,8 @@ const cameraStartErrorMessage = (error) => {
     case 'OverconstrainedError':
     case 'ConstraintNotSatisfiedError':
       return 'The selected camera is unavailable. Choose another camera or upload a QR image.';
+    case 'TimeoutError':
+      return 'Camera startup timed out. Check browser camera permissions and make sure a camera is available, or upload a QR image.';
     default:
       return error?.message || 'Camera could not start. Upload a QR image instead.';
   }
@@ -117,7 +120,9 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
       const deviceIndex = preferredIndex >= 0 ? preferredIndex : 0;
       const deviceId = requestedDeviceId || devices[deviceIndex]?.deviceId;
       if (mountedRef.current) setVideoDeviceIndex(deviceIndex);
-      const controls = await reader.decodeFromVideoDevice(deviceId, videoRef.current, (result, _decodeError, activeControls) => {
+      let cameraStartTimedOut = false;
+      let cameraStartTimeoutId;
+      const cameraStartPromise = reader.decodeFromVideoDevice(deviceId, videoRef.current, (result, _decodeError, activeControls) => {
         if (!result) return;
         scanFinishedRef.current = true;
         activeControls?.stop?.();
@@ -126,6 +131,22 @@ export default function QrScannerDialog({ title = 'Scan QR code', onDecode, onCl
         setCameraActive(false);
         emitText(result.getText());
       });
+      cameraStartPromise.then((lateControls) => {
+        if (cameraStartTimedOut || !mountedRef.current || scanFinishedRef.current) {
+          lateControls?.stop?.();
+        }
+      }).catch(() => {});
+      const controls = await Promise.race([
+        cameraStartPromise,
+        new Promise((_, reject) => {
+          cameraStartTimeoutId = window.setTimeout(() => {
+            cameraStartTimedOut = true;
+            const timeoutError = new Error('Camera startup timed out.');
+            timeoutError.name = 'TimeoutError';
+            reject(timeoutError);
+          }, CAMERA_START_TIMEOUT_MS);
+        }),
+      ]).finally(() => window.clearTimeout(cameraStartTimeoutId));
       if (!mountedRef.current || scanFinishedRef.current) {
         controls.stop?.();
         return;

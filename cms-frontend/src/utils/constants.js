@@ -45,6 +45,12 @@ export const NAV_ITEMS = [
     permissions: { module: 'attendance', action: 'read' }
   },
   {
+    label: 'QR Attendance',
+    path: '/attendance/qr',
+    icon: 'attendance',
+    permissions: { module: 'qr_attendance', action: 'read' }
+  },
+  {
     label: 'Services',
     path: '/services',
     icon: 'services',

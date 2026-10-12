@@ -16,6 +16,7 @@ const InventoryRequest = sequelize.define(
     service_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     ministry_role_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     requested_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    request_key: { type: DataTypes.STRING(64), allowNull: true },
     quantity: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
     purpose: { type: DataTypes.STRING(255), allowNull: true },
     status: {
@@ -32,6 +33,7 @@ const InventoryRequest = sequelize.define(
     underscored: true,
     indexes: [
       { fields: ["requested_by", "status"], name: "idx_ir_requester_status" },
+      { fields: ["requested_by", "request_key"], name: "uq_inventory_requests_requester_key", unique: true },
     ],
   },
 );

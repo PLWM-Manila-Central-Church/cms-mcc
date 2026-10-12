@@ -30,8 +30,13 @@ const getDatabaseOptions = ({ logging = false } = {}) => {
     port: Number(process.env.DB_PORT || 3306),
     dialect: "mysql",
     logging,
-    pool: { max: 15, min: 2, acquire: 60000, idle: 20000 },
-    ...(ssl && { dialectOptions: { ssl } }),
+    // Cloud DB gateways can expire idle TCP connections. Keep the pool empty
+    // while idle and retire released sockets promptly before they can go stale.
+    pool: { max: 15, min: 0, acquire: 30000, idle: 60000, evict: 1000 },
+    dialectOptions: {
+      connectTimeout: 15000,
+      ...(ssl && { ssl }),
+    },
   };
 };
 

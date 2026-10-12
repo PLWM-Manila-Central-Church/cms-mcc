@@ -5,6 +5,7 @@ const auditLog  = require("../helpers/auditLog.helper");
 const sequelize = require("../config/db");
 const logger    = require("../helpers/logger");
 const AppError = require("../helpers/AppError");
+const uploadStorage = require("../middlewares/upload-s3");
 const {
   FinancialRecord,
   FinancialCategory,
@@ -39,7 +40,20 @@ const recordIncludes = [
     attributes: ["id", "email"],
     required: false,
   },
+  {
+    model: Attachment,
+    as: "attachments",
+    attributes: ["id", "file_name", "uploaded_at"],
+    separate: true,
+  },
 ];
+
+const deleteReceiptFiles = async (filePaths, message) => {
+  for (const filePath of filePaths) {
+    try { await uploadStorage.deleteStoredFile(filePath); }
+    catch (error) { logger.error(error, message); }
+  }
+};
 
 // ── Get All Financial Records (paginated) ────────────────────
 exports.getAllRecords = async ({ page = 1, limit = 20, category_id, payment_method, date_from, date_to } = {}) => {
@@ -160,7 +174,7 @@ exports.createRecord = async (data, recordedBy) => {
       is_deleted: 0,
     }, { transaction: t });
 
-    auditLog.log({ userId: recordedBy, action: "CREATE_FINANCE_RECORD", targetTable: "financial_records", targetId: r.id }, { transaction: t });
+    await auditLog.log({ userId: recordedBy, action: "CREATE_FINANCE_RECORD", targetTable: "financial_records", targetId: r.id }, { transaction: t });
     return r;
   });
 
@@ -218,10 +232,11 @@ exports.updateRecord = async (id, data, updatedBy) => {
       ...(notes          !== undefined && { notes }),
     }, { transaction: t });
 
-    auditLog.log({ userId: updatedBy, action: "UPDATE_FINANCE_RECORD", targetTable: "financial_records", targetId: id }, { transaction: t });
+    await auditLog.log({ userId: updatedBy, action: "UPDATE_FINANCE_RECORD", targetTable: "financial_records", targetId: id }, { transaction: t });
   });
 
   const updated = await exports.getRecordById(id);
+  cache.keys("dashboard:*").forEach((key) => cache.del(key));
   return updated;
 };
 
@@ -230,21 +245,12 @@ exports.deleteRecord = async (id, deletedBy) => {
   const record = await FinancialRecord.findOne({ where: { id } });
   if (!record) throw AppError.notFound("RECORD_NOT_FOUND", "Financial record not found");
 
+  let attachmentPaths = [];
   await sequelize.transaction(async (t) => {
     // Cascade: delete attachment files + DB records (mirrors deleteExpense)
     const attachments = await Attachment.findAll({ where: { income_id: id }, transaction: t });
-    const fs = require("fs");
-    const path = require("path");
-    const RECEIPTS_DIR = path.join(__dirname, "../..", "uploads", "receipts");
-    for (const att of attachments) {
-      const filePath = path.isAbsolute(att.file_path)
-        ? att.file_path
-        : path.join(RECEIPTS_DIR, path.basename(att.file_path));
-      if (fs.existsSync(filePath)) {
-        try { fs.unlinkSync(filePath); } catch (e) { logger.error(e, "Could not delete receipt file"); }
-      }
-      await att.destroy({ transaction: t });
-    }
+    attachmentPaths = attachments.map((attachment) => attachment.file_path).filter(Boolean);
+    for (const attachment of attachments) await attachment.destroy({ transaction: t });
 
     await record.update({
       is_deleted: 1,
@@ -252,8 +258,10 @@ exports.deleteRecord = async (id, deletedBy) => {
       deleted_by: deletedBy,
     }, { transaction: t });
 
-    auditLog.log({ userId: deletedBy, action: "DELETE_FINANCE_RECORD", targetTable: "financial_records", targetId: id }, { transaction: t });
+    await auditLog.log({ userId: deletedBy, action: "DELETE_FINANCE_RECORD", targetTable: "financial_records", targetId: id }, { transaction: t });
       });
+
+  await deleteReceiptFiles(attachmentPaths, "Could not delete receipt file");
 
       cache.keys("dashboard:*").forEach(k => cache.del(k));
       return { message: "Financial record deleted successfully." };
@@ -341,7 +349,7 @@ exports.getMyGiving = async (memberId, { page = 1, limit = 20, date_from, date_t
       where,
       include: [
         { model: FinancialCategory, as: "category", attributes: ["id", "name"], required: false },
-        { model: Attachment, as: "attachments", attributes: ["id", "file_name", "file_path"], required: false },
+        { model: Attachment, as: "attachments", attributes: ["id", "file_name", "uploaded_at"], separate: true },
       ],
       order: [["transaction_date", "DESC"]],
       limit: parseInt(limit),
@@ -364,6 +372,31 @@ exports.getMyGiving = async (memberId, { page = 1, limit = 20, date_from, date_t
   };
 };
 
+// ── Member lookup for finance entry forms ────────────────────
+// Return only the fields needed to identify a giver. Finance staff do not
+// receive access to the broader member directory through this endpoint.
+exports.searchGivingMembers = async ({ q, limit = 6 } = {}) => {
+  const { Op } = require("sequelize");
+  const terms = String(q || "").trim().split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+
+  const where = {
+    [Op.and]: terms.map((term) => ({
+      [Op.or]: [
+        { first_name: { [Op.like]: `%${term}%` } },
+        { last_name:  { [Op.like]: `%${term}%` } },
+      ],
+    })),
+  };
+
+  return Member.findAll({
+    where,
+    attributes: ["id", "first_name", "last_name"],
+    order: [["last_name", "ASC"], ["first_name", "ASC"]],
+    limit: Math.min(10, Math.max(1, Number.parseInt(limit, 10) || 6)),
+  });
+};
+
 // ── 1. FUNDS SERVICES ─────────────────────────────────────────
 exports.getAllFunds = async () => {
   return await Fund.findAll({
@@ -384,7 +417,7 @@ exports.createFund = async (data, userId) => {
 
   const fund = await sequelize.transaction(async (t) => {
     const f = await Fund.create({ name, description }, { transaction: t });
-    auditLog.log({ userId, action: "CREATE_FUND", targetTable: "funds", targetId: f.id }, { transaction: t });
+    await auditLog.log({ userId, action: "CREATE_FUND", targetTable: "funds", targetId: f.id }, { transaction: t });
     return f;
   });
   return fund;
@@ -405,7 +438,7 @@ exports.updateFund = async (id, data, userId) => {
       ...(description !== undefined && { description }),
     }, { transaction: t });
 
-    auditLog.log({ userId, action: "UPDATE_FUND", targetTable: "funds", targetId: id }, { transaction: t });
+    await auditLog.log({ userId, action: "UPDATE_FUND", targetTable: "funds", targetId: id }, { transaction: t });
   });
   return fund;
 };
@@ -418,7 +451,7 @@ exports.deleteFund = async (id, userId) => {
 
   await sequelize.transaction(async (t) => {
     await fund.destroy({ transaction: t });
-    auditLog.log({ userId, action: "DELETE_FUND", targetTable: "funds", targetId: id }, { transaction: t });
+    await auditLog.log({ userId, action: "DELETE_FUND", targetTable: "funds", targetId: id }, { transaction: t });
   });
   return { message: "Fund deleted successfully." };
 };
@@ -450,7 +483,7 @@ exports.createAccount = async (data, userId) => {
 
   const account = await sequelize.transaction(async (t) => {
     const a = await Account.create({ name, fund_id, description }, { transaction: t });
-    auditLog.log({ userId, action: "CREATE_ACCOUNT", targetTable: "accounts", targetId: a.id }, { transaction: t });
+    await auditLog.log({ userId, action: "CREATE_ACCOUNT", targetTable: "accounts", targetId: a.id }, { transaction: t });
     return a;
   });
   return await exports.getAccountById(account.id);
@@ -477,7 +510,7 @@ exports.updateAccount = async (id, data, userId) => {
       ...(description !== undefined && { description }),
     }, { transaction: t });
 
-    auditLog.log({ userId, action: "UPDATE_ACCOUNT", targetTable: "accounts", targetId: id }, { transaction: t });
+    await auditLog.log({ userId, action: "UPDATE_ACCOUNT", targetTable: "accounts", targetId: id }, { transaction: t });
   });
   return await exports.getAccountById(id);
 };
@@ -492,7 +525,7 @@ exports.deleteAccount = async (id, userId) => {
 
   await sequelize.transaction(async (t) => {
     await account.destroy({ transaction: t });
-    auditLog.log({ userId, action: "DELETE_ACCOUNT", targetTable: "accounts", targetId: id }, { transaction: t });
+    await auditLog.log({ userId, action: "DELETE_ACCOUNT", targetTable: "accounts", targetId: id }, { transaction: t });
   });
   return { message: "Account deleted successfully." };
 };
@@ -524,7 +557,7 @@ exports.createExpenseCategory = async (data, userId) => {
 
   const category = await sequelize.transaction(async (t) => {
     const c = await ExpenseCategory.create({ category_name, account_id, description }, { transaction: t });
-    auditLog.log({ userId, action: "CREATE_EXPENSE_CATEGORY", targetTable: "expense_categories", targetId: c.id }, { transaction: t });
+    await auditLog.log({ userId, action: "CREATE_EXPENSE_CATEGORY", targetTable: "expense_categories", targetId: c.id }, { transaction: t });
     return c;
   });
   return await exports.getExpenseCategoryById(category.id);
@@ -551,7 +584,7 @@ exports.updateExpenseCategory = async (id, data, userId) => {
       ...(description !== undefined && { description }),
     }, { transaction: t });
 
-    auditLog.log({ userId, action: "UPDATE_EXPENSE_CATEGORY", targetTable: "expense_categories", targetId: id }, { transaction: t });
+    await auditLog.log({ userId, action: "UPDATE_EXPENSE_CATEGORY", targetTable: "expense_categories", targetId: id }, { transaction: t });
   });
   return await exports.getExpenseCategoryById(id);
 };
@@ -564,7 +597,7 @@ exports.deleteExpenseCategory = async (id, userId) => {
 
   await sequelize.transaction(async (t) => {
     await category.destroy({ transaction: t });
-    auditLog.log({ userId, action: "DELETE_EXPENSE_CATEGORY", targetTable: "expense_categories", targetId: id }, { transaction: t });
+    await auditLog.log({ userId, action: "DELETE_EXPENSE_CATEGORY", targetTable: "expense_categories", targetId: id }, { transaction: t });
   });
   return { message: "Expense category deleted successfully." };
 };
@@ -598,7 +631,7 @@ exports.getAllExpenses = async ({ page = 1, limit = 20, account_id, category_id,
       { model: ExpenseCategory, as: "category", attributes: ["id", "category_name"] },
       { model: PaymentMethod, as: "paymentMethod", attributes: ["id", "method_name"] },
       { model: User, as: "creator", attributes: ["id", "email"] },
-      { model: Attachment, as: "attachments", attributes: ["id", "file_name", "file_path"] },
+      { model: Attachment, as: "attachments", attributes: ["id", "file_name", "uploaded_at"], separate: true },
     ],
     order: [["date", "DESC"]],
     limit: parseInt(limit),
@@ -654,7 +687,7 @@ exports.getExpenseById = async (id) => {
       { model: ExpenseCategory, as: "category", attributes: ["id", "category_name"] },
       { model: PaymentMethod, as: "paymentMethod", attributes: ["id", "method_name"] },
       { model: User, as: "creator", attributes: ["id", "email"] },
-      { model: Attachment, as: "attachments", attributes: ["id", "file_name", "file_path"] },
+      { model: Attachment, as: "attachments", attributes: ["id", "file_name", "uploaded_at"], separate: true },
     ],
   });
   if (!expense) throw AppError.notFound("RECORD_NOT_FOUND", "Expense record not found");
@@ -687,7 +720,7 @@ exports.createExpense = async (data, userId) => {
       created_by: userId,
     }, { transaction: t });
 
-    auditLog.log({ userId, action: "CREATE_EXPENSE", targetTable: "expenses", targetId: e.id }, { transaction: t });
+    await auditLog.log({ userId, action: "CREATE_EXPENSE", targetTable: "expenses", targetId: e.id }, { transaction: t });
     return e;
       });
       cache.keys("dashboard:*").forEach(k => cache.del(k));
@@ -727,7 +760,7 @@ exports.updateExpense = async (id, data, userId) => {
       ...(payment_method_id && { payment_method_id }),
     }, { transaction: t });
 
-    auditLog.log({ userId, action: "UPDATE_EXPENSE", targetTable: "expenses", targetId: id }, { transaction: t });
+    await auditLog.log({ userId, action: "UPDATE_EXPENSE", targetTable: "expenses", targetId: id }, { transaction: t });
       });
       cache.keys("dashboard:*").forEach(k => cache.del(k));
       return await exports.getExpenseById(id);
@@ -737,26 +770,17 @@ exports.deleteExpense = async (id, userId) => {
   const expense = await Expense.findByPk(id);
   if (!expense) throw AppError.notFound("RECORD_NOT_FOUND", "Expense record not found");
 
+  let attachmentPaths = [];
   await sequelize.transaction(async (t) => {
     // Cascade delete attachments
     const attachments = await Attachment.findAll({ where: { expense_id: id }, transaction: t });
-    const fs = require("fs");
-    const path = require("path");
-    const RECEIPTS_DIR = path.join(__dirname, "../..", "uploads", "receipts");
-    for (const att of attachments) {
-      // Handle both absolute (legacy) and relative URL paths
-      const filePath = path.isAbsolute(att.file_path)
-        ? att.file_path
-        : path.join(RECEIPTS_DIR, path.basename(att.file_path));
-      if (fs.existsSync(filePath)) {
-        try { fs.unlinkSync(filePath); } catch (e) { logger.error(e, 'Could not delete attachment file'); }
-      }
-      await att.destroy({ transaction: t });
-    }
+    attachmentPaths = attachments.map((attachment) => attachment.file_path).filter(Boolean);
+    for (const attachment of attachments) await attachment.destroy({ transaction: t });
 
     await expense.destroy({ transaction: t });
-        auditLog.log({ userId, action: "DELETE_EXPENSE", targetTable: "expenses", targetId: id }, { transaction: t });
+        await auditLog.log({ userId, action: "DELETE_EXPENSE", targetTable: "expenses", targetId: id }, { transaction: t });
       });
+  await deleteReceiptFiles(attachmentPaths, "Could not delete expense attachment file");
       cache.keys("dashboard:*").forEach(k => cache.del(k));
       return { message: "Expense record deleted successfully." };
 };
@@ -805,48 +829,101 @@ exports.getBalance = async ({ date_from, date_to } = {}) => {
 
 // ── 6. ATTACHMENTS SERVICES ───────────────────────────────────
 exports.createAttachment = async ({ file_name, file_path, income_id, expense_id }, userId) => {
-  if (income_id) {
-    const income = await FinancialRecord.findByPk(income_id);
-    if (!income) throw AppError.notFound("RECORD_NOT_FOUND", "Income record not found");
+  const hasIncomeId = income_id !== null && income_id !== undefined && String(income_id).trim() !== "";
+  const hasExpenseId = expense_id !== null && expense_id !== undefined && String(expense_id).trim() !== "";
+  if (hasIncomeId === hasExpenseId) {
+    throw AppError.badRequest("VALIDATION", "An attachment must be linked to exactly one income or expense record");
   }
 
-  if (expense_id) {
-    const expense = await Expense.findByPk(expense_id);
+  const ownerId = Number(hasIncomeId ? income_id : expense_id);
+  if (!Number.isSafeInteger(ownerId) || ownerId <= 0) {
+    throw AppError.badRequest("VALIDATION", "The attachment record ID is invalid");
+  }
+
+  const fileName = String(file_name || "")
+    .replace(/[\\/\u0000-\u001f\u007f]/g, "_")
+    .trim()
+    .slice(0, 255);
+  const fileKey = uploadStorage.getStoredFileKey(file_path, "receipts");
+  if (!fileName || !fileKey) {
+    throw AppError.badRequest("VALIDATION", "The receipt file details are invalid");
+  }
+  const storedPath = uploadStorage.getFileUrl(fileKey);
+
+  if (hasIncomeId) {
+    const income = await FinancialRecord.findOne({ where: { id: ownerId, is_deleted: 0 }, attributes: ["id"] });
+    if (!income) throw AppError.notFound("RECORD_NOT_FOUND", "Income record not found");
+  } else {
+    const expense = await Expense.findByPk(ownerId, { attributes: ["id"] });
     if (!expense) throw AppError.notFound("RECORD_NOT_FOUND", "Expense record not found");
   }
 
   const attachment = await sequelize.transaction(async (t) => {
     const a = await Attachment.create({
-      income_id: income_id || null,
-      expense_id: expense_id || null,
-      file_name,
-      file_path,
+      income_id: hasIncomeId ? ownerId : null,
+      expense_id: hasExpenseId ? ownerId : null,
+      file_name: fileName,
+      file_path: storedPath,
       uploaded_by: userId,
     }, { transaction: t });
 
-    auditLog.log({ userId, action: "CREATE_ATTACHMENT", targetTable: "attachments", targetId: a.id }, { transaction: t });
+    await auditLog.log({ userId, action: "CREATE_ATTACHMENT", targetTable: "attachments", targetId: a.id }, { transaction: t });
     return a;
   });
   return attachment;
 };
 
+exports.getAttachmentDownloadKey = async (id) => {
+  const attachmentId = Number(id);
+  if (!Number.isSafeInteger(attachmentId) || attachmentId <= 0) {
+    throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+  }
+  const attachment = await Attachment.findByPk(attachmentId, { attributes: ["id", "file_path"] });
+  if (!attachment) throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+  const key = uploadStorage.getStoredFileKey(attachment.file_path, "receipts");
+  if (!key) throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+  return key;
+};
+
+exports.getMemberAttachmentDownloadKey = async (id, memberId) => {
+  const attachmentId = Number(id);
+  if (!Number.isSafeInteger(Number(memberId)) || Number(memberId) <= 0) {
+    throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+  }
+  if (!Number.isSafeInteger(attachmentId) || attachmentId <= 0) {
+    throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+  }
+
+  const attachment = await Attachment.findByPk(attachmentId, {
+    attributes: ["id", "income_id", "expense_id", "file_path"],
+  });
+  if (!attachment || !attachment.income_id || attachment.expense_id) {
+    throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+  }
+
+  const income = await FinancialRecord.findOne({
+    where: { id: attachment.income_id, member_id: Number(memberId), is_deleted: 0 },
+    attributes: ["id"],
+  });
+  if (!income) throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+
+  const key = uploadStorage.getStoredFileKey(attachment.file_path, "receipts");
+  if (!key) throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+  return key;
+};
+
 exports.deleteAttachment = async (id, userId) => {
-  const attachment = await Attachment.findByPk(id);
+  const attachmentId = Number(id);
+  if (!Number.isSafeInteger(attachmentId) || attachmentId <= 0) {
+    throw AppError.notFound("RECORD_NOT_FOUND", "Attachment not found");
+  }
+  const attachment = await Attachment.findByPk(attachmentId);
   if (!attachment) throw AppError.notFound("RECORD_NOT_FOUND", "Attachment not found");
 
   await sequelize.transaction(async (t) => {
-    const fs = require("fs");
-    const path = require("path");
-    const RECEIPTS_DIR = path.join(__dirname, "../..", "uploads", "receipts");
-    const filePath = path.isAbsolute(attachment.file_path)
-      ? attachment.file_path
-      : path.join(RECEIPTS_DIR, path.basename(attachment.file_path));
-    if (fs.existsSync(filePath)) {
-      try { fs.unlinkSync(filePath); } catch (e) { logger.error(e, 'Could not delete attachment file'); }
-    }
-
     await attachment.destroy({ transaction: t });
-    auditLog.log({ userId, action: "DELETE_ATTACHMENT", targetTable: "attachments", targetId: id }, { transaction: t });
+    await auditLog.log({ userId, action: "DELETE_ATTACHMENT", targetTable: "attachments", targetId: attachmentId }, { transaction: t });
   });
+  await deleteReceiptFiles([attachment.file_path], "Could not delete receipt attachment file");
   return { message: "Attachment deleted successfully." };
 };

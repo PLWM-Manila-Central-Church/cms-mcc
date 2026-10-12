@@ -157,7 +157,7 @@ exports.createAttendance = async (data, recordedBy, user = {}, options = {}) => 
 
   const created = await exports.getAttendanceById(record.id, user, transaction && { transaction });
   if (!internal.skipAudit) {
-    auditLog.log({
+      await auditLog.log({
       userId: recordedBy, action: "CHECK_IN",
       targetTable: "attendances", targetId: created.id,
       newValues: { service_id, member_id },

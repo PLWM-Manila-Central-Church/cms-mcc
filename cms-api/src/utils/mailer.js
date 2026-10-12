@@ -1,6 +1,9 @@
 "use strict";
 
 const logger = require("../helpers/logger");
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
+}[character]));
 
 // ── Brevo HTTP API
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
@@ -124,5 +127,22 @@ If you did not request this, you can safely ignore this email.
 </body>
 </html>
     `.trim(),
+  });
+};
+
+exports.sendNotification = async ({ to, message }) => {
+  const smtpFrom = process.env.SMTP_FROM;
+  if (!smtpFrom) throw new Error("[Mailer] SMTP_FROM env variable is not set.");
+  const match = smtpFrom.match(/^(.*?)\s*<(.+)>$/);
+  const fromName = match ? match[1].trim() : "PLWM-MCC";
+  const fromEmail = match ? match[2].trim() : smtpFrom.trim();
+  const safeMessage = escapeHtml(message);
+
+  await sendViaBrevo({
+    sender: { name: fromName, email: fromEmail },
+    to: [{ email: to }],
+    subject: "PLWM-MCC Notification",
+    textContent: `${String(message ?? "").trim()}\n\nSign in to PLWM-MCC to view the related record.`,
+    htmlContent: `<!doctype html><html><body style="font-family:Arial,sans-serif;color:#0f172a"><p>${safeMessage}</p><p>Sign in to PLWM-MCC to view the related record.</p></body></html>`,
   });
 };

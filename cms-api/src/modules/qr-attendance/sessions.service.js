@@ -485,6 +485,22 @@ const listSessionRoster = async (sessionId, { limit = 50, page = 1, search = "" 
 
   if (search.trim()) {
     const safeSearch = search.trim().slice(0, 80);
+    const searchParts = safeSearch.replace(/,/g, " ").split(/\s+/).filter(Boolean);
+    const fullNameMatches = [];
+    for (let splitAt = 1; splitAt < searchParts.length; splitAt += 1) {
+      const firstPart = searchParts.slice(0, splitAt).join(" ");
+      const lastPart = searchParts.slice(splitAt).join(" ");
+      fullNameMatches.push(
+        { [Op.and]: [
+          { first_name: { [Op.like]: `%${firstPart}%` } },
+          { last_name: { [Op.like]: `%${lastPart}%` } },
+        ] },
+        { [Op.and]: [
+          { first_name: { [Op.like]: `%${lastPart}%` } },
+          { last_name: { [Op.like]: `%${firstPart}%` } },
+        ] },
+      );
+    }
     memberWhere[Op.and] = [
       ...(memberWhere[Op.and] || []),
       {
@@ -492,6 +508,7 @@ const listSessionRoster = async (sessionId, { limit = 50, page = 1, search = "" 
           { first_name: { [Op.like]: "%" + safeSearch + "%" } },
           { last_name: { [Op.like]: "%" + safeSearch + "%" } },
           { barcode: { [Op.like]: "%" + safeSearch + "%" } },
+          ...fullNameMatches,
         ],
       },
     ];

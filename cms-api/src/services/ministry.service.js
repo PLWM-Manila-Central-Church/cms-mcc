@@ -299,31 +299,12 @@ exports.getPendingSubstitutes = async (leadsMinistryId) => {
 
 // ── Ministry Leader: Resolve Substitute ───────────────────────
 exports.resolveSubstitute = async (id, data, leadsMinistryId, userId) => {
-  const SubstituteRequest = require("../models/SubstituteRequest.model");
-
-  const request = await SubstituteRequest.findByPk(id, {
-    include: [
-      {
-        model: MinistryAssignment,
-        as: "assignment",
-        attributes: ["ministry_role_id"],
-        required: true,
-      },
-    ],
+  const serviceExtras = require("./service-extras.service");
+  return serviceExtras.resolveSubstituteRequest(id, data?.status, userId, {
+    roleName: "Ministry Leader",
+    leadsMinistryId,
+    userId,
   });
-  if (!request) throw AppError.notFound("RECORD_NOT_FOUND", "Substitute request not found");
-
-  if (request.assignment?.ministry_role_id !== leadsMinistryId) {
-    throw AppError.forbidden("This request is not for your ministry");
-  }
-
-  const { status } = data;
-  if (!["approved", "rejected"].includes(status)) {
-    throw AppError.badRequest("VALIDATION", "Status must be 'approved' or 'rejected'");
-  }
-
-  await request.update({ status });
-  return request;
 };
 
 // ── Ministry Roster — Search All Members ─────────────────────

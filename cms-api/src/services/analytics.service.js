@@ -5,6 +5,7 @@ const sequelize = require("../config/db");
 const { Member, FinancialRecord, Expense, Attendance } = require("../models");
 const { getAttendanceModel } = require("../helpers/attendanceSummary.helper");
 const AppError = require("../helpers/AppError");
+const { appendOtherGroupSummary } = require("../helpers/analyticsDemographics.helper");
 
 const REPORT_ROLES = new Set(["System Admin", "Pastor", "Registration Team", "Finance Team"]);
 const asNumber = (value) => Number(value || 0);
@@ -61,26 +62,27 @@ const monthlyCounts = async (Model, dateColumn, range, extraWhere = {}) => {
 exports.getAnalytics = async ({ user, date_from, date_to } = {}) => {
   if (!REPORT_ROLES.has(user?.roleName)) throw AppError.forbidden("This role cannot view consolidated analytics");
   const range = parseDateRange({ date_from, date_to });
+  const demographicsAsOfDate = manilaToday();
   const canSeeMembers = ["System Admin", "Pastor", "Registration Team"].includes(user.roleName);
   const canSeeAttendance = ["System Admin", "Pastor", "Registration Team"].includes(user.roleName);
   const canSeeFinance = ["System Admin", "Pastor", "Finance Team"].includes(user.roleName);
   const result = { range: { from: range.from, to: range.to }, members: null, demographics: null, member_growth: null, attendance: null, finance: null };
 
   const memberTask = canSeeMembers ? (async () => {
-    const [active, inactive, total, ageBands, gender, cellGroups, groups, growthRows] = await Promise.all([
+    const [active, inactive, total, ageBands, gender, cellGroups, groups, cellGroupCategoryCounts, groupCategoryCounts, growthRows] = await Promise.all([
       Member.count({ where: { status: "Active" } }),
       Member.count({ where: { status: "Inactive" } }),
       Member.count(),
       sequelize.query(`
         SELECT CASE
-          WHEN birthdate IS NULL OR birthdate > CURDATE() THEN 'Unknown'
-          WHEN TIMESTAMPDIFF(YEAR, birthdate, CURDATE()) < 18 THEN '0-17'
-          WHEN TIMESTAMPDIFF(YEAR, birthdate, CURDATE()) < 30 THEN '18-29'
-          WHEN TIMESTAMPDIFF(YEAR, birthdate, CURDATE()) < 50 THEN '30-49'
+          WHEN birthdate IS NULL OR birthdate > :asOfDate THEN 'Unknown'
+          WHEN TIMESTAMPDIFF(YEAR, birthdate, :asOfDate) < 18 THEN '0-17'
+          WHEN TIMESTAMPDIFF(YEAR, birthdate, :asOfDate) < 30 THEN '18-29'
+          WHEN TIMESTAMPDIFF(YEAR, birthdate, :asOfDate) < 50 THEN '30-49'
           ELSE '50+'
         END AS label, COUNT(*) AS total
         FROM members WHERE is_deleted = 0 GROUP BY label ORDER BY label`,
-        { type: QueryTypes.SELECT },
+        { type: QueryTypes.SELECT, replacements: { asOfDate: demographicsAsOfDate } },
       ),
       sequelize.query(`
         SELECT COALESCE(NULLIF(gender, ''), 'Unspecified') AS label, COUNT(*) AS total
@@ -100,6 +102,26 @@ exports.getAnalytics = async ({ user, date_from, date_to } = {}) => {
         { type: QueryTypes.SELECT },
       ),
       sequelize.query(`
+        SELECT COUNT(*) AS category_count
+        FROM (
+          SELECT cg.id, cg.name
+          FROM members m LEFT JOIN cell_groups cg ON cg.id = m.cell_group_id
+          WHERE m.is_deleted = 0
+          GROUP BY cg.id, cg.name
+        ) AS cell_group_categories`,
+        { type: QueryTypes.SELECT },
+      ),
+      sequelize.query(`
+        SELECT COUNT(*) AS category_count
+        FROM (
+          SELECT g.id, g.name
+          FROM members m LEFT JOIN ministry_groups g ON g.id = m.group_id
+          WHERE m.is_deleted = 0
+          GROUP BY g.id, g.name
+        ) AS member_group_categories`,
+        { type: QueryTypes.SELECT },
+      ),
+      sequelize.query(`
         SELECT DATE_FORMAT(created_at, '%Y-%m') AS period, COUNT(*) AS total
         FROM members WHERE is_deleted = 0 AND created_at >= :fromDateTime AND created_at < :toExclusive
         GROUP BY period ORDER BY period`,
@@ -111,8 +133,16 @@ exports.getAnalytics = async ({ user, date_from, date_to } = {}) => {
       demographics: {
         age_bands: ageBands.map((row) => ({ label: row.label, total: asNumber(row.total) })),
         gender: gender.map((row) => ({ label: row.label, total: asNumber(row.total) })),
-        cell_groups: cellGroups.map((row) => ({ id: row.id, label: row.label, total: asNumber(row.total) })),
-        groups: groups.map((row) => ({ id: row.id, label: row.label, total: asNumber(row.total) })),
+        cell_groups: appendOtherGroupSummary(cellGroups, {
+          totalMembers: total,
+          totalCategories: cellGroupCategoryCounts[0]?.category_count,
+          categoryLabel: "cell groups",
+        }),
+        groups: appendOtherGroupSummary(groups, {
+          totalMembers: total,
+          totalCategories: groupCategoryCounts[0]?.category_count,
+          categoryLabel: "groups",
+        }),
       },
       growth: fillMonths(range.from, range.to, growthRows),
     };

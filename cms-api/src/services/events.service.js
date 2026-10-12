@@ -4,6 +4,11 @@ const { Op } = require("sequelize");
 const sequelize = require("../config/db");
 const AppError    = require("../helpers/AppError");
 const { getMemberScopeWhere } = require("../helpers/scopedLeader.helper");
+const {
+  assertEventReservationLimits,
+  registerEventMember,
+  updateEventRegistrationReservation,
+} = require("../helpers/eventRegistrationReservation.helper");
 const cache       = require("../helpers/cache.helper");
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
@@ -88,11 +93,17 @@ const getRegistrationCounts = async (eventIds, user = {}) => {
     attributes: [
       "event_id",
       [sequelize.fn("COUNT", sequelize.col("EventRegistration.id")), "registration_count"],
+      [sequelize.fn("COUNT", sequelize.col("EventRegistration.seat_number")), "seat_reserved_count"],
+      [sequelize.fn("COUNT", sequelize.col("EventRegistration.parking_slot")), "parking_reserved_count"],
     ],
     group: ["event_id"],
     raw: true,
   });
-  return Object.fromEntries(rows.map((row) => [Number(row.event_id), Number(row.registration_count)]));
+  return Object.fromEntries(rows.map((row) => [Number(row.event_id), {
+    registration_count: Number(row.registration_count || 0),
+    seat_reserved_count: Number(row.seat_reserved_count || 0),
+    parking_reserved_count: Number(row.parking_reserved_count || 0),
+  }]));
 };
 
 const registrationListInclude = async (user = {}) => {
@@ -103,7 +114,7 @@ const registrationListInclude = async (user = {}) => {
   return {
     model: EventRegistration,
     where: registrationsWhere,
-    attributes: ["id", "member_id", "registered_at", "registered_by"],
+    attributes: ["id", "member_id", "registered_at", "registered_by", "seat_number", "parking_slot"],
     include: registrationIncludes.map((include) => memberScopeWhere
       ? { ...include, where: memberScopeWhere, required: true }
       : include),
@@ -141,7 +152,9 @@ exports.getAllEvents = async ({
   return {
     events:      rows.map((event) => ({
       ...remapEvent(event),
-      registration_count: counts[Number(event.id)] || 0,
+      registration_count: counts[Number(event.id)]?.registration_count || 0,
+      seat_reserved_count: counts[Number(event.id)]?.seat_reserved_count || 0,
+      parking_reserved_count: counts[Number(event.id)]?.parking_reserved_count || 0,
       EventRegistrations: [],
     })),
     total:       count,
@@ -167,7 +180,9 @@ exports.getEventById = async (id, user = {}) => {
       .filter((registration) => registration.member?.id);
   }
   const counts = await getRegistrationCounts([Number(id)], user);
-  plain.registration_count = counts[Number(id)] || 0;
+  plain.registration_count = counts[Number(id)]?.registration_count || 0;
+  plain.seat_reserved_count = counts[Number(id)]?.seat_reserved_count || 0;
+  plain.parking_reserved_count = counts[Number(id)]?.parking_reserved_count || 0;
   return plain;
   };
 
@@ -175,7 +190,7 @@ exports.getEventById = async (id, user = {}) => {
 exports.createEvent = async (data, createdBy) => {
   const {
     category_id, title, description, start_date, end_date,
-    start_time, location, capacity, registration_deadline, status,
+    start_time, location, capacity, total_parking_slots, registration_deadline, status,
   } = data;
 
   if (end_date && end_date < start_date)
@@ -195,6 +210,7 @@ exports.createEvent = async (data, createdBy) => {
     start_time:            start_time            || null,
     location:              location              || null,
     capacity:              capacity              || null,
+    total_parking_slots:   total_parking_slots   ?? 0,
     registration_deadline: registration_deadline || null,
     status:                status                || EVENT_STATUS.UPCOMING,
     is_deleted: 0,
@@ -213,39 +229,50 @@ exports.createEvent = async (data, createdBy) => {
 
 // ── Update Event ─────────────────────────────────────────────
 exports.updateEvent = async (id, data, updatedBy) => {
-  const event = await Event.findOne({ where: { id, is_deleted: 0 } });
-  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
-
-  const currentStatus = normalizeStatus(event.status);
-  if (currentStatus === EVENT_STATUS.COMPLETED || currentStatus === EVENT_STATUS.CANCELLED)
-    throw AppError.badRequest("VALIDATION", "Cannot update a completed or cancelled event");
-
   const {
     category_id, title, description, start_date, end_date,
-    start_time, location, capacity, registration_deadline, status,
+    start_time, location, capacity, total_parking_slots, registration_deadline, status,
   } = data;
 
-  const resolvedStart = start_date || event.start_date;
-  const resolvedEnd   = end_date !== undefined ? end_date : event.end_date;
-  if (resolvedEnd && resolvedEnd < resolvedStart)
-    throw AppError.badRequest("VALIDATION", "End date cannot be before start date");
+  await sequelize.transaction(async (transaction) => {
+    const event = await Event.findOne({
+      where: { id, is_deleted: 0 },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
-  if (category_id) {
-    const category = await EventCategory.findByPk(category_id);
-    if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
-  }
+    const currentStatus = normalizeStatus(event.status);
+    if (currentStatus === EVENT_STATUS.COMPLETED || currentStatus === EVENT_STATUS.CANCELLED)
+      throw AppError.badRequest("VALIDATION", "Cannot update a completed or cancelled event");
 
-  await event.update({
-    ...(category_id           !== undefined && { category_id }),
-    ...(title                               && { title }),
-    ...(description           !== undefined && { description }),
-    ...(start_date                          && { start_date }),
-    ...(end_date              !== undefined && { end_date }),
-    ...(start_time            !== undefined && { start_time }),
-    ...(location              !== undefined && { location }),
-    ...(capacity              !== undefined && { capacity }),
-    ...(registration_deadline !== undefined && { registration_deadline }),
-    ...(status                              && { status }),
+    const resolvedStart = start_date || event.start_date;
+    const resolvedEnd   = end_date !== undefined ? end_date : event.end_date;
+    if (resolvedEnd && resolvedEnd < resolvedStart)
+      throw AppError.badRequest("VALIDATION", "End date cannot be before start date");
+
+    if (category_id) {
+      const category = await EventCategory.findByPk(category_id, { transaction });
+      if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Event category not found");
+    }
+
+    if (capacity !== undefined || total_parking_slots !== undefined) {
+      await assertEventReservationLimits({ event, capacity, totalParkingSlots: total_parking_slots, transaction });
+    }
+
+    await event.update({
+      ...(category_id           !== undefined && { category_id }),
+      ...(title                               && { title }),
+      ...(description           !== undefined && { description }),
+      ...(start_date                          && { start_date }),
+      ...(end_date              !== undefined && { end_date }),
+      ...(start_time            !== undefined && { start_time }),
+      ...(location              !== undefined && { location }),
+      ...(capacity              !== undefined && { capacity }),
+      ...(total_parking_slots   !== undefined && { total_parking_slots: total_parking_slots ?? 0 }),
+      ...(registration_deadline !== undefined && { registration_deadline }),
+      ...(status                              && { status }),
+    }, { transaction });
   });
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_EVENT", targetTable: "events", targetId: id });
@@ -416,39 +443,13 @@ exports.getEventRegistrations = async (eventId, user = {}) => {
 };
 
 // ── Register Member ──────────────────────────────────────────
-exports.registerMember = async (eventId, memberId, registeredBy) => {
-  // Transaction + row lock on the event serializes concurrent registrations
-  // so capacity cannot be exceeded by racing requests.
-  const reg = await sequelize.transaction(async (t) => {
-    const event = await Event.findOne({
-      where: { id: eventId },
-      lock: t.LOCK.UPDATE,
-      transaction: t,
-    });
-    if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
-    if (!REGISTRATION_OPEN_STATUSES.includes(event.status))
-      throw AppError.badRequest("VALIDATION", "Event is not open for registration");
-    if (event.registration_deadline && new Date() > new Date(event.registration_deadline))
-      throw AppError.badRequest("VALIDATION", "Registration deadline has passed");
-
-    const member = await Member.findByPk(memberId, { transaction: t });
-    if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
-
-    const existing = await EventRegistration.findOne({
-      where: { event_id: eventId, member_id: memberId },
-      transaction: t,
-    });
-    if (existing) throw AppError.conflict("DUPLICATE", "Member already registered for this event");
-
-    if (event.capacity) {
-      const count = await EventRegistration.count({ where: { event_id: eventId }, transaction: t });
-      if (count >= event.capacity) throw AppError.badRequest("VALIDATION", "Event has reached full capacity");
-    }
-
-    return await EventRegistration.create({
-      event_id: eventId, member_id: memberId,
-      registered_at: new Date(), registered_by: registeredBy,
-    }, { transaction: t });
+exports.registerMember = async (eventId, memberId, registeredBy, reservation = {}) => {
+  const result = await registerEventMember({
+    eventId,
+    memberId,
+    registeredBy,
+    seatNumber: reservation.seat_number,
+    parkingSlot: reservation.parking_slot,
   });
 
   try {
@@ -458,7 +459,9 @@ exports.registerMember = async (eventId, memberId, registeredBy) => {
     if (userRecord) {
       await notifService.createNotification({
         user_id: userRecord.id, type: "event_registered",
-        message: `You have been successfully registered for "${event.title}".`,
+        message: `You have been successfully registered for "${result.eventTitle}".`,
+        reference_id: eventId,
+        reference_type: "event",
       });
     }
   } catch (err) {
@@ -467,10 +470,38 @@ exports.registerMember = async (eventId, memberId, registeredBy) => {
 
   auditLog.log({
     userId: registeredBy, action: "REGISTER_EVENT",
-    targetTable: "event_registrations", targetId: reg.id,
-    newValues: { event_id: eventId, member_id: memberId },
+    targetTable: "event_registrations", targetId: result.registration.id,
+    newValues: {
+      event_id: eventId,
+      member_id: memberId,
+      seat_number: result.registration.seat_number,
+      parking_slot: result.registration.parking_slot,
+    },
   });
-  return reg;
+  return result.registration;
+};
+
+exports.updateRegistrationReservation = async (eventId, memberId, reservation, updatedBy) => {
+  const result = await updateEventRegistrationReservation({
+    eventId,
+    memberId,
+    seatNumber: reservation.seat_number,
+    parkingSlot: reservation.parking_slot,
+    allowAfterDeadline: true,
+  });
+  auditLog.log({
+    userId: updatedBy,
+    action: "UPDATE_EVENT_REGISTRATION_RESERVATION",
+    targetTable: "event_registrations",
+    targetId: result.registration.id,
+    newValues: {
+      event_id: Number(eventId),
+      member_id: Number(memberId),
+      seat_number: result.registration.seat_number,
+      parking_slot: result.registration.parking_slot,
+    },
+  });
+  return result.registration;
 };
 
 // ── Unregister Member ────────────────────────────────────────
@@ -490,6 +521,8 @@ exports.unregisterMember = async (eventId, memberId, unregisteredBy) => {
         await notifService.createNotification({
           user_id: userRecord.id, type: "event_unregistered",
           message: `Your registration for "${event.title}" has been cancelled.`,
+          reference_id: eventId,
+          reference_type: "event",
         });
       }
     }
@@ -567,6 +600,8 @@ exports.bulkRegisterMembers = async (eventId, memberIds, registeredBy) => {
         await notifService.createNotification({
           user_id: userRecord.id, type: "event_registered",
           message: `You have been registered for "${event.title}".`,
+          reference_id: eventId,
+          reference_type: "event",
         });
       }
     } catch { /* non-fatal */ }

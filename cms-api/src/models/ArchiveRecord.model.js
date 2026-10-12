@@ -15,6 +15,7 @@ const ArchiveRecord = sequelize.define(
     title: { type: DataTypes.STRING(255), allowNull: false },
     description: { type: DataTypes.TEXT, allowNull: true },
     file_url: { type: DataTypes.STRING(500), allowNull: false },
+    current_version_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     file_type: {
       type: DataTypes.ENUM("pdf", "docx", "xlsx", "jpg", "png", "mp4", "mp3"),
       allowNull: false,

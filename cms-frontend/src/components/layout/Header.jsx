@@ -2,18 +2,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import useNotificationPolling from '../../hooks/useNotificationPolling';
 import { LANGS, getLangCode, saveLangCode } from '../../utils/langUtils';
+import { timeAgo } from '../../utils/timeAgo';
 import MonoIcon from '../common/MonoIcon';
-
-const POLL_INTERVAL = 30000;
-
-function timeAgo(dateStr) {
-  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-  if (diff < 60)    return 'Just now';
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
 
 const TYPE_ICON = {
   info:    { icon: 'file', bg: '#eff6ff', dot: '#3b82f6' },
@@ -23,7 +15,7 @@ const TYPE_ICON = {
 };
 const defaultType = TYPE_ICON.info;
 
-export default function Header({ sidebarWidth, isMobile = false }) {
+export default function Header({ sidebarWidth, isMobile = false, isTablet = false, isNarrowDesktop = false }) {
   const { user, logout, activeLeaderScopeKey, selectLeaderScope } = useAuth();
   const navigate = useNavigate();
 
@@ -68,20 +60,11 @@ export default function Header({ sidebarWidth, isMobile = false }) {
     window.location.reload();
   };
 
-  const fetchNotifs = useCallback(async () => {
-    try {
-      const res  = await axiosInstance.get('/notifications');
-      const data = res.data.data || [];
-      setNotifs(data);
-      setUnread(data.filter(n => !n.is_read).length);
-    } catch (_) {}
+  const handleNotifications = useCallback((data) => {
+    setNotifs(data);
+    setUnread(data.filter((notification) => !notification.is_read).length);
   }, []);
-
-  useEffect(() => {
-    fetchNotifs();
-    const timer = setInterval(fetchNotifs, POLL_INTERVAL);
-    return () => clearInterval(timer);
-  }, [fetchNotifs]);
+  useNotificationPolling({ onNotifications: handleNotifications });
 
   useEffect(() => {
     const handler = (e) => {
@@ -184,19 +167,24 @@ export default function Header({ sidebarWidth, isMobile = false }) {
   const panelWidth = isMobile ? 'calc(100vw - 24px)' : '360px';
 
   return (
-    <div style={{ ...S.header, left: sidebarWidth }}>
-      <div style={S.left}>
+    <div style={{ ...S.header, left: sidebarWidth, padding: isNarrowDesktop ? '0 12px' : '0 16px' }}>
+      <div style={{ ...S.left, minWidth: 0, flex: '1 1 auto', gap: isNarrowDesktop ? 8 : 10 }}>
         {/* NO hamburger on mobile — navigation is via bottom tab bar + More drawer */}
         <span style={S.plwmBadge}>PLWM-MCC</span>
         {!isMobile && (
           <>
             <div style={S.divider} />
-            <h2 style={S.pageTitle}>Church Management System</h2>
+            <h2 style={{
+              ...S.pageTitle,
+              maxWidth: isTablet ? 140 : isNarrowDesktop ? 240 : 300,
+              minWidth: 0,
+              flex: '1 1 auto',
+            }}>Church Management System</h2>
           </>
         )}
       </div>
 
-      <div style={S.right}>
+      <div style={{ ...S.right, minWidth: 0, flexShrink: 0, gap: isNarrowDesktop ? 8 : 10 }}>
         {leaderAssignments.length > 0 && (
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', whiteSpace: 'nowrap' }}>
@@ -207,7 +195,8 @@ export default function Header({ sidebarWidth, isMobile = false }) {
               value={currentLeaderScope}
               onChange={(event) => selectLeaderScope(event.target.value, { reload: true })}
               style={{
-                maxWidth: isMobile ? 138 : 230,
+                maxWidth: isMobile || isTablet ? 138 : isNarrowDesktop ? 180 : 230,
+                minWidth: 0,
                 minHeight: 34,
                 border: '1px solid #dbe4ee',
                 borderRadius: 8,
@@ -236,10 +225,10 @@ export default function Header({ sidebarWidth, isMobile = false }) {
           </div>
         )}
 
-        {!isMobile && (
+        {!isMobile && !isTablet && (
           <>
             <div style={S.divider} />
-            <span style={S.email}>{user?.email}</span>
+            <span style={{ ...S.email, maxWidth: isNarrowDesktop ? 120 : 200, minWidth: 0 }}>{user?.email}</span>
           </>
         )}
 
@@ -324,7 +313,7 @@ export default function Header({ sidebarWidth, isMobile = false }) {
                         </div>
                         <div style={S.notifContent}>
                           <p style={S.notifMsg}>{n.message}</p>
-                          <span style={S.notifTime}>{timeAgo(n.created_at)}</span>
+                          <span style={S.notifTime}>{timeAgo(n.created_at ?? n.createdAt)}</span>
                         </div>
                         <button style={S.deleteNotif} onClick={(e) => deleteOne(e, n.id)} title="Dismiss"><MonoIcon name="close" size={12} /></button>
                       </div>
@@ -336,7 +325,7 @@ export default function Header({ sidebarWidth, isMobile = false }) {
           )}
         </div>
 
-        <button onClick={handleLogout} style={{ ...S.logoutBtn, padding: isMobile ? '7px 10px' : '7px 16px', fontSize: isMobile ? '12px' : '13px' }}>
+        <button aria-label="Sign Out" title="Sign Out" onClick={handleLogout} style={{ ...S.logoutBtn, padding: isMobile ? '7px 10px' : '7px 16px', fontSize: isMobile ? '12px' : '13px' }}>
           {isMobile ? '↩' : 'Sign Out'}
         </button>
       </div>

@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConfirmationProvider } from '../../context/ConfirmationContext';
 
 const fixture = vi.hoisted(() => ({
   get: vi.fn(),
@@ -49,6 +50,7 @@ function mockScenario() {
     if (url.endsWith('/summary')) return { data: { data: fixture.summary || { confirmed_count: 0, expected_count: null, registered_count: 0, pending_members_count: 0, absent_count: null } } };
     if (url.endsWith('/attendance')) return { data: { data: { records: [], count: 0, page: 1, limit: 100 } } };
     if (url.endsWith('/batches')) return { data: { data: { batches: batchRows } } };
+    if (url.endsWith('/export.csv')) return { data: new Blob(['"MEMBER","CHECK-IN"\r\n']) };
     if (url === '/qr-attendance/batches/8') return { data: { data: batchDetail } };
     if (url === '/qr-attendance/batches/44') return { data: { data: batchDetail } };
     if (url.endsWith('/image.png')) return { data: new Blob(['png']) };
@@ -57,7 +59,7 @@ function mockScenario() {
 }
 
 function renderWorkspace() {
-  return render(<MemoryRouter><QrAttendanceWorkspace targetType="event" targetId="7" /></MemoryRouter>);
+  return render(<ConfirmationProvider><MemoryRouter><QrAttendanceWorkspace targetType="event" targetId="7" /></MemoryRouter></ConfirmationProvider>);
 }
 
 describe('QR attendance workspace role flows', () => {
@@ -134,6 +136,79 @@ describe('QR attendance workspace role flows', () => {
     expect(await screen.findByText('Attendance session opened.')).toBeInTheDocument();
     await waitFor(() => expect(fixture.post).toHaveBeenCalledWith('/qr-attendance/sessions/2/open', {}));
     expect(await screen.findByText('open', { selector: '.qr-session-status' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Sunday Morning · open/ })).toBeInTheDocument();
+  });
+
+  it('preserves rapid schedule field changes when creating a session', async () => {
+    currentSession = null;
+    fixture.post.mockImplementation(async (url, payload) => {
+      if (url === '/qr-attendance/sessions') {
+        currentSession = { ...session, id: 2, ...payload, status: 'draft' };
+        return { data: { data: currentSession } };
+      }
+      throw new Error(`Unexpected POST ${url}`);
+    });
+
+    renderWorkspace();
+    await screen.findByLabelText('Session title');
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText('Session title'), { target: { value: 'Fast Schedule' } });
+      fireEvent.change(screen.getByLabelText('Session key'), { target: { value: 'fast-schedule' } });
+      fireEvent.change(screen.getByLabelText('Activity starts'), { target: { value: '2026-10-11T08:00' } });
+      fireEvent.change(screen.getByLabelText('Activity ends'), { target: { value: '2026-10-11T23:00' } });
+      fireEvent.change(screen.getByLabelText('Check-in opens'), { target: { value: '2026-10-11T08:00' } });
+      fireEvent.change(screen.getByLabelText('Check-in closes'), { target: { value: '2026-10-11T22:00' } });
+      fireEvent.change(screen.getByLabelText('Batch approval deadline'), { target: { value: '2026-10-12T10:00' } });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Draft Session' }));
+
+    await screen.findByText('Draft attendance session created. Open it when check-in is ready.');
+    const [, payload] = fixture.post.mock.calls.find(([url]) => url === '/qr-attendance/sessions');
+    expect(payload).toMatchObject({
+      title: 'Fast Schedule',
+      session_key: 'fast-schedule',
+      starts_at: new Date('2026-10-11T08:00').toISOString(),
+      ends_at: new Date('2026-10-11T23:00').toISOString(),
+      check_in_opens_at: new Date('2026-10-11T08:00').toISOString(),
+      check_in_closes_at: new Date('2026-10-11T22:00').toISOString(),
+      approval_deadline: new Date('2026-10-12T10:00').toISOString(),
+    });
+  });
+
+  it('keeps the CSV object URL alive while the browser starts the export', async () => {
+    const url = 'blob:qr-attendance-export';
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const originalAnchorClick = HTMLAnchorElement.prototype.click;
+    const createObjectURL = vi.fn(() => url);
+    const revokeObjectURL = vi.fn();
+    const anchorClick = vi.fn(function anchorClickSpy() {
+      expect(this.isConnected).toBe(true);
+      expect(this.href).toBe(url);
+      expect(this.download).toBe('attendance-session-1.csv');
+    });
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+    HTMLAnchorElement.prototype.click = anchorClick;
+
+    try {
+      renderWorkspace();
+      const exportButtons = await screen.findAllByRole('button', { name: 'Export CSV' });
+      fireEvent.click(exportButtons[0]);
+
+      await waitFor(() => expect(fixture.get).toHaveBeenCalledWith('/qr-attendance/sessions/1/export.csv', { responseType: 'blob' }));
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      expect(anchorClick).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+      await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith(url), { timeout: 2000 });
+    } finally {
+      HTMLAnchorElement.prototype.click = originalAnchorClick;
+      if (originalCreateObjectURL === undefined) delete URL.createObjectURL;
+      else Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: originalCreateObjectURL });
+      if (originalRevokeObjectURL === undefined) delete URL.revokeObjectURL;
+      else Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: originalRevokeObjectURL });
+    }
   });
 
   it('lets a scoped Cell Group Leader record a draft and receive a batch QR only after submission', async () => {

@@ -137,7 +137,7 @@ exports.getAllInvites = async () => {
 
 exports.getInviteById = async (id) => {
   const invite = await InvitedMember.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Invite not found");
+  if (!invite) throw AppError.notFound("RECORD_NOT_FOUND", "Invite not found");
   return invite;
 };
 
@@ -145,7 +145,7 @@ exports.createInvite = async (data, invitedBy) => {
   const { email, first_name, last_name } = data;
 
   const existing = await InvitedMember.findOne({ where: { email } });
-  throw AppError.conflict("DUPLICATE", "Email already invited");
+  if (existing) throw AppError.conflict("DUPLICATE", "Email already invited");
 
   const invite_token = crypto.randomBytes(32).toString("hex");
   const expires_at   = new Date(Date.now() + 7 * 24 * 3600 * 1000); // 7 days
@@ -163,7 +163,7 @@ exports.createInvite = async (data, invitedBy) => {
 
 exports.deleteInvite = async (id) => {
   const invite = await InvitedMember.findByPk(id);
-  throw AppError.notFound("RECORD_NOT_FOUND", "Invite not found");
+  if (!invite) throw AppError.notFound("RECORD_NOT_FOUND", "Invite not found");
   await invite.destroy();
   return { message: "Invite deleted successfully." };
 };

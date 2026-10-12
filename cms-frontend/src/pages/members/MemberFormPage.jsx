@@ -163,8 +163,8 @@ export default function MemberFormPage() {
           <h2 style={styles.sectionTitle}>Classification</h2>
           <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'16px' }}>
             <div style={styles.fieldWrap}>
-              <label style={styles.label}>Gender</label>
-              <select name="gender" value={form.gender} onChange={handleChange} style={styles.select}>
+              <label htmlFor="member-gender" style={styles.label}>Gender</label>
+              <select id="member-gender" name="gender" value={form.gender} onChange={handleChange} style={styles.select}>
                 <option value="">— Select —</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -174,8 +174,8 @@ export default function MemberFormPage() {
             {!isScopedLeader && (
               <>
             <div style={styles.fieldWrap}>
-              <label style={styles.label}>Status</label>
-              <select name="status" value={form.status} onChange={handleChange} style={styles.select}>
+              <label htmlFor="member-status" style={styles.label}>Status</label>
+              <select id="member-status" name="status" value={form.status} onChange={handleChange} style={styles.select}>
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
               </select>

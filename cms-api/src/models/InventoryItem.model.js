@@ -2,6 +2,7 @@
 
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
+const { INVENTORY_STATUSES } = require("../helpers/inventoryStatus.helper");
 
 const InventoryItem = sequelize.define(
   "InventoryItem",
@@ -24,7 +25,7 @@ const InventoryItem = sequelize.define(
       allowNull: true,
     },
     status: {
-      type: DataTypes.ENUM("Available", "Under Repair"),
+      type: DataTypes.ENUM(...INVENTORY_STATUSES),
       allowNull: false,
       defaultValue: "Available",
     },

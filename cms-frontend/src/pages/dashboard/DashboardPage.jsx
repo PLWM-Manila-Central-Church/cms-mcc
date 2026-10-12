@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
 import useIsMobile from '../../hooks/useIsMobile';
 import { greetingTarget } from '../../utils/roleDisplay';
+import { getFinanceRecordLabel } from '../../utils/financeRecordLabel';
 
 const R = {
   ADMIN: 'System Admin',
@@ -59,7 +60,7 @@ const greeting = () => {
 };
 
 const metric = (label, value, sub, path) => ({ label, value, sub, path });
-const row = (label, detail, path, value) => ({ label, detail, path, value });
+const row = (label, detail, path, value, key) => ({ label, detail, path, value, key });
 
 function MetricCard({ item, accent, onOpen }) {
   return (
@@ -101,7 +102,7 @@ function RowList({ rows, accent, empty = 'No items to show.' }) {
   if (!rows.length) return <div style={S.empty}>{empty}</div>;
   return rows.map((item) => (
     <button
-      key={`${item.label}-${item.path || item.detail}`}
+      key={item.key || `${item.label}-${item.path || item.detail}`}
       type="button"
       onClick={() => item.path && navigate(item.path)}
       disabled={!item.path}
@@ -419,7 +420,7 @@ function getDashboardConfig({ role, stats, hasPermission }) {
 
   const commonFinance = (stats.finance?.recentRecords || []).slice(0, 5).map((record) =>
     row(
-      record.Member ? `${record.Member.first_name} ${record.Member.last_name}` : 'Member record',
+      getFinanceRecordLabel(record),
       `${record.category?.name || 'Uncategorized'} - ${fmtDate(record.transaction_date)}`,
       '/finance',
       fmtMoney(record.amount),
@@ -446,8 +447,14 @@ function getDashboardConfig({ role, stats, hasPermission }) {
           row('Upcoming services', 'Published services coming up.', '/services', fmtNumber(stats.services.upcoming)),
         ],
         secondaryTitle: 'Recent Activity',
-        secondaryRows: canAudit ? (stats.recentActivity || []).slice(0, 6).map((log) =>
-          row(log.action?.replace(/_/g, ' ') || 'Activity', log.User?.email || 'System activity', '/audit-logs', 'View')
+        secondaryRows: canAudit ? (stats.recentActivity || []).slice(0, 6).map((log, index) =>
+          row(
+            log.action?.replace(/_/g, ' ') || 'Activity',
+            log.User?.email || 'System activity',
+            '/audit-logs',
+            'View',
+            `recent-activity-${log.id ?? index}`,
+          )
         ) : [],
       };
     case R.PASTOR:
@@ -491,17 +498,17 @@ function getDashboardConfig({ role, stats, hasPermission }) {
         metrics: [
           metric('This month', fmtMoney(stats.finance.totalThisMonth), 'Recorded giving', '/finance'),
           metric('Records', fmtNumber(summary.recordsThisMonth), 'Transactions this month', '/finance'),
-          metric('Members', fmtNumber(stats.members.total), 'Lookup for giving records', '/members'),
+          metric('Members', fmtNumber(stats.members.total), 'Search names while recording giving', '/finance'),
           metric('Archives', fmtNumber(summary.pendingArchives), 'Public/restricted queue', '/archives'),
         ],
         primary: [
           row('Finance records', 'Record and review contributions.', '/finance'),
-          row('Member lookup', 'Find members tied to giving records.', '/members'),
+          row('Member lookup', 'Search a member when recording a contribution.', '/finance'),
           row('Archives', 'Access finance-related documents.', '/archives'),
         ],
         watch: [
           row('Recent total', 'Month-to-date giving.', '/finance', fmtMoney(stats.finance.totalThisMonth)),
-          row('New members', 'Recently added member records.', '/members', fmtNumber(stats.members.newThisMonth)),
+          row('New members', 'Recently added and available in the giving form.', '/finance', fmtNumber(stats.members.newThisMonth)),
         ],
         secondaryTitle: 'Recent Finance Records',
         secondaryRows: commonFinance,

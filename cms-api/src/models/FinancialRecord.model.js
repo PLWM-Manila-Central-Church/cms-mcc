@@ -31,9 +31,10 @@ const FinancialRecord = sequelize.define(
     defaultScope: { where: { is_deleted: 0 } },
     scopes: { withDeleted: {} },
     indexes: [
-      { fields: ["transaction_date"], name: "idx_fr_transaction_date" },
-      { fields: ["member_id", "transaction_date"], name: "idx_fr_member_date" },
-      { fields: ["category_id"], name: "idx_fr_category_id" },
+      { fields: ["transaction_date", "is_deleted"], name: "idx_financial_records_date_deleted" },
+      { fields: ["member_id", "is_deleted", "transaction_date"], name: "idx_financial_records_member_deleted_date" },
+      { fields: ["category_id", "is_deleted"], name: "idx_financial_records_category_deleted" },
+      { fields: ["is_deleted", "transaction_date"], name: "idx_finance_date" },
     ],
   },
 );

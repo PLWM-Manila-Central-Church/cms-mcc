@@ -14,6 +14,7 @@ const axiosInstance = axios.create({
 
 // ── Token refresh queue — prevents concurrent refresh race conditions ──
 let isRefreshing = false;
+let isSessionInvalid = false;
 let refreshSubscribers = [];
 
 function subscribeToRefresh(resolve, reject) {
@@ -31,6 +32,17 @@ function onRefreshFailed(error) {
   refreshSubscribers = [];
   subscribers.forEach(({ reject }) => reject(error));
 }
+
+const refreshSession = async (baseUrl) => {
+  const refresh = () => axios.post(`${baseUrl}/auth/refresh`, {}, { withCredentials: true });
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : null;
+  if (typeof locks?.request !== 'function') return refresh();
+
+  // Same-origin tabs share the HttpOnly refresh cookie. Serialize rotations so
+  // a second tab uses the cookie set by the first refresh rather than replaying
+  // the just-revoked value.
+  return locks.request('plwm-mcc-auth-refresh', { mode: 'exclusive' }, refresh);
+};
 
 const shouldAttemptRefresh = (url = '') => {
   const path = String(url).split(/[?#]/, 1)[0].replace(/\/+$/, '');
@@ -114,11 +126,17 @@ axiosInstance.interceptors.request.use(
 );
 
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const requestPath = String(response.config?.url || '').split(/[?#]/, 1)[0].replace(/\/+$/, '');
+    if (requestPath.endsWith('/auth/login')) isSessionInvalid = false;
+    if (requestPath.endsWith('/auth/logout')) isSessionInvalid = true;
+    return response;
+  },
   async (error) => {
     const original = error.config;
 
     const status = error.response?.status;
+    if (status === 401 && isSessionInvalid) return Promise.reject(error);
     if (status === 401 && original && !original._retry && shouldAttemptRefresh(original.url)) {
       original._retry = true;
       if (isRefreshing) {
@@ -130,10 +148,12 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
       try {
         const baseUrl = (axiosInstance.defaults.baseURL || '').replace(/\/+$/, '');
-        await axios.post(`${baseUrl}/auth/refresh`, {}, { withCredentials: true });
+        await refreshSession(baseUrl);
+        isSessionInvalid = false;
         onRefreshed(null);
         return axiosInstance(original);
       } catch (refreshError) {
+        isSessionInvalid = true;
         onRefreshFailed(refreshError);
         if (!original._skipAuthRedirect) window.location.href = '/login';
         return Promise.reject(refreshError);

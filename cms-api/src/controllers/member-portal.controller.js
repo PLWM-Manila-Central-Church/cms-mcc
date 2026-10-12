@@ -36,7 +36,7 @@ exports.getMyFinance = async (req, res, next) => {
   try {
     if (!req.user.memberId)
       return res.status(400).json({ message: "No member profile linked to this account" });
-    const data = await portalService.getMyFinance(req.user.memberId);
+    const data = await portalService.getMyFinance(req.user.memberId, req.query);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
@@ -55,8 +55,22 @@ exports.registerForEvent = async (req, res, next) => {
   try {
     if (!req.user.memberId)
       return res.status(400).json({ message: "No member profile linked to this account" });
-    const data = await portalService.registerForEvent(req.user.memberId, req.params.eventId);
+    const data = await portalService.registerForEvent(req.user.memberId, req.params.eventId, req.body || {});
     res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.updateEventReservation = async (req, res, next) => {
+  try {
+    if (!req.user.memberId)
+      return res.status(400).json({ message: "No member profile linked to this account" });
+    const data = await portalService.updateEventRegistrationReservation(
+      req.user.memberId,
+      req.params.eventId,
+      req.body,
+      req.user.userId,
+    );
+    res.json({ success: true, data });
   } catch (err) { next(err); }
 };
 
@@ -93,11 +107,10 @@ exports.uploadProfilePhoto = async (req, res, next) => {
       return res.status(400).json({ message: "No member profile linked to this account" });
     if (!req.file)
       return res.status(400).json({ message: "No file uploaded" });
-    // S3 uploads expose the object key on req.file.key; disk uploads on req.file.filename
-    const { s3Enabled, getFileUrl } = require("../middlewares/upload-s3");
-    const filePath = s3Enabled && req.file.key
-      ? getFileUrl(req.file.key)
-      : `/profiles/${req.file.filename}`;
+    // Store a stable storage key. The client resolves it through the authenticated
+    // /uploads route for both local disk and object storage.
+    const storageKey = req.file.key || `profiles/${req.file.filename}`;
+    const filePath = `/${storageKey}`;
     const data = await portalService.uploadProfilePhoto(req.user.memberId, filePath);
     res.json({ success: true, data });
   } catch (err) { next(err); }
@@ -116,9 +129,8 @@ exports.submitServiceResponse = async (req, res, next) => {
   try {
     if (!req.user.memberId)
       return res.status(400).json({ message: "No member profile linked to this account" });
-    const { attendance_status } = req.body;
     const data = await portalService.submitServiceResponse(
-      req.user.memberId, req.params.serviceId, attendance_status
+      req.user.memberId, req.params.serviceId, req.body
     );
     res.json({ success: true, data });
   } catch (err) { next(err); }

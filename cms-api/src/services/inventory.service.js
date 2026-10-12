@@ -2,11 +2,12 @@
 
 const cache       = require("../helpers/cache.helper");
 const sequelize   = require("../config/db");
-const { Op }      = require("sequelize");
+const { Op, fn, col } = require("sequelize");
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
 const AppError = require("../helpers/AppError");
+const { INVENTORY_STATUSES, deriveInventoryStatus } = require("../helpers/inventoryStatus.helper");
 const {
   InventoryItem,
   InventoryCategory,
@@ -32,6 +33,80 @@ const notifyInventoryManagers = async (payload) => {
   }
 };
 
+const notifyInventoryMembers = async (payload, excludedUserIds = []) => {
+  try {
+    const roles = await Role.findAll({ where: { role_name: { [Op.in]: ["Member"] } }, attributes: ["id"] });
+    const roleIds = roles.map((role) => role.id);
+    if (!roleIds.length) return;
+
+    const excluded = new Set(excludedUserIds.map(Number));
+    const users = await User.findAll({
+      where: { role_id: { [Op.in]: roleIds }, is_active: 1, is_deleted: 0 },
+      attributes: ["id"],
+    });
+    const memberIds = [...new Set(users.map((user) => Number(user.id)).filter((id) => id > 0 && !excluded.has(id)))];
+    if (memberIds.length) await notifService.bulkCreateNotifications(memberIds, payload);
+  } catch (error) {
+    logger.error(error, "Inventory Member notification failed");
+  }
+};
+
+const notifyInventoryStatusChange = async (item, status) => {
+  const messages = {
+    "Low Stock": `Inventory item "${item.name}" is low (${item.quantity} ${item.unit || "units"} remaining).`,
+    "Out of Stock": `Inventory item "${item.name}" is out of stock.`,
+    "Under Repair": `Inventory item "${item.name}" was placed Under Repair.`,
+    Available: `Inventory item "${item.name}" is available again.`,
+  };
+  const types = {
+    "Low Stock": "inventory_item_low_stock",
+    "Out of Stock": "inventory_item_out_of_stock",
+    "Under Repair": "inventory_item_under_repair",
+    Available: "inventory_item_available",
+  };
+  if (!messages[status]) return;
+
+  await notifyInventoryManagers({
+    type: types[status],
+    message: messages[status],
+    reference_id: item.id,
+    reference_type: "inventory_item",
+  });
+
+  let pendingRequesterIds = [];
+  try {
+    const pendingRequests = await InventoryRequest.findAll({
+      where: { item_id: item.id, status: "pending" },
+      attributes: ["requested_by"],
+    });
+    pendingRequesterIds = [...new Set(pendingRequests.map((request) => Number(request.requested_by)).filter(Boolean))];
+  } catch (error) {
+    logger.error(error, "Inventory requester notification lookup failed");
+  }
+
+  await notifyInventoryMembers({
+    type: types[status],
+    message: messages[status],
+    reference_id: item.id,
+    reference_type: "inventory_item",
+  }, pendingRequesterIds);
+
+  if (pendingRequesterIds.length) {
+    try {
+      await notifService.bulkCreateNotifications(pendingRequesterIds, {
+      type: status === "Available" ? "inventory_request_item_available" : `inventory_request_item_${status.toLowerCase().replace(/\s+/g, "_")}`,
+      message: status === "Available"
+        ? `The requested item "${item.name}" is available again; your pending request remains open.`
+        : `The requested item "${item.name}" is ${status.toLowerCase()}; your pending request remains open.`,
+      reference_id: item.id,
+      reference_type: "inventory_item",
+      });
+    } catch (error) {
+      logger.error(error, "Inventory requester notification failed");
+    }
+  }
+};
+
 const itemIncludes = [
   {
     model: InventoryCategory,
@@ -42,12 +117,13 @@ const itemIncludes = [
 ];
 
 // ── Get All Items (paginated) ────────────────────────────────
-exports.getAllItems = async ({ page = 1, limit = 15, search, category_id } = {}) => {
+exports.getAllItems = async ({ page = 1, limit = 15, search, category_id, status } = {}) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where = {};
 
   if (category_id) where.category_id = category_id;
   if (search)      where.name = { [Op.like]: `%${search}%` };
+  if (status)      where.status = status;
 
   const { count, rows } = await InventoryItem.findAndCountAll({
     where,
@@ -64,6 +140,44 @@ exports.getAllItems = async ({ page = 1, limit = 15, search, category_id } = {})
     total_pages: Math.ceil(count / parseInt(limit)),
   };
 };
+
+exports.getInventoryReport = async () => {
+  const [totalItems, totalQuantity, statusRows, usageCount, usedQuantity, requestRows] = await Promise.all([
+    InventoryItem.count(),
+    InventoryItem.sum("quantity"),
+    InventoryItem.findAll({
+      attributes: ["status", [fn("COUNT", col("id")), "count"]],
+      group: ["status"],
+      raw: true,
+    }),
+    InventoryUsage.count(),
+    InventoryUsage.sum("quantity_used"),
+    InventoryRequest.findAll({
+      attributes: ["status", [fn("COUNT", col("id")), "count"]],
+      group: ["status"],
+      raw: true,
+    }),
+  ]);
+
+  const statusCounts = new Map(statusRows.map((row) => [row.status, Number(row.count || 0)]));
+  const requestCounts = new Map(requestRows.map((row) => [row.status, Number(row.count || 0)]));
+  return {
+    generated_at: new Date().toISOString(),
+    total_items: Number(totalItems || 0),
+    total_quantity: Number(totalQuantity || 0),
+    statuses: INVENTORY_STATUSES.map((status) => ({ status, count: statusCounts.get(status) || 0 })),
+    usage: { records: Number(usageCount || 0), quantity_used: Number(usedQuantity || 0) },
+    requests: ["pending", "approved", "rejected"].map((status) => ({ status, count: requestCounts.get(status) || 0 })),
+  };
+};
+
+exports.getInventoryReportPage = async ({ offset = 0, limit = 250 } = {}) =>
+  InventoryItem.findAll({
+    include: itemIncludes,
+    order: [["name", "ASC"], ["id", "ASC"]],
+    offset: Number(offset),
+    limit: Number(limit),
+  });
 
 // ── Get Item By ID ───────────────────────────────────────────
 exports.getItemById = async (id) => {
@@ -91,16 +205,14 @@ exports.createItem = async (data, createdBy) => {
     quantity:            qty,
     unit:                unit                 || null,
     condition:           condition            || null,
-    status,
-    low_stock_threshold: low_stock_threshold  || null,
+    status:              deriveInventoryStatus({ quantity: qty, low_stock_threshold, status }),
+    low_stock_threshold: low_stock_threshold ?? null,
     notes:               notes               || null,
   });
 
   const created = await exports.getItemById(item.id);
   auditLog.log({ userId: createdBy, action: "CREATE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: created.id });
-  if (created.status === "Under Repair") {
-    await notifyInventoryManagers({ type: "inventory_item_under_repair", message: `Inventory item "${created.name}" was added as Under Repair.`, reference_id: created.id, reference_type: "inventory_item" });
-  }
+  if (created.status !== "Available") await notifyInventoryStatusChange(created, created.status);
   return created;
 };
 
@@ -110,8 +222,14 @@ exports.updateItem = async (id, data, updatedBy) => {
   if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
   const { name, category_id, quantity, unit, condition, status, low_stock_threshold, notes } = data;
-  const wasLow = item.low_stock_threshold != null && item.quantity <= item.low_stock_threshold;
   const previousStatus = item.status || "Available";
+  const nextQuantity = quantity !== undefined ? Math.max(0, parseInt(quantity, 10) || 0) : Number(item.quantity);
+  const nextThreshold = low_stock_threshold !== undefined ? low_stock_threshold : item.low_stock_threshold;
+  const nextStatus = deriveInventoryStatus({
+    quantity: nextQuantity,
+    low_stock_threshold: nextThreshold,
+    status: status === undefined ? previousStatus : status,
+  });
 
   if (category_id) {
     const category = await InventoryCategory.findByPk(category_id);
@@ -121,40 +239,18 @@ exports.updateItem = async (id, data, updatedBy) => {
   await item.update({
     ...(name                !== undefined && { name }),
     ...(category_id         !== undefined && { category_id }),
-    ...(quantity            !== undefined && { quantity: Math.max(0, parseInt(quantity, 10) || 0) }),
+    ...(quantity            !== undefined && { quantity: nextQuantity }),
     ...(unit                !== undefined && { unit }),
     ...(condition           !== undefined && { condition }),
-    ...(status              !== undefined && { status }),
-    ...(low_stock_threshold !== undefined && { low_stock_threshold }),
+    status: nextStatus,
+    ...(low_stock_threshold !== undefined && { low_stock_threshold: nextThreshold }),
     ...(notes               !== undefined && { notes }),
   });
 
   auditLog.log({ userId: updatedBy, action: "UPDATE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: id });
   const updated = await exports.getItemById(id);
   if (previousStatus !== updated.status) {
-    const underRepair = updated.status === "Under Repair";
-    await notifyInventoryManagers({
-      type: underRepair ? "inventory_item_under_repair" : "inventory_item_available",
-      message: underRepair ? `Inventory item "${updated.name}" was placed Under Repair.` : `Inventory item "${updated.name}" is available again.`,
-      reference_id: updated.id,
-      reference_type: "inventory_item",
-    });
-    try {
-      const pendingRequests = await InventoryRequest.findAll({ where: { item_id: updated.id, status: "pending" }, attributes: ["requested_by"] });
-      const recipients = [...new Set(pendingRequests.map((request) => Number(request.requested_by)).filter(Boolean))];
-      await notifService.bulkCreateNotifications(recipients, {
-        type: underRepair ? "inventory_request_item_unavailable" : "inventory_request_item_available",
-        message: underRepair ? `The requested item "${updated.name}" is under repair; your pending request remains open.` : `The requested item "${updated.name}" is available again; your pending request remains open.`,
-        reference_id: updated.id,
-        reference_type: "inventory_item",
-      });
-    } catch (error) {
-      logger.error(error, "Inventory availability notification failed");
-    }
-  }
-  const isLow = updated.low_stock_threshold != null && updated.quantity <= updated.low_stock_threshold;
-  if (!wasLow && isLow) {
-    await notifyInventoryManagers({ type: "inventory_item_low_stock", message: `Inventory item "${updated.name}" reached its low-stock threshold (${updated.quantity} ${updated.unit || "units"} remaining).`, reference_id: updated.id, reference_type: "inventory_item" });
+    await notifyInventoryStatusChange(updated, updated.status);
   }
   return updated;
 };
@@ -236,6 +332,7 @@ exports.getAllRequests = async ({ page = 1, limit = 15, status } = {}) => {
       { model: Service, as: "service", attributes: ["id", "title"], required: false },
       { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"], required: false },
       { model: User,          as: "requestedByUser",  attributes: ["id", "email"],        required: false },
+      { model: User,          as: "reviewedByUser",   attributes: ["id", "email"],        required: false },
     ],
     order: [["created_at", "DESC"]],
     limit: parseInt(limit),
@@ -258,6 +355,7 @@ exports.getMyRequests = async (userId) => {
       { model: Event, as: "event", attributes: ["id", "title"], required: false },
       { model: Service, as: "service", attributes: ["id", "title"], required: false },
       { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"], required: false },
+      { model: User, as: "reviewedByUser", attributes: ["id", "email"], required: false },
     ],
     order: [["created_at", "DESC"]],
   });
@@ -270,6 +368,7 @@ exports.getRequestById = async (id) => {
       { model: Event, as: "event", attributes: ["id", "title"], required: false },
       { model: Service, as: "service", attributes: ["id", "title"], required: false },
       { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"], required: false },
+      { model: User, as: "reviewedByUser", attributes: ["id", "email"], required: false },
     ],
   });
   if (!request) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory request not found");
@@ -278,43 +377,102 @@ exports.getRequestById = async (id) => {
 
 // ── Create Request ───────────────────────────────────────────
 exports.createRequest = async (data, requestedBy) => {
-  const { item_id, quantity, purpose, event_id, service_id, ministry_role_id } = data;
+  const itemId = Number(data.item_id);
+  const quantity = data.quantity;
+  const purpose = String(data.purpose || "").trim() || null;
+  const eventId = data.event_id == null || data.event_id === "" ? null : Number(data.event_id);
+  const serviceId = data.service_id == null || data.service_id === "" ? null : Number(data.service_id);
+  const ministryRoleId = data.ministry_role_id == null || data.ministry_role_id === "" ? null : Number(data.ministry_role_id);
+  const requestKey = String(data.request_key || "").trim() || null;
 
-  const linkedContexts = [event_id, service_id, ministry_role_id].filter((value) => value != null);
+  const linkedContexts = [eventId, serviceId, ministryRoleId].filter((value) => value != null);
   if (linkedContexts.length > 1) throw AppError.badRequest("INVALID_REQUEST_CONTEXT", "Link a request to only one event, service, or ministry");
 
   const qty = parseInt(quantity, 10);
   if (!Number.isInteger(qty) || qty <= 0)
     throw AppError.badRequest("VALIDATION", "Quantity must be a positive integer");
 
-  const item = await InventoryItem.findByPk(item_id);
-  if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
-  if (item.status === "Under Repair") throw AppError.badRequest("ITEM_UNDER_REPAIR", "This item is under repair and cannot be requested");
-  const [event, service, ministryRole] = await Promise.all([
-    event_id ? Event.findByPk(event_id) : null,
-    service_id ? Service.findByPk(service_id) : null,
-    ministry_role_id ? MinistryRole.findByPk(ministry_role_id) : null,
-  ]);
-  if (event_id && !event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
-  if (service_id && !service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
-  if (ministry_role_id && !ministryRole) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry not found");
-
-  const request = await InventoryRequest.create({
-    item_id,
-    event_id: event_id || null,
-    service_id: service_id || null,
-    ministry_role_id: ministry_role_id || null,
-    requested_by: requestedBy,
+  const payload = {
+    item_id: itemId,
+    event_id: eventId,
+    service_id: serviceId,
+    ministry_role_id: ministryRoleId,
+    requested_by: Number(requestedBy),
     quantity: qty,
-    purpose: purpose || null,
-    status: "pending",
-  });
+    purpose,
+    request_key: requestKey,
+  };
+  const samePayload = (existing) => Number(existing.item_id) === payload.item_id
+    && Number(existing.quantity) === payload.quantity
+    && Number(existing.requested_by) === payload.requested_by
+    && (existing.event_id == null ? null : Number(existing.event_id)) === payload.event_id
+    && (existing.service_id == null ? null : Number(existing.service_id)) === payload.service_id
+    && (existing.ministry_role_id == null ? null : Number(existing.ministry_role_id)) === payload.ministry_role_id
+    && (String(existing.purpose || "").trim() || null) === payload.purpose;
+  const returnReplay = async (existing) => {
+    if (!samePayload(existing)) {
+      throw AppError.conflict("INVENTORY_REQUEST_KEY_REUSED", "This request key was already used for a different request. Start a new request.");
+    }
+    return await exports.getRequestById(existing.id);
+  };
 
-  const created = await exports.getRequestById(request.id);
-    auditLog.log({ userId: requestedBy, action: "CREATE_INVENTORY_REQUEST", targetTable: "inventory_requests", targetId: created.id });
-    cache.keys("dashboard:*").forEach(k => cache.del(k));
-  await notifyInventoryManagers({ type: "inventory_request_submitted", message: `A new request was submitted for ${item.name}.`, reference_id: created.id, reference_type: "inventory_request" });
-    return created;
+  if (requestKey) {
+    const existing = await InventoryRequest.findOne({ where: { requested_by: payload.requested_by, request_key: requestKey } });
+    if (existing) return await returnReplay(existing);
+  }
+
+  let result;
+  try {
+    result = await sequelize.transaction(async (transaction) => {
+      const item = await InventoryItem.findByPk(itemId, { transaction, lock: transaction.LOCK.UPDATE });
+      if (requestKey) {
+        const existing = await InventoryRequest.findOne({
+          where: { requested_by: payload.requested_by, request_key: requestKey },
+          transaction,
+        });
+        if (existing) return { id: existing.id, created: false, existing };
+      }
+
+      if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
+      if (item.status === "Under Repair") throw AppError.badRequest("ITEM_UNDER_REPAIR", "This item is under repair and cannot be requested");
+      if (Number(item.quantity) <= 0 || item.status === "Out of Stock") throw AppError.badRequest("ITEM_OUT_OF_STOCK", "This item is out of stock and cannot be requested");
+
+      const [event, service, ministryRole] = await Promise.all([
+        eventId ? Event.findByPk(eventId, { transaction }) : null,
+        serviceId ? Service.findByPk(serviceId, { transaction }) : null,
+        ministryRoleId ? MinistryRole.findByPk(ministryRoleId, { transaction }) : null,
+      ]);
+      if (eventId && !event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+      if (serviceId && !service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+      if (ministryRoleId && !ministryRole) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry not found");
+      if (eventId && !["Upcoming", "Ongoing"].includes(event.status)) {
+        throw AppError.badRequest("INVALID_REQUEST_CONTEXT", "Inventory requests can only be linked to upcoming or ongoing Events");
+      }
+      if (serviceId && service.status !== "published") {
+        throw AppError.badRequest("INVALID_REQUEST_CONTEXT", "Inventory requests can only be linked to published Services");
+      }
+
+      const request = await InventoryRequest.create({
+        ...payload,
+        status: "pending",
+      }, { transaction });
+      return { id: request.id, created: true, itemName: item.name };
+    });
+  } catch (error) {
+    if (requestKey && ["SequelizeUniqueConstraintError", "UniqueConstraintError"].includes(error?.name)) {
+      const existing = await InventoryRequest.findOne({ where: { requested_by: payload.requested_by, request_key: requestKey } });
+      if (existing) return await returnReplay(existing);
+    }
+    throw error;
+  }
+
+  if (!result.created) return await returnReplay(result.existing);
+
+  const created = await exports.getRequestById(result.id);
+  auditLog.log({ userId: requestedBy, action: "CREATE_INVENTORY_REQUEST", targetTable: "inventory_requests", targetId: created.id });
+  cache.keys("dashboard:*").forEach((key) => cache.del(key));
+  await notifyInventoryManagers({ type: "inventory_request_submitted", message: `A new request was submitted for ${result.itemName}.`, reference_id: created.id, reference_type: "inventory_request" });
+  return created;
 };
 
 // ── Review Request (Approve/Reject) ──────────────────────────
@@ -323,7 +481,7 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
   if (!["approved", "rejected"].includes(normalized))
     throw AppError.badRequest("VALIDATION", "Status must be approved or rejected");
 
-  let stockNotice = null;
+  let statusChange = null;
   await sequelize.transaction(async (t) => {
     // Lock the request row for update to prevent concurrent reviews
     const request = await InventoryRequest.findOne({
@@ -347,11 +505,14 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
       if (item.status === "Under Repair") throw AppError.badRequest("ITEM_UNDER_REPAIR", "This item is under repair and cannot be issued");
       if (item.quantity < request.quantity)
         throw AppError.badRequest("VALIDATION", "Insufficient inventory quantity");
+      const previousStatus = item.status || "Available";
       const nextQuantity = Number(item.quantity) - Number(request.quantity);
-      if (item.low_stock_threshold != null && item.quantity > item.low_stock_threshold && nextQuantity <= item.low_stock_threshold) {
-        stockNotice = { name: item.name, quantity: nextQuantity, unit: item.unit || "units", id: item.id };
-      }
       await item.decrement("quantity", { by: request.quantity, transaction: t });
+      const nextStatus = deriveInventoryStatus({ quantity: nextQuantity, low_stock_threshold: item.low_stock_threshold, status: previousStatus });
+      if (nextStatus !== previousStatus) {
+        await item.update({ status: nextStatus }, { transaction: t });
+        statusChange = { id: item.id, name: item.name, unit: item.unit, quantity: nextQuantity, status: nextStatus };
+      }
     }
 
     await request.update(
@@ -370,9 +531,7 @@ exports.reviewRequest = async (id, status, reviewedBy, reviewNote) => {
     }, { transaction: t });
   });
 
-  if (stockNotice) {
-    await notifyInventoryManagers({ type: "inventory_item_low_stock", message: `Inventory item "${stockNotice.name}" reached its low-stock threshold (${stockNotice.quantity} ${stockNotice.unit} remaining).`, reference_id: stockNotice.id, reference_type: "inventory_item" });
-  }
+  if (statusChange) await notifyInventoryStatusChange(statusChange, statusChange.status);
 
   // Notify requester (outside transaction — non-fatal if it fails)
   try {
@@ -414,18 +573,27 @@ exports.deleteRequest = async (id, deletedBy) => {
 };
 
 // ── Get All Usage Records ────────────────────────────────────
-exports.getAllUsage = async () => {
-  return await InventoryUsage.findAll({
+exports.getAllUsage = async ({ page = 1, limit = 15 } = {}) => {
+  const parsedPage = Number.parseInt(page, 10);
+  const parsedLimit = Number.parseInt(limit, 10);
+  const { count, rows } = await InventoryUsage.findAndCountAll({
     include: [
       { model: InventoryItem, as: "item", attributes: ["id", "name", "unit"], required: false },
+      { model: User, as: "usedByUser", attributes: ["id", "email"], required: false },
     ],
-    order: [["used_at", "DESC"]],
+    order: [["used_at", "DESC"], ["id", "DESC"]],
+    limit: parsedLimit,
+    offset: (parsedPage - 1) * parsedLimit,
+    distinct: true,
   });
+  return { records: rows, total: count, total_pages: Math.ceil(count / parsedLimit) };
 };
 
 // ── Create Usage Record ──────────────────────────────────────
 exports.createUsage = async (data, usedBy) => {
-  const { item_id, quantity_used, used_for, used_at } = data;
+  const { item_id, used_for } = data;
+  const quantity_used = data.quantity_used ?? data.quantity;
+  const used_at = data.used_at ?? data.used_date;
 
   const qty = parseInt(quantity_used, 10);
   if (!Number.isInteger(qty) || qty <= 0)
@@ -433,7 +601,7 @@ exports.createUsage = async (data, usedBy) => {
 
   // Same pattern as reviewRequest: lock the item row so concurrent usage
   // records cannot both pass the sufficiency check and drive stock negative.
-  let stockNotice = null;
+  let statusChange = null;
   const usage = await sequelize.transaction(async (t) => {
     const item = await InventoryItem.findOne({
       where: { id: item_id },
@@ -446,12 +614,15 @@ exports.createUsage = async (data, usedBy) => {
     if (item.quantity < qty)
       throw AppError.badRequest("VALIDATION", "Insufficient inventory quantity");
 
+    const previousStatus = item.status || "Available";
     const nextQuantity = Number(item.quantity) - qty;
-    if (item.low_stock_threshold != null && item.quantity > item.low_stock_threshold && nextQuantity <= item.low_stock_threshold) {
-      stockNotice = { name: item.name, quantity: nextQuantity, unit: item.unit || "units", id: item.id };
-    }
 
     await item.decrement("quantity", { by: qty, transaction: t });
+    const nextStatus = deriveInventoryStatus({ quantity: nextQuantity, low_stock_threshold: item.low_stock_threshold, status: previousStatus });
+    if (nextStatus !== previousStatus) {
+      await item.update({ status: nextStatus }, { transaction: t });
+      statusChange = { id: item.id, name: item.name, unit: item.unit, quantity: nextQuantity, status: nextStatus };
+    }
 
     return await InventoryUsage.create({
       item_id,
@@ -461,17 +632,28 @@ exports.createUsage = async (data, usedBy) => {
       used_at:  used_at  || new Date(),
     }, { transaction: t });
   });
-  if (stockNotice) {
-    await notifyInventoryManagers({ type: "inventory_item_low_stock", message: `Inventory item "${stockNotice.name}" reached its low-stock threshold (${stockNotice.quantity} ${stockNotice.unit} remaining).`, reference_id: stockNotice.id, reference_type: "inventory_item" });
-  }
+  if (statusChange) await notifyInventoryStatusChange(statusChange, statusChange.status);
   return usage;
 };
 
 // ── Delete Usage Record ──────────────────────────────────────
-exports.deleteUsage = async (id) => {
-  const usage = await InventoryUsage.findByPk(id);
-  if (!usage) throw AppError.notFound("RECORD_NOT_FOUND", "Usage record not found");
-
-  await usage.destroy();
+exports.deleteUsage = async (id, deletedBy) => {
+  let statusChange = null;
+  await sequelize.transaction(async (transaction) => {
+    const usage = await InventoryUsage.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!usage) throw AppError.notFound("RECORD_NOT_FOUND", "Usage record not found");
+    const item = await InventoryItem.findByPk(usage.item_id, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
+    const previousStatus = item.status || "Available";
+    const nextQuantity = Number(item.quantity) + Number(usage.quantity_used);
+    const nextStatus = deriveInventoryStatus({ quantity: nextQuantity, low_stock_threshold: item.low_stock_threshold, status: previousStatus });
+    await item.update({ quantity: nextQuantity, status: nextStatus }, { transaction });
+    await usage.destroy({ transaction });
+    await auditLog.log({ userId: deletedBy, action: "DELETE_INVENTORY_USAGE", targetTable: "inventory_usage", targetId: id }, { transaction });
+    if (nextStatus !== previousStatus) {
+      statusChange = { id: item.id, name: item.name, unit: item.unit, quantity: nextQuantity, status: nextStatus };
+    }
+  });
+  if (statusChange) await notifyInventoryStatusChange(statusChange, statusChange.status);
   return { message: "Usage record deleted successfully." };
 };

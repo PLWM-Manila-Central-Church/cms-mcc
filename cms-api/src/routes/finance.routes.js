@@ -6,7 +6,7 @@ const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
 const validateQuery = require("../middlewares/validateQuery");
-const { receiptUpload } = require("../middlewares/upload-s3");
+const { receiptUpload, requireDurableUploadStorage } = require("../middlewares/upload-s3");
 
 const {
   createRecordSchema, updateRecordSchema,
@@ -15,11 +15,12 @@ const {
   createAccountSchema, updateAccountSchema,
   createExpenseCategorySchema, updateExpenseCategorySchema,
   createExpenseSchema, updateExpenseSchema,
-  getRecordsQuerySchema,
+  getRecordsQuerySchema, searchGivingMembersQuerySchema,
 } = require("../validators/finance.validator");
 
 // ── Financial Records (Income / Tithes / Offerings) ──────────
 router.get("/my-giving",    auth, authorize("finance", "read"), ctrl.getMyGiving);
+router.get("/members/search", auth, authorize("finance", "create"), validateQuery(searchGivingMembersQuerySchema), ctrl.searchGivingMembers);
 router.get("/balance",      auth, authorize("finance", "read"),   ctrl.getBalance);
 router.get("/summary",      auth, authorize("finance", "read"), validateQuery(getRecordsQuerySchema), ctrl.getSummary);
 router.get("/records",      auth, authorize("finance", "read"), validateQuery(getRecordsQuerySchema), ctrl.getAllRecords);
@@ -68,7 +69,13 @@ router.put("/expenses/:id",     auth, authorize("finance", "update"), validate(u
 router.delete("/expenses/:id",  auth, authorize("finance", "delete"), ctrl.deleteExpense);
 
 // ── Attachments Endpoints ────────────────────────────────────
-router.post("/attachments/upload", auth, authorize("finance", "create"), receiptUpload.single("file"), ctrl.uploadAttachment);
+const authorizeAttachmentDownload = (req, res, next) => {
+  if (req.user?.roleName === "Member") return next();
+  return authorize("finance", "read")(req, res, next);
+};
+
+router.post("/attachments/upload", auth, authorize("finance", "create"), requireDurableUploadStorage, receiptUpload.single("file"), ctrl.uploadAttachment);
+router.get("/attachments/:id/download", auth, authorizeAttachmentDownload, ctrl.downloadAttachment);
 router.delete("/attachments/:id",  auth, authorize("finance", "delete"), ctrl.deleteAttachment);
 
 // ── Root aliases (frontend compatibility) ────────────────────

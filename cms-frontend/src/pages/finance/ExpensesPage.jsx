@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { localDateInputValue } from '../../utils/localDateInput';
+import { getDateRangeError } from '../../utils/dateRange';
+import FinanceAttachments from '../../components/finance/FinanceAttachments';
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = localDateInputValue;
 const formatMoney = (value) => `PHP ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const formatDate = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
 const blankExpense = () => ({ account_id: '', category_id: '', date: today(), amount: '', description: '', payment_method_id: '' });
@@ -48,6 +51,10 @@ export default function ExpensesPage() {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [expenseForm, setExpenseForm] = useState(blankExpense);
+  const [expenseToDelete, setExpenseToDelete] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
+  const deleteTriggerRef = useRef(null);
+  const cancelDeleteRef = useRef(null);
   const [showSetup, setShowSetup] = useState(false);
   const [fundForm, setFundForm] = useState({ name: '', description: '' });
   const [accountForm, setAccountForm] = useState({ name: '', fund_id: '', description: '' });
@@ -77,6 +84,15 @@ export default function ExpensesPage() {
   }, [page, dateFrom, dateTo, accountFilter, categoryFilter]);
 
   const loadData = useCallback(async () => {
+    const dateRangeError = getDateRangeError(dateFrom, dateTo);
+    if (dateRangeError) {
+      setExpenses([]);
+      setTotal(0);
+      setBalance({ total_income: 0, total_expense: 0, net_balance: 0 });
+      setError(dateRangeError);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -97,6 +113,10 @@ export default function ExpensesPage() {
 
   useEffect(() => { reloadLookups().catch((requestError) => setError(requestError.response?.data?.message || 'Finance setup could not be loaded.')); }, [reloadLookups]);
   useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    if (expenseToDelete) cancelDeleteRef.current?.focus();
+    else if (deleteTriggerRef.current?.isConnected) deleteTriggerRef.current.focus();
+  }, [expenseToDelete]);
 
   const resetExpenseForm = () => { setExpenseForm(blankExpense()); setEditing(null); setError(''); };
   const openCreate = () => { resetExpenseForm(); setShowExpenseForm(true); };
@@ -135,14 +155,15 @@ export default function ExpensesPage() {
     } finally { setBusy(false); }
   };
 
-  const deleteExpense = async (id) => {
-    if (!window.confirm('Delete this expense record?')) return;
-    setBusy(true); setError(''); setNotice('');
+  const deleteExpense = async () => {
+    if (!expenseToDelete) return;
+    setBusy(true); setError(''); setDeleteError(''); setNotice('');
     try {
-      await axiosInstance.delete(`/finance/expenses/${id}`);
+      await axiosInstance.delete(`/finance/expenses/${expenseToDelete.id}`);
+      setExpenseToDelete(null);
       setNotice('Expense deleted.');
       await loadData();
-    } catch (requestError) { setError(requestError.response?.data?.message || 'Expense could not be deleted.'); }
+    } catch (requestError) { setDeleteError(requestError.response?.data?.message || 'Expense could not be deleted.'); }
     finally { setBusy(false); }
   };
 
@@ -230,17 +251,17 @@ export default function ExpensesPage() {
       <section style={{ display: 'flex', gap: 10, flexWrap: 'wrap', padding: 14, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }} aria-label="Expense filters">
         <label style={{ ...labelStyle, minWidth: 150 }}>Account<select value={accountFilter} onChange={(event) => { setAccountFilter(event.target.value); setCategoryFilter(''); setPage(1); }} style={fieldStyle}><option value="">All accounts</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
         <label style={{ ...labelStyle, minWidth: 160 }}>Category<select value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setPage(1); }} style={fieldStyle}><option value="">All categories</option>{visibleCategories.map((category) => <option key={category.id} value={category.id}>{category.category_name}</option>)}</select></label>
-        <label style={{ ...labelStyle, minWidth: 140 }}>From<input type="date" value={dateFrom} onChange={(event) => { setDateFrom(event.target.value); setPage(1); }} style={fieldStyle} /></label>
-        <label style={{ ...labelStyle, minWidth: 140 }}>To<input type="date" value={dateTo} onChange={(event) => { setDateTo(event.target.value); setPage(1); }} style={fieldStyle} /></label>
-        <button type="button" style={{ ...buttonStyle('secondary'), alignSelf: 'end' }} onClick={() => { setDateFrom(''); setDateTo(''); setAccountFilter(''); setCategoryFilter(''); setPage(1); }}>Clear filters</button>
+        <label style={{ ...labelStyle, minWidth: 140 }}>From<input type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => { setDateFrom(event.target.value); setPage(1); setNotice(''); setError(''); }} style={fieldStyle} /></label>
+        <label style={{ ...labelStyle, minWidth: 140 }}>To<input type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => { setDateTo(event.target.value); setPage(1); setNotice(''); setError(''); }} style={fieldStyle} /></label>
+        <button type="button" style={{ ...buttonStyle('secondary'), alignSelf: 'end' }} onClick={() => { setDateFrom(''); setDateTo(''); setAccountFilter(''); setCategoryFilter(''); setPage(1); setNotice(''); setError(''); }}>Clear filters</button>
       </section>
 
       <section style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 12, background: '#fff' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
-          <thead><tr style={{ background: '#f8fafc', textAlign: 'left' }}>{['Date', 'Description', 'Category', 'Account', 'Payment', 'Amount', 'Actions'].map((heading) => <th key={heading} style={{ padding: 12, fontSize: 12, color: '#64748b' }}>{heading}</th>)}</tr></thead>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 920 }}>
+          <thead><tr style={{ background: '#f8fafc', textAlign: 'left' }}>{['Date', 'Description', 'Category', 'Account', 'Payment', 'Amount', 'Receipts', 'Actions'].map((heading) => <th key={heading} style={{ padding: 12, fontSize: 12, color: '#64748b' }}>{heading}</th>)}</tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan={7} style={{ padding: 28, textAlign: 'center', color: '#64748b' }}>Loading expenses…</td></tr>
-              : expenses.length === 0 ? <tr><td colSpan={7} style={{ padding: 28, textAlign: 'center', color: '#64748b' }}>{accounts.length && categories.length ? 'No expenses match these filters.' : 'Set up a fund, account, and expense category before recording expenses.'}</td></tr>
+            {loading ? <tr><td colSpan={8} style={{ padding: 28, textAlign: 'center', color: '#64748b' }}>Loading expenses…</td></tr>
+              : expenses.length === 0 ? <tr><td colSpan={8} style={{ padding: 28, textAlign: 'center', color: '#64748b' }}>{accounts.length && categories.length ? 'No expenses match these filters.' : 'Set up a fund, account, and expense category before recording expenses.'}</td></tr>
                 : expenses.map((expense) => (
                   <tr key={expense.id} style={{ borderTop: '1px solid #eef2f7' }}>
                     <td style={{ padding: 12 }}>{formatDate(expense.date)}</td>
@@ -249,9 +270,23 @@ export default function ExpensesPage() {
                     <td style={{ padding: 12 }}>{expense.account?.name || '—'}</td>
                     <td style={{ padding: 12 }}>{expense.paymentMethod?.method_name || '—'}</td>
                     <td style={{ padding: 12, fontWeight: 700 }}>{formatMoney(expense.amount)}</td>
+                    <td style={{ padding: 10, maxWidth: 280 }}>
+                      <FinanceAttachments
+                        attachments={expense.attachments || []}
+                        targetType="expense"
+                        targetId={expense.id}
+                        canUpload={canCreate}
+                        canDelete={canDelete}
+                        onChanged={loadData}
+                        compact
+                      />
+                    </td>
                     <td style={{ padding: 12, whiteSpace: 'nowrap' }}>
                       {canUpdate && <button type="button" style={buttonStyle('secondary')} onClick={() => openEdit(expense)}>Edit</button>}
-                      {canDelete && <button type="button" style={{ ...buttonStyle('secondary'), marginLeft: 6, color: '#b91c1c' }} disabled={busy} onClick={() => deleteExpense(expense.id)}>Delete</button>}
+                      {canDelete && <button type="button" style={{ ...buttonStyle('secondary'), marginLeft: 6, color: '#b91c1c' }} disabled={busy} onClick={(event) => {
+                        deleteTriggerRef.current = event.currentTarget;
+                        setDeleteError(''); setError(''); setNotice(''); setExpenseToDelete(expense);
+                      }}>Delete</button>}
                     </td>
                   </tr>
                 ))}
@@ -276,6 +311,36 @@ export default function ExpensesPage() {
                 <button type="submit" style={buttonStyle()} disabled={busy}>{busy ? 'Saving…' : editing ? 'Save changes' : 'Save expense'}</button>
               </div>
             </form>
+          </section>
+        </div>
+      )}
+
+      {expenseToDelete && (
+        <div role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !busy) setExpenseToDelete(null);
+        }} style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'grid', placeItems: 'center', padding: 16, background: 'rgba(15,23,42,0.55)' }}>
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="expense-delete-title"
+            aria-describedby="expense-delete-description"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' && !busy) {
+                event.preventDefault();
+                setExpenseToDelete(null);
+              }
+            }}
+            style={{ width: 'min(100%,460px)', background: '#fff', borderRadius: 16, padding: 22, boxShadow: '0 24px 70px rgba(15,23,42,0.28)' }}
+          >
+            <h2 id="expense-delete-title" style={{ margin: '0 0 10px', fontSize: 20 }}>Delete expense?</h2>
+            <p id="expense-delete-description" style={{ margin: '0 0 12px', color: '#475569', lineHeight: 1.5 }}>
+              This permanently deletes {expenseToDelete.description?.trim() || 'this expense'} recorded on {formatDate(expenseToDelete.date)} for {formatMoney(expenseToDelete.amount)}.
+            </p>
+            {deleteError && <div role="alert" style={{ marginBottom: 12, padding: 10, borderRadius: 8, background: '#fef2f2', color: '#b91c1c' }}>{deleteError}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+              <button ref={cancelDeleteRef} type="button" style={buttonStyle('secondary')} disabled={busy} onClick={() => setExpenseToDelete(null)}>Keep expense</button>
+              <button type="button" style={{ ...buttonStyle(), background: '#b91c1c' }} disabled={busy} onClick={deleteExpense}>{busy ? 'Deleting…' : 'Delete expense'}</button>
+            </div>
           </section>
         </div>
       )}

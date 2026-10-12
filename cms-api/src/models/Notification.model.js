@@ -27,6 +27,7 @@ const Notification = sequelize.define(
     updatedAt:   false,
     indexes: [
       { fields: ["user_id", "is_read"], name: "idx_notif_user_read" },
+      { fields: ["user_id", "createdAt"], name: "idx_notifications_user_created" },
     ],
   },
 );

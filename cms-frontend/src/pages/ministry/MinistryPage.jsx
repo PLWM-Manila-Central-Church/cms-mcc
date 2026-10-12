@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import axiosInstance from '../../api/axiosInstance';
 import { fetchAllPages } from '../../api/fetchAllPages';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
 import { fullName, ageLabel, dateWithAge, fmtDate } from '../../utils/member';
 import { MinistryApplicationQueue } from './MinistryApplications';
+import SubstituteReviewQueue from './SubstituteReviewQueue';
+import MemberSubstituteRequests from '../../components/ministry/MemberSubstituteRequests';
 
 function ministryPageTitle(name = '') {
   const value = String(name || '').trim();
@@ -15,10 +18,12 @@ function ministryPageTitle(name = '') {
   }
 
   export default function MinistryPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const { confirm } = useConfirmation();
   const isMobile = useIsMobile();
   const isMember = user?.roleName === 'Member';
   const isAdmin = user?.roleName === 'System Admin';
+  const canReviewSubstituteRequests = Boolean(hasPermission('ministry', 'update'));
 
   // Ministry Leaders see their roster and application review queue without system-wide tabs.
   const isMinistryLeader = user?.roleName === 'Ministry Leader' && !!user?.leadsMinistryId;
@@ -50,6 +55,7 @@ function ministryPageTitle(name = '') {
         { key: 'assignments', label: 'Assignments' },
         { key: 'roles',       label: 'Roles' },
         { key: 'substitutes', label: 'Substitute Requests' },
+        ...(canReviewSubstituteRequests ? [{ key: 'substitute-review', label: 'Substitute Review' }] : []),
         ...(isAdmin ? [{ key: 'applications', label: 'Applications' }] : []),
       ];
 
@@ -87,10 +93,11 @@ function ministryPageTitle(name = '') {
         </div>
       )}
 
-      {isMinistryLeader && <><ScopedRosterTab /><MinistryApplicationQueue /></>}
+      {isMinistryLeader && <><ScopedRosterTab /><MinistryApplicationQueue />{canReviewSubstituteRequests && <SubstituteReviewQueue />}</>}
       {!isMinistryLeader && tab === 'assignments' && <AssignmentsTab />}
       {!isMinistryLeader && tab === 'roles'       && <RolesTab />}
-      {!isMinistryLeader && tab === 'substitutes' && <SubstituteRequestsTab />}
+      {!isMinistryLeader && tab === 'substitutes' && <MemberSubstituteRequests />}
+      {!isMinistryLeader && tab === 'substitute-review' && canReviewSubstituteRequests && <SubstituteReviewQueue />}
       {!isMinistryLeader && isAdmin && tab === 'applications' && <MinistryApplicationQueue />}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }
@@ -192,7 +199,12 @@ function ScopedRosterTab() {
   };
 
   const handleUnassign = async (member) => {
-    if (!window.confirm(`Unassign ${fullName(member)} from this ministry?`)) return;
+    if (!(await confirm({
+      title: 'Unassign member from ministry?',
+      message: `Unassign ${fullName(member)} from this ministry?`,
+      confirmLabel: 'Unassign member',
+      tone: 'warning',
+    }))) return;
     setActionErr('');
     try {
       await axiosInstance.delete(`/ministry/members/${member.id}`);
@@ -1049,100 +1061,6 @@ function RolesTab() {
       </div>
       {modal && (<div style={S.backdrop} onClick={closeModal}><div style={{ ...S.modalBox, maxWidth:'440px' }} onClick={e => e.stopPropagation()}><div style={S.modalAccent} /><div style={S.modalBody}><h3 style={S.modalTitle}>{modal === 'add' ? '+ New Ministry Role' : 'Edit Role'}</h3><p style={S.modalSub}>{modal === 'add' ? 'Add a new ministry team (e.g. Choir, Media Team, Ushers…)' : `Editing: ${editing?.name}`}</p>{formErr && <div style={S.formErr}><MonoIcon name="warning" size={14} /> {formErr}</div>}<div style={S.fieldGroup}><label style={S.label}>Role Name <span style={{ color:'#ef4444' }}>*</span></label><input value={name} onChange={e => { setName(e.target.value); setFormErr(''); }} placeholder="e.g. Worship Leader" autoFocus style={S.input} /></div><div style={S.modalActions}><button style={S.cancelBtn} onClick={closeModal} disabled={saving}>Cancel</button><button style={{ ...S.saveBtn, opacity: saving ? 0.8 : 1 }} onClick={handleSave} disabled={saving}>{saving ? <span style={S.loadRow}><span style={S.miniSpinner} />{modal === 'add' ? 'Creating…' : 'Saving…'}</span> : modal === 'add' ? 'Create Role' : 'Save Changes'}</button></div></div></div></div>)}
       {delTarget && (<div style={S.backdrop} onClick={() => setDelTarget(null)}><div style={{ ...S.modalBox, maxWidth:'420px' }} onClick={e => e.stopPropagation()}><div style={{ ...S.modalAccent, background:'#ef4444' }} /><div style={S.modalBody}><div style={S.delIcon}><MonoIcon name="delete" size={28} /></div><h3 style={S.modalTitle}>Delete Role?</h3><p style={S.modalSub}>Delete <strong>"{delTarget.name}"</strong>? This cannot be undone. Roles with active assignments or roster members cannot be deleted.</p>{delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}><MonoIcon name="warning" size={14} /> {delErr}</div>}<div style={S.modalActions}><button style={S.cancelBtn} onClick={() => setDelTarget(null)} disabled={deleting}>Cancel</button><button style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }} onClick={handleDelete} disabled={deleting}>{deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Deleting…</span> : 'Yes, Delete'}</button></div></div></div></div>)}
-    </>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Substitute Requests Tab
-───────────────────────────────────────────────────────────── */
-function SubstituteRequestsTab() {
-  const [requests, setRequests]   = useState([]);
-  const [services, setServices]   = useState([]);
-  const [loading,  setLoading]    = useState(true);
-  const [error,    setError]      = useState('');
-  const [showForm, setShowForm]   = useState(false);
-  const [saving,   setSaving]     = useState(false);
-  const [formError,setFormError]  = useState('');
-  const [form,     setForm]       = useState({ service_id: '', reason: '', proposed_member_id: '' });
-  const [memberSearch,  setMemberSearch]  = useState('');
-  const [memberResults, setMemberResults] = useState([]);
-  const searchTimeout = useRef(null);
-
-  const STATUS_META = {
-    pending:  { bg: '#fffbeb', color: '#d97706', label: 'Pending' },
-    approved: { bg: '#dcfce7', color: '#16a34a', label: 'Approved' },
-    rejected: { bg: '#fef2f2', color: '#dc2626', label: 'Rejected' },
-  };
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [subRes, svcRes] = await Promise.all([
-        axiosInstance.get('/services/substitutes/mine'),
-        axiosInstance.get('/services?limit=100'),
-      ]);
-      const all = subRes.data.data || [];
-      setRequests(Array.isArray(all) ? all : []);
-      setServices(svcRes.data.data?.services || []);
-    } catch { setError('Failed to load data.'); }
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const handleMemberSearch = (val) => {
-    setMemberSearch(val);
-    clearTimeout(searchTimeout.current);
-    if (!val.trim()) { setMemberResults([]); return; }
-    searchTimeout.current = setTimeout(async () => {
-      try { const res = await axiosInstance.get(`/members?search=${encodeURIComponent(val)}&limit=5`); setMemberResults(res.data.data?.members || []); } catch {}
-    }, 300);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.service_id || !form.reason.trim()) { setFormError('Please select a service and provide a reason.'); return; }
-    setSaving(true); setFormError('');
-    try {
-      await axiosInstance.post('/services/substitutes', { service_id: Number(form.service_id), reason: form.reason, ...(form.proposed_member_id && { proposed_member_id: Number(form.proposed_member_id) }) });
-      setShowForm(false); setForm({ service_id: '', reason: '', proposed_member_id: '' }); setMemberSearch(''); fetchData();
-    } catch (err) { setFormError(err.response?.data?.message || 'Failed to submit request.'); }
-    finally { setSaving(false); }
-  };
-
-  const publishedServices = services.filter(s => s.status === 'published');
-
-  return (
-    <>
-      <div style={S.toolbar}><button onClick={() => { setShowForm(!showForm); setFormError(''); }} style={S.addBtn}>{showForm ? <><MonoIcon name="close" size={14} /> Cancel</> : '+ New Request'}</button></div>
-      {showForm && (
-        <div style={{ ...S.tableCard, padding: '24px', marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px' }}>Submit Substitute Request</h3>
-          {formError && <div style={S.formErr}>{formError}</div>}
-          <form onSubmit={handleSubmit}>
-            <div style={S.fieldGroup}><label style={S.label}>Service *</label><select value={form.service_id} onChange={e => setForm({ ...form, service_id: e.target.value })} style={S.select} required><option value="">— Select a service —</option>{publishedServices.map(s => <option key={s.id} value={s.id}>{s.title} — {fmtDate(s.service_date)}</option>)}</select></div>
-            <div style={S.fieldGroup}><label style={S.label}>Reason *</label><textarea value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Explain why you cannot attend this service..." rows={3} style={{ ...S.input, resize: 'vertical', fontFamily: 'inherit' }} required /></div>
-            <div style={S.fieldGroup}>
-              <label style={S.label}>Proposed Replacement (optional)</label>
-              <div style={{ position: 'relative' }}>
-                <input type="text" value={memberSearch} onChange={e => handleMemberSearch(e.target.value)} placeholder="Search member by name..." style={S.input} />
-                {memberResults.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10 }}>
-                    {memberResults.map(m => <div key={m.id} onClick={() => { setForm({ ...form, proposed_member_id: m.id }); setMemberSearch(`${m.last_name}, ${m.first_name}`); setMemberResults([]); }} style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid #f1f5f9' }} onMouseEnter={e => e.currentTarget.style.background = '#f0f6ff'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>{m.last_name}, {m.first_name}</div>)}
-                  </div>
-                )}
-              </div>
-              {form.proposed_member_id && <p style={{ fontSize: '12px', color: '#16a34a', margin: '4px 0 0', display: 'inline-flex', alignItems: 'center', gap: 4 }}><MonoIcon name="check" size={13} /> Replacement selected</p>}
-            </div>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}><button type="button" onClick={() => setShowForm(false)} style={S.cancelBtn}>Cancel</button><button type="submit" disabled={saving} style={{ ...S.saveBtn, opacity: saving ? 0.7 : 1 }}>{saving ? 'Submitting...' : 'Submit Request'}</button></div>
-          </form>
-        </div>
-      )}
-      {error && <div style={S.errBanner}>{error}</div>}
-      {loading ? <div style={S.centerMsg}><div style={S.spinner} /></div>
-      : requests.length === 0 ? <div style={S.centerMsg}><div style={S.emptyIcon}><MonoIcon name="refresh" size={36} /></div><div style={S.emptyTitle}>No substitute requests yet</div><div style={S.emptyHint}>Click "+ New Request" to submit one.</div></div>
-      : <div style={S.tableCard}><div style={S.tableScroll}><table style={S.table}><thead><tr style={S.thead}><th style={S.th}>Service</th><th style={S.th}>Reason</th><th style={S.th}>Proposed Replacement</th><th style={S.th}>Status</th><th style={S.th}>Submitted</th></tr></thead><tbody>{requests.map(r => { const meta = STATUS_META[r.status] || STATUS_META.pending; const serviceTitle = r.assignment?.Service?.title || `Service #${r.assignment?.service_id || '—'}`; const proposed = r.proposedSubstituteUser?.member; return (<tr key={r.id} style={S.row}><td style={{ ...S.td, fontWeight: '600', color: '#0f172a' }}>{serviceTitle}</td><td style={{ ...S.td, maxWidth: '220px', color: '#374151' }}>{r.reason}</td><td style={S.td}>{proposed ? `${proposed.last_name}, ${proposed.first_name}` : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>None</span>}</td><td style={S.td}><span style={{ ...S.pill, background: meta.bg, color: meta.color }}>{meta.label}</span></td><td style={{ ...S.td, color: '#64748b' }}>{fmtDate(r.created_at)}</td></tr>); })}</tbody></table></div></div>}
     </>
   );
 }
