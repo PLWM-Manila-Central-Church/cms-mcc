@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
 import MonoIcon from '../../components/common/MonoIcon';
+import { apiErrorMessage } from '../../utils/apiErrorMessage';
 
 export default function ForceChangePassword() {
-  const { logout, clearForcePasswordChange } = useAuth();
+  const { user, logout, clearForcePasswordChange } = useAuth();
   const navigate   = useNavigate();
 
   const [form, setForm]       = useState({ current_password: '', new_password: '', confirm_password: '' });
@@ -27,19 +28,9 @@ export default function ForceChangePassword() {
     try {
       await axiosInstance.put('/auth/change-password', form);
       clearForcePasswordChange();
-      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      const scopedRoles = ['Ministry Leader', 'Cell Group Leader', 'Group Leader', 'Leader'];
-      if (storedUser.roleName === 'Member') {
-        navigate('/portal');
-      } else if (scopedRoles.includes(storedUser.roleName)) {
-        navigate('/dashboard');
-      } else if (storedUser.memberId) {
-        navigate(`/members/${storedUser.memberId}/edit`);
-      } else {
-        navigate('/dashboard');
-      }
+      navigate(user?.roleName === 'Member' ? '/portal' : '/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to change password.');
+      setError(apiErrorMessage(err, 'Failed to change password.'));
     } finally {
       setLoading(false);
     }
