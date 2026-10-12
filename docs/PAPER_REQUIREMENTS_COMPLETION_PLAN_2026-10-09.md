@@ -1197,3 +1197,11 @@ Browser verification found PLWM MCC project xbxfsieriaffsxvsodyi in the PLWM-MCC
 ### Release review: auth transaction revocation repair (2026-10-12)
 
 Current release validation passed 62 API suites/282 tests (guarded integration excluded), 36 frontend files/123 tests, and production build of 459 modules. Review then found refresh expiration/replay revocation writes were followed by throws inside a managed transaction, causing those writes to roll back. APR repair returns the rejection from the transaction and throws after commit; regression tests now assert commit before rejection for old-token replay and expiration. Focused refresh/session checks passed 2 suites/9 tests. Full API suite must be rerun after this change; prior full-suite counts precede it. Generated tmp/output directories are now ignored while keeping local evidence/manual draft files. User approved one synthetic production archive test; no hosted fixture created yet. Current repairs remain uncommitted/unreleased.
+
+### PR CI follow-up (2026-10-12)
+
+PR #19 first CI found that its fixture seeded the unified Leader account before the browser flow tried to create it through the Admin interface (409 DUPLICATE). Removed that seeded user/assignment while keeping the manifest's synthetic identity for the UI-created user; cell/group fixtures remain seeded. Commit 2d36a9d pushed. On the follow-up workflow run, API tests and frontend tests/build passed; all fresh MySQL migrations and QR persistence integration passed, fixtures seeded, API started successfully, browser dependencies were installing at last check. Uploaded-QR browser flow result remains pending. No production test fixture or production code deployed.
+
+### Pull request CI acceptance (2026-10-12)
+
+PR #19 run 38218511538 passed API tests, frontend tests/build, fresh MySQL migrations, QR attendance persistence integration, synthetic browser fixture setup and uploaded-QR browser flow against MySQL. The browser flow passed after commit 2d36a9d removed the duplicate seeded unified Leader account and let the Admin UI create it. The run is complete/success. Review artifacts on PR #19. Hosted production storage test is separately approved but awaits rollout. Camera optical and human study/manual evidence remain explicit limits.
