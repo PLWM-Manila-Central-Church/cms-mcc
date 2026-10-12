@@ -16,7 +16,6 @@ const {
   Service,
   SystemSetting,
   User,
-  UserLeaderAssignment,
 } = require("../src/models");
 
 const run = async () => {
@@ -71,28 +70,9 @@ const run = async () => {
   const registration = await makeUser("Registration Team", "registration");
   const cellLeader = await makeUser("Cell Group Leader", "cell-leader", null, { leads_cell_group_id: cell.id });
   const groupLeader = await makeUser("Group Leader", "group-leader", null, { leads_group_id: group.id });
-  const unifiedLeader = await makeUser("Leader", "unified-leader", leaderMember.id, { leads_cell_group_id: cell.id, leads_group_id: group.id });
-  const unifiedLeaderUser = await User.findOne({ where: { email: unifiedLeader.email }, attributes: ["id"] });
-  await UserLeaderAssignment.bulkCreate([
-    {
-      user_id: unifiedLeaderUser.id,
-      scope_type: "cell_group",
-      scope_id: cell.id,
-      legacy_column: "leads_cell_group_id",
-      assigned_by: adminUser.id,
-      is_active: true,
-      version: 1,
-    },
-    {
-      user_id: unifiedLeaderUser.id,
-      scope_type: "member_group",
-      scope_id: group.id,
-      legacy_column: "leads_group_id",
-      assigned_by: adminUser.id,
-      is_active: true,
-      version: 1,
-    },
-  ]);
+  // This account is intentionally created through the Admin UI by the browser
+  // flow below. Seeding it here would make the UI exercise fail with DUPLICATE.
+  const unifiedLeader = { email: `qr-browser-unified-leader-${suffix}@example.com`, password };
   const pastor = await makeUser("Pastor", "pastor");
   const finance = await makeUser("Finance Team", "finance");
   const memberAUser = await makeUser("Member", "member-a", memberA.id);
