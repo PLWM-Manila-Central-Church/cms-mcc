@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
+import { deleteRecordsWithResults } from '../../utils/bulkDelete';
+import { apiErrorMessage } from '../../utils/apiErrorMessage';
 
 const ROLE_COLORS = {
   'System Admin':      { bg: '#fef2f2', color: '#dc2626' },
@@ -101,15 +103,20 @@ export default function UsersPage() {
     if (selected.size === 0) return;
     if (!(await confirm({
       title: `Delete ${selected.size} selected user${selected.size > 1 ? 's' : ''}?`,
-      message: 'The selected accounts will be deleted. This action cannot be undone.',
+      message: 'The selected login accounts will be removed. Member profiles and church history will be preserved. This action cannot be undone.',
       confirmLabel: `Delete ${selected.size} user${selected.size > 1 ? 's' : ''}`,
       tone: 'danger',
     }))) return;
     setBulkDeleting(true);
     try {
-      await Promise.all([...selected].map(id => axiosInstance.delete(`/users/${id}`)));
-      setSelected(new Set());
-      fetchUsers();
+      const { deletedCount, failures } = await deleteRecordsWithResults(
+        [...selected], (id) => axiosInstance.delete(`/users/${id}`),
+      );
+      setSelected(new Set(failures.map(({ id }) => id)));
+      await fetchUsers();
+      if (failures.length) {
+        setError(`${deletedCount} account(s) removed; ${failures.length} failed. ${apiErrorMessage(failures[0].error, 'Review the remaining selected accounts.')}`);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Some deletes failed.');
     } finally { setBulkDeleting(false); }
@@ -373,7 +380,7 @@ export default function UsersPage() {
             <p style={styles.modalBody}>
               You are about to permanently delete{' '}
               <strong>{deleteTarget.email}</strong>. This action cannot be undone.
-              Their audit log history will be preserved.
+              Their Member profile, ministry records, and audit history will be preserved. Only login access will be removed.
             </p>
             {deleteError && <div style={styles.errorBox}>{deleteError}</div>}
             <div style={styles.modalActions}>
