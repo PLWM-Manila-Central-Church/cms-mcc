@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { LANGS, saveLangCode } from '../../utils/langUtils';
 import MonoIcon from '../../components/common/MonoIcon';
+import { uploadUrl } from '../../utils/uploadUrl';
 
 const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
-const API_IMG = (process.env.REACT_APP_API_URL || '').replace(/\/api$/, '');
 
 const FONTS = [
   { name:'DM Sans',       google:true  },
@@ -91,7 +91,7 @@ export default function MemberPortalSettings() {
       .then(res=>{
         const p = res.data.data;
         setProfile(p);
-        if(p?.profile_photo_url) setCurrentPhoto(`${API_IMG}/uploads${p.profile_photo_url}`);
+        if(p?.profile_photo_url) setCurrentPhoto(uploadUrl(p.profile_photo_url));
       })
       .catch(()=>{});
   },[]);
@@ -128,7 +128,11 @@ export default function MemberPortalSettings() {
   };
 
   const handlePhotoChange = async (e) => {
-    const file = e.target.files?.[0]; if(!file) return;
+    const input = e.currentTarget;
+    const file = input.files?.[0]; if(!file) return;
+    // Clear the input after capturing the File so selecting the same photo
+    // again fires `change` after a validation or upload failure.
+    input.value = '';
     if(file.size>2*1024*1024){setPhotoMsg('File must be under 2MB.');return;}
     if(!['image/jpeg','image/jpg','image/png','image/webp'].includes(file.type)){setPhotoMsg('Only JPG, PNG, or WebP.');return;}
     const reader=new FileReader(); reader.onload=ev=>setPhotoPreview(ev.target.result); reader.readAsDataURL(file);
@@ -137,7 +141,7 @@ export default function MemberPortalSettings() {
     try {
       const res = await axiosInstance.post('/member-portal/profile/photo',fd,{headers:{'Content-Type':'multipart/form-data'}});
       const newUrl=res.data.data?.profile_photo_url;
-      if(newUrl) setCurrentPhoto(`${API_IMG}/uploads${newUrl}`);
+      if(newUrl) setCurrentPhoto(uploadUrl(newUrl));
       showToast('Profile photo updated!');
     } catch(err){setPhotoMsg(err.response?.data?.message||'Upload failed.');setPhotoPreview(null);}
     finally{setPhotoUploading(false);}

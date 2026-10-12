@@ -23,6 +23,15 @@ exports.getMemberById = async (req, res, next) => {
   }
 };
 
+exports.getMemberStatusHistory = async (req, res, next) => {
+  try {
+    const result = await membersService.getMemberStatusHistory(req.params.id, req.user);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createMember = async (req, res, next) => {
   try {
     const result = await membersService.createMember(req.body, req.user.userId, req.user);

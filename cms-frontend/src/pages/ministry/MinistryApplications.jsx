@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import { useConfirmation } from '../../context/ConfirmationContext';
 
 const statusColor = {
   pending: { color: '#a16207', background: '#fef3c7' },
@@ -8,7 +9,15 @@ const statusColor = {
   withdrawn: { color: '#475569', background: '#f1f5f9' },
 };
 
+const formatApplicationDate = (application) => {
+  const value = application.created_at || application.createdAt;
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+};
+
 export function MemberMinistryApplications({ c, f, showToast }) {
+  const { confirm } = useConfirmation();
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
@@ -42,7 +51,12 @@ export function MemberMinistryApplications({ c, f, showToast }) {
   };
 
   const withdraw = async (application) => {
-    if (!window.confirm('Withdraw this pending ministry application?')) return;
+    if (!(await confirm({
+      title: 'Withdraw ministry application?',
+      message: 'This pending ministry application will be withdrawn.',
+      confirmLabel: 'Withdraw application',
+      tone: 'warning',
+    }))) return;
     setSavingId(application.ministry_role_id); setError('');
     try {
       await axiosInstance.delete(`/ministry-applications/${application.id}`);
@@ -142,7 +156,7 @@ export function MinistryApplicationQueue() {
             return (
               <article key={application.id} style={S.application}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  <div><strong>{application.member?.first_name} {application.member?.last_name}</strong><div style={{ marginTop: 4, color: '#64748b', fontSize: 13 }}>{application.ministryRole?.name} ministry · {new Date(application.created_at).toLocaleDateString()}</div></div>
+                  <div><strong>{application.member?.first_name} {application.member?.last_name}</strong><div style={{ marginTop: 4, color: '#64748b', fontSize: 13 }}>{application.ministryRole?.name} ministry · {formatApplicationDate(application)}</div></div>
                   <span style={{ ...S.badge, color: badge.color, background: badge.background }}>{application.status}</span>
                 </div>
                 {application.message && <p style={{ color: '#334155', fontSize: 13, whiteSpace: 'pre-wrap' }}>{application.message}</p>}

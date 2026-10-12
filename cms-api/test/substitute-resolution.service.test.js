@@ -51,10 +51,22 @@ describe("substitute request resolution", () => {
   test("approves atomically, changes the assignee, and notifies both participants", async () => {
     const resolved = await service.resolveSubstituteRequest(3, "approved", 2, { roleName: "System Admin", userId: 2 });
 
-    expect(mockState.assignmentUpdate).toHaveBeenCalledWith({ member_id: 22 }, expect.objectContaining({ transaction: expect.any(Object) }));
+    expect(mockState.assignmentUpdate).toHaveBeenCalledWith({ member_id: 22, substitute_requested: 0 }, expect.objectContaining({ transaction: expect.any(Object) }));
     expect(mockState.request.update).toHaveBeenCalledWith({ status: "approved", resolved_by: 2 }, expect.objectContaining({ transaction: expect.any(Object) }));
     expect(mockState.auditLog).toHaveBeenCalledWith(expect.objectContaining({ action: "RESOLVE_SUBSTITUTE_APPROVED" }), expect.any(Object));
     expect(mockState.notifications).toHaveBeenCalledWith([8, 9], expect.objectContaining({ type: "substitute_request_approved", reference_id: 3 }));
     expect(resolved.status).toBe("approved");
+  });
+
+  test("rejects a request, clears the assignment flag, and notifies the requester", async () => {
+    mockState.request.proposed_substitute = null;
+    mockState.request.proposedSubstituteUser = null;
+
+    const resolved = await service.resolveSubstituteRequest(3, "rejected", 2, { roleName: "System Admin", userId: 2 });
+
+    expect(mockState.assignmentUpdate).toHaveBeenCalledWith({ substitute_requested: 0 }, expect.objectContaining({ transaction: expect.any(Object) }));
+    expect(mockState.request.update).toHaveBeenCalledWith({ status: "rejected", resolved_by: 2 }, expect.objectContaining({ transaction: expect.any(Object) }));
+    expect(mockState.notifications).toHaveBeenCalledWith([8], expect.objectContaining({ type: "substitute_request_rejected", reference_id: 3 }));
+    expect(resolved.status).toBe("rejected");
   });
 });

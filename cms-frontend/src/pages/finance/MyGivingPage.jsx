@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import MonoIcon from '../../components/common/MonoIcon';
+import { useAuth } from '../../context/AuthContext';
+import { getDateRangeError } from '../../utils/dateRange';
 
 const PAYMENT_LABELS = {
   cash:          'Cash',
@@ -9,6 +12,8 @@ const PAYMENT_LABELS = {
 };
 
 export default function MyGivingPage() {
+  const { user } = useAuth();
+  const hasMemberProfile = Boolean(user?.memberId);
   const [records, setRecords]         = useState([]);
   const [total, setTotal]             = useState(0);
   const [totalPages, setTotalPages]   = useState(1);
@@ -22,6 +27,17 @@ export default function MyGivingPage() {
   const limit = 20;
 
   const fetchGiving = useCallback(async () => {
+    if (!hasMemberProfile) return;
+    const dateRangeError = getDateRangeError(filterDateFrom, filterDateTo);
+    if (dateRangeError) {
+      setRecords([]);
+      setTotal(0);
+      setTotalPages(1);
+      setTotalAmount(0);
+      setError(dateRangeError);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -40,12 +56,22 @@ export default function MyGivingPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterDateFrom, filterDateTo]);
+  }, [page, filterDateFrom, filterDateTo, hasMemberProfile]);
 
   useEffect(() => { fetchGiving(); }, [fetchGiving]);
 
   const formatDate   = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
   const formatAmount = (a) => parseFloat(a || 0).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' });
+
+  if (!hasMemberProfile) {
+    return (
+      <section style={{maxWidth:640,margin:'32px auto',padding:24,border:'1px solid #e2e8f0',borderRadius:12,background:'#fff'}}>
+        <h1 style={{marginTop:0,color:'#0f172a'}}>Personal giving history unavailable</h1>
+        <p style={{color:'#475569',lineHeight:1.6}}>This account is not linked to a member profile, so it has no personal giving history. Finance staff can view church records in the Finance workspace.</p>
+        <Link to="/finance" style={{display:'inline-block',padding:'10px 14px',borderRadius:8,background:'#005599',color:'#fff',fontWeight:700,textDecoration:'none'}}>Go to Finance workspace</Link>
+      </section>
+    );
+  }
 
   return (
     <div style={s.page}>
@@ -90,11 +116,11 @@ export default function MyGivingPage() {
       {/* Date filter */}
       <div style={s.filterBar}>
         <label style={s.filterLabel}>Filter by date:</label>
-        <input type="date" value={filterDateFrom}
+        <input aria-label="From" type="date" value={filterDateFrom} max={filterDateTo || undefined}
           onChange={e => { setFilterDateFrom(e.target.value); setPage(1); }}
           style={s.filterInput} />
         <span style={{ color: '#94a3b8', fontSize: '13px' }}>to</span>
-        <input type="date" value={filterDateTo}
+        <input aria-label="To" type="date" value={filterDateTo} min={filterDateFrom || undefined}
           onChange={e => { setFilterDateTo(e.target.value); setPage(1); }}
           style={s.filterInput} />
         {(filterDateFrom || filterDateTo) && (

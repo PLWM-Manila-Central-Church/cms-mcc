@@ -7,23 +7,30 @@ const mockModels = {
 };
 const mockAudit = { writeQrAudit: jest.fn() };
 const mockReconciliation = { invalidateSessionFinalization: jest.fn() };
+const mockNotifications = { notifyAttendanceRecorded: jest.fn() };
+const notificationCallbacks = [];
 
 jest.mock("../src/modules/qr-attendance/models", () => mockModels);
 jest.mock("../src/modules/qr-attendance/audit", () => mockAudit);
 jest.mock("../src/modules/qr-attendance/reconciliation.service", () => mockReconciliation);
 jest.mock("../src/helpers/attendanceSummary.helper", () => ({ syncServiceAttendanceSummary: jest.fn() }));
 jest.mock("../src/helpers/cache.helper", () => ({ keys: jest.fn(() => []), del: jest.fn() }));
+jest.mock("../src/services/notifications.service", () => mockNotifications);
 
 const { createEventAttendance, createServiceAttendance } = require("../src/modules/qr-attendance/attendanceWriter");
 
-const transaction = { LOCK: { UPDATE: "UPDATE" } };
-const serviceSession = { id: 4, service_id: 12, event_id: null };
-const eventSession = { id: 8, service_id: null, event_id: 22 };
+const transaction = {
+  LOCK: { UPDATE: "UPDATE" },
+  afterCommit: jest.fn((callback) => notificationCallbacks.push(callback)),
+};
+const serviceSession = { id: 4, service_id: 12, event_id: null, title: "QA Service" };
+const eventSession = { id: 8, service_id: null, event_id: 22, title: "QA Event" };
 const member = { id: 30, cell_group_id: 5, group_id: 2 };
 
 describe("QR attendance writers", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    notificationCallbacks.length = 0;
     mockAudit.writeQrAudit.mockResolvedValue({});
     mockReconciliation.invalidateSessionFinalization.mockResolvedValue(null);
   });
@@ -65,6 +72,15 @@ describe("QR attendance writers", () => {
       actorId: 7,
       reason: "service_attendance_added",
     }));
+    expect(transaction.afterCommit).toHaveBeenCalledTimes(1);
+    expect(mockNotifications.notifyAttendanceRecorded).not.toHaveBeenCalled();
+    await notificationCallbacks[0]();
+    expect(mockNotifications.notifyAttendanceRecorded).toHaveBeenCalledWith({
+      memberId: 30,
+      activityType: "service",
+      activityId: 12,
+      activityTitle: "QA Service",
+    });
   });
 
   it("converts an RSVP row to a real check-in and returns existing check-ins idempotently", async () => {
@@ -118,5 +134,14 @@ describe("QR attendance writers", () => {
       recordId: 201,
       transaction,
     }));
+    expect(transaction.afterCommit).toHaveBeenCalledTimes(1);
+    expect(mockNotifications.notifyAttendanceRecorded).not.toHaveBeenCalled();
+    await notificationCallbacks[0]();
+    expect(mockNotifications.notifyAttendanceRecorded).toHaveBeenCalledWith({
+      memberId: 30,
+      activityType: "event",
+      activityId: 22,
+      activityTitle: "QA Event",
+    });
   });
 });

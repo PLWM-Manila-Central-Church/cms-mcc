@@ -3,6 +3,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
 const MEMBER_STATUSES = require("../constants/memberStatus");
+const MEMBER_GENDERS = require("../constants/memberGender");
 
 const Member = sequelize.define(
   "Member",
@@ -20,7 +21,7 @@ const Member = sequelize.define(
     spiritual_birthday: { type: DataTypes.DATEONLY, allowNull: true },
     address: { type: DataTypes.TEXT, allowNull: true },
     gender: {
-      type: DataTypes.ENUM("Male", "Female"),
+      type: DataTypes.ENUM(...MEMBER_GENDERS),
       allowNull: true,
     },
     status: {

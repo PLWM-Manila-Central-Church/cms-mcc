@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
+import ArchiveCategoriesManager from '../../components/archives/ArchiveCategoriesManager';
+import { archiveDownloadName, archiveDownloadPath } from '../../utils/archiveDownload';
 
 const STATUS_META = {
   pending:  { bg: '#fffbeb', color: '#d97706', label: 'Pending' },
@@ -22,9 +25,12 @@ const FILE_ICONS = {
 
 export default function ArchivesPage() {
   const { user, hasPermission } = useAuth();
+  const { confirm } = useConfirmation();
   const isMobile   = useIsMobile();
   const canUpload  = hasPermission('archives', 'create');
-  const canApprove = hasPermission('archives', 'update');
+  const canUpdate  = hasPermission('archives', 'update');
+  const canDelete  = hasPermission('archives', 'delete');
+  const canApprove = canUpdate;
   const isApprover = canApprove;
   const isAdmin    = user?.roleName === 'System Admin';
   const isFinance  = user?.roleName === 'Finance Team';
@@ -59,7 +65,9 @@ export default function ArchivesPage() {
   const fetchCategories = useCallback(async () => {
     try {
       const res = await axiosInstance.get('/archives/categories');
-      setCategories(res.data.data);
+      const nextCategories = res.data.data || [];
+      setCategories(nextCategories);
+      setFilterCat((current) => current && !nextCategories.some((category) => String(category.id) === String(current)) ? '' : current);
     } catch {}
   }, []);
 
@@ -144,7 +152,12 @@ export default function ArchivesPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this archive record?')) return;
+    if (!(await confirm({
+      title: 'Delete archive record?',
+      message: 'This archive record will be deleted. This action cannot be undone.',
+      confirmLabel: 'Delete record',
+      tone: 'danger',
+    }))) return;
     try {
       await axiosInstance.delete(`/archives/${id}`);
       fetchRecords();
@@ -152,42 +165,42 @@ export default function ArchivesPage() {
     } catch (err) { setError(err.response?.data?.message || 'Failed to delete.'); }
   };
 
+  const saveDownloadedFile = (data, fileName) => {
+    const blob = data instanceof Blob ? data : new Blob([data]);
+    const objectUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
+  };
+
   const handleDownload = async (record) => {
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-    const fileUrl = `${apiUrl}${record.file_url}`;
+    setError('');
     try {
-      const res = await axiosInstance.get(fileUrl, { responseType: 'blob' });
-      const blob = new Blob([res.data]);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = record.file_url.split('/').pop();
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-    } catch {
-      // Fallback: open in new tab
-      window.open(fileUrl, '_blank');
+      const response = await axiosInstance.get(archiveDownloadPath(record.id), { responseType: 'blob' });
+      saveDownloadedFile(response.data, archiveDownloadName(record.title, record.file_type));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to download archive file.');
     }
   };
 
-  const handleDownloadFile = async (fileUrl, fileName) => {
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-    const fullUrl = `${apiUrl}${fileUrl}`;
+  const handleDownloadFile = async (record, version) => {
+    setError('');
     try {
-      const res = await axiosInstance.get(fullUrl, { responseType: 'blob' });
-      const blob = new Blob([res.data]);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileUrl.split('/').pop();
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-    } catch {
-      window.open(fullUrl, '_blank');
+      const response = await axiosInstance.get(
+        archiveDownloadPath(record.id, version.id),
+        { responseType: 'blob' },
+      );
+      saveDownloadedFile(
+        response.data,
+        archiveDownloadName(record.title, version.file_type, version.version_number),
+      );
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to download archive version.');
     }
   };
 
@@ -195,6 +208,7 @@ export default function ArchivesPage() {
     try {
       const res = await axiosInstance.get(`/archives/${record.id}`);
       setDetailRecord(res.data.data);
+      try { await axiosInstance.post(`/archives/${record.id}/view`); } catch { /* Keep details available if audit logging fails. */ }
       if (isApprover) {
         setLogsLoading(true);
         try {
@@ -265,7 +279,7 @@ export default function ArchivesPage() {
               <div key={v.id} style={s.versionRow}>
                 <span style={s.versionNum}>v{v.version_number}</span>
                 <span style={s.versionMeta}>{v.file_type?.toUpperCase()} · {v.uploadedByUser?.email}</span>
-                <button onClick={() => handleDownloadFile(v.file_url, `v${v.version_number}_${detailRecord.title}`)} style={s.versionLink}>Download</button>
+                <button onClick={() => handleDownloadFile(detailRecord, v)} style={s.versionLink}>Download</button>
               </div>
             ))}
           </div>
@@ -273,7 +287,7 @@ export default function ArchivesPage() {
 
         {/* Actions */}
         <div style={s.detailActions}>
-          {canUpload && (detailRecord.uploaded_by === user?.id || isApprover) && (
+          {canUpdate && (detailRecord.uploaded_by === user?.id || isApprover) && (
             <button onClick={() => openEdit(detailRecord)} style={s.editBtn}>Edit</button>
           )}
           {detailRecord.status === 'pending' && canApprove && (
@@ -314,11 +328,21 @@ export default function ArchivesPage() {
               <h1 style={s.title}>Archives</h1>
               <p style={s.subtitle}>{total} records</p>
             </div>
-            {canUploadFinance && (
-              <button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} style={s.addBtn}>
-                {showForm ? <><MonoIcon name="close" size={14} /> Cancel</> : '+ Upload'}
-              </button>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+              {canUpdate && (
+                <ArchiveCategoriesManager
+                  categories={categories}
+                  canManage={canUpdate}
+                  canDelete={canDelete}
+                  onChanged={fetchCategories}
+                />
+              )}
+              {canUploadFinance && (
+                <button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} style={s.addBtn}>
+                  {showForm ? <><MonoIcon name="close" size={14} /> Cancel</> : '+ Upload'}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Upload / Edit form */}
@@ -382,7 +406,7 @@ export default function ArchivesPage() {
               placeholder="Search records..." style={s.filterInput} />
             <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setPage(1); }} style={s.filterSelect}>
               <option value="">All Categories</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {filteredCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             {isApprover && (
               <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }} style={s.filterSelect}>

@@ -3,15 +3,20 @@
 const bcrypt   = require("bcrypt");
 const { Op }   = require("sequelize");
 const sequelize = require("../config/db");
-const path     = require("path");
-const fs       = require("fs");
 const logger   = require("../helpers/logger");
 const AppError = require("../helpers/AppError");
+const auditLog = require("../helpers/auditLog.helper");
+const notifService = require("./notifications.service");
 const { getAttendanceModel, syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
+const { saveServiceResponse } = require("../helpers/serviceResponseReservation.helper");
+const {
+  registerEventMember,
+  updateEventRegistrationReservation,
+} = require("../helpers/eventRegistrationReservation.helper");
 const {
   Member, CellGroup, Group, EmergencyContact,
   Attendance, Service, ServiceResponse, ServiceAttendanceSummary,
-  FinancialRecord, FinancialCategory,
+  FinancialRecord, FinancialCategory, Attachment,
   Event, EventRegistration, EventCategory,
   MinistryAssignment, MinistryRole, MinistryEventInvite, Notification,
   User, RefreshToken,
@@ -67,6 +72,28 @@ exports.getMyProfile = async (memberId) => {
   plain.flesh_age            = calcAge(member.birthdate);
   plain.spiritual_age        = calcAge(member.spiritual_birthday);
   return plain;
+};
+
+const notifyEventRegistrationChange = async ({ memberId, eventId, eventTitle, cancelled = false }) => {
+  try {
+    const user = await User.findOne({
+      where: { member_id: memberId, is_active: 1, is_deleted: 0 },
+      attributes: ["id"],
+    });
+    if (!user) return;
+
+    await notifService.createNotification({
+      user_id: user.id,
+      type: cancelled ? "event_unregistered" : "event_registered",
+      message: cancelled
+        ? `Your registration for "${eventTitle}" has been cancelled.`
+        : `You have been successfully registered for "${eventTitle}".`,
+      reference_id: eventId,
+      reference_type: "event",
+    });
+  } catch (error) {
+    logger.error(error, "Member event-registration notification failed");
+  }
 };
 
 // ── Update My Profile (restricted fields only) ───────────────
@@ -164,27 +191,47 @@ exports.getMyAttendance = async (memberId) => {
 };
 
 // ── Get My Finance ───────────────────────────────────────────
-exports.getMyFinance = async (memberId) => {
+exports.getMyFinance = async (memberId, { page = 1, limit = 20, date_from, date_to } = {}) => {
   const thisYear = new Date(new Date().getFullYear(), 0, 1);
+  const pageNumber = Math.max(1, Number.parseInt(page, 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
+  const where = { member_id: memberId, is_deleted: 0 };
 
-  const records = await FinancialRecord.findAll({
-    where: { member_id: memberId },
-    include: [
-      { model: FinancialCategory, as: "category", attributes: ["id", "name"], required: false },
-    ],
-    order: [["transaction_date", "DESC"]],
-  });
+  if (date_from || date_to) {
+    where.transaction_date = {};
+    if (date_from) where.transaction_date[Op.gte] = date_from;
+    if (date_to) where.transaction_date[Op.lte] = date_to;
+  }
 
-  const ytdTotal = (
-    await FinancialRecord.sum("amount", {
+  const [{ count, rows }, ytdTotal] = await Promise.all([
+    FinancialRecord.findAndCountAll({
+      where,
+      include: [
+        { model: FinancialCategory, as: "category", attributes: ["id", "name"], required: false },
+        { model: Attachment, as: "attachments", attributes: ["id", "file_name", "uploaded_at"], separate: true },
+      ],
+      order: [["transaction_date", "DESC"], ["id", "DESC"]],
+      limit: pageSize,
+      offset: (pageNumber - 1) * pageSize,
+      distinct: true,
+    }),
+    FinancialRecord.sum("amount", {
       where: {
         member_id:        memberId,
+        is_deleted:       0,
         transaction_date: { [Op.gte]: thisYear },
       },
-    })
-  ) || 0;
+    }),
+  ]);
 
-  return { records, ytdTotal };
+  return {
+    records: rows,
+    total: count,
+    page: pageNumber,
+    limit: pageSize,
+    total_pages: Math.max(1, Math.ceil(count / pageSize)),
+    ytdTotal: ytdTotal || 0,
+  };
 };
 
 // ── Get My Events (open events, with registration status) ─────
@@ -194,14 +241,14 @@ exports.getMyEvents = async (memberId) => {
     where: { status: { [Op.in]: ["Upcoming", "Ongoing"] } },
     include: [
       { model: EventCategory,    as: "category",      attributes: ["id", "name"],           required: false },
-      { model: EventRegistration, attributes: ["id", "member_id", "registered_at"],          required: false },
+      { model: EventRegistration, attributes: ["id", "member_id", "registered_at", "seat_number", "parking_slot"], required: false },
     ],
     order: [["start_date", "ASC"]],
   });
 
   const myRegs = await EventRegistration.findAll({
     where: { member_id: memberId },
-    attributes: ["event_id", "id", "registered_at"],
+    attributes: ["event_id", "id", "registered_at", "seat_number", "parking_slot"],
   });
   const myRegMap = new Map(myRegs.map((r) => [r.event_id, r]));
 
@@ -209,6 +256,8 @@ exports.getMyEvents = async (memberId) => {
     const plain       = e.toJSON();
     const reg         = myRegMap.get(e.id);
     const regCount    = (plain.EventRegistrations || []).length;
+    const seatReservedCount = (plain.EventRegistrations || []).filter((registration) => registration.seat_number != null).length;
+    const parkingReservedCount = (plain.EventRegistrations || []).filter((registration) => registration.parking_slot != null).length;
     const deadlinePast = e.registration_deadline && now > new Date(e.registration_deadline);
     const atCapacity   = e.capacity && regCount >= e.capacity;
 
@@ -220,6 +269,7 @@ exports.getMyEvents = async (memberId) => {
       end_date:              e.end_date,
       location:              e.location,
       capacity:              e.capacity,
+      total_parking_slots:   e.total_parking_slots || 0,
       registration_deadline: e.registration_deadline,
       status:                e.status,
       category:              plain.category,
@@ -227,45 +277,52 @@ exports.getMyEvents = async (memberId) => {
       is_registered:         !!reg,
       my_registration_id:    reg?.id    || null,
       my_registered_at:      reg?.registered_at || null,
+      my_seat_number:        reg?.seat_number ?? null,
+      my_parking_slot:       reg?.parking_slot ?? null,
+      seat_reserved_count:   seatReservedCount,
+      parking_reserved_count: parkingReservedCount,
       can_register:          !reg && !deadlinePast && !atCapacity,
       can_cancel:            !!reg && !deadlinePast,
+      can_update_reservation: !!reg && !deadlinePast,
       deadline_passed:       !!deadlinePast,
     };
   });
 };
 
 // ── Register for Event (self) ────────────────────────────────
-exports.registerForEvent = async (memberId, eventId) => {
-  // Transaction + row lock on the event serializes concurrent registrations
-  // so capacity cannot be exceeded by racing requests.
-  return await sequelize.transaction(async (t) => {
-    const event = await Event.findOne({
-      where: { id: eventId },
-      lock: t.LOCK.UPDATE,
-      transaction: t,
-    });
-    if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
-    if (!["Upcoming", "Ongoing"].includes(event.status))
-      throw AppError.badRequest("VALIDATION", "Event is not open for registration");
-    if (event.registration_deadline && new Date() > new Date(event.registration_deadline))
-      throw AppError.badRequest("VALIDATION", "Registration deadline has passed");
-
-    const existing = await EventRegistration.findOne({
-      where: { event_id: eventId, member_id: memberId },
-      transaction: t,
-    });
-    if (existing) throw AppError.conflict("DUPLICATE", "You are already registered for this event");
-
-    if (event.capacity) {
-      const count = await EventRegistration.count({ where: { event_id: eventId }, transaction: t });
-      if (count >= event.capacity) throw AppError.badRequest("VALIDATION", "Event has reached full capacity");
-    }
-
-    return await EventRegistration.create({
-      event_id: eventId, member_id: memberId,
-      registered_at: new Date(), registered_by: null,
-    }, { transaction: t });
+exports.registerForEvent = async (memberId, eventId, reservation = {}) => {
+  const result = await registerEventMember({
+    eventId,
+    memberId,
+    registeredBy: null,
+    seatNumber: reservation.seat_number,
+    parkingSlot: reservation.parking_slot,
   });
+
+  await notifyEventRegistrationChange({ memberId, eventId, eventTitle: result.eventTitle });
+  return result.registration;
+};
+
+exports.updateEventRegistrationReservation = async (memberId, eventId, reservation = {}, updatedBy = null) => {
+  const result = await updateEventRegistrationReservation({
+    eventId,
+    memberId,
+    seatNumber: reservation.seat_number,
+    parkingSlot: reservation.parking_slot,
+  });
+  auditLog.log({
+    userId: updatedBy,
+    action: "UPDATE_MY_EVENT_RESERVATION",
+    targetTable: "event_registrations",
+    targetId: result.registration.id,
+    newValues: {
+      event_id: Number(eventId),
+      member_id: Number(memberId),
+      seat_number: result.registration.seat_number,
+      parking_slot: result.registration.parking_slot,
+    },
+  });
+  return result.registration;
 };
 
 // ── Cancel Event Registration (self) ─────────────────────────
@@ -280,6 +337,9 @@ exports.cancelEventRegistration = async (memberId, eventId) => {
   if (!reg) throw AppError.notFound("RECORD_NOT_FOUND", "Registration not found");
 
   await reg.destroy();
+  if (event) {
+    await notifyEventRegistrationChange({ memberId, eventId, eventTitle: event.title, cancelled: true });
+  }
   return { message: "Registration cancelled successfully." };
 };
 
@@ -297,7 +357,7 @@ exports.changeMyPassword = async (userId, currentPassword, newPassword) => {
   const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   await user.update({ password_hash: hash, force_password_change: 0 });
   // Revoke all sessions so outstanding refresh tokens die with the old password
-  await RefreshToken.update({ revoked: 1 }, { where: { user_id: userId, revoked: 0 } });
+  await RefreshToken.update({ revoked: 1, revoked_at: new Date() }, { where: { user_id: userId, revoked: 0 } });
 
   return { message: "Password changed successfully." };
 };
@@ -355,24 +415,21 @@ exports.uploadProfilePhoto = async (memberId, filePath) => {
   const member = await Member.findOne({ where: { id: memberId } });
   if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
-  // Delete the old photo file from disk if it exists
-  if (member.profile_photo_url) {
-    try {
-      const oldAbs = path.join(__dirname, "../../uploads", member.profile_photo_url);
-      if (fs.existsSync(oldAbs)) fs.unlinkSync(oldAbs);
-    } catch (err) {
-      logger.warn(err, "Could not delete old profile photo:")
-    }
-  }
-
+  const storage = require("../middlewares/upload-s3");
+  const oldKey = storage.getStoredFileKey(member.profile_photo_url, "profiles");
+  const nextKey = storage.getStoredFileKey(filePath, "profiles");
   await member.update({ profile_photo_url: filePath });
+  if (oldKey && oldKey !== nextKey) {
+    try { await storage.deleteStoredFile(oldKey); }
+    catch (err) { logger.warn(err, "Could not delete old profile photo"); }
+  }
   return exports.getMyProfile(memberId);
 };
 
 // ── Get Service Details with Member's RSVP ───────────────────
 exports.getServiceDetails = async (serviceId, memberId) => {
   const service = await Service.findByPk(serviceId, {
-    attributes: ["id", "title", "service_date", "service_time", "capacity", "status", "response_deadline"],
+    attributes: ["id", "title", "service_date", "service_time", "capacity", "total_parking_slots", "status", "response_deadline"],
   });
   if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
@@ -393,53 +450,24 @@ exports.getServiceDetails = async (serviceId, memberId) => {
 };
 
 // ── Submit Service RSVP (creates Attendance pre-reg for ATTENDING) ─
-exports.submitServiceResponse = async (memberId, serviceId, attendanceStatus) => {
-  const service = await Service.findByPk(serviceId);
-  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
-
+exports.submitServiceResponse = async (memberId, serviceId, responseData) => {
+  // Keep accepting the former string argument for internal callers while the
+  // HTTP route now passes the validated RSVP and optional slot data together.
+  const data = typeof responseData === "string" ? { attendance_status: responseData } : responseData;
+  const attendanceStatus = data?.attendance_status;
   const validStatuses = ["ATTENDING", "NOT_ATTENDING", "UNDECIDED"];
-  if (!validStatuses.includes(attendanceStatus))
+  if (!validStatuses.includes(attendanceStatus)) {
     throw AppError.badRequest("VALIDATION", "Invalid attendance status");
+  }
 
-  // Upsert the ServiceResponse
-  const existing = await ServiceResponse.findOne({
-    where: { service_id: serviceId, member_id: memberId },
+  await saveServiceResponse({
+    serviceId,
+    memberId,
+    attendanceStatus,
+    seatNumber: data.seat_number,
+    parkingSlot: data.parking_slot,
   });
-
-  if (existing) {
-    await existing.update({ attendance_status: attendanceStatus });
-  } else {
-    await ServiceResponse.create({
-      service_id: serviceId,
-      member_id: memberId,
-      attendance_status: attendanceStatus,
-    });
-  }
-
-  // Sync Attendance pre-reg record
-  if (attendanceStatus === "ATTENDING") {
-    // Create a pre-reg Attendance record only if NO attendance exists for this service+member
-    const existingAttendance = await Attendance.findOne({
-      where: { service_id: serviceId, member_id: memberId },
-    });
-    if (!existingAttendance) {
-      await Attendance.create({
-        service_id:      serviceId,
-        member_id:       memberId,
-        check_in_method: "pre-reg",
-        checked_in_at:   new Date(),
-        recorded_by:     null,
-      });
-    }
-    await syncAttendanceSummary(serviceId);
-  } else {
-    // Remove any pre-reg Attendance record when member says not attending or undecided
-    await Attendance.destroy({
-      where: { service_id: serviceId, member_id: memberId, check_in_method: "pre-reg" },
-    });
-    await syncAttendanceSummary(serviceId);
-  }
-
+  await syncAttendanceSummary(serviceId);
   return exports.getServiceDetails(serviceId, memberId);
 };
 

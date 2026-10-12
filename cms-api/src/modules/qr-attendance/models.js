@@ -131,7 +131,9 @@ const EventAttendance = sequelize.define("EventAttendance", {
   version: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0 },
   session_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
   member_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-  check_in_method: { type: DataTypes.ENUM("qr", "manual"), allowNull: false },
+  // Preserve the migration's legacy `leader_batch` value for older rows; new
+  // rows use `entry_source` to distinguish direct from leader-approved scans.
+  check_in_method: { type: DataTypes.ENUM("qr", "manual", "leader_batch"), allowNull: false },
   entry_source: { type: DataTypes.ENUM("direct", "leader_batch"), allowNull: false },
   checked_in_at: { type: DataTypes.DATE, allowNull: false },
   recorded_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },

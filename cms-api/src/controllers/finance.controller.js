@@ -2,6 +2,17 @@
 
 const financeService = require("../services/finance.service");
 const AppError       = require("../helpers/AppError");
+const uploadStorage  = require("../middlewares/upload-s3");
+const logger         = require("../helpers/logger");
+
+const parseAttachmentOwnerId = (value) => {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const id = Number(value);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw AppError.badRequest("VALIDATION", "The attachment record ID is invalid");
+  }
+  return id;
+};
 
 // ── Financial Records ────────────────────────────────────────
 exports.getAllRecords = async (req, res, next) => {
@@ -110,6 +121,13 @@ exports.deleteCategory = async (req, res, next) => {
 exports.getMyGiving = async (req, res, next) => {
   try {
     const result = await financeService.getMyGiving(req.user.memberId, req.query);
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
+exports.searchGivingMembers = async (req, res, next) => {
+  try {
+    const result = await financeService.searchGivingMembers(req.query);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -282,23 +300,42 @@ exports.deleteExpense = async (req, res, next) => {
 
 // ── 6. ATTACHMENTS CONTROLLERS ────────────────────────────────
 exports.uploadAttachment = async (req, res, next) => {
+  let storageKey = null;
+  let attachmentSaved = false;
   try {
     if (!req.file) throw AppError.badRequest("VALIDATION", "No receipt file uploaded");
 
     const { income_id, expense_id } = req.body;
     // S3 uploads expose the object key on req.file.key; disk uploads on req.file.filename
-    const { s3Enabled, getFileUrl } = require("../middlewares/upload-s3");
-    const relativePath = s3Enabled && req.file.key
-      ? getFileUrl(req.file.key)
-      : "/uploads/receipts/" + req.file.filename;
+    storageKey = req.file.key || `receipts/${req.file.filename}`;
+    const relativePath = uploadStorage.getFileUrl(storageKey);
     const result = await financeService.createAttachment({
       file_name: req.file.originalname,
       file_path: relativePath,
-      income_id: income_id ? parseInt(income_id) : null,
-      expense_id: expense_id ? parseInt(expense_id) : null,
+      income_id: parseAttachmentOwnerId(income_id),
+      expense_id: parseAttachmentOwnerId(expense_id),
     }, req.user.userId);
 
+    attachmentSaved = true;
     res.status(201).json({ success: true, data: result });
+  } catch (err) {
+    if (storageKey && !attachmentSaved) {
+      try {
+        await uploadStorage.deleteStoredFile(storageKey);
+      } catch (cleanupError) {
+        logger.error(cleanupError, "Could not remove an unlinked receipt upload");
+      }
+    }
+    next(err);
+  }
+};
+
+exports.downloadAttachment = async (req, res, next) => {
+  try {
+    const key = req.user.roleName === "Member"
+      ? await financeService.getMemberAttachmentDownloadKey(req.params.id, req.user.memberId)
+      : await financeService.getAttachmentDownloadKey(req.params.id);
+    await uploadStorage.sendStoredUpload(key, res);
   } catch (err) { next(err); }
 };
 

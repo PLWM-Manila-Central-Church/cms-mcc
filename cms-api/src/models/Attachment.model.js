@@ -41,6 +41,15 @@ const Attachment = sequelize.define(
     tableName: "attachments",
     timestamps: false,
     underscored: true,
+    validate: {
+      hasExactlyOneFinancialOwner() {
+        const hasIncome = this.income_id !== null && this.income_id !== undefined;
+        const hasExpense = this.expense_id !== null && this.expense_id !== undefined;
+        if (hasIncome === hasExpense) {
+          throw new Error("An attachment must belong to exactly one income or expense record");
+        }
+      },
+    },
   },
 );
 

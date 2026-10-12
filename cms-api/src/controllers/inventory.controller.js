@@ -46,6 +46,55 @@ exports.getAllItems = async (req, res, next) => {
   }
 };
 
+exports.getInventoryReport = async (req, res, next) => {
+  try {
+    const data = await inventoryService.getInventoryReport();
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const csvCell = (value) => {
+  let text = String(value ?? "");
+  if (/^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+};
+
+exports.exportInventoryReport = async (req, res, next) => {
+  try {
+    res.status(200);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="plwm-mcc-inventory-report.csv"');
+    res.write("\uFEFF");
+    res.write(["Item ID", "Item", "Category", "Quantity", "Unit", "Availability", "Condition", "Low Stock Threshold"].map(csvCell).join(",") + "\r\n");
+
+    const pageSize = 250;
+    let offset = 0;
+    while (true) {
+      const rows = await inventoryService.getInventoryReportPage({ offset, limit: pageSize });
+      for (const item of rows) {
+        res.write([
+          item.id,
+          item.name,
+          item.category?.name,
+          item.quantity,
+          item.unit,
+          item.status,
+          item.condition,
+          item.low_stock_threshold,
+        ].map(csvCell).join(",") + "\r\n");
+      }
+      if (rows.length < pageSize) break;
+      offset += rows.length;
+    }
+    res.end();
+  } catch (err) {
+    if (res.headersSent) return res.destroy(err);
+    next(err);
+  }
+};
+
 exports.getItemById = async (req, res, next) => {
   try {
     const data = await inventoryService.getItemById(req.params.id);
@@ -219,10 +268,10 @@ exports.deleteRequest = async (req, res, next) => {
 exports.getAllUsage = async (req, res, next) => {
   try {
     if (isScopedLeader(req.user)) {
-      res.json({ success: true, data: [] });
+      res.json({ success: true, data: { records: [], total: 0, total_pages: 0 } });
       return;
     }
-    const data = await inventoryService.getAllUsage();
+    const data = await inventoryService.getAllUsage(req.query);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -242,7 +291,7 @@ exports.createUsage = async (req, res, next) => {
 exports.deleteUsage = async (req, res, next) => {
   try {
     if (forbidScopedInventoryManage(req, res)) return;
-    const data = await inventoryService.deleteUsage(req.params.id);
+    const data = await inventoryService.deleteUsage(req.params.id, req.user.userId);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

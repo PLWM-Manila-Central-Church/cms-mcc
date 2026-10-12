@@ -107,3 +107,8 @@ exports.getRecordsQuerySchema = Joi.object({
   date_to:           Joi.date().iso().optional(),
 });
 
+exports.searchGivingMembersQuerySchema = Joi.object({
+  q:     Joi.string().trim().min(2).max(100).required(),
+  limit: Joi.number().integer().min(1).max(10).default(6),
+});
+

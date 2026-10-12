@@ -80,6 +80,28 @@ exports.getMySubstituteRequests = async (req, res, next) => {
   }
 };
 
+exports.getEligibleSubstituteServices = async (req, res, next) => {
+  try {
+    const data = await serviceExtrasService.getEligibleSubstituteServices(req.user.userId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getEligibleSubstituteReplacements = async (req, res, next) => {
+  try {
+    const data = await serviceExtrasService.getEligibleSubstituteReplacements(
+      req.query.service_id,
+      req.user.userId,
+      req.query.q,
+    );
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getSubstituteRequestById = async (req, res, next) => {
   try {
     const data = await serviceExtrasService.getSubstituteRequestById(req.params.id, req.user);

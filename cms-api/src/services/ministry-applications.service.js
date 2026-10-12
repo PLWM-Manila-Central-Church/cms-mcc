@@ -5,6 +5,7 @@ const sequelize = require("../config/db");
 const auditLog = require("../helpers/auditLog.helper");
 const AppError = require("../helpers/AppError");
 const logger = require("../helpers/logger");
+const { getLatestApplicationsByRole } = require("../helpers/ministryApplications.helper");
 const notifications = require("./notifications.service");
 const {
   Member,
@@ -42,7 +43,9 @@ const notifyUsers = async (userIds, payload) => {
 };
 
 const applicationIncludes = [
-  { model: Member, as: "member", attributes: ["id", "first_name", "last_name", "member_id"], required: true },
+  // members uses its numeric primary key as the member ID; there is no separate
+  // `member_id` column in the table.
+  { model: Member, as: "member", attributes: ["id", "first_name", "last_name"], required: true },
   { model: MinistryRole, as: "ministryRole", attributes: ["id", "name"], required: true },
 ];
 
@@ -55,15 +58,10 @@ exports.getOpportunities = async (memberId) => {
   const [roles, memberships, applications] = await Promise.all([
     MinistryRole.findAll({ order: [["name", "ASC"]] }),
     MinistryMembership.findAll({ where: { member_id: memberId }, attributes: ["ministry_role_id"] }),
-    MinistryApplication.findAll({ where: { member_id: memberId }, attributes: ["id", "ministry_role_id", "status", "message", "review_note", "created_at", "reviewed_at"] }),
+    MinistryApplication.findAll({ where: { member_id: memberId }, attributes: ["id", "ministry_role_id", "status", "message", "review_note", "reviewed_at"] }),
   ]);
   const membershipRoleIds = new Set(memberships.map((row) => Number(row.ministry_role_id)));
-  const latestByRole = new Map();
-  for (const application of applications) {
-    const key = Number(application.ministry_role_id);
-    const previous = latestByRole.get(key);
-    if (!previous || new Date(application.created_at) > new Date(previous.created_at)) latestByRole.set(key, application);
-  }
+  const latestByRole = getLatestApplicationsByRole(applications);
   return roles.map((role) => ({
     ...role.toJSON(),
     is_member: membershipRoleIds.has(Number(role.id)),
@@ -114,7 +112,7 @@ exports.createApplication = async ({ memberId, ministryRoleId, message, userId }
         status: "pending",
         message: message || null,
       }, { transaction });
-      auditLog.log({ userId, action: "CREATE_MINISTRY_APPLICATION", targetTable: "ministry_applications", targetId: created.id }, { transaction });
+      await auditLog.log({ userId, action: "CREATE_MINISTRY_APPLICATION", targetTable: "ministry_applications", targetId: created.id }, { transaction });
       return created;
     });
   } catch (error) {
@@ -166,7 +164,7 @@ exports.withdrawApplication = async (id, memberId, userId) => {
   if (!application) throw AppError.notFound("PENDING_APPLICATION_NOT_FOUND", "Pending application not found");
   await sequelize.transaction(async (transaction) => {
     await application.update({ status: "withdrawn", application_key: null }, { transaction });
-    auditLog.log({ userId, action: "WITHDRAW_MINISTRY_APPLICATION", targetTable: "ministry_applications", targetId: id }, { transaction });
+    await auditLog.log({ userId, action: "WITHDRAW_MINISTRY_APPLICATION", targetTable: "ministry_applications", targetId: id }, { transaction });
   });
   return exports.getApplicationById(id);
 };
@@ -204,7 +202,7 @@ exports.reviewApplication = async (id, { status, review_note }, user = {}) => {
       reviewed_by: user.userId,
       reviewed_at: new Date(),
     }, { transaction });
-    auditLog.log({ userId: user.userId, action: `MINISTRY_APPLICATION_${status.toUpperCase()}`, targetTable: "ministry_applications", targetId: id }, { transaction });
+    await auditLog.log({ userId: user.userId, action: `MINISTRY_APPLICATION_${status.toUpperCase()}`, targetTable: "ministry_applications", targetId: id }, { transaction });
     return application;
   });
 

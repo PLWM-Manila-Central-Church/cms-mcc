@@ -6,10 +6,10 @@ const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
 const validateQuery = require("../middlewares/validateQuery");
-const { eventImageUpload } = require("../middlewares/upload-s3");
+const { eventImageUpload, requireDurableUploadStorage } = require("../middlewares/upload-s3");
 const {
   createEventSchema, updateEventSchema, updateEventStatusSchema,
-  registerMemberSchema, bulkRegisterSchema, getEventsQuerySchema,
+  registerMemberSchema, updateRegistrationReservationSchema, bulkRegisterSchema, getEventsQuerySchema,
 } = require("../validators/events.validator");
 
 // ── Event Categories (MUST be before /:id) ───────────────────
@@ -21,7 +21,7 @@ router.delete("/categories/:id", auth, authorize("events", "delete"), ctrl.delet
 
 // ── Events ───────────────────────────────────────────────────
 router.get("/:id/image", auth, authorize("events", "read"), ctrl.getEventImage);
-router.post("/:id/image", auth, ctrl.authorizeEventImageUpload, eventImageUpload.single("image"), ctrl.uploadEventImage);
+router.post("/:id/image", auth, ctrl.authorizeEventImageUpload, requireDurableUploadStorage, eventImageUpload.single("image"), ctrl.uploadEventImage);
 router.delete("/:id/image", auth, authorize("events", "update"), ctrl.deleteEventImage);
 router.get("/",    auth, authorize("events", "read"), validateQuery(getEventsQuerySchema), ctrl.getAllEvents);
 router.get("/:id", auth, authorize("events", "read"),   ctrl.getEventById);
@@ -32,9 +32,11 @@ router.delete("/:id",       auth, authorize("events", "delete"), ctrl.deleteEven
 
 // ── Event Registrations ──────────────────────────────────────
 router.get("/:id/registrations",              auth, authorize("events", "read"),   ctrl.getEventRegistrations);
-router.post("/:id/registrations",             auth, authorize("events", "create"), validate(registerMemberSchema), ctrl.registerMember);
-router.post("/:id/registrations/bulk",        auth, authorize("events", "create"), validate(bulkRegisterSchema),   ctrl.bulkRegisterMembers);
-router.delete("/:id/registrations",           auth, authorize("events", "delete"), ctrl.unregisterMember);
-router.delete("/:id/registrations/:memberId", auth, authorize("events", "delete"), ctrl.unregisterMemberById);
+// Attendee management is separate from create/update/delete on the event record itself.
+router.post("/:id/registrations",             auth, authorize("event_registrations", "create"), validate(registerMemberSchema), ctrl.registerMember);
+router.post("/:id/registrations/bulk",        auth, authorize("event_registrations", "create"), validate(bulkRegisterSchema),   ctrl.bulkRegisterMembers);
+router.put("/:id/registrations/:memberId/reservation", auth, authorize("event_registrations", "update"), validate(updateRegistrationReservationSchema), ctrl.updateRegistrationReservation);
+router.delete("/:id/registrations",           auth, authorize("event_registrations", "delete"), ctrl.unregisterMember);
+router.delete("/:id/registrations/:memberId", auth, authorize("event_registrations", "delete"), ctrl.unregisterMemberById);
 
 module.exports = router;

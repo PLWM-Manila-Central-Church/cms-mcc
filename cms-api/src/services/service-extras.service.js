@@ -9,6 +9,7 @@ const {
   ServiceResponse,
   SubstituteRequest,
   MinistryAssignment,
+  MinistryMembership,
   Service,
   Member,
   User,
@@ -19,6 +20,7 @@ const notifications = require("./notifications.service");
 const auditLog = require("../helpers/auditLog.helper");
 const { getAttendanceModel, syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
 const { getMemberScopeWhere } = require("../helpers/scopedLeader.helper");
+const { saveServiceResponse } = require("../helpers/serviceResponseReservation.helper");
 
 // ── Helpers ──────────────────────────────────────────────────
 const syncSummary = async (serviceId) => {
@@ -103,65 +105,19 @@ exports.createOrUpdateResponse = async (
   data,
   overrideBy,
 ) => {
-  const service = await Service.findByPk(serviceId);
-  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
-
-  const member = await Member.findByPk(memberId);
-  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
-
   const { attendance_status, seat_number, parking_slot, override_reason } =
     data;
-
-  const existing = await ServiceResponse.findOne({
-    where: { service_id: serviceId, member_id: memberId },
+  const response = await saveServiceResponse({
+    serviceId,
+    memberId,
+    attendanceStatus: attendance_status,
+    seatNumber: seat_number,
+    parkingSlot: parking_slot,
+    overrideBy,
+    overrideReason: override_reason,
   });
-
-  if (existing) {
-    await existing.update({
-      attendance_status,
-      ...(seat_number !== undefined && { seat_number }),
-      ...(parking_slot !== undefined && { parking_slot }),
-      ...(overrideBy && {
-        override_by: overrideBy,
-        override_reason: override_reason || null,
-      }),
-    });
-  } else {
-    await ServiceResponse.create({
-      service_id: serviceId,
-      member_id: memberId,
-      attendance_status,
-      seat_number: seat_number || null,
-      parking_slot: parking_slot || null,
-      override_by: overrideBy || null,
-      override_reason: override_reason || null,
-    });
-  }
-
-  // Sync companion Attendance row + summary
-  if (attendance_status === "ATTENDING") {
-    const existingAttendance = await Attendance.findOne({
-      where: { service_id: serviceId, member_id: memberId },
-    });
-    if (!existingAttendance) {
-      await Attendance.create({
-        service_id: serviceId,
-        member_id: memberId,
-        check_in_method: "pre-reg",
-        checked_in_at: new Date(),
-        recorded_by: overrideBy || null,
-      });
-    }
-  } else {
-    await Attendance.destroy({
-      where: { service_id: serviceId, member_id: memberId, check_in_method: "pre-reg" },
-    });
-  }
   await syncSummary(serviceId);
-
-  return existing || (await ServiceResponse.findOne({
-    where: { service_id: serviceId, member_id: memberId },
-  }));
+  return response;
 };
 
 exports.deleteResponse = async (id) => {
@@ -173,7 +129,7 @@ exports.deleteResponse = async (id) => {
 
 // ── Substitute Requests ──────────────────────────────────────
 
-// Shared includes so Service and proposed Member always appear
+// Shared includes so the service, requester, and proposed replacement always appear.
 const substituteIncludes = [
   {
     model: MinistryAssignment,
@@ -183,6 +139,20 @@ const substituteIncludes = [
       {
         model: Service,
         attributes: ["id", "title", "service_date", "service_time"],
+        required: false,
+      },
+    ],
+  },
+  {
+    model: User,
+    as: "requestedByUser",
+    attributes: ["id", "member_id"],
+    required: false,
+    include: [
+      {
+        model: Member,
+        as: "member",
+        attributes: ["id", "first_name", "last_name"],
         required: false,
       },
     ],
@@ -230,6 +200,201 @@ exports.getAllSubstituteRequests = async (user = {}) => {
   });
 };
 
+exports.getEligibleSubstituteServices = async (userId) => {
+  const requester = await User.findByPk(userId, {
+    attributes: ["id", "member_id", "is_active", "is_deleted"],
+  });
+  if (!requester || Number(requester.is_active) !== 1 || Number(requester.is_deleted) === 1 || !requester.member_id) {
+    return [];
+  }
+
+  const assignments = await MinistryAssignment.findAll({
+    where: { member_id: requester.member_id },
+    attributes: ["id", "service_id"],
+    include: [{
+      model: Service,
+      attributes: ["id", "title", "service_date", "service_time", "status"],
+      where: { status: "published" },
+      required: true,
+    }],
+  });
+  if (!assignments.length) return [];
+
+  const pendingRequests = await SubstituteRequest.findAll({
+    where: {
+      assignment_id: { [Op.in]: assignments.map((assignment) => assignment.id) },
+      status: "pending",
+    },
+    attributes: ["assignment_id"],
+    raw: true,
+  });
+  const pendingAssignmentIds = new Set(pendingRequests.map((request) => Number(request.assignment_id)));
+  return assignments
+    .filter((assignment) => !pendingAssignmentIds.has(Number(assignment.id)))
+    .map((assignment) => assignment.Service)
+    .filter(Boolean)
+    .sort((left, right) => `${left.service_date} ${left.service_time}`.localeCompare(`${right.service_date} ${right.service_time}`));
+};
+
+exports.getEligibleSubstituteReplacements = async (serviceIdValue, userId, search = "") => {
+  const serviceId = Number(serviceIdValue);
+  if (!Number.isSafeInteger(serviceId) || serviceId <= 0) {
+    throw AppError.badRequest("VALIDATION", "Select a valid service.");
+  }
+  const requester = await User.findByPk(userId, {
+    attributes: ["id", "member_id", "is_active", "is_deleted"],
+  });
+  if (!requester || Number(requester.is_active) !== 1 || Number(requester.is_deleted) === 1 || !requester.member_id) {
+    throw AppError.forbidden("A linked active Member account is required to search for a substitute.");
+  }
+
+  const assignment = await MinistryAssignment.findOne({
+    where: { service_id: serviceId, member_id: requester.member_id },
+    attributes: ["id", "ministry_role_id"],
+    include: [{
+      model: Service,
+      attributes: ["id", "status"],
+      where: { status: "published" },
+      required: true,
+    }],
+  });
+  if (!assignment) {
+    throw AppError.forbidden("You can only search replacements for a published service where you are assigned.");
+  }
+
+  const whereMember = { is_deleted: 0 };
+  const query = String(search || "").trim();
+  if (query) {
+    const like = `%${query}%`;
+    whereMember[Op.or] = [
+      { first_name: { [Op.like]: like } },
+      { last_name: { [Op.like]: like } },
+    ];
+  }
+  const roster = await MinistryMembership.findAll({
+    where: {
+      ministry_role_id: assignment.ministry_role_id,
+      member_id: { [Op.ne]: requester.member_id },
+    },
+    attributes: ["member_id"],
+    include: [{
+      model: Member,
+      as: "member",
+      attributes: ["id", "first_name", "last_name"],
+      where: whereMember,
+      required: true,
+      include: [{
+        model: User,
+        attributes: ["id"],
+        where: { is_active: 1, is_deleted: 0 },
+        required: true,
+      }],
+    }],
+  });
+
+  return roster
+    .map((entry) => entry.member)
+    .filter(Boolean)
+    .sort((left, right) => `${left.last_name} ${left.first_name}`.localeCompare(`${right.last_name} ${right.first_name}`))
+    .slice(0, 10);
+};
+
+exports.createSubstituteRequest = async (data, requestedBy) => {
+  const serviceId = Number(data?.service_id);
+  const reason = String(data?.reason || "").trim();
+  if (!Number.isSafeInteger(serviceId) || serviceId <= 0) {
+    throw AppError.badRequest("VALIDATION", "Select a valid service.");
+  }
+  if (reason.length < 5 || reason.length > 500) {
+    throw AppError.badRequest("VALIDATION", "Reason must be between 5 and 500 characters.");
+  }
+
+  const requester = await User.findByPk(requestedBy, {
+    attributes: ["id", "member_id", "is_active", "is_deleted"],
+  });
+  if (!requester || Number(requester.is_active) !== 1 || Number(requester.is_deleted) === 1 || !requester.member_id) {
+    throw AppError.forbidden("A linked active Member account is required to request a substitute.");
+  }
+
+  let proposedSubstituteUserId = null;
+  let proposedMemberId = null;
+  const hasProposedMember = data?.proposed_member_id !== undefined
+    && data?.proposed_member_id !== null
+    && String(data.proposed_member_id).trim() !== "";
+  if (hasProposedMember) {
+    proposedMemberId = Number(data.proposed_member_id);
+    if (!Number.isSafeInteger(proposedMemberId) || proposedMemberId <= 0) {
+      throw AppError.badRequest("VALIDATION", "Select a valid proposed replacement.");
+    }
+    if (proposedMemberId === Number(requester.member_id)) {
+      throw AppError.badRequest("VALIDATION", "You cannot select yourself as the substitute.");
+    }
+    const proposedUser = await User.findOne({
+      where: { member_id: proposedMemberId, is_active: 1, is_deleted: 0 },
+      attributes: ["id", "member_id"],
+    });
+    if (!proposedUser) {
+      throw AppError.badRequest("VALIDATION", "The proposed replacement must have an active Member account.");
+    }
+    proposedSubstituteUserId = proposedUser.id;
+  }
+
+  const requestId = await sequelize.transaction(async (transaction) => {
+    const assignment = await MinistryAssignment.findOne({
+      where: { service_id: serviceId, member_id: requester.member_id },
+      include: [{
+        model: Service,
+        attributes: ["id", "title", "status"],
+        where: { status: "published" },
+        required: true,
+      }],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!assignment) {
+      throw AppError.forbidden("You can only request a substitute for a published service where you are assigned.");
+    }
+
+    if (proposedMemberId) {
+      const proposedMembership = await MinistryMembership.findOne({
+        where: { ministry_role_id: assignment.ministry_role_id, member_id: proposedMemberId },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!proposedMembership) {
+        throw AppError.badRequest("VALIDATION", "The proposed replacement must belong to your ministry roster.");
+      }
+    }
+
+    const existingRequest = await SubstituteRequest.findOne({
+      where: { assignment_id: assignment.id, status: "pending" },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (existingRequest) {
+      throw AppError.conflict("SUBSTITUTE_REQUEST_PENDING", "A substitute request is already pending for this service.");
+    }
+
+    const request = await SubstituteRequest.create({
+      assignment_id: assignment.id,
+      requested_by: requester.id,
+      proposed_substitute: proposedSubstituteUserId,
+      reason,
+      status: "pending",
+    }, { transaction });
+    await assignment.update({ substitute_requested: 1 }, { transaction });
+    await auditLog.log({
+      userId: requester.id,
+      action: "CREATE_SUBSTITUTE_REQUEST",
+      targetTable: "substitute_requests",
+      targetId: request.id,
+    }, { transaction });
+    return request.id;
+  });
+
+  return await exports.getSubstituteRequestById(requestId, { roleName: "Member", userId: requester.id });
+};
+
 // Get only the requests submitted by the calling user's linked member
 exports.getMySubstituteRequests = async (userId) => {
   return await SubstituteRequest.findAll({
@@ -261,18 +426,17 @@ exports.resolveSubstituteRequest = async (id, status, resolvedBy, user = {}) => 
     ensureSubstituteInScope(request, user);
     if (request.status !== "pending") throw AppError.badRequest("VALIDATION", "Request has already been resolved");
 
-    // On approval, replace the assignment's current member in the same transaction.
+    const assignment = await MinistryAssignment.findByPk(request.assignment_id, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!assignment) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry assignment not found");
+    const assignmentChanges = { substitute_requested: 0 };
     if (status === "approved" && request.proposed_substitute) {
       const proposedMemberId = request.proposedSubstituteUser?.member_id;
-      if (proposedMemberId) {
-        const assignment = await MinistryAssignment.findByPk(request.assignment_id, { transaction, lock: transaction.LOCK.UPDATE });
-        if (!assignment) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry assignment not found");
-        await assignment.update({ member_id: proposedMemberId }, { transaction });
-      }
+      if (proposedMemberId) assignmentChanges.member_id = proposedMemberId;
     }
+    await assignment.update(assignmentChanges, { transaction });
 
     await request.update({ status, resolved_by: resolvedBy }, { transaction });
-    auditLog.log({ userId: resolvedBy, action: `RESOLVE_SUBSTITUTE_${status.toUpperCase()}`, targetTable: "substitute_requests", targetId: id }, { transaction });
+    await auditLog.log({ userId: resolvedBy, action: `RESOLVE_SUBSTITUTE_${status.toUpperCase()}`, targetTable: "substitute_requests", targetId: id }, { transaction });
     return request.id;
   });
   try {

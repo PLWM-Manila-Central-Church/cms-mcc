@@ -22,6 +22,7 @@ router.get("/",    auth, authorize("members", "read"), validateQuery(getMembersQ
 router.get("/dropdowns/cell-groups", auth, authorize("members", "read"), ctrl.getCellGroupDropdowns);
 router.get("/dropdowns/groups",      auth, authorize("members", "read"), ctrl.getGroupDropdowns);
 
+router.get("/:id/status-history", auth, authorize("members", "read"), ctrl.getMemberStatusHistory);
 router.get("/:id", auth, authorize("members", "read"),   ctrl.getMemberById);
 router.post("/",   auth, authorize("members", "create"), validate(createMemberSchema), ctrl.createMember);  // Fix #1
 router.put("/:id", auth, authorize("members", "update"), validate(updateMemberSchema), ctrl.updateMember);  // Fix #1

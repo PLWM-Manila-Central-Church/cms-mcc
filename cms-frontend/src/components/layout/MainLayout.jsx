@@ -306,6 +306,8 @@ export default function MainLayout({ children }) {
       <Header
         sidebarWidth={mainPadLeft}
         isMobile={isMobile}
+        isTablet={isTablet}
+        isNarrowDesktop={width <= 1440}
       />
 
       {/* Main content */}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
 
@@ -48,6 +49,7 @@ const getLeaderAssignmentLabel = (u) => {
 export default function UsersPage() {
   const navigate = useNavigate();
   const { hasPermission, user: currentUser } = useAuth();
+  const { confirm } = useConfirmation();
   const isMobile = useIsMobile();
 
   const [users, setUsers]             = useState([]);
@@ -97,7 +99,12 @@ export default function UsersPage() {
   const toggleAll     = () => setSelected(prev => prev.size === filtered.length ? new Set() : new Set(filtered.map(u => u.id)));
   const handleBulkDelete = async () => {
     if (selected.size === 0) return;
-    if (!window.confirm(`Delete ${selected.size} selected user${selected.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    if (!(await confirm({
+      title: `Delete ${selected.size} selected user${selected.size > 1 ? 's' : ''}?`,
+      message: 'The selected accounts will be deleted. This action cannot be undone.',
+      confirmLabel: `Delete ${selected.size} user${selected.size > 1 ? 's' : ''}`,
+      tone: 'danger',
+    }))) return;
     setBulkDeleting(true);
     try {
       await Promise.all([...selected].map(id => axiosInstance.delete(`/users/${id}`)));

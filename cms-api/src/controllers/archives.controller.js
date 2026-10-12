@@ -1,16 +1,18 @@
 "use strict";
 
-const path            = require("path");
 const archivesService = require("../services/archives.service");
+const uploadStorage   = require("../middlewares/upload-s3");
+const { normalizeArchiveFileType } = require("../helpers/archiveFileMetadata.helper");
+const { getFileUrl } = uploadStorage;
 
 // ── Helper: extract file info from multer req.file ───────────
 const extractFileFields = (file) => {
   if (!file) return {};
-  const ext = path.extname(file.originalname).toLowerCase().replace(".", "");
+  const storageKey = file.key || `archives/${file.filename}`;
   return {
-    // Store as a URL path so the frontend can build the download link
-    file_url:  `/uploads/archives/${file.filename}`,
-    file_type: ext || file.mimetype.split("/")[1] || "unknown",
+    // Store the authenticated application route for both disk and object storage.
+    file_url: getFileUrl(storageKey),
+    file_type: normalizeArchiveFileType(file),
     file_size: file.size,
   };
 };
@@ -28,16 +30,7 @@ exports.getAllRecords = async (req, res, next) => {
 
 exports.getRecordById = async (req, res, next) => {
   try {
-    // Enforce single-record visibility
-    const data = await archivesService.getRecordById(req.params.id);
-    const roleName = req.user?.roleName;
-    if (data.visibility === "confidential" && !["System Admin", "Pastor"].includes(roleName)) {
-      return res.status(403).json({ success: false, message: "Access forbidden" });
-    }
-    if (data.visibility === "restricted" &&
-        !["System Admin", "Pastor", "Finance Team", "Registration Team", "Ministry Leader", "Cell Group Leader", "Group Leader", "Leader"].includes(roleName)) {
-      return res.status(403).json({ success: false, message: "Access forbidden" });
-    }
+    const data = await archivesService.getRecordByIdForRole(req.params.id, req.user?.roleName);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
@@ -100,29 +93,59 @@ exports.deleteRecord = async (req, res, next) => {
 // ── Versions ─────────────────────────────────────────────────
 exports.getVersions = async (req, res, next) => {
   try {
-    const data = await archivesService.getVersions(req.params.id);
+    const data = await archivesService.getVersions(req.params.id, req.user?.roleName);
     res.json({ success: true, data });
   } catch (err) { next(err); }
+};
+
+exports.downloadRecord = async (req, res, next) => {
+  try {
+    const { storageKey } = await archivesService.getDownloadFile(
+      req.params.id,
+      null,
+      req.user?.roleName,
+    );
+    await archivesService.logAccess(req.params.id, req.user.userId, "download", req.user?.roleName);
+    await uploadStorage.sendStoredUpload(storageKey, res);
+  } catch (err) {
+    if (!res.headersSent) next(err);
+    else res.destroy(err);
+  }
+};
+
+exports.downloadVersion = async (req, res, next) => {
+  try {
+    const { storageKey } = await archivesService.getDownloadFile(
+      req.params.id,
+      req.params.versionId,
+      req.user?.roleName,
+    );
+    await archivesService.logAccess(req.params.id, req.user.userId, "download", req.user?.roleName);
+    await uploadStorage.sendStoredUpload(storageKey, res);
+  } catch (err) {
+    if (!res.headersSent) next(err);
+    else res.destroy(err);
+  }
 };
 
 // ── Access Logs ──────────────────────────────────────────────
 exports.logView = async (req, res, next) => {
   try {
-    const data = await archivesService.logAccess(req.params.id, req.user.userId, "view");
+    const data = await archivesService.logAccess(req.params.id, req.user.userId, "view", req.user?.roleName);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
 
 exports.logDownload = async (req, res, next) => {
   try {
-    const data = await archivesService.logAccess(req.params.id, req.user.userId, "download");
+    const data = await archivesService.logAccess(req.params.id, req.user.userId, "download", req.user?.roleName);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
 
 exports.getAccessLogs = async (req, res, next) => {
   try {
-    const data = await archivesService.getAccessLogs(req.params.id);
+    const data = await archivesService.getAccessLogs(req.params.id, req.user?.roleName);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
@@ -130,14 +153,14 @@ exports.getAccessLogs = async (req, res, next) => {
 // ── Categories ───────────────────────────────────────────────
 exports.getAllCategories = async (req, res, next) => {
   try {
-    const data = await archivesService.getAllCategories();
+    const data = await archivesService.getAllCategories(req.user?.roleName);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
 
 exports.getCategoryById = async (req, res, next) => {
   try {
-    const data = await archivesService.getCategoryById(req.params.id);
+    const data = await archivesService.getCategoryById(req.params.id, req.user?.roleName);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };

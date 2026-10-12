@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import axiosInstance, { setLeaderScopeHeader } from '../api/axiosInstance';
 
 const AuthContext = createContext(null);
@@ -31,6 +32,7 @@ const initialLeaderScope = (nextUser, previousKey = null) => {
 };
 
 export const AuthProvider = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [permissions, setPermissions] = useState([]);
   const [activeLeaderScopeKey, setActiveLeaderScopeKey] = useState(null);
@@ -103,6 +105,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const revision = ++authRevision.current;
+    await queryClient.cancelQueries();
+    queryClient.clear();
     try {
       const response = await axiosInstance.post('/auth/login', { email, password });
       const { user: responseUser, permissions: responsePermissions, forcePasswordChange } = response.data.data;
@@ -131,6 +135,8 @@ export const AuthProvider = ({ children }) => {
     const revision = ++authRevision.current;
     setLeaderScopeHeader(null);
     try { window.sessionStorage.removeItem('mcc-leader-scope'); } catch { /* storage is optional */ }
+    await queryClient.cancelQueries();
+    queryClient.clear();
     try {
       await axiosInstance.post('/auth/logout', {});
     } catch {

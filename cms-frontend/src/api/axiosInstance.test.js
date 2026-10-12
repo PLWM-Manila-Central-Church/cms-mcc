@@ -47,6 +47,13 @@ describe('axios auth refresh queue', () => {
   });
 
   it('keeps the original team scope on an in-flight retry after the active selection changes', async () => {
+    // A successful login clears the module's invalid-session guard left by the
+    // preceding failed-refresh test, keeping this case order-independent.
+    axiosInstance.defaults.adapter = async (config) => ({
+      data: { success: true }, status: 200, statusText: 'OK', headers: {}, config,
+    });
+    await axiosInstance.post('/auth/login', {});
+
     const sentScopes = [];
     const adapter = vi.fn(async (config) => {
       sentScopes.push(config.headers.get('X-MCC-Leader-Scope'));

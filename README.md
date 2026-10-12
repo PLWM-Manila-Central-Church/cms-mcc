@@ -290,7 +290,7 @@ The backend exposes REST endpoints under `/api`.
 
 ## Documentation
 
-Project documentation is versioned under `docs/`: architecture and UX guides, the ERD, migration notes, and the full system user manual. The manual is included as editable DOCX and PDF files; page-by-page render previews are generated artifacts and stay out of Git.
+Project documentation is versioned under `docs/`: architecture and UX guides, the ERD, migration notes, the full system user manual, and the [QR Attendance User Guide](docs/QR_ATTENDANCE_USER_GUIDE.md). A printable guide supplement is available at [`output/pdf/PLWM-MCC_QR_Attendance_User_Guide.pdf`](output/pdf/PLWM-MCC_QR_Attendance_User_Guide.pdf). The full system manual is also included as editable DOCX and PDF files; page-by-page render previews are generated artifacts and stay out of Git.
 
 `design/landing-redesign/` is a static design prototype and is not part of the deployed application.
 

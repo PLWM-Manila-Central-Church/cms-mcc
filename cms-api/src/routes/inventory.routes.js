@@ -11,11 +11,13 @@ const {
   createRequestSchema, reviewRequestSchema,
   createUsageSchema,
   createCategorySchema, updateCategorySchema,
-  getItemsQuerySchema,
+  getItemsQuerySchema, getRequestsQuerySchema, getUsageQuerySchema,
 } = require("../validators/inventory.validator");
 
 // ── Items ────────────────────────────────────────────────────
 router.get("/items",        auth, authorize("inventory", "read"), validateQuery(getItemsQuerySchema), ctrl.getAllItems);
+router.get("/reports", auth, authorize("inventory", "read"), ctrl.getInventoryReport);
+router.get("/reports/export.csv", auth, authorize("inventory", "read"), ctrl.exportInventoryReport);
 router.get("/items/:id",    auth, authorize("inventory", "read"),   ctrl.getItemById);
 router.post("/items",       auth, authorize("inventory", "create"), validate(createItemSchema), ctrl.createItem);
 router.put("/items/:id",    auth, authorize("inventory", "update"), validate(updateItemSchema), ctrl.updateItem);
@@ -31,7 +33,7 @@ router.delete("/categories/:id", auth, authorize("inventory", "delete"), ctrl.de
 
 // ── Requests — static paths MUST come before /:id ────────────
 router.get("/requests/mine", auth, authorize("inventory", "read"), ctrl.getMyRequests);
-router.get("/requests/all",  auth, authorize("inventory", "read"), validateQuery(getItemsQuerySchema), ctrl.getAllRequestsPaginated);
+router.get("/requests/all",  auth, authorize("inventory", "read"), validateQuery(getRequestsQuerySchema), ctrl.getAllRequestsPaginated);
 router.get("/requests",      auth, authorize("inventory", "read"), ctrl.getAllRequests);
 router.get("/requests/:id",  auth, authorize("inventory", "read"), ctrl.getRequestById);
 router.post("/requests",                   auth, authorize("inventory", "read"),   validate(createRequestSchema), ctrl.createRequest);
@@ -40,7 +42,7 @@ router.patch("/requests/:id/review",       auth, authorize("inventory", "update"
 router.delete("/requests/:id",             auth, authorize("inventory", "delete"), ctrl.deleteRequest);
 
 // ── Usage ────────────────────────────────────────────────────
-router.get("/usage",        auth, authorize("inventory", "read"),   ctrl.getAllUsage);
+router.get("/usage",        auth, authorize("inventory", "read"), validateQuery(getUsageQuerySchema), ctrl.getAllUsage);
 router.post("/usage",       auth, authorize("inventory", "create"), validate(createUsageSchema), ctrl.createUsage);
 router.delete("/usage/:id", auth, authorize("inventory", "delete"), ctrl.deleteUsage);
 

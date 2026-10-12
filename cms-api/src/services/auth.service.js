@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const jwt    = require("jsonwebtoken");
 const crypto = require("crypto");
 const { Op } = require("sequelize");
+const sequelize = require("../config/db");
 const logger = require("../helpers/logger");
 const {
   User, Role, Member, PasswordResetToken,
@@ -22,9 +23,12 @@ const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
 // verifyToken.js re-fetches the full user from DB on every request,
 // so embedding extra fields in the token is redundant and increases
 // exposure if a token is ever intercepted.
-const generateAccessToken = (user) => {
+const generateAccessToken = (user, userSessionId = null) => {
+  const payload = { userId: user.id };
+  const sessionId = Number(userSessionId);
+  if (Number.isInteger(sessionId) && sessionId > 0) payload.userSessionId = sessionId;
   return jwt.sign(
-    { userId: user.id },
+    payload,
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || "8h" },
   );
@@ -46,6 +50,7 @@ const DUMMY_HASH = bcrypt.hashSync("timing-equalization-dummy", BCRYPT_ROUNDS);
 
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+const REFRESH_TOKEN_REUSE_GRACE_MS = 30 * 1000;
 
 const getUserPermissions = async (roleId) => {
   const rp = await RolePermission.findAll({
@@ -100,8 +105,11 @@ exports.getLeaderAssignmentContext = getLeaderAssignmentContext;
 
 // Revoke every outstanding refresh token for a user (password change/reset,
 // or refresh-token reuse detection). Forces re-login on all devices.
-const revokeAllRefreshTokens = async (userId) => {
-  await RefreshToken.update({ revoked: 1 }, { where: { user_id: userId, revoked: 0 } });
+const revokeAllRefreshTokens = async (userId, options = {}) => {
+  await RefreshToken.update(
+    { revoked: 1, revoked_at: new Date() },
+    { where: { user_id: userId, revoked: 0 }, ...(options.transaction && { transaction: options.transaction }) },
+  );
 };
 
 // ── Login ────────────────────────────────────────────────────
@@ -152,15 +160,30 @@ exports.login = async (email, password, ip, device) => {
   // Fix #7 — reset lockout counters on successful login
   await user.update({ failed_login_attempts: 0, locked_until: null, last_login_at: new Date() });
 
-  const accessToken  = generateAccessToken(user);
-  const rawRefresh   = generateRefreshToken(user.id);  // Fix #4
+  const { accessToken, rawRefresh } = await sequelize.transaction(async (transaction) => {
+    const session = await UserSession.create({
+      user_id: user.id,
+      ip_address: ip || null,
+      device: device || null,
+      login_at: new Date(),
+    }, { transaction });
+    const sessionId = Number(session.id);
+    const nextAccessToken = generateAccessToken(user, sessionId);
+    const nextRawRefresh = generateRefreshToken(user.id);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
 
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7);
+    // Fix #4 — store hashed refresh tokens and link rotations to this login session.
+    await RefreshToken.create({
+      user_id: user.id,
+      user_session_id: sessionId,
+      token: hashToken(nextRawRefresh),
+      expires_at: expiresAt,
+      revoked: 0,
+    }, { transaction });
 
-  // Fix #4 — store hashed refresh token, return raw token to client
-  await RefreshToken.create({ user_id: user.id, token: hashToken(rawRefresh), expires_at: expiresAt, revoked: 0 });
-  await UserSession.create({ user_id: user.id, ip_address: ip || null, device: device || null, login_at: new Date() });
+    return { accessToken: nextAccessToken, rawRefresh: nextRawRefresh };
+  });
   auditLog.log({ userId: user.id, action: "LOGIN", ipAddress: ip });
 
   const permissions = await getUserPermissions(user.role_id);
@@ -202,45 +225,75 @@ exports.refreshToken = async (token) => {
     throw new AppError("UNAUTHORIZED", 401, "Invalid or expired refresh token");
   }
 
-  // Fix #4 — look up the hashed version of the token (including revoked ones
-  // so reuse of an already-rotated token can be detected)
-  const stored = await RefreshToken.findOne({ where: { token: hashToken(token) } });
+  const result = await sequelize.transaction(async (transaction) => {
+    // Lock the token row so concurrent tabs cannot both rotate it as if each
+    // were the first request. A short grace period handles an already-racing
+    // request; replay after that window revokes remaining tokens for the user.
+    const stored = await RefreshToken.findOne({
+      where: { token: hashToken(token) },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!stored) throw new AppError("UNAUTHORIZED", 401, "Refresh token expired or revoked");
 
-  if (!stored || stored.revoked || new Date() > stored.expires_at) {
-    // Signature verified but the token is gone/expired/revoked → likely reuse
-    // of a rotated token (stolen cookie). Kill every session for this user.
-    await revokeAllRefreshTokens(decoded.userId);
-    throw new AppError("UNAUTHORIZED", 401, "Refresh token expired or revoked");
-  }
+    const sessionId = Number(stored.user_session_id) || null;
+    if (sessionId) {
+      const session = await UserSession.findOne({
+        where: { id: sessionId, user_id: decoded.userId, logout_at: null },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!session) throw new AppError("UNAUTHORIZED", 401, "Refresh session is closed");
+    }
 
-  const user = await User.findOne({
+    const now = new Date();
+    const expiry = new Date(stored.expires_at);
+    if (!Number.isFinite(expiry.getTime()) || now > expiry) {
+      if (!stored.revoked) await stored.update({ revoked: 1, revoked_at: now }, { transaction });
+      return { rejection: new AppError("UNAUTHORIZED", 401, "Refresh token expired or revoked") };
+    }
+
+    if (stored.revoked) {
+      const revokedAt = stored.revoked_at ? new Date(stored.revoked_at).getTime() : NaN;
+      const recentlyRotated = Number.isFinite(revokedAt) && now.getTime() - revokedAt <= REFRESH_TOKEN_REUSE_GRACE_MS;
+      if (!recentlyRotated) {
+        await revokeAllRefreshTokens(decoded.userId, { transaction });
+        return { rejection: new AppError("UNAUTHORIZED", 401, "Refresh token expired or revoked") };
+      }
+    } else {
+      await stored.update({ revoked: 1, revoked_at: now }, { transaction });
+    }
+
+    const user = await User.findOne({
       where: { id: decoded.userId, is_deleted: 0 },
       include: [
-        { model: Role,   as: "role" },
+        { model: Role, as: "role" },
         { model: Member, as: "member", attributes: ["cell_group_id", "group_id"], required: false },
       ],
+      transaction,
     });
+    if (!user || !user.is_active) throw new AppError("UNAUTHORIZED", 401, "Account deactivated");
 
-  if (!user || !user.is_active)
-    throw new AppError("UNAUTHORIZED", 401, "Account deactivated");
+    const newAccessToken = generateAccessToken(user, sessionId);
+    const newRawRefresh = generateRefreshToken(user.id);
+    const newExpiry = new Date();
+    newExpiry.setDate(newExpiry.getDate() + 7);
+    await RefreshToken.create({
+      user_id: user.id,
+      user_session_id: sessionId,
+      token: hashToken(newRawRefresh),
+      expires_at: newExpiry,
+      revoked: 0,
+      revoked_at: null,
+    }, { transaction });
 
-  await stored.update({ revoked: 1 });
-
-  const newAccessToken = generateAccessToken(user);
-  const newRawRefresh  = generateRefreshToken(user.id);  // Fix #4
-
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7);
-
-  // Fix #4 — store hashed version
-  await RefreshToken.create({ user_id: user.id, token: hashToken(newRawRefresh), expires_at: expiresAt, revoked: 0 });
-
-  return {
-    accessToken:  newAccessToken,
-    refreshToken: newRawRefresh,
-  };
+    return { accessToken: newAccessToken, refreshToken: newRawRefresh };
+  });
+  // Persist security revocations before reporting rejection. Throwing inside
+  // the managed transaction would roll those writes back.
+  if (result.rejection) throw result.rejection;
+  return result;
 };
-
 // ── Forgot Password ──────────────────────────────────────────
 exports.forgotPassword = async (email) => {
   const user = await User.findOne({ where: { email, is_deleted: 0 } });
@@ -307,11 +360,37 @@ exports.changePassword = async (userId, currentPassword, newPassword) => {
 };
 
 // ── Logout ───────────────────────────────────────────────────
-exports.logout = async (userId, token) => {
-  if (token) {
-    // Fix #4 — look up by hashed token
-    await RefreshToken.update({ revoked: 1 }, { where: { user_id: userId, token: hashToken(token) } });
-  }
+exports.logout = async (userId, token, userSessionId = null) => {
+  const now = new Date();
+  await sequelize.transaction(async (transaction) => {
+    let sessionId = Number(userSessionId) || null;
+    const tokenHash = token ? hashToken(token) : null;
+    if (tokenHash) {
+      // Legacy tokens may not yet carry a session link; use the row link when present.
+      const stored = await RefreshToken.findOne({
+        where: { user_id: userId, token: tokenHash },
+        attributes: ["user_session_id"],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!sessionId && stored?.user_session_id) sessionId = Number(stored.user_session_id);
+      await RefreshToken.update(
+        { revoked: 1, revoked_at: now },
+        { where: { user_id: userId, token: tokenHash, revoked: 0 }, transaction },
+      );
+    }
+
+    if (sessionId) {
+      await RefreshToken.update(
+        { revoked: 1, revoked_at: now },
+        { where: { user_id: userId, user_session_id: sessionId, revoked: 0 }, transaction },
+      );
+      await UserSession.update(
+        { logout_at: now },
+        { where: { id: sessionId, user_id: userId, logout_at: null }, transaction },
+      );
+    }
+  });
   auditLog.log({ userId, action: "LOGOUT" });
   return { message: "Logged out successfully." };
 };

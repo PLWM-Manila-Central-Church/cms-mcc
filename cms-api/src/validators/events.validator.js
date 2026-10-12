@@ -13,6 +13,7 @@ exports.createEventSchema = Joi.object({
   start_time:            Joi.string().max(20).allow(null, "").optional(),
   location:              Joi.string().max(300).allow(null, "").optional(),
   capacity:              Joi.number().integer().positive().allow(null).optional(),
+  total_parking_slots:   Joi.number().integer().min(0).allow(null).optional(),
   registration_deadline: Joi.date().iso().allow(null).optional(),
   status:                Joi.string().valid(...eventStatuses).optional(),
 });
@@ -26,6 +27,7 @@ exports.updateEventSchema = Joi.object({
   start_time:            Joi.string().max(20).allow(null, "").optional(),
   location:              Joi.string().max(300).allow(null, "").optional(),
   capacity:              Joi.number().integer().positive().allow(null).optional(),
+  total_parking_slots:   Joi.number().integer().min(0).allow(null).optional(),
   registration_deadline: Joi.date().iso().allow(null).optional(),
   status:                Joi.string().valid(...eventStatuses).optional(),
 }).min(1);
@@ -35,8 +37,15 @@ exports.updateEventStatusSchema = Joi.object({
 });
 
 exports.registerMemberSchema = Joi.object({
-  member_id: Joi.number().integer().positive().required(),
+  member_id: Joi.number().integer().positive().optional(),
+  seat_number: Joi.number().integer().positive().allow(null, "").optional(),
+  parking_slot: Joi.number().integer().positive().allow(null, "").optional(),
 });
+
+exports.updateRegistrationReservationSchema = Joi.object({
+  seat_number: Joi.number().integer().positive().allow(null, "").optional(),
+  parking_slot: Joi.number().integer().positive().allow(null, "").optional(),
+}).min(1);
 
 exports.bulkRegisterSchema = Joi.object({
   member_ids: Joi.array().items(Joi.number().integer().positive()).min(1).required(),

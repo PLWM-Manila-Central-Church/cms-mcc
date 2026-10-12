@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { LANGS, saveLangCode } from '../../utils/langUtils';
 import MonoIcon from '../../components/common/MonoIcon';
+import { uploadUrl } from '../../utils/uploadUrl';
 
 // ── Constants ─────────────────────────────────────────────────
 const FONTS = [
@@ -25,7 +26,6 @@ const RESOLUTIONS = [
   { value: 1.5,  label: '150%' },
 ];
 
-const API_IMG = (process.env.REACT_APP_API_URL || '').replace(/\/api$/, '');
 
 const getPrefs  = () => { try { return JSON.parse(localStorage.getItem('plwm_prefs') || '{}'); } catch { return {}; } };
 const savePrefs = (p) => {
@@ -77,7 +77,7 @@ export default function MySettingsPage() {
       .then(res => {
         const p = res.data.data;
         setProfile(p);
-        if (p?.profile_photo_url) setCurrentPhoto(`${API_IMG}/uploads${p.profile_photo_url}`);
+        if (p?.profile_photo_url) setCurrentPhoto(uploadUrl(p.profile_photo_url));
       })
       .catch(() => {}); // silently ignore if no member profile linked
   }, []);
@@ -127,7 +127,7 @@ export default function MySettingsPage() {
     try {
       const res = await axiosInstance.post('/member-portal/profile/photo', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       const newUrl = res.data.data?.profile_photo_url;
-      if (newUrl) setCurrentPhoto(`${API_IMG}/uploads${newUrl}`);
+      if (newUrl) setCurrentPhoto(uploadUrl(newUrl));
       showToast('Profile photo updated!');
     } catch (err) {
       setPhotoMsg(err.response?.data?.message || 'Upload failed.');

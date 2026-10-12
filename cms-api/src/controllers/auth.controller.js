@@ -117,7 +117,7 @@ exports.changePassword = async (req, res, next) => {
 exports.logout = async (req, res, next) => {
   try {
     const refreshToken = req.cookies?.refreshToken || req.body?.refresh_token;
-    const data = await authService.logout(req.user.userId, refreshToken);
+    const data = await authService.logout(req.user.userId, refreshToken, req.user.userSessionId);
 
     // Clear auth cookies
     res.clearCookie("accessToken",  { ...cookieOpts });

@@ -1,16 +1,22 @@
-import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import { LANGS, getLangCode, saveLangCode, loadGTScript, applyGTLang } from '../../utils/langUtils';
 import MonoIcon from '../../components/common/MonoIcon';
+import MemberNotificationCenter from '../../components/common/MemberNotificationCenter';
+import EventReservationFields from '../../components/events/EventReservationFields';
+import FinanceAttachments from '../../components/finance/FinanceAttachments';
 import { MemberMinistryApplications } from '../ministry/MinistryApplications';
+import MemberSubstituteRequests from '../../components/ministry/MemberSubstituteRequests';
+import { uploadUrl } from '../../utils/uploadUrl';
+import { apiErrorMessage } from '../../utils/apiErrorMessage';
 import useWindowWidth from '../../hooks/useWindowWidth';
 const MemberQrPanel = lazy(() => import('../../components/attendance/MemberQrPanel'));
 
 // ── Constants ─────────────────────────────────────────────────
 const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
-const API_IMG = (process.env.REACT_APP_API_URL || '').replace(/\/api$/, '');
 const PHP     = (n) => `₱${Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2})}`;
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'}) : '—';
 const fmtShort= (d) => d ? new Date(d).toLocaleDateString('en-PH',{month:'short',day:'numeric'}) : '—';
@@ -53,6 +59,21 @@ const TAB_ICON_NAMES = ['home', 'calendar', 'attendance', 'finance', 'ministry']
 const LBL = {
   en:{tabs:['Overview','Events','Attendance','Tithes','Ministries'],portal:'Member Portal',welcome:'Welcome',settings:'Settings',logout:'Logout',attendanceRate:'Attendance Rate',last2mo:'Last month',totalOfferings:'Total Tithes & Offerings',thisYear:'This year',memberSince:'Member Since',myProfile:'My Profile',editProfile:'Edit Profile',save:'Save',cancel:'Cancel',memberId:'Member ID',memberName:'Member Name',spiritual:'Spiritual Birthday',cellGroup:'Cell Group',address:'Address',joinDate:'Join Date',group:'Group',contact:'Contact No',birthdate:'Flesh Birthday',status:'Status',ministry:'Ministry Assignments',services:'Upcoming Services',confirm:'Confirm',confirmed:'Confirmed',noMinistry:'No ministry assignments.',noServices:'No upcoming services.',noEvents:'No upcoming events at this time.',registerNow:'Register Now',cancelReg:'Cancel Registration',closedReg:'Registration Closed',viewDetails:'View Details',myRegs:'My Registrations',regDeadline:'Deadline',of:'of',registered:'registered',attendanceHistory:'My Attendance History',noAttendance:'No attendance records found.',date:'Date',service:'Service',checkin:'Check-in',statusL:'Status',present:'Present',absent:'Absent',offeringsHistory:'My Tithes and Offering History',noOfferings:'No giving records.',type:'Type',amount:'Amount',totalYtd:'Total Year-to-Date',verse:'"God loves a cheerful giver." — 2 Corinthians 9:7',excellent:'Excellent',good:'Good',improve:'Needs Improvement',willAttend:'I will attend',wontAttend:'Cannot attend',undecided:'Undecided',rsvp:'RSVP',closePanel:'Close',serviceDetails:'Service Details',eventDetails:'Event Details',attending:'Attending',notAttending:'Not attending',capacity:'Capacity',responseBy:'Response by',yourRsvp:'Your RSVP'},
   tl:{tabs:['Pangkalahatang-tanaw','Mga Kaganapan','Pagdalo','Mga Handog','Mga Ministeryo'],portal:'Portal ng Miyembro',welcome:'Maligayang pagdating',settings:'Mga Setting',logout:'Mag-logout',attendanceRate:'Rate ng Pagdalo',last2mo:'Nakaraang buwan',totalOfferings:'Kabuuang Ikapu at Handog',thisYear:'Ngayong taon',memberSince:'Miyembro Mula',myProfile:'Aking Profile',editProfile:'I-edit',save:'I-save',cancel:'Kanselahin',memberId:'Member ID',memberName:'Pangalan',spiritual:'Espirituwal na Kaarawan',cellGroup:'Cell Group',address:'Tirahan',joinDate:'Petsa ng Pagsali',group:'Grupo',contact:'Numero',birthdate:'Kaarawan',status:'Katayuan',ministry:'Mga Takdang Gawain',services:'Mga Paparating na Serbisyo',confirm:'Kumpirmahin',confirmed:'Nakumpirma',noMinistry:'Walang mga takdang gawain.',noServices:'Walang paparating na serbisyo.',noEvents:'Walang mga kaganapan.',registerNow:'Mag-register Na',cancelReg:'Kanselahin',closedReg:'Sarado na',viewDetails:'Tingnan',myRegs:'Aking mga Pagpaparehistro',regDeadline:'Deadline',of:'sa',registered:'nakapag-register',attendanceHistory:'Kasaysayan ng Pagdalo',noAttendance:'Walang rekord ng pagdalo.',date:'Petsa',service:'Serbisyo',checkin:'Check-in',statusL:'Katayuan',present:'Naroroon',absent:'Wala',offeringsHistory:'Kasaysayan ng Ikapu at Handog',noOfferings:'Walang rekord ng pagbibigay.',type:'Uri',amount:'Halaga',totalYtd:'Kabuuang Ikapu at Handog sa Taon',verse:'"Ang nagbibigay nang masaya ay mahal ng Diyos." — 2 Mga Taga-Corinto 9:7',excellent:'Kahusayan',good:'Mabuti',improve:'Kailangan ng Pagpabuti',willAttend:'Darating ako',wontAttend:'Hindi ako makakarating',undecided:'Hindi pa sigurado',rsvp:'RSVP',closePanel:'Isara',serviceDetails:'Detalye ng Serbisyo',eventDetails:'Detalye ng Kaganapan',attending:'Darating',notAttending:'Hindi darating',capacity:'Kapasidad',responseBy:'Sagot bago ang',yourRsvp:'Iyong RSVP'},
+};
+
+const FINANCE_LBL = {
+  en: {
+    from: 'From date', to: 'To date', clear: 'Clear filters', previous: 'Previous', next: 'Next',
+    page: 'Page', of: 'of', record: 'record', records: 'records', loading: 'Loading giving records…',
+    retry: 'Retry', invalidRange: 'The start date must be on or before the end date.',
+    loadError: 'Giving records could not be loaded.',
+  },
+  tl: {
+    from: 'Mula sa petsa', to: 'Hanggang petsa', clear: 'I-clear ang filter', previous: 'Nakaraan', next: 'Susunod',
+    page: 'Pahina', of: 'sa', record: 'rekord', records: 'rekord', loading: 'Naglo-load ng mga rekord…',
+    retry: 'Subukan muli', invalidRange: 'Dapat kapareho o mas maaga ang petsa ng simula sa petsa ng wakas.',
+    loadError: 'Hindi ma-load ang mga rekord ng pagbibigay.',
+  },
 };
 
 // ── Shared utility components ─────────────────────────────────
@@ -99,7 +120,13 @@ function Backdrop({onClose,children,isMobile}) {
 }
 
 // ── Service RSVP Modal ─────────────────────────────────────────
-function ServiceModal({svc,onClose,onRespond,responding,c,f,t,isMobile}) {
+function ServiceModal({svc,onClose,onRespond,responding,error,onClearError,c,f,t,isMobile}) {
+  const [seatNumber, setSeatNumber] = useState('');
+  const [parkingSlot, setParkingSlot] = useState('');
+  useEffect(() => {
+    setSeatNumber(svc?.my_response?.seat_number || '');
+    setParkingSlot(svc?.my_response?.parking_slot || '');
+  }, [svc?.id, svc?.my_response?.seat_number, svc?.my_response?.parking_slot]);
   if(!svc) return null;
   const current = svc.my_response?.attendance_status;
   const rsvpMeta = current ? RSVP_META[current] : null;
@@ -126,6 +153,20 @@ function ServiceModal({svc,onClose,onRespond,responding,c,f,t,isMobile}) {
         )}
 
         <div style={{fontSize:f?.xs||11,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:10}}>{t?.rsvp||'RSVP'}</div>
+        {error&&<div role="alert" aria-live="polite" style={{background:'#fef2f2',border:'1px solid #fecaca',color:'#b91c1c',borderRadius:8,padding:'10px 12px',fontSize:12,marginBottom:12}}>{error}</div>}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,marginBottom:14}}>
+          <label style={{display:'flex',flexDirection:'column',gap:5,fontSize:12,fontWeight:600,color:'#475569'}}>
+            Preferred seat (1–{svc.capacity})
+            <input aria-label="Preferred seat number" type="number" min="1" max={svc.capacity} step="1" value={seatNumber}
+              onChange={e=>{setSeatNumber(e.target.value);onClearError?.();}} style={{padding:'9px 10px',border:'1px solid #cbd5e1',borderRadius:8,fontSize:14}} />
+          </label>
+          <label style={{display:'flex',flexDirection:'column',gap:5,fontSize:12,fontWeight:600,color:'#475569'}}>
+            Parking slot {Number(svc.total_parking_slots)>0?`(1–${svc.total_parking_slots})`:'(none configured)'}
+            <input aria-label="Parking slot number" type="number" min="1" max={svc.total_parking_slots} step="1" value={parkingSlot}
+              onChange={e=>{setParkingSlot(e.target.value);onClearError?.();}} disabled={Number(svc.total_parking_slots)<=0}
+              style={{padding:'9px 10px',border:'1px solid #cbd5e1',borderRadius:8,fontSize:14,background:Number(svc.total_parking_slots)<=0?'#f1f5f9':'#fff'}} />
+          </label>
+        </div>
         <div style={{display:'flex',flexDirection:'column',gap:10,paddingBottom:8}}>
           {[
             {status:'ATTENDING',    label:t?.willAttend||'I will attend',    icon:'check'},
@@ -135,7 +176,7 @@ function ServiceModal({svc,onClose,onRespond,responding,c,f,t,isMobile}) {
             const isActive = current===status;
             const meta = RSVP_META[status];
             return (
-              <button key={status} onClick={()=>onRespond(status)} disabled={responding}
+              <button key={status} onClick={()=>onRespond(status,{seat_number:seatNumber,parking_slot:parkingSlot})} disabled={responding}
                 style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderRadius:10,border:`2px solid ${isActive?meta.color:'#e2e8f0'}`,background:isActive?meta.bg:'transparent',cursor:responding?'not-allowed':'pointer',fontFamily:'inherit',opacity:responding?0.7:1,textAlign:'left',transition:'all 0.15s',minHeight:52}}>
                 <span style={{width:32,height:32,borderRadius:'50%',background:isActive?meta.color:'#f1f5f9',color:isActive?'#fff':meta.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,flexShrink:0}}><MonoIcon name={icon} size={15} /></span>
                 <span style={{fontSize:f?.base||14,fontWeight:isActive?700:500,color:isActive?meta.color:'#374151'}}>{label}</span>
@@ -150,8 +191,21 @@ function ServiceModal({svc,onClose,onRespond,responding,c,f,t,isMobile}) {
 }
 
 // ── Event Details Modal ────────────────────────────────────────
-function EventModal({evt,onClose,onRegister,onCancel,evtLoading,c,f,t,isMobile}) {
+function EventModal({evt,onClose,onRegister,onUpdateReservation,onCancel,evtLoading,eventError,onClearError,c,f,t,isMobile}) {
+  const [seatNumber, setSeatNumber] = useState('');
+  const [parkingSlot, setParkingSlot] = useState('');
+  useEffect(() => {
+    setSeatNumber(evt?.my_seat_number ?? '');
+    setParkingSlot(evt?.my_parking_slot ?? '');
+    onClearError?.();
+  }, [evt?.id, evt?.my_seat_number, evt?.my_parking_slot, onClearError]);
   if(!evt) return null;
+  const reservation = {
+    seat_number: seatNumber === '' ? null : Number(seatNumber),
+    parking_slot: parkingSlot === '' ? null : Number(parkingSlot),
+  };
+  const reservationChanged = String(evt.my_seat_number ?? '') !== String(seatNumber)
+    || String(evt.my_parking_slot ?? '') !== String(parkingSlot);
   return (
     <Backdrop onClose={onClose} isMobile={isMobile}>
       <div style={{padding:'20px 20px 8px'}}>
@@ -166,6 +220,7 @@ function EventModal({evt,onClose,onRegister,onCancel,evtLoading,c,f,t,isMobile})
           <div style={{fontSize:f?.sm||13,opacity:0.85,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="calendar" size={14} /> {fmtDate(evt.start_date)}{evt.end_date&&evt.end_date!==evt.start_date?` – ${fmtDate(evt.end_date)}`:''}</div>
           {evt.location&&<div style={{fontSize:f?.sm||13,opacity:0.85,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="location" size={14} /> {evt.location}</div>}
           <div style={{fontSize:f?.sm||13,opacity:0.85,display:'flex',alignItems:'center',gap:6}}><MonoIcon name="members" size={14} /> {evt.registration_count} {t?.registered||'registered'}{evt.capacity?` ${t?.of||'of'} ${evt.capacity}`:''}</div>
+          {Number(evt.total_parking_slots)>0&&<div style={{fontSize:f?.sm||13,opacity:0.85,display:'flex',alignItems:'center',gap:6}}>Parking reserved {evt.parking_reserved_count||0} / {evt.total_parking_slots}</div>}
           {evt.registration_deadline&&<div style={{fontSize:f?.sm||13,opacity:0.75,marginTop:4}}>{t?.regDeadline||'Deadline'}: {fmtDate(evt.registration_deadline)}</div>}
         </div>
 
@@ -175,17 +230,47 @@ function EventModal({evt,onClose,onRegister,onCancel,evtLoading,c,f,t,isMobile})
           </div>
         )}
 
+        {eventError&&<div role="alert" aria-live="polite" style={{background:'#fef2f2',border:'1px solid #fecaca',color:'#b91c1c',borderRadius:8,padding:'10px 12px',fontSize:12,marginBottom:12}}>{eventError}</div>}
+
         <div style={{display:'flex',flexDirection:'column',gap:10,paddingBottom:8}}>
           {evt.is_registered?(
-            <button onClick={()=>onCancel(evt.id)} disabled={evtLoading===evt.id||!evt.can_cancel}
-              style={{padding:'14px',borderRadius:10,fontSize:f?.base||14,fontWeight:700,cursor:evt.can_cancel?'pointer':'not-allowed',background:'none',border:'2px solid #dc2626',color:'#dc2626',fontFamily:'inherit',opacity:!evt.can_cancel?0.5:1,minHeight:52}}>
-              {evtLoading===evt.id?'…':t?.cancelReg||'Cancel Registration'}
-            </button>
+            <>
+              <EventReservationFields
+                capacity={evt.capacity}
+                totalParkingSlots={evt.total_parking_slots}
+                seatNumber={seatNumber}
+                parkingSlot={parkingSlot}
+                onSeatNumberChange={(value)=>{setSeatNumber(value);onClearError?.();}}
+                onParkingSlotChange={(value)=>{setParkingSlot(value);onClearError?.();}}
+                disabled={evtLoading===evt.id||!evt.can_update_reservation}
+              />
+              {evt.can_update_reservation&&reservationChanged&&(
+                <button type="button" onClick={()=>onUpdateReservation(evt.id,reservation)} disabled={evtLoading===evt.id}
+                  style={{padding:'12px 14px',borderRadius:10,fontSize:f?.base||14,fontWeight:700,cursor:evtLoading===evt.id?'not-allowed':'pointer',background:'#eff6ff',border:'1px solid #bfdbfe',color:'#1d4ed8',fontFamily:'inherit',minHeight:48}}>
+                  {evtLoading===evt.id?'Saving…':'Update reservation'}
+                </button>
+              )}
+              <button onClick={()=>onCancel(evt.id)} disabled={evtLoading===evt.id||!evt.can_cancel}
+                style={{padding:'14px',borderRadius:10,fontSize:f?.base||14,fontWeight:700,cursor:evt.can_cancel?'pointer':'not-allowed',background:'none',border:'2px solid #dc2626',color:'#dc2626',fontFamily:'inherit',opacity:!evt.can_cancel?0.5:1,minHeight:52}}>
+                {evtLoading===evt.id?'…':t?.cancelReg||'Cancel Registration'}
+              </button>
+            </>
           ):(
-            <button onClick={()=>onRegister(evt.id)} disabled={evtLoading===evt.id||!evt.can_register}
-              style={{padding:'14px',borderRadius:10,fontSize:f?.base||14,fontWeight:700,cursor:evt.can_register?'pointer':'not-allowed',background:evt.can_register?'#0f172a':'#e2e8f0',color:evt.can_register?'#fff':'#94a3b8',border:'none',fontFamily:'inherit',minHeight:52}}>
-              {evtLoading===evt.id?'…':evt.deadline_passed?t?.closedReg||'Registration Closed':t?.registerNow||'Register Now'}
-            </button>
+            <>
+              <EventReservationFields
+                capacity={evt.capacity}
+                totalParkingSlots={evt.total_parking_slots}
+                seatNumber={seatNumber}
+                parkingSlot={parkingSlot}
+                onSeatNumberChange={(value)=>{setSeatNumber(value);onClearError?.();}}
+                onParkingSlotChange={(value)=>{setParkingSlot(value);onClearError?.();}}
+                disabled={evtLoading===evt.id||!evt.can_register}
+              />
+              <button onClick={()=>onRegister(evt.id,reservation)} disabled={evtLoading===evt.id||!evt.can_register}
+                style={{padding:'14px',borderRadius:10,fontSize:f?.base||14,fontWeight:700,cursor:evt.can_register?'pointer':'not-allowed',background:evt.can_register?'#0f172a':'#e2e8f0',color:evt.can_register?'#fff':'#94a3b8',border:'none',fontFamily:'inherit',minHeight:52}}>
+                {evtLoading===evt.id?'…':evt.deadline_passed?t?.closedReg||'Registration Closed':t?.registerNow||'Register Now'}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -197,7 +282,7 @@ function EventModal({evt,onClose,onRegister,onCancel,evtLoading,c,f,t,isMobile})
 // TAB COMPONENTS — defined OUTSIDE MemberPortal to prevent focus loss
 // ══════════════════════════════════════════════════════════════
 
-function OverviewTab({profile,attendance,finance,editing,editForm,setEditForm,editSaving,editError,startEdit,saveEdit,setEditing,c,f,t,avatarUrl,initials,BRAND,PHP,fmtDate,isMobile}) {
+function OverviewTab({profile,attendance,finance,editing,editForm,setEditForm,editSaving,editError,setEditError,startEdit,saveEdit,setEditing,c,f,t,avatarUrl,initials,BRAND,PHP,fmtDate,isMobile}) {
   const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
   const bdg  = (bg,color,border)=>({padding:'3px 10px',borderRadius:20,fontSize:f.xs,fontWeight:700,background:bg,color,border});
 
@@ -251,12 +336,12 @@ function OverviewTab({profile,attendance,finance,editing,editForm,setEditForm,ed
           {!editing
             ? <button onClick={startEdit} style={{background:c.accentL,color:c.accentT,border:`1px solid ${c.border}`,borderRadius:8,padding:'8px 18px',fontSize:f.sm,fontWeight:600,cursor:'pointer',fontFamily:'inherit',width:isMobile?'100%':'auto',minHeight:40}}>{t.editProfile}</button>
             : <div style={{display:'flex',gap:8,width:isMobile?'100%':'auto'}}>
-                <button onClick={()=>setEditing(false)} style={{background:c.surfaceAlt,color:c.t2,border:`1px solid ${c.border}`,borderRadius:8,padding:'8px 14px',fontSize:f.sm,fontWeight:600,cursor:'pointer',fontFamily:'inherit',flex:isMobile?1:'none',minHeight:40}}>{t.cancel}</button>
+                <button onClick={()=>{setEditError('');setEditing(false);}} style={{background:c.surfaceAlt,color:c.t2,border:`1px solid ${c.border}`,borderRadius:8,padding:'8px 14px',fontSize:f.sm,fontWeight:600,cursor:'pointer',fontFamily:'inherit',flex:isMobile?1:'none',minHeight:40}}>{t.cancel}</button>
                 <button onClick={saveEdit} disabled={editSaving} style={{background:BRAND,color:'#fff',border:'none',borderRadius:8,padding:'8px 18px',fontSize:f.sm,fontWeight:600,cursor:'pointer',fontFamily:'inherit',opacity:editSaving?0.7:1,flex:isMobile?2:'none',minHeight:40}}>{editSaving?'…':t.save}</button>
               </div>}
         </div>
 
-        {editError&&<div style={{background:c.dangerL,color:c.danger,border:`1px solid ${c.dangerB}`,borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:f.sm}}>{editError}</div>}
+        {editing&&editError&&<div style={{background:c.dangerL,color:c.danger,border:`1px solid ${c.dangerB}`,borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:f.sm}}>{editError}</div>}
 
         {!editing?(
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:isMobile?'0':'0 40px'}}>
@@ -426,7 +511,7 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
                     <>
                       <button onClick={()=>doRegister(e.id)} disabled={evtL===e.id||!e.can_register}
                         style={{flex:2,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:700,cursor:e.can_register?'pointer':'not-allowed',background:e.can_register?c.t1:c.surfaceAlt,color:e.can_register?'#fff':c.t3,border:'none',fontFamily:'inherit',minHeight:40}}>
-                        {evtL===e.id?'…':e.deadline_passed?t.closedReg:t.registerNow}
+                        {evtL===e.id?'…':e.deadline_passed?t.closedReg:(Number(e.capacity)>0||Number(e.total_parking_slots)>0)?'Choose seat/parking':t.registerNow}
                       </button>
                       <button onClick={()=>onEventDetailsClick(e)}
                         style={{flex:1,padding:'8px',borderRadius:8,fontSize:f.xs,fontWeight:600,background:c.surfaceAlt,border:`1px solid ${c.border}`,color:c.t2,cursor:'pointer',fontFamily:'inherit',minHeight:40}}>
@@ -535,7 +620,7 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
                       <>
                         <button onClick={()=>doRegister(e.id)} disabled={evtL===e.id||!e.can_register}
                           style={{padding:'8px 20px',borderRadius:8,fontSize:f.sm,fontWeight:700,cursor:e.can_register?'pointer':'not-allowed',background:e.can_register?c.t1:c.surfaceAlt,color:e.can_register?'#fff':c.t3,border:'none',fontFamily:'inherit'}}>
-                          {evtL===e.id?'…':e.deadline_passed?t.closedReg:t.registerNow}
+                          {evtL===e.id?'…':e.deadline_passed?t.closedReg:(Number(e.capacity)>0||Number(e.total_parking_slots)>0)?'Choose seat/parking':t.registerNow}
                         </button>
                         <button onClick={()=>onEventDetailsClick(e)}
                           style={{padding:'7px 14px',borderRadius:8,fontSize:f.sm,fontWeight:600,background:c.surfaceAlt,border:`1px solid ${c.border}`,color:c.t2,cursor:'pointer',fontFamily:'inherit'}}>
@@ -717,16 +802,70 @@ function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile,language}) {
   );
 }
 
-function FinanceTab({finance,c,f,t,fmtDate,PHP,isMobile}) {
+function FinanceTab({finance,initialError,c,f,t,fmtDate,PHP,isMobile,language}) {
   const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
+  const copy = FINANCE_LBL[language] || FINANCE_LBL.en;
+  const attachmentLabels = language === 'tl'
+    ? { title: 'Mga resibo', download: 'I-download', empty: 'Walang resibo' }
+    : { title: 'Receipts', download: 'Download', empty: 'No receipts' };
+  const [financeView, setFinanceView] = useState(finance);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [page, setPage] = useState(1);
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [requestError, setRequestError] = useState(initialError || '');
+  const [retryCount, setRetryCount] = useState(0);
+  const queryKey = `${page}|${dateFrom}|${dateTo}|${retryCount}`;
+  const lastQueryKey = useRef('1|||0');
+  useEffect(() => {
+    setFinanceView(finance);
+    setRequestError(initialError || '');
+  }, [finance, initialError]);
+
+  useEffect(() => {
+    // The parent fetch supplies the initial page. Track the exact request key so
+    // StrictMode replay is skipped but returning from page 2 still reloads page 1.
+    if (queryKey === lastQueryKey.current) return undefined;
+    lastQueryKey.current = queryKey;
+
+    const controller = new AbortController();
+    const loadFilteredPage = async () => {
+      if (dateFrom && dateTo && dateFrom > dateTo) {
+        setRequestLoading(false);
+        setRequestError(copy.invalidRange);
+        setFinanceView((current) => current ? { ...current, records: [], total: 0, total_pages: 1 } : current);
+        return;
+      }
+
+      setRequestLoading(true);
+      setRequestError('');
+      const params = { page, limit: 20 };
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+
+      try {
+        const response = await axiosInstance.get('/member-portal/finance', { params, signal: controller.signal });
+        setFinanceView(response.data.data);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setRequestError(apiErrorMessage(error, copy.loadError));
+        setFinanceView((current) => current ? { ...current, records: [], total: 0, total_pages: 1 } : current);
+      } finally {
+        if (!controller.signal.aborted) setRequestLoading(false);
+      }
+    };
+
+    loadFilteredPage();
+    return () => controller.abort();
+  }, [queryKey, page, dateFrom, dateTo, retryCount, copy.invalidRange, copy.loadError]);
 
   return (
     <div style={{...card,overflow:'hidden'}}>
       {/* YTD hero card */}
-      {finance&&(
+      {financeView&&(
         <div style={{padding:isMobile?'16px':'20px 22px',background:'linear-gradient(135deg,#003d70,#005599)',color:'#fff',borderBottom:`1px solid ${c.border}`}}>
           <div style={{fontSize:f.xs,opacity:0.8,fontWeight:600,marginBottom:6,textTransform:'uppercase',letterSpacing:'0.5px'}}>{t.totalYtd}</div>
-          <div style={{fontSize:isMobile?28:f.stat,fontWeight:900,letterSpacing:'-1px',lineHeight:1}}>{PHP(finance.ytdTotal)}</div>
+          <div style={{fontSize:isMobile?28:f.stat,fontWeight:900,letterSpacing:'-1px',lineHeight:1}}>{PHP(financeView.ytdTotal)}</div>
           <div style={{fontSize:f.xs,opacity:0.7,marginTop:6}}>{t.thisYear}</div>
           <div style={{fontSize:f.xs,opacity:0.7,marginTop:2,fontStyle:'italic'}}>{t.verse}</div>
         </div>
@@ -734,18 +873,57 @@ function FinanceTab({finance,c,f,t,fmtDate,PHP,isMobile}) {
 
       <div style={{padding:'14px 18px',borderBottom:`1px solid ${c.borderL}`,fontSize:f.lg,fontWeight:700,color:c.t1}}>{t.offeringsHistory}</div>
 
+      <div style={{padding:'14px 18px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'end',gap:10,flexWrap:'wrap'}}>
+        <label style={{display:'grid',gap:5,fontSize:f.xs,color:c.t2,fontWeight:600}}>
+          {copy.from}
+          <input aria-label={copy.from} type="date" value={dateFrom} max={dateTo || undefined}
+            onChange={(event) => { setDateFrom(event.target.value); setPage(1); }}
+            style={{minHeight:38,padding:'7px 10px',border:`1px solid ${c.border}`,borderRadius:8,background:c.surface,color:c.t1,font: 'inherit'}} />
+        </label>
+        <label style={{display:'grid',gap:5,fontSize:f.xs,color:c.t2,fontWeight:600}}>
+          {copy.to}
+          <input aria-label={copy.to} type="date" value={dateTo} min={dateFrom || undefined}
+            onChange={(event) => { setDateTo(event.target.value); setPage(1); }}
+            style={{minHeight:38,padding:'7px 10px',border:`1px solid ${c.border}`,borderRadius:8,background:c.surface,color:c.t1,font: 'inherit'}} />
+        </label>
+        {(dateFrom || dateTo) && (
+          <button type="button" onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); setFinanceView(finance); setRetryCount((count) => count + 1); }}
+            style={{minHeight:38,padding:'8px 12px',border:`1px solid ${c.border}`,borderRadius:8,background:c.surfaceAlt,color:c.t2,fontWeight:600,cursor:'pointer'}}>
+            {copy.clear}
+          </button>
+        )}
+        <div style={{marginLeft:'auto',fontSize:f.xs,color:c.t3}} aria-live="polite">
+          {financeView?.total ?? 0} {(financeView?.total ?? 0) === 1 ? copy.record : copy.records}
+        </div>
+      </div>
+
+      {requestError && (
+        <div role="alert" style={{margin:'12px 18px',padding:'10px 12px',borderRadius:8,background:c.dangerL,color:c.danger,fontSize:f.sm,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
+          <span>{requestError}</span>
+          <button type="button" onClick={() => setRetryCount((count) => count + 1)} disabled={requestLoading}
+            style={{border:0,background:'transparent',color:c.danger,fontWeight:700,cursor:'pointer'}}>{copy.retry}</button>
+        </div>
+      )}
+
       {isMobile?(
         // Card list on mobile
-        <div style={{padding:'8px 0'}}>
-          {(!finance?.records||finance.records.length===0)
+        <div style={{padding:'8px 0'}} aria-live="polite">
+          {requestLoading
+            ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{copy.loading}</div>
+            : (!financeView?.records||financeView.records.length===0)
             ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{t.noOfferings}</div>
-            : finance.records.map(r=>{
+            : financeView.records.map(r=>{
               const cs=catStyle(r.category?.name,c.dk);
               return (
                 <div key={r.id} style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
                   <div style={{flex:1,minWidth:0}}>
                     <span style={{padding:'3px 10px',borderRadius:20,fontSize:f.xs,fontWeight:600,...cs}}>{r.category?.name||'Offering'}</span>
                     <div style={{fontSize:f.xs,color:c.t3,marginTop:4}}>{fmtDate(r.transaction_date)}</div>
+                  {r.attachments?.length > 0 && (
+                    <div style={{marginTop:8}}>
+                      <FinanceAttachments attachments={r.attachments} labels={attachmentLabels} compact />
+                    </div>
+                  )}
                   </div>
                   <div style={{fontSize:f.md,fontWeight:800,color:c.t1,flexShrink:0}}>{PHP(r.amount)}</div>
                 </div>
@@ -754,19 +932,21 @@ function FinanceTab({finance,c,f,t,fmtDate,PHP,isMobile}) {
         </div>
       ):(
         // Table on desktop
-        <div style={{overflowX:'auto'}}>
+        <div style={{overflowX:'auto'}} aria-live="polite">
           <table style={{width:'100%',borderCollapse:'collapse'}}>
             <thead>
               <tr style={{background:c.surfaceAlt}}>
-                {[t.date,t.type,t.amount].map(h=>(
+                {[t.date,t.type,t.amount,attachmentLabels.title].map(h=>(
                   <th key={h} style={{padding:'11px 20px',textAlign:'left',fontSize:f.xs,fontWeight:700,color:c.t3,textTransform:'uppercase',letterSpacing:'0.5px',borderBottom:`1px solid ${c.border}`}}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {(!finance?.records||finance.records.length===0)
-                ? <tr><td colSpan={3} style={{padding:'40px',textAlign:'center',color:c.t3}}>{t.noOfferings}</td></tr>
-                : finance.records.map((r,i)=>{
+              {requestLoading
+                ? <tr><td colSpan={4} style={{padding:'40px',textAlign:'center',color:c.t3}}>{copy.loading}</td></tr>
+                : (!financeView?.records||financeView.records.length===0)
+                ? <tr><td colSpan={4} style={{padding:'40px',textAlign:'center',color:c.t3}}>{t.noOfferings}</td></tr>
+                : financeView.records.map((r,i)=>{
                   const cs=catStyle(r.category?.name,c.dk);
                   return (
                     <tr key={r.id} style={{background:i%2===0?c.surface:c.surfaceAlt,borderBottom:`1px solid ${c.borderL}`}}>
@@ -775,11 +955,24 @@ function FinanceTab({finance,c,f,t,fmtDate,PHP,isMobile}) {
                         <span style={{padding:'4px 12px',borderRadius:20,fontSize:f.sm,fontWeight:600,...cs}}>{r.category?.name||'Offering'}</span>
                       </td>
                       <td style={{padding:'13px 20px',fontSize:f.base,color:c.t1,fontWeight:600}}>{PHP(r.amount)}</td>
+                      <td style={{padding:'13px 20px'}}>
+                        <FinanceAttachments attachments={r.attachments || []} labels={attachmentLabels} compact />
+                      </td>
                     </tr>
                   );
                 })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {financeView?.total_pages > 1 && (
+        <div style={{padding:'12px 18px',borderTop:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',justifyContent:'center',gap:14}}>
+          <button type="button" disabled={requestLoading || page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}
+            style={{minHeight:36,padding:'6px 12px',border:`1px solid ${c.border}`,borderRadius:8,background:c.surface,color:c.t2,cursor:requestLoading || page <= 1?'not-allowed':'pointer'}}>{copy.previous}</button>
+          <span style={{fontSize:f.xs,color:c.t3}}>{copy.page} {page} {copy.of} {financeView.total_pages}</span>
+          <button type="button" disabled={requestLoading || page >= financeView.total_pages} onClick={() => setPage((current) => Math.min(financeView.total_pages, current + 1))}
+            style={{minHeight:36,padding:'6px 12px',border:`1px solid ${c.border}`,borderRadius:8,background:c.surface,color:c.t2,cursor:requestLoading || page >= financeView.total_pages?'not-allowed':'pointer'}}>{copy.next}</button>
         </div>
       )}
     </div>
@@ -791,6 +984,7 @@ function FinanceTab({finance,c,f,t,fmtDate,PHP,isMobile}) {
 // ══════════════════════════════════════════════════════════════
 export default function MemberPortal() {
   const { user, logout } = useAuth();
+  const { confirm } = useConfirmation();
   const navigate = useNavigate();
   const location = useLocation();
   const width    = useWindowWidth();
@@ -858,16 +1052,18 @@ export default function MemberPortal() {
     stat: Math.round(fontSize * 1.9),
   };
 
-  const [tab, setTab]           = useState(() => { const p = new URLSearchParams(location.search); if (p.get('tab') === 'events') return 1; if (p.get('tab') === 'services') return 1; return 0; });
+  const [tab, setTab]           = useState(() => { const p = new URLSearchParams(location.search); if (p.get('tab') === 'events') return 1; if (p.get('tab') === 'services') return 1; if (p.get('tab') === 'tithes' || p.get('tab') === 'giving') return 3; return 0; });
   const [profile, setProfile]   = useState(null);
   const [attendance, setAtt]    = useState(null);
   const [finance, setFin]       = useState(null);
+  const [financeError, setFinanceError] = useState('');
   const [events, setEvents]     = useState([]);
   const [assigns, setAssigns]   = useState([]);
   const [services, setSvcs]     = useState([]);
   const [invites, setInvites]   = useState([]);
   const [inviteResponding, setInviteResponding] = useState(null);
   const [loading, setLoading]   = useState(true);
+  const loadPromiseRef = useRef(null);
   const [toast, setToast]       = useState(null);
 
   const [editing,   setEditing]   = useState(false);
@@ -881,37 +1077,52 @@ export default function MemberPortal() {
   const [serviceModal, setServiceModal] = useState(null);
   const [svcLoading,   setSvcLoading]   = useState(false);
   const [svcResponding,setSvcResponding]= useState(false);
+  const [serviceResponseError, setServiceResponseError] = useState('');
   const [eventModal,   setEventModal]   = useState(null);
+  const [eventRegistrationError, setEventRegistrationError] = useState('');
 
   const showToast = (msg, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),3500); };
+  const clearEventRegistrationError = useCallback(() => setEventRegistrationError(''), []);
 
   const initials  = profile ? `${profile.first_name?.[0]||''}${profile.last_name?.[0]||''}`.toUpperCase() : '?';
   const greeting  = profile ? `${profile.gender==='Female'?'Sister':'Brother'} ${profile.first_name}` : user?.email?.split('@')[0]||'Friend';
-  const avatarUrl = profile?.profile_photo_url ? `${API_IMG}/uploads${profile.profile_photo_url}` : null;
+  const avatarUrl = uploadUrl(profile?.profile_photo_url) || null;
 
   const load = useCallback(async () => {
-    setLoading(true);
-    // Use allSettled so a single failed endpoint (e.g. no member profile linked)
-    // does NOT crash the whole portal — each request resolves independently.
-    const [pR,aR,fR,eR,mR,sR,iR] = await Promise.allSettled([
-      axiosInstance.get('/member-portal/profile'),
-      axiosInstance.get('/member-portal/attendance'),
-      axiosInstance.get('/member-portal/finance'),
-      axiosInstance.get('/member-portal/events'),
-      axiosInstance.get('/member-portal/ministry-assignments'),
-      axiosInstance.get('/member-portal/services'),
-      axiosInstance.get('/member-portal/ministry-invites'),
-    ]);
-    if (pR.status === 'fulfilled') setProfile(pR.value.data.data);
-    if (aR.status === 'fulfilled') setAtt(aR.value.data.data);
-    if (fR.status === 'fulfilled') setFin(fR.value.data.data);
-    if (eR.status === 'fulfilled') setEvents(eR.value.data.data);
-    if (mR.status === 'fulfilled') setAssigns(mR.value.data.data);
-    if (sR.status === 'fulfilled') setSvcs(sR.value.data.data);
-    if (iR.status === 'fulfilled') setInvites(iR.value.data.data);
-    // Only show the error toast if profile specifically failed (most critical)
-    if (pR.status === 'rejected') showToast('Member profile not linked to this account. Contact your administrator.','error');
-    setLoading(false);
+    if (loadPromiseRef.current) return loadPromiseRef.current;
+
+    const request = (async () => {
+      setLoading(true);
+      // Use allSettled so a single failed endpoint (e.g. no member profile linked)
+      // does NOT crash the whole portal — each request resolves independently.
+      const [pR,aR,fR,eR,mR,sR,iR] = await Promise.allSettled([
+        axiosInstance.get('/member-portal/profile'),
+        axiosInstance.get('/member-portal/attendance'),
+        axiosInstance.get('/member-portal/finance?page=1&limit=20'),
+        axiosInstance.get('/member-portal/events'),
+        axiosInstance.get('/member-portal/ministry-assignments'),
+        axiosInstance.get('/member-portal/services'),
+        axiosInstance.get('/member-portal/ministry-invites'),
+      ]);
+      if (pR.status === 'fulfilled') setProfile(pR.value.data.data);
+      if (aR.status === 'fulfilled') setAtt(aR.value.data.data);
+      if (fR.status === 'fulfilled') { setFin(fR.value.data.data); setFinanceError(''); }
+      else { setFin(null); setFinanceError(apiErrorMessage(fR.reason, 'Giving records could not be loaded.')); }
+      if (eR.status === 'fulfilled') setEvents(eR.value.data.data);
+      if (mR.status === 'fulfilled') setAssigns(mR.value.data.data);
+      if (sR.status === 'fulfilled') setSvcs(sR.value.data.data);
+      if (iR.status === 'fulfilled') setInvites(iR.value.data.data);
+      // Only show the error toast if profile specifically failed (most critical)
+      if (pR.status === 'rejected') showToast('Member profile not linked to this account. Contact your administrator.','error');
+      setLoading(false);
+    })();
+
+    loadPromiseRef.current = request;
+    try {
+      await request;
+    } finally {
+      if (loadPromiseRef.current === request) loadPromiseRef.current = null;
+    }
   },[]); // eslint-disable-line
 
   useEffect(()=>{load();},[load]);
@@ -921,6 +1132,7 @@ export default function MemberPortal() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('tab') === 'events' || params.get('tab') === 'services') setTab(1);
+    if (params.get('tab') === 'tithes' || params.get('tab') === 'giving') setTab(3);
   }, [location.search]);
 
   const startEdit = useCallback(()=>{
@@ -933,32 +1145,66 @@ export default function MemberPortal() {
     try {
       const res = await axiosInstance.put('/member-portal/profile', editForm);
       setProfile(res.data.data); setEditing(false); showToast('Profile updated!');
-    } catch(err) { setEE(err.response?.data?.message||'Failed to save.'); }
+    } catch(err) { setEE(apiErrorMessage(err, 'Failed to save.')); }
     finally { setES(false); }
   },[editForm]);
 
-  const doRegister = useCallback(async (eid)=>{
+  const doRegister = useCallback(async (eid,reservation=null)=>{
+    const target = events.find((event) => Number(event.id) === Number(eid));
+    if (!reservation && target && (Number(target.capacity)>0 || Number(target.total_parking_slots)>0)) {
+      setEventRegistrationError('');
+      setEventModal(target);
+      return;
+    }
     setEvtL(eid);
+    setEventRegistrationError('');
     try {
-      await axiosInstance.post(`/member-portal/events/${eid}/register`);
+      await axiosInstance.post(`/member-portal/events/${eid}/register`, reservation || {});
       showToast('Registered!');
-      const r=await axiosInstance.get('/member-portal/events'); setEvents(r.data.data);
-      setEventModal(prev=>prev?.id===eid?{...prev,is_registered:true,can_cancel:true,can_register:false}:prev);
-    } catch(err) { showToast(err.response?.data?.message||'Failed.','error'); }
+      const r=await axiosInstance.get('/member-portal/events');
+      const nextEvents=r.data.data;
+      setEvents(nextEvents);
+      const updated=nextEvents.find((event)=>Number(event.id)===Number(eid));
+      setEventModal(prev=>prev?.id===eid?(updated||{...prev,is_registered:true,can_cancel:true,can_register:false}):prev);
+    } catch(err) { const message=apiErrorMessage(err, 'Failed.'); setEventRegistrationError(message); showToast(message,'error'); }
+    finally { setEvtL(null); }
+  },[events]);
+
+  const doUpdateEventReservation = useCallback(async (eid,reservation)=>{
+    setEvtL(eid);
+    setEventRegistrationError('');
+    try {
+      await axiosInstance.patch(`/member-portal/events/${eid}/reservation`, reservation);
+      const r=await axiosInstance.get('/member-portal/events');
+      const nextEvents=r.data.data;
+      setEvents(nextEvents);
+      const updated=nextEvents.find((event)=>Number(event.id)===Number(eid));
+      setEventModal(prev=>prev?.id===eid?(updated||prev):prev);
+      showToast('Seat and parking reservation updated!');
+    } catch(err) { const message=apiErrorMessage(err, 'Failed to update reservation.'); setEventRegistrationError(message); showToast(message,'error'); }
     finally { setEvtL(null); }
   },[]);
 
   const doCancel = useCallback(async (eid)=>{
-    if(!window.confirm('Cancel your registration?')) return;
+    if(!(await confirm({
+      title: 'Cancel event registration?',
+      message: 'Your registration for this event will be cancelled.',
+      confirmLabel: 'Cancel registration',
+      tone: 'warning',
+    }))) return;
     setEvtL(eid);
+    setEventRegistrationError('');
     try {
       await axiosInstance.delete(`/member-portal/events/${eid}/register`);
       showToast('Registration cancelled.');
-      const r=await axiosInstance.get('/member-portal/events'); setEvents(r.data.data);
-      setEventModal(prev=>prev?.id===eid?{...prev,is_registered:false,can_cancel:false,can_register:!prev.deadline_passed}:prev);
-    } catch(err) { showToast(err.response?.data?.message||'Failed.','error'); }
+      const r=await axiosInstance.get('/member-portal/events');
+      const nextEvents=r.data.data;
+      setEvents(nextEvents);
+      const updated=nextEvents.find((event)=>Number(event.id)===Number(eid));
+      setEventModal(prev=>prev?.id===eid?(updated||{...prev,is_registered:false,can_cancel:false,can_register:!prev.deadline_passed,my_seat_number:null,my_parking_slot:null}):prev);
+    } catch(err) { showToast(apiErrorMessage(err, 'Failed.'),'error'); }
     finally { setEvtL(null); }
-  },[]);
+  },[confirm]);
 
   const doConfirm = useCallback(async (aid)=>{
     setConfL(aid);
@@ -966,7 +1212,7 @@ export default function MemberPortal() {
       await axiosInstance.post(`/member-portal/ministry-assignments/${aid}/confirm`);
       showToast('Assignment confirmed!');
       const r=await axiosInstance.get('/member-portal/ministry-assignments'); setAssigns(r.data.data);
-    } catch(err) { showToast(err.response?.data?.message||'Failed.','error'); }
+    } catch(err) { showToast(apiErrorMessage(err, 'Failed.'),'error'); }
     finally { setConfL(null); }
   },[]);
 
@@ -977,28 +1223,35 @@ export default function MemberPortal() {
       showToast(response_status === 'attending' ? 'Marked as Attending!' : 'Response saved.');
       const r = await axiosInstance.get('/member-portal/ministry-invites');
       setInvites(r.data.data);
-    } catch(err) { showToast(err.response?.data?.message||'Failed.','error'); }
+    } catch(err) { showToast(apiErrorMessage(err, 'Failed.'),'error'); }
     finally { setInviteResponding(null); }
   },[]);
 
   const onServiceClick = useCallback(async (svcId)=>{
     setSvcLoading(true);
+    setServiceResponseError('');
     try {
       const r = await axiosInstance.get(`/member-portal/services/${svcId}`);
       setServiceModal(r.data.data);
-    } catch(err) { showToast(err.response?.data?.message||'Failed to load service.','error'); }
+    } catch(err) { showToast(apiErrorMessage(err, 'Failed to load service.'),'error'); }
     finally { setSvcLoading(false); }
   },[]);
 
-  const onServiceRespond = useCallback(async (status)=>{
+  const onServiceRespond = useCallback(async (status,reservations={})=>{
     if(!serviceModal) return;
     setSvcResponding(true);
+    setServiceResponseError('');
     try {
-      const r = await axiosInstance.post(`/member-portal/services/${serviceModal.id}/respond`,{attendance_status:status});
+      const payload = { attendance_status: status };
+      if(status==='ATTENDING') {
+        if(reservations.seat_number) payload.seat_number = Number(reservations.seat_number);
+        if(reservations.parking_slot) payload.parking_slot = Number(reservations.parking_slot);
+      }
+      const r = await axiosInstance.post(`/member-portal/services/${serviceModal.id}/respond`,payload);
       setServiceModal(r.data.data);
       showToast(status==='ATTENDING'?'RSVP saved — see you at the service!':status==='NOT_ATTENDING'?'Response saved.':'Response updated.');
       const aR = await axiosInstance.get('/member-portal/attendance'); setAtt(aR.data.data);
-    } catch(err) { showToast(err.response?.data?.message||'Failed.','error'); }
+    } catch(err) { setServiceResponseError(apiErrorMessage(err, 'Failed to save your service response.')); }
     finally { setSvcResponding(false); }
   },[serviceModal]);
 
@@ -1023,12 +1276,13 @@ export default function MemberPortal() {
             : <div style={{width:isMobile?26:28,height:isMobile?26:28,borderRadius:'50%',background:'rgba(255,255,255,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:isMobile?9:10,fontWeight:800,color:'#fff'}}>{initials}</div>}
           <span style={{color:'rgba(255,255,255,0.9)',fontSize:f.sm,fontWeight:600}}>{profile?.first_name||'—'}</span>
         </div>
+        <MemberNotificationCenter colors={c} isMobile={isMobile} language={getLangCode()} />
         {/* Settings — icon only on mobile */}
-        <button onClick={()=>navigate('/portal/settings')} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',color:'#fff',borderRadius:8,padding:isMobile?'6px 10px':'6px 14px',fontSize:isMobile?16:f.sm,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:36,minWidth:36,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <button aria-label={t.settings} title={t.settings} onClick={()=>navigate('/portal/settings')} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',color:'#fff',borderRadius:8,padding:isMobile?'6px 10px':'6px 14px',fontSize:isMobile?16:f.sm,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:36,minWidth:36,display:'flex',alignItems:'center',justifyContent:'center'}}>
           {isMobile ? <MonoIcon name="settings" size={17} /> : t.settings}
         </button>
         {/* Logout — icon only on mobile */}
-        <button onClick={handleLogout} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',color:'#fff',borderRadius:8,padding:isMobile?'6px 10px':'6px 14px',fontSize:isMobile?16:f.sm,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:36,minWidth:36,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <button aria-label={t.logout} title={t.logout} onClick={handleLogout} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',color:'#fff',borderRadius:8,padding:isMobile?'6px 10px':'6px 14px',fontSize:isMobile?16:f.sm,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:36,minWidth:36,display:'flex',alignItems:'center',justifyContent:'center'}}>
           {isMobile ? <MonoIcon name="logout" size={17} /> : t.logout}
         </button>
       </div>
@@ -1112,11 +1366,14 @@ export default function MemberPortal() {
 
         {loading ? <LoadSkeleton/> : (
           <>
-            {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={PHP} fmtDate={fmtDate} isMobile={isMobile}/>}
+            {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} setEditError={setEE} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={PHP} fmtDate={fmtDate} isMobile={isMobile}/>}
             {tab===1&&<EventsTab events={events} assigns={assigns} services={services} invites={invites} evtL={evtL} confL={confL} inviteResponding={inviteResponding} doRegister={doRegister} doCancel={doCancel} doConfirm={doConfirm} onServiceClick={onServiceClick} onEventDetailsClick={onEventDetailsClick} onInviteRespond={onInviteRespond} c={c} f={f} t={t} fmtDate={fmtDate} fmtShort={fmtShort} fmtSvcT={fmtSvcT} isMobile={isMobile}/>}
             {tab===2&&<AttendanceTab attendance={attendance} c={c} f={f} t={t} fmtDate={fmtDate} fmtTime={fmtTime} isMobile={isMobile} language={lang}/>}
-            {tab===3&&<FinanceTab finance={finance} c={c} f={f} t={t} fmtDate={fmtDate} PHP={PHP} isMobile={isMobile}/>}
-            {tab===4&&<MemberMinistryApplications c={c} f={f} showToast={showToast}/>}
+            {tab===3&&<FinanceTab finance={finance} initialError={financeError} c={c} f={f} t={t} fmtDate={fmtDate} PHP={PHP} isMobile={isMobile} language={lang}/>}
+            {tab===4&&<>
+              <MemberSubstituteRequests c={c} isMobile={isMobile}/>
+              <MemberMinistryApplications c={c} f={f} showToast={showToast}/>
+            </>}
           </>
         )}
       </div>
@@ -1131,12 +1388,12 @@ export default function MemberPortal() {
         </div>
       )}
       {serviceModal&&!svcLoading&&(
-        <ServiceModal svc={serviceModal} onClose={()=>setServiceModal(null)} onRespond={onServiceRespond} responding={svcResponding} c={c} f={f} t={t} isMobile={isMobile}/>
+        <ServiceModal svc={serviceModal} onClose={()=>{setServiceModal(null);setServiceResponseError('');}} onRespond={onServiceRespond} responding={svcResponding} error={serviceResponseError} onClearError={()=>setServiceResponseError('')} c={c} f={f} t={t} isMobile={isMobile}/>
       )}
 
       {/* Event Details Modal */}
       {eventModal&&(
-        <EventModal evt={eventModal} onClose={()=>setEventModal(null)} onRegister={doRegister} onCancel={doCancel} evtLoading={evtL} c={c} f={f} t={t} isMobile={isMobile}/>
+        <EventModal evt={eventModal} onClose={()=>{setEventModal(null);clearEventRegistrationError();}} onRegister={doRegister} onUpdateReservation={doUpdateEventReservation} onCancel={doCancel} evtLoading={evtL} eventError={eventRegistrationError} onClearError={clearEventRegistrationError} c={c} f={f} t={t} isMobile={isMobile}/>
       )}
 
       {/* Toast — above bottom tab bar on mobile */}

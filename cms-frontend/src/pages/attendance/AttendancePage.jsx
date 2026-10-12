@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import MonoIcon from '../../components/common/MonoIcon';
 
 const STATUS_META = {
@@ -12,6 +13,7 @@ const STATUS_META = {
 };
 
 export default function AttendancePage() {
+  const { confirm } = useConfirmation();
   const { id: serviceId } = useParams();
   const navigate          = useNavigate();
   const { hasPermission, user, activeLeaderScopeKey } = useAuth();
@@ -160,7 +162,12 @@ export default function AttendancePage() {
   };
 
   const handleUndoCheckIn = async (memberId, memberName) => {
-    if (!window.confirm(`Remove check-in for ${memberName}?`)) return;
+    if (!(await confirm({
+      title: 'Remove check-in?',
+      message: `Remove the attendance check-in for ${memberName}?`,
+      confirmLabel: 'Remove check-in',
+      tone: 'danger',
+    }))) return;
     try {
       await axiosInstance.delete(`/services/${serviceId}/attendance/${memberId}`);
       fetchAttendance();
@@ -385,7 +392,7 @@ export default function AttendancePage() {
       {/* Attendance List */}
       <div style={styles.listHeader}>
         <h3 style={styles.listTitle}>Attendance Sheet</h3>
-        <span style={styles.listCount}>{records.length} checked in</span>
+        <span style={styles.listCount}>{activeCheckIns} checked in</span>
       </div>
 
       <div style={styles.tableWrap}>

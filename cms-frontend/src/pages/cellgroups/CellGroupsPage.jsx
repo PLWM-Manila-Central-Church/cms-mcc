@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import { cellGroupPageTitle } from '../../utils/roleDisplay';
 import MonoIcon from '../../components/common/MonoIcon';
@@ -11,6 +12,7 @@ const EMPTY_FORM = { name: '', area: '' };
 export default function CellGroupsPage() {
   const navigate = useNavigate();
   const { hasPermission, user, activeLeaderScopeKey } = useAuth();
+  const { confirm } = useConfirmation();
   const isMobile = useIsMobile();
   const isCellGroupLeader = user?.roleName === 'Cell Group Leader'
     || (user?.roleName === 'Leader' && String(activeLeaderScopeKey || '').startsWith('cell_group:'));
@@ -115,7 +117,12 @@ export default function CellGroupsPage() {
 
   const handleUnassignMember = async (member) => {
     const name = `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'this member';
-    if (!window.confirm(`Unassign ${name} from your cell group?`)) return;
+    if (!(await confirm({
+      title: 'Unassign member?',
+      message: `Unassign ${name} from your cell group?`,
+      confirmLabel: 'Unassign member',
+      tone: 'warning',
+    }))) return;
     setMemberAction('');
     try {
       await axiosInstance.patch(`/members/${member.id}/unassign-scope`);

@@ -1,8 +1,43 @@
 "use strict";
 
-const { Notification, User } = require("../models");
+const { Op } = require("sequelize");
+const { Notification, User, SystemSetting } = require("../models");
 const AppError = require("../helpers/AppError");
 const logger = require("../helpers/logger");
+const mailer = require("../utils/mailer");
+
+const deliverNotificationEmails = async (userIds, message) => {
+  if (process.env.EMAIL_NOTIFICATION_DELIVERY_ENABLED !== "true") return;
+  if (!process.env.BREVO_API_KEY || !process.env.SMTP_FROM) return;
+
+  try {
+    const preference = await SystemSetting.findOne({
+      where: { key: "email_notifications" },
+      attributes: ["value"],
+    });
+    if (!/^(true|1|yes)$/i.test(String(preference?.value || ""))) return;
+
+    const ids = [...new Set((userIds || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+    if (!ids.length) return;
+    const recipients = await User.findAll({
+      where: { id: { [Op.in]: ids }, is_active: 1, is_deleted: 0 },
+      attributes: ["id", "email"],
+    });
+
+    // Keep provider concurrency bounded when a broadcast reaches many accounts.
+    for (let offset = 0; offset < recipients.length; offset += 5) {
+      const batch = recipients.slice(offset, offset + 5).filter((recipient) => recipient.email);
+      const results = await Promise.allSettled(batch.map((recipient) => mailer.sendNotification({
+        to: recipient.email,
+        message,
+      })));
+      const failed = results.filter((result) => result.status === "rejected").length;
+      if (failed) logger.error(new Error(`${failed} notification email(s) failed`), "Notification email delivery failed");
+    }
+  } catch (error) {
+    logger.error(error, "Notification email delivery failed");
+  }
+};
 
 // ── Get All Notifications for User ──────────────────────────
 exports.getUserNotifications = async (userId) => {
@@ -32,7 +67,7 @@ exports.getNotificationById = async (id, userId) => {
 // ── Create Notification ──────────────────────────────────────
 exports.createNotification = async (data) => {
   const { user_id, type, message, reference_id = null, reference_type = null } = data;
-  return await Notification.create({
+  const notification = await Notification.create({
     user_id,
     type,
     message,
@@ -41,6 +76,8 @@ exports.createNotification = async (data) => {
     reference_id,
     reference_type,
   });
+  await deliverNotificationEmails([user_id], message);
+  return notification;
 };
 
 // ── Bulk Create Notifications ────────────────────────────────
@@ -62,7 +99,9 @@ exports.bulkCreateNotifications = async (
     reference_type,
     created_at:     now,
   }));
-  return await Notification.bulkCreate(records, { ignoreDuplicates: true });
+  const notifications = await Notification.bulkCreate(records, { ignoreDuplicates: true });
+  await deliverNotificationEmails(userIds, message);
+  return notifications;
 };
 
 exports.notifyAttendanceRecorded = async ({ memberId, activityType, activityId, activityTitle }) => {

@@ -1,6 +1,7 @@
 "use strict";
 
 const Joi = require("joi");
+const MEMBER_GENDERS = require("../constants/memberGender");
 const MEMBER_STATUSES = require("../constants/memberStatus");
 
 const memberBody = {
@@ -8,7 +9,7 @@ const memberBody = {
   last_name:          Joi.string().max(100).required(),
   email:              Joi.string().email().max(150).allow(null, "").optional(),
   phone:              Joi.string().max(30).allow(null, "").optional(),
-  gender:             Joi.string().valid("Male", "Female").allow(null, "").optional(),
+  gender:             Joi.string().valid(...MEMBER_GENDERS).allow(null, "").optional(),
   birthdate:          Joi.date().iso().allow(null, "").optional(),
   spiritual_birthday: Joi.date().iso().allow(null, "").optional(),
   address:            Joi.string().max(500).allow(null, "").optional(),

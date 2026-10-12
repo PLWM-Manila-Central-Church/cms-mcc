@@ -123,8 +123,9 @@ app.use("/api/members",       require("./routes/members.routes"));
 app.use("/api/members",       require("./routes/member-extras.routes"));
 app.use("/api/cellgroups",    require("./routes/cellgroups.routes"));
 app.use("/api/attendance",    require("./routes/attendance.routes"));
-app.use("/api/services",      require("./routes/services.routes"));
+// Keep static and nested service-extra paths ahead of the general /:id detail route.
 app.use("/api/services",      require("./routes/service-extras.routes"));
+app.use("/api/services",      require("./routes/services.routes"));
 app.use("/api/finance",       require("./routes/finance.routes"));
 app.use("/api/events",        require("./routes/events.routes"));
 app.use("/api/events",        require("./routes/ministry-invites.routes"));

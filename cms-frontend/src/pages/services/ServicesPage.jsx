@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import MonoIcon from '../../components/common/MonoIcon';
+import { apiErrorMessage } from '../../utils/apiErrorMessage';
+import { toLocalDateTimeInput } from '../../utils/localDateTimeInput';
 
 const STATUS_META = {
   draft:     { bg: '#f1f5f9', color: '#475569', label: 'Draft' },
@@ -24,10 +27,17 @@ const RESPONSE_META = {
   undecided:     { bg: '#fffbeb', color: '#d97706', label: '? Undecided' },
 };
 
+const blankServiceForm = () => ({
+  title: '', service_date: '', service_time: '',
+  capacity: '', total_parking_slots: '', response_deadline: '', status: 'draft',
+});
+
 export default function ServicesPage() {
   const navigate = useNavigate();
   const { hasPermission, user } = useAuth();
+  const { confirm } = useConfirmation();
   const canCreate  = hasPermission('services', 'create');
+  const canUpdate  = hasPermission('services', 'update');
   const canDelete  = hasPermission('services', 'delete');
   const isMember   = user?.roleName === 'Member';
 
@@ -46,12 +56,13 @@ export default function ServicesPage() {
     title: '', service_date: '', service_time: '',
     capacity: '', total_parking_slots: '', response_deadline: '', status: 'draft'
   });
+  const [editingService, setEditingService] = useState(null);
   const [saving, setSaving]       = useState(false);
   const [formError, setFormError] = useState('');
 
   // Pre-registration (member)
   const [preRegTarget, setPreRegTarget]   = useState(null); // service object
-  const [preRegForm, setPreRegForm]       = useState({ attendance_status: 'attending', seat_number: '', parking_slot: '' });
+  const [preRegForm, setPreRegForm]       = useState({ attendance_status: 'ATTENDING', seat_number: '', parking_slot: '' });
   const [preRegSaving, setPreRegSaving]   = useState(false);
   const [preRegError, setPreRegError]     = useState('');
   const [preRegSuccess, setPreRegSuccess] = useState('');
@@ -107,16 +118,57 @@ export default function ServicesPage() {
     setFormError('');
     try {
       const payload = { ...form };
-      if (!payload.response_deadline) delete payload.response_deadline;
-      await axiosInstance.post('/services', payload);
+      if (editingService) {
+        delete payload.status;
+        if (!payload.response_deadline) payload.response_deadline = null;
+        await axiosInstance.put(`/services/${editingService.id}`, payload);
+      } else {
+        if (!payload.response_deadline) delete payload.response_deadline;
+        await axiosInstance.post('/services', payload);
+      }
       setShowForm(false);
-      setForm({ title: '', service_date: '', service_time: '', capacity: '', total_parking_slots: '', response_deadline: '', status: 'draft' });
-      fetchServices();
+      setEditingService(null);
+      setForm(blankServiceForm());
+      await fetchServices();
     } catch (err) {
-      setFormError(err.response?.data?.message || 'Failed to create service.');
+      setFormError(apiErrorMessage(err, `Failed to ${editingService ? 'update' : 'create'} service.`));
     } finally {
       setSaving(false);
     }
+  };
+
+  const openCreateForm = () => {
+    setEditingService(null);
+    setForm(blankServiceForm());
+    setFormError('');
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingService(null);
+    setForm(blankServiceForm());
+    setFormError('');
+  };
+
+  const openEditForm = (service) => {
+    setEditingService(service);
+    setForm({
+      title: service.title || '',
+      service_date: String(service.service_date || '').slice(0, 10),
+      service_time: String(service.service_time || '').slice(0, 5),
+      capacity: String(service.capacity ?? ''),
+      total_parking_slots: String(service.total_parking_slots ?? ''),
+      response_deadline: toLocalDateTimeInput(service.response_deadline),
+      status: service.status || 'draft',
+    });
+    setFormError('');
+    setShowForm(true);
+  };
+
+  const toggleCreateForm = () => {
+    if (showForm && !editingService) closeForm();
+    else openCreateForm();
   };
 
   const handleStatusChange = async (serviceId, newStatus) => {    setStatusUpdating(serviceId);
@@ -124,26 +176,31 @@ export default function ServicesPage() {
       await axiosInstance.patch(`/services/${serviceId}/status`, { status: newStatus });
       fetchServices();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update status.');
+      setError(apiErrorMessage(err, 'Failed to update status.'));
     } finally {
       setStatusUpdating(null);
     }
   };
 
   const handleDeleteService = async (service) => {
-    if (!window.confirm(`Delete "${service.title}"? This cannot be undone.`)) return;
+    if (!(await confirm({
+      title: 'Delete service?',
+      message: `Delete "${service.title}"? This action cannot be undone.`,
+      confirmLabel: 'Delete service',
+      tone: 'danger',
+    }))) return;
     try {
       await axiosInstance.delete(`/services/${service.id}`);
       fetchServices();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete service.');
+      setError(apiErrorMessage(err, 'Failed to delete service.'));
     }
   };
 
   const openPreReg = (service) => {
     const existing = myResponses[service.id];
     setPreRegForm({
-      attendance_status: existing?.attendance_status || 'attending',
+      attendance_status: existing?.attendance_status || 'ATTENDING',
       seat_number:       existing?.seat_number       || '',
       parking_slot:      existing?.parking_slot      || '',
     });
@@ -172,7 +229,7 @@ export default function ServicesPage() {
       if (myRes) setMyResponses(prev => ({ ...prev, [preRegTarget.id]: myRes }));
       setTimeout(() => setPreRegTarget(null), 1500);
     } catch (err) {
-      setPreRegError(err.response?.data?.message || 'Failed to save response.');
+      setPreRegError(apiErrorMessage(err, 'Failed to save response.'));
     } finally {
       setPreRegSaving(false);
     }
@@ -195,8 +252,8 @@ export default function ServicesPage() {
           <p style={styles.subtitle}>{total} total services</p>
         </div>
         {canCreate && !isMember && (
-          <button onClick={() => setShowForm(!showForm)} style={styles.addBtn}>
-            {showForm ? <><MonoIcon name="close" size={15} /> Cancel</> : '+ New Service'}
+          <button onClick={toggleCreateForm} style={styles.addBtn}>
+            {showForm && !editingService ? <><MonoIcon name="close" size={15} /> Cancel</> : '+ New Service'}
           </button>
         )}
       </div>
@@ -215,7 +272,7 @@ export default function ServicesPage() {
       {/* Create Form */}
       {showForm && (
         <div style={styles.formCard}>
-          <h3 style={styles.formTitle}>Create New Service</h3>
+          <h3 style={styles.formTitle}>{editingService ? 'Edit Service' : 'Create New Service'}</h3>
           {formError && <div style={styles.errorBox}>{formError}</div>}
           <form onSubmit={handleCreate} style={styles.form}>
             <div style={styles.formRow}>
@@ -224,13 +281,13 @@ export default function ServicesPage() {
                 <input name="title" value={form.title} onChange={handleFormChange}
                   placeholder="e.g. Sunday Service - March 9" required style={styles.input} />
               </div>
-              <div style={styles.field}>
+              {!editingService && <div style={styles.field}>
                 <label style={styles.label}>Status</label>
                 <select name="status" value={form.status} onChange={handleFormChange} style={styles.select}>
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
                 </select>
-              </div>
+              </div>}
             </div>
             <div style={styles.formRow}>
               <div style={styles.field}>
@@ -260,9 +317,9 @@ export default function ServicesPage() {
               </div>
             </div>
             <div style={styles.formActions}>
-              <button type="button" onClick={() => setShowForm(false)} style={styles.cancelBtn}>Cancel</button>
+              <button type="button" onClick={closeForm} style={styles.cancelBtn}>Cancel</button>
               <button type="submit" disabled={saving} style={{ ...styles.submitBtn, opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Creating...' : 'Create Service'}
+                {saving ? (editingService ? 'Saving...' : 'Creating...') : (editingService ? 'Save Changes' : 'Create Service')}
               </button>
             </div>
           </form>
@@ -351,6 +408,11 @@ export default function ServicesPage() {
                           Attendance
                         </button>
                       )}
+                      {canUpdate && !isMember && !['completed', 'cancelled'].includes(s.status) && (
+                        <button onClick={() => openEditForm(s)} style={styles.viewBtn}>
+                          Edit
+                        </button>
+                      )}
                       {nextStatuses.map(ns => (
                         <button key={ns}
                           onClick={() => handleStatusChange(s.id, ns)}
@@ -421,9 +483,9 @@ export default function ServicesPage() {
                   <label style={styles.label}>Attendance *</label>
                   <div style={styles.radioGroup}>
                     {[
-                      { value: 'attending',     label: 'Attending',     color: '#16a34a', bg: '#dcfce7' },
-                      { value: 'not_attending', label: 'Not Attending', color: '#dc2626', bg: '#fef2f2' },
-                      { value: 'undecided',     label: '? Undecided',     color: '#d97706', bg: '#fffbeb' },
+                      { value: 'ATTENDING',     label: 'Attending',     color: '#16a34a', bg: '#dcfce7' },
+                      { value: 'NOT_ATTENDING', label: 'Not Attending', color: '#dc2626', bg: '#fef2f2' },
+                      { value: 'UNDECIDED',     label: '? Undecided',     color: '#d97706', bg: '#fffbeb' },
                     ].map(opt => (
                       <label key={opt.value} style={{
                         ...styles.radioOption,
@@ -449,7 +511,7 @@ export default function ServicesPage() {
                   <div style={styles.field}>
                     <label style={styles.label}>Preferred Seat # (optional)</label>
                     <input
-                      type="number" min="1"
+                      type="number" min="1" max={preRegTarget.capacity} step="1"
                       value={preRegForm.seat_number}
                       onChange={e => setPreRegForm({ ...preRegForm, seat_number: e.target.value })}
                       placeholder="e.g. 12"
@@ -459,7 +521,7 @@ export default function ServicesPage() {
                   <div style={styles.field}>
                     <label style={styles.label}>Parking Slot # (optional)</label>
                     <input
-                      type="number" min="1"
+                      type="number" min="1" max={preRegTarget.total_parking_slots} step="1"
                       value={preRegForm.parking_slot}
                       onChange={e => setPreRegForm({ ...preRegForm, parking_slot: e.target.value })}
                       placeholder="e.g. 5"

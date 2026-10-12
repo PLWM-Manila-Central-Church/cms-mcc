@@ -3,6 +3,7 @@
 require("dotenv").config();
 
 const { assertSafeQrTestTarget } = require("../scripts/qr-test-target");
+const { Op } = require("sequelize");
 const integrationEnabled = process.env.QR_ATTENDANCE_INTEGRATION_DB === "true";
 if (integrationEnabled) assertSafeQrTestTarget(process.env);
 const describeDatabase = integrationEnabled ? describe : describe.skip;
@@ -17,6 +18,7 @@ describeDatabase("QR attendance API persistence integration", () => {
   let jwt;
   let actors;
   let fixture;
+  let dbAuthenticated = false;
 
   const dateOnlyInManila = () => {
     const parts = new Intl.DateTimeFormat("en-US", {
@@ -64,6 +66,7 @@ describeDatabase("QR attendance API persistence integration", () => {
         leader_confirmation_mode: "batch_review",
       });
     const session = expectData(created, 201);
+    fixture.sessionIds.push(Number(session.id));
     const opened = await api("post", `/api/qr-attendance/sessions/${session.id}/open`, actors.admin.token).send({});
     expectData(opened);
     return session;
@@ -116,19 +119,45 @@ describeDatabase("QR attendance API persistence integration", () => {
     qrModels = require("../src/modules/qr-attendance/models");
     app = require("../src/app");
     await qrModels.sequelize.authenticate();
+    dbAuthenticated = true;
 
     const suffix = `${Date.now()}-${process.pid}`;
+    fixture = {
+      suffix,
+      cellGroupIds: [],
+      groupIds: [],
+      memberIds: [],
+      userIds: [],
+      serviceIds: [],
+      eventIds: [],
+      sessionIds: [],
+    };
+    const previousQrSetting = await models.SystemSetting.findOne({
+      where: { key: "qr_attendance_enabled" },
+      attributes: ["value", "updated_by"],
+      raw: true,
+    });
+    fixture.previousQrSetting = previousQrSetting
+      ? { value: previousQrSetting.value, updated_by: previousQrSetting.updated_by }
+      : null;
+
     const roleNames = ["System Admin", "Pastor", "Registration Team", "Cell Group Leader", "Group Leader", "Leader", "Member"];
     const roleRows = await models.Role.findAll({ where: { role_name: roleNames } });
     const roles = new Map(roleRows.map((role) => [role.role_name, role]));
     for (const roleName of roleNames) expect(roles.has(roleName)).toBe(true);
 
     const cell = await models.CellGroup.create({ name: `QR CI cell ${suffix}`, area: "CI" });
+    fixture.cellGroupIds.push(Number(cell.id));
     const otherCell = await models.CellGroup.create({ name: `QR CI other cell ${suffix}`, area: "CI" });
+    fixture.cellGroupIds.push(Number(otherCell.id));
     const assignmentGuardCell = await models.CellGroup.create({ name: `QR CI guarded cell ${suffix}`, area: "CI" });
+    fixture.cellGroupIds.push(Number(assignmentGuardCell.id));
     const group = await models.Group.create({ name: `QR CI group ${suffix}` });
+    fixture.groupIds.push(Number(group.id));
     const otherGroup = await models.Group.create({ name: `QR CI other group ${suffix}` });
+    fixture.groupIds.push(Number(otherGroup.id));
     const youngAdultsGroup = await models.Group.create({ name: `Young Adults QA ${suffix}` });
+    fixture.groupIds.push(Number(youngAdultsGroup.id));
 
     const memberA = await models.Member.create({
       first_name: "QR",
@@ -137,6 +166,7 @@ describeDatabase("QR attendance API persistence integration", () => {
       cell_group_id: cell.id,
       group_id: group.id,
     });
+    fixture.memberIds.push(Number(memberA.id));
     const memberB = await models.Member.create({
       first_name: "QR",
       last_name: `Batch-${suffix}`,
@@ -144,6 +174,7 @@ describeDatabase("QR attendance API persistence integration", () => {
       cell_group_id: cell.id,
       group_id: group.id,
     });
+    fixture.memberIds.push(Number(memberB.id));
     const outsideMember = await models.Member.create({
       first_name: "QR",
       last_name: `Outside-${suffix}`,
@@ -151,6 +182,7 @@ describeDatabase("QR attendance API persistence integration", () => {
       cell_group_id: otherCell.id,
       group_id: otherGroup.id,
     });
+    fixture.memberIds.push(Number(outsideMember.id));
     const unassignedMember = await models.Member.create({
       first_name: "QR",
       last_name: `Concurrent-${suffix}`,
@@ -158,6 +190,7 @@ describeDatabase("QR attendance API persistence integration", () => {
       cell_group_id: null,
       group_id: null,
     });
+    fixture.memberIds.push(Number(unassignedMember.id));
 
     const makeUser = async (roleName, label, memberId = null, scope = {}) => {
       const user = await models.User.create({
@@ -169,6 +202,7 @@ describeDatabase("QR attendance API persistence integration", () => {
         force_password_change: 0,
         ...scope,
       });
+      fixture.userIds.push(Number(user.id));
       return { user, token: tokenFor(user) };
     };
 
@@ -236,6 +270,7 @@ describeDatabase("QR attendance API persistence integration", () => {
       total_parking_slots: 0,
       status: "published",
     });
+    fixture.serviceIds.push(Number(service.id));
     const event = await models.Event.create({
       title: `QR CI Event ${suffix}`,
       start_date: activityDate,
@@ -243,8 +278,9 @@ describeDatabase("QR attendance API persistence integration", () => {
       status: "Upcoming",
       created_by: actors.admin.user.id,
     });
+    fixture.eventIds.push(Number(event.id));
 
-    fixture = {
+    Object.assign(fixture, {
       memberA,
       memberB,
       outsideMember,
@@ -258,11 +294,117 @@ describeDatabase("QR attendance API persistence integration", () => {
       event,
       serviceSession: await makeSession("service", service.id, "primary", "QR CI Service Session"),
       eventSession: await makeSession("event", event.id, "qr-ci-session", "QR CI Event Session"),
-    };
+    });
   });
 
   afterAll(async () => {
-    if (qrModels?.sequelize) await qrModels.sequelize.close();
+    try {
+      if (!dbAuthenticated || !fixture || !models || !qrModels) return;
+
+      const ids = (values) => [...new Set((values || []).map(Number).filter(Number.isInteger))];
+      const memberIds = ids(fixture.memberIds);
+      const userIds = ids(fixture.userIds);
+      const serviceIds = ids(fixture.serviceIds);
+      const eventIds = ids(fixture.eventIds);
+      let sessionIds = ids(fixture.sessionIds);
+      const cellGroupIds = ids(fixture.cellGroupIds);
+      const groupIds = ids(fixture.groupIds);
+      const destroyIn = async (Model, column, values, transaction) => {
+        if (values.length) {
+          await Model.destroy({ where: { [column]: { [Op.in]: values } }, transaction });
+        }
+      };
+
+      let batchIds = [];
+      await qrModels.sequelize.transaction(async (transaction) => {
+        if (serviceIds.length || eventIds.length) {
+          const relatedSessions = await qrModels.QrAttendanceSession.findAll({
+            where: { [Op.or]: [
+              ...(serviceIds.length ? [{ service_id: { [Op.in]: serviceIds } }] : []),
+              ...(eventIds.length ? [{ event_id: { [Op.in]: eventIds } }] : []),
+            ] },
+            attributes: ["id"],
+            raw: true,
+            transaction,
+          });
+          sessionIds = ids([...sessionIds, ...relatedSessions.map((session) => session.id)]);
+        }
+        const batches = sessionIds.length
+          ? await qrModels.AttendanceBatch.findAll({
+            where: { session_id: { [Op.in]: sessionIds } },
+            attributes: ["id"],
+            raw: true,
+            transaction,
+          })
+          : [];
+        batchIds = ids(batches.map((batch) => batch.id));
+
+        await destroyIn(qrModels.AttendanceBatchItem, "batch_id", batchIds, transaction);
+        await destroyIn(qrModels.AttendanceExpectedMember, "session_id", sessionIds, transaction);
+        await destroyIn(qrModels.EventAttendance, "session_id", sessionIds, transaction);
+        await destroyIn(qrModels.QrServiceAttendance, "service_id", serviceIds, transaction);
+        if (batchIds.length) {
+          await qrModels.AttendanceBatch.update(
+            { supersedes_batch_id: null },
+            { where: { id: { [Op.in]: batchIds } }, transaction },
+          );
+        }
+        await destroyIn(qrModels.AttendanceBatch, "id", batchIds, transaction);
+        await destroyIn(qrModels.MemberQrCredential, "member_id", memberIds, transaction);
+        await destroyIn(qrModels.QrAttendanceSession, "id", sessionIds, transaction);
+
+        await destroyIn(models.EventRegistration, "event_id", eventIds, transaction);
+        await destroyIn(models.ServiceResponse, "service_id", serviceIds, transaction);
+        await destroyIn(models.Attendance, "service_id", serviceIds, transaction);
+        await destroyIn(models.ServiceAttendanceSummary, "service_id", serviceIds, transaction);
+        await destroyIn(models.EmergencyContact, "member_id", memberIds, transaction);
+        await destroyIn(models.MemberNote, "member_id", memberIds, transaction);
+        await destroyIn(models.MemberStatusHistory, "member_id", memberIds, transaction);
+        await destroyIn(models.CellGroupHistory, "member_id", memberIds, transaction);
+        await destroyIn(models.UserLeaderAssignment, "user_id", userIds, transaction);
+        await destroyIn(models.UserSession, "user_id", userIds, transaction);
+        await destroyIn(models.RefreshToken, "user_id", userIds, transaction);
+        await destroyIn(models.Notification, "user_id", userIds, transaction);
+        await destroyIn(models.AuditLog, "user_id", userIds, transaction);
+        await destroyIn(models.Event, "id", eventIds, transaction);
+        await destroyIn(models.Service, "id", serviceIds, transaction);
+        if (userIds.length) {
+          await models.User.unscoped().destroy({ where: { id: { [Op.in]: userIds } }, transaction });
+        }
+        if (memberIds.length) {
+          await models.Member.unscoped().destroy({ where: { id: { [Op.in]: memberIds } }, transaction });
+        }
+        await destroyIn(models.Group, "id", groupIds, transaction);
+        await destroyIn(models.CellGroup, "id", cellGroupIds, transaction);
+
+        if (fixture.previousQrSetting) {
+          await models.SystemSetting.update(
+            fixture.previousQrSetting,
+            { where: { key: "qr_attendance_enabled" }, transaction },
+          );
+        }
+      });
+
+      const remaining = await Promise.all([
+        userIds.length ? models.User.unscoped().count({ where: { id: { [Op.in]: userIds } } }) : 0,
+        memberIds.length ? models.Member.unscoped().count({ where: { id: { [Op.in]: memberIds } } }) : 0,
+        serviceIds.length ? models.Service.count({ where: { id: { [Op.in]: serviceIds } } }) : 0,
+        eventIds.length ? models.Event.count({ where: { id: { [Op.in]: eventIds } } }) : 0,
+        sessionIds.length ? qrModels.QrAttendanceSession.count({ where: { id: { [Op.in]: sessionIds } } }) : 0,
+        sessionIds.length ? qrModels.AttendanceBatch.count({ where: { session_id: { [Op.in]: sessionIds } } }) : 0,
+        batchIds.length ? qrModels.AttendanceBatchItem.count({ where: { batch_id: { [Op.in]: batchIds } } }) : 0,
+        sessionIds.length ? qrModels.AttendanceExpectedMember.count({ where: { session_id: { [Op.in]: sessionIds } } }) : 0,
+        sessionIds.length ? qrModels.EventAttendance.count({ where: { session_id: { [Op.in]: sessionIds } } }) : 0,
+        serviceIds.length ? qrModels.QrServiceAttendance.count({ where: { service_id: { [Op.in]: serviceIds } } }) : 0,
+        memberIds.length ? qrModels.MemberQrCredential.count({ where: { member_id: { [Op.in]: memberIds } } }) : 0,
+        eventIds.length ? models.EventRegistration.count({ where: { event_id: { [Op.in]: eventIds } } }) : 0,
+        serviceIds.length ? models.ServiceResponse.count({ where: { service_id: { [Op.in]: serviceIds } } }) : 0,
+        serviceIds.length ? models.Attendance.count({ where: { service_id: { [Op.in]: serviceIds } } }) : 0,
+      ]);
+      expect(remaining).toEqual(Array(14).fill(0));
+    } finally {
+      if (qrModels?.sequelize) await qrModels.sequelize.close();
+    }
   });
 
   it("issues a stable member QR and downloads its PNG", async () => {
@@ -322,6 +464,274 @@ describeDatabase("QR attendance API persistence integration", () => {
     ]));
   });
 
+  it("rejects malformed member QRs, cross-session batch QRs, and captures after the check-in window with typed non-401 errors", async () => {
+    const malformedMemberQr = await api(
+      "post",
+      `/api/qr-attendance/sessions/${fixture.serviceSession.id}/member-preview`,
+      actors.registration.token,
+    ).send({ qr_payload: "not-an-attendance-qr" });
+    expect(malformedMemberQr.status).toBe(400);
+    expect(malformedMemberQr.body.error.code).toBe("QR_INVALID");
+    expect(malformedMemberQr.status).not.toBe(401);
+
+    const now = Date.now();
+    const date = (offsetMs) => new Date(now + offsetMs).toISOString();
+    const closedWindowCreated = await api("post", "/api/qr-attendance/sessions", actors.admin.token).send({
+      target_type: "event",
+      target_id: fixture.event.id,
+      session_key: `qr-closed-window-${now}`,
+      title: "QR closed-window integration session",
+      starts_at: date(-60 * 60 * 1000),
+      ends_at: date(60 * 60 * 1000),
+      check_in_opens_at: date(-20 * 60 * 1000),
+      check_in_closes_at: date(-60 * 1000),
+      approval_deadline: date(60 * 60 * 1000),
+      time_zone: "Asia/Manila",
+      expected_basis: "none",
+      registration_required: false,
+      leader_confirmation_mode: "batch_review",
+    });
+    const closedWindowSession = expectData(closedWindowCreated, 201);
+    fixture.sessionIds.push(Number(closedWindowSession.id));
+    const openedClosedWindow = expectData(
+      await api("post", `/api/qr-attendance/sessions/${closedWindowSession.id}/open`, actors.admin.token).send({}),
+    );
+    expect(openedClosedWindow).toMatchObject({ status: "open" });
+
+    const outsideWindowPreview = await api(
+      "post",
+      `/api/qr-attendance/sessions/${closedWindowSession.id}/member-preview`,
+      actors.registration.token,
+    ).send({ qr_payload: fixture.qrPayloadA });
+    expect(outsideWindowPreview.status).toBe(409);
+    expect(outsideWindowPreview.body.error.code).toBe("CHECK_IN_CLOSED");
+    expect(outsideWindowPreview.status).not.toBe(401);
+
+    expect(await qrModels.EventAttendance.count({ where: { session_id: closedWindowSession.id } })).toBe(0);
+    expect(await qrModels.QrAttendanceSession.destroy({ where: { id: closedWindowSession.id, event_id: fixture.event.id } })).toBe(1);
+    expect(await models.AuditLog.destroy({
+      where: {
+        target_table: "attendance_sessions",
+        target_id: closedWindowSession.id,
+        action: { [Op.in]: ["QR_SESSION_CREATED", "QR_SESSION_OPENED"] },
+      },
+    })).toBe(2);
+    fixture.sessionIds = fixture.sessionIds.filter((id) => Number(id) !== Number(closedWindowSession.id));
+
+    const createdBatch = await api(
+      "post",
+      `/api/qr-attendance/sessions/${fixture.serviceSession.id}/batches`,
+      actors.cellLeader.token,
+    ).send({ client_request_id: require("node:crypto").randomUUID() });
+    const batch = expectData(createdBatch, 201).batch;
+    const addedMember = await api("post", `/api/qr-attendance/batches/${batch.id}/items`, actors.cellLeader.token)
+      .send({ qr_payload: fixture.qrPayloadB, expected_revision: batch.revision });
+    expectData(addedMember, 201);
+
+    const submitted = await api("post", `/api/qr-attendance/batches/${batch.id}/submit`, actors.cellLeader.token)
+      .send({ expected_revision: Number(batch.revision) + 1 });
+    const submittedBatch = expectData(submitted);
+    expect(submittedBatch.batch.state).toBe("submitted");
+    expect(submittedBatch.payload).toMatch(/^MCC:BATCH:1:/);
+
+    const wrongSessionResolution = await api("post", "/api/qr-attendance/batches/resolve", actors.registration.token)
+      .send({ session_id: fixture.eventSession.id, qr_payload: submittedBatch.payload });
+    expect(wrongSessionResolution.status).toBe(409);
+    expect(wrongSessionResolution.body.error.code).toBe("BATCH_SESSION_MISMATCH");
+    expect(wrongSessionResolution.status).not.toBe(401);
+
+    expect(await qrModels.QrServiceAttendance.count({ where: { source_batch_id: batch.id } })).toBe(0);
+    expect(await qrModels.AttendanceBatchItem.destroy({ where: { batch_id: batch.id } })).toBe(1);
+    expect(await qrModels.AttendanceBatch.destroy({ where: { id: batch.id, session_id: fixture.serviceSession.id } })).toBe(1);
+    expect(await models.AuditLog.destroy({
+      where: {
+        target_table: "attendance_batches",
+        target_id: batch.id,
+        action: { [Op.like]: "QR_ATTENDANCE_BATCH_%" },
+      },
+    })).toBeGreaterThanOrEqual(2);
+  });
+
+  it("rejects expired batch submission and requires an audited reason for late approval", async () => {
+    if (!fixture.qrPayloadB) {
+      const issued = await api("post", `/api/qr-attendance/members/${fixture.memberB.id}/qr`, actors.registration.token).send({});
+      expect([200, 201]).toContain(issued.status);
+      const state = expectData(await api("get", `/api/qr-attendance/members/${fixture.memberB.id}/qr`, actors.registration.token));
+      fixture.qrPayloadB = state.payload;
+    }
+
+    const temporarySessions = [];
+    const createEventSession = async (sessionKey, title) => {
+      const now = Date.now();
+      const date = (offsetMs) => new Date(now + offsetMs).toISOString();
+      const created = await api("post", "/api/qr-attendance/sessions", actors.admin.token).send({
+        target_type: "event",
+        target_id: fixture.event.id,
+        session_key: sessionKey,
+        title,
+        starts_at: date(-60 * 60 * 1000),
+        ends_at: date(60 * 60 * 1000),
+        check_in_opens_at: date(-5 * 60 * 1000),
+        check_in_closes_at: date(30 * 60 * 1000),
+        approval_deadline: date(60 * 60 * 1000),
+        time_zone: "Asia/Manila",
+        expected_basis: "none",
+        registration_required: false,
+        leader_confirmation_mode: "batch_review",
+      });
+      const session = expectData(created, 201);
+      temporarySessions.push(session);
+      fixture.sessionIds.push(Number(session.id));
+      const opened = expectData(
+        await api("post", `/api/qr-attendance/sessions/${session.id}/open`, actors.admin.token).send({}),
+      );
+      expect(opened).toMatchObject({ status: "open" });
+      return session;
+    };
+
+    const submitMemberBatch = async (session) => {
+      const created = await api("post", `/api/qr-attendance/sessions/${session.id}/batches`, actors.cellLeader.token)
+        .send({ client_request_id: require("node:crypto").randomUUID() });
+      const batch = expectData(created, 201).batch;
+      const added = await api("post", `/api/qr-attendance/batches/${batch.id}/items`, actors.cellLeader.token)
+        .send({ qr_payload: fixture.qrPayloadB, expected_revision: batch.revision });
+      expectData(added, 201);
+      const submitted = await api("post", `/api/qr-attendance/batches/${batch.id}/submit`, actors.cellLeader.token)
+        .send({ expected_revision: Number(batch.revision) + 1 });
+      return { batch, receipt: expectData(submitted) };
+    };
+
+    const cleanupTemporaryEventSession = async (session) => {
+      const batchRows = await qrModels.AttendanceBatch.findAll({
+        where: { session_id: session.id }, attributes: ["id"], raw: true,
+      });
+      const batchIds = batchRows.map((row) => Number(row.id));
+      const itemRows = batchIds.length ? await qrModels.AttendanceBatchItem.findAll({
+        where: { batch_id: { [Op.in]: batchIds } }, attributes: ["id"], raw: true,
+      }) : [];
+      const attendanceRows = await qrModels.EventAttendance.findAll({
+        where: { session_id: session.id }, attributes: ["id"], raw: true,
+      });
+      const attendanceIds = attendanceRows.map((row) => Number(row.id));
+      const relatedTargets = [
+        { target_table: "attendance_sessions", target_id: session.id },
+        ...(batchIds.length ? [{ target_table: "attendance_batches", target_id: { [Op.in]: batchIds } }] : []),
+        ...(itemRows.length ? [{ target_table: "attendance_batch_items", target_id: { [Op.in]: itemRows.map((row) => Number(row.id)) } }] : []),
+        ...(attendanceIds.length ? [{ target_table: "event_attendances", target_id: { [Op.in]: attendanceIds } }] : []),
+      ];
+      const auditRows = await models.AuditLog.findAll({
+        where: { action: { [Op.like]: "QR_%" }, [Op.or]: relatedTargets },
+        attributes: ["id"],
+        raw: true,
+      });
+      const notificationRows = await models.Notification.findAll({
+        where: {
+          type: "attendance_event_recorded",
+          reference_id: fixture.event.id,
+          reference_type: "event",
+          message: `Your attendance was recorded for ${session.title}.`,
+        },
+        attributes: ["id"],
+        raw: true,
+      });
+
+      await qrModels.sequelize.transaction(async (transaction) => {
+        if (batchIds.length) {
+          await qrModels.AttendanceBatchItem.destroy({ where: { batch_id: { [Op.in]: batchIds } }, transaction });
+        }
+        await qrModels.EventAttendance.destroy({ where: { session_id: session.id }, transaction });
+        await qrModels.AttendanceExpectedMember.destroy({ where: { session_id: session.id }, transaction });
+        if (batchIds.length) await qrModels.AttendanceBatch.destroy({ where: { id: { [Op.in]: batchIds } }, transaction });
+        await qrModels.QrAttendanceSession.destroy({ where: { id: session.id, event_id: fixture.event.id }, transaction });
+        if (auditRows.length) {
+          await models.AuditLog.destroy({ where: { id: { [Op.in]: auditRows.map((row) => Number(row.id)) } }, transaction });
+        }
+        if (notificationRows.length) {
+          await models.Notification.destroy({ where: { id: { [Op.in]: notificationRows.map((row) => Number(row.id)) } }, transaction });
+        }
+      });
+
+      fixture.sessionIds = fixture.sessionIds.filter((id) => Number(id) !== Number(session.id));
+      expect(await qrModels.QrAttendanceSession.count({ where: { id: session.id } })).toBe(0);
+      expect(await qrModels.AttendanceBatch.count({ where: { session_id: session.id } })).toBe(0);
+      expect(await qrModels.EventAttendance.count({ where: { session_id: session.id } })).toBe(0);
+    };
+
+    try {
+      const expiredSubmissionSession = await createEventSession(
+        `qr-expired-submit-${Date.now()}`,
+        "QR expired submission integration session",
+      );
+      const expiredBatchCreated = await api(
+        "post",
+        `/api/qr-attendance/sessions/${expiredSubmissionSession.id}/batches`,
+        actors.cellLeader.token,
+      ).send({ client_request_id: require("node:crypto").randomUUID() });
+      const expiredBatch = expectData(expiredBatchCreated, 201).batch;
+      const expiredItemAdded = await api(
+        "post",
+        `/api/qr-attendance/batches/${expiredBatch.id}/items`,
+        actors.cellLeader.token,
+      ).send({ qr_payload: fixture.qrPayloadB, expected_revision: expiredBatch.revision });
+      const expiredDraft = expectData(expiredItemAdded, 201).batch;
+      await qrModels.QrAttendanceSession.update(
+        { approval_deadline: new Date(Date.now() - 60 * 1000) },
+        { where: { id: expiredSubmissionSession.id } },
+      );
+      const expiredSubmission = await api(
+        "post",
+        `/api/qr-attendance/batches/${expiredBatch.id}/submit`,
+        actors.cellLeader.token,
+      ).send({ expected_revision: Number(expiredDraft.revision) });
+      expect(expiredSubmission.status).toBe(410);
+      expect(expiredSubmission.body.error.code).toBe("BATCH_SUBMISSION_EXPIRED");
+      expect(expiredSubmission.status).not.toBe(401);
+      await cleanupTemporaryEventSession(expiredSubmissionSession);
+
+      const lateApprovalSession = await createEventSession(
+        `qr-late-approval-${Date.now()}`,
+        "QR late approval integration session",
+      );
+      const lateApprovalBatch = await submitMemberBatch(lateApprovalSession);
+      await qrModels.QrAttendanceSession.update(
+        { approval_deadline: new Date(Date.now() - 60 * 1000) },
+        { where: { id: lateApprovalSession.id } },
+      );
+      const expiredApproval = await api(
+        "post",
+        `/api/qr-attendance/batches/${lateApprovalBatch.batch.id}/approve`,
+        actors.registration.token,
+      ).send({
+        expected_revision: lateApprovalBatch.receipt.batch.revision,
+        content_digest: lateApprovalBatch.receipt.batch.content_digest,
+        late_approval: false,
+      });
+      expect(expiredApproval.status).toBe(410);
+      expect(expiredApproval.body.error.code).toBe("BATCH_APPROVAL_EXPIRED");
+      expect(expiredApproval.status).not.toBe(401);
+
+      const acceptedLateApproval = await api(
+        "post",
+        `/api/qr-attendance/batches/${lateApprovalBatch.batch.id}/approve`,
+        actors.registration.token,
+      ).send({
+        expected_revision: lateApprovalBatch.receipt.batch.revision,
+        content_digest: lateApprovalBatch.receipt.batch.content_digest,
+        late_approval: true,
+        late_approval_reason: "Authorized late QA approval",
+      });
+      expect(expectData(acceptedLateApproval)).toMatchObject({ newly_confirmed_count: 1, already_confirmed_count: 0 });
+      expect(await qrModels.EventAttendance.count({ where: { session_id: lateApprovalSession.id, member_id: fixture.memberB.id } })).toBe(1);
+      await cleanupTemporaryEventSession(lateApprovalSession);
+    } finally {
+      for (const session of temporarySessions) {
+        if (await qrModels.QrAttendanceSession.count({ where: { id: session.id } })) {
+          await cleanupTemporaryEventSession(session);
+        }
+      }
+    }
+  });
+
   it("opens and retries an explicit expected roster without duplicating saved members", async () => {
     const now = Date.now();
     const date = (offsetMs) => new Date(now + offsetMs).toISOString();
@@ -341,6 +751,7 @@ describeDatabase("QR attendance API persistence integration", () => {
       leader_confirmation_mode: "batch_review",
     });
     const session = expectData(created, 201);
+    fixture.sessionIds.push(Number(session.id));
 
     const roster = await api("post", `/api/qr-attendance/sessions/${session.id}/expected-members`, actors.admin.token)
       .send({ member_ids: [fixture.memberA.id, fixture.memberB.id], reason: "Expected integration attendees" });
@@ -367,6 +778,27 @@ describeDatabase("QR attendance API persistence integration", () => {
 
 
   it("persists scoped Cell Group and Group Leader batches for both target types", async () => {
+    const fullNameSearch = await api(
+      "get",
+      `/api/qr-attendance/sessions/${fixture.serviceSession.id}/roster?search=${encodeURIComponent(`${fixture.memberB.first_name} ${fixture.memberB.last_name}`)}`,
+      actors.cellLeader.token,
+    );
+    expect(expectData(fullNameSearch).members.map((member) => Number(member.id))).toContain(Number(fixture.memberB.id));
+
+    const reversedNameSearch = await api(
+      "get",
+      `/api/qr-attendance/sessions/${fixture.serviceSession.id}/roster?search=${encodeURIComponent(`${fixture.memberB.last_name} ${fixture.memberB.first_name}`)}`,
+      actors.cellLeader.token,
+    );
+    expect(expectData(reversedNameSearch).members.map((member) => Number(member.id))).toContain(Number(fixture.memberB.id));
+
+    const outsideScopeSearch = await api(
+      "get",
+      `/api/qr-attendance/sessions/${fixture.serviceSession.id}/roster?search=${encodeURIComponent(`${fixture.outsideMember.first_name} ${fixture.outsideMember.last_name}`)}`,
+      actors.cellLeader.token,
+    );
+    expect(expectData(outsideScopeSearch).members).toHaveLength(0);
+
     const serviceBatch = await submitAndApprove({
       leader: actors.cellLeader,
       sessionId: fixture.serviceSession.id,
@@ -565,6 +997,7 @@ describeDatabase("QR attendance API persistence integration", () => {
       total_parking_slots: 0,
       status: "completed",
     });
+    fixture.serviceIds.push(Number(legacyService.id));
     await models.Attendance.create({
       service_id: legacyService.id,
       member_id: fixture.outsideMember.id,
@@ -600,6 +1033,7 @@ describeDatabase("QR attendance API persistence integration", () => {
       total_parking_slots: 0,
       status: "published",
     });
+    fixture.serviceIds.push(Number(service.id));
     const event = await models.Event.create({
       title: `QR CI finalize event ${Date.now()}`,
       start_date: activityDate,
@@ -607,6 +1041,7 @@ describeDatabase("QR attendance API persistence integration", () => {
       status: "Upcoming",
       created_by: actors.admin.user.id,
     });
+    fixture.eventIds.push(Number(event.id));
 
     for (const target of [
       { type: "service", id: service.id },
@@ -630,6 +1065,7 @@ describeDatabase("QR attendance API persistence integration", () => {
         leader_confirmation_mode: "batch_review",
       });
       const session = expectData(created, 201);
+      fixture.sessionIds.push(Number(session.id));
 
       const roster = await api("post", `/api/qr-attendance/sessions/${session.id}/expected-members`, actors.admin.token)
         .send({ member_ids: [fixture.memberA.id, fixture.memberB.id], reason: "Finalize test expected roster" });
@@ -770,15 +1206,19 @@ describeDatabase("QR attendance API persistence integration", () => {
       date.setFullYear(date.getFullYear() - years);
       return date.toISOString().slice(0, 10);
     };
-    const [tooYoung, eligible, tooOld] = await Promise.all([17, 20, 31].map((age) =>
-      models.Member.create({
+    const candidateFixtures = [];
+    for (const age of [17, 20, 31]) {
+      const candidate = await models.Member.create({
         first_name: "Candidate",
         last_name: `Age${age}-${Date.now()}-${process.pid}`,
         birthdate: dateForAge(age),
         status: "Active",
         group_id: null,
-      }),
-    ));
+      });
+      fixture.memberIds.push(Number(candidate.id));
+      candidateFixtures.push(candidate);
+    }
+    const [tooYoung, eligible, tooOld] = candidateFixtures;
 
     const candidates = await api(
       "get",

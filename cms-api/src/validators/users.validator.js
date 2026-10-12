@@ -1,6 +1,7 @@
 "use strict";
 
 const Joi = require("joi");
+const MEMBER_GENDERS = require("../constants/memberGender");
 
 const passwordSchema = Joi.string()
   .min(8).max(72)
@@ -24,7 +25,7 @@ exports.createUserSchema = Joi.object({
   first_name:         Joi.string().max(100).optional(),
   last_name:          Joi.string().max(100).optional(),
   phone:              Joi.string().max(30).allow(null, "").optional(),
-  gender:             Joi.string().valid("Male", "Female", "Other").allow(null, "").optional(),
+  gender:             Joi.string().valid(...MEMBER_GENDERS).allow(null, "").optional(),
   birthdate:          Joi.date().iso().allow(null).optional(),
   spiritual_birthday: Joi.date().iso().allow(null).optional(),
   address:            Joi.string().max(500).allow(null, "").optional(),
@@ -53,7 +54,7 @@ exports.updateUserSchema = Joi.object({
   first_name:         Joi.string().max(100).optional(),
   last_name:          Joi.string().max(100).optional(),
   phone:              Joi.string().max(30).allow(null, "").optional(),
-  gender:             Joi.string().valid("Male", "Female", "Other").allow(null, "").optional(),
+  gender:             Joi.string().valid(...MEMBER_GENDERS).allow(null, "").optional(),
   birthdate:          Joi.date().iso().allow(null).optional(),
   spiritual_birthday: Joi.date().iso().allow(null).optional(),
   address:            Joi.string().max(500).allow(null, "").optional(),

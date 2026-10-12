@@ -5,6 +5,8 @@
 !/cms-api/uploads/**/
 !/cms-api/uploads/**/.gitkeep
 /docs/rendered_full_system_doc/
+/tmp/
+/output/
 
 # Keep real and machine-specific environment files out of Git.
 **/.env

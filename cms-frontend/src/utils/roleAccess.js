@@ -1,7 +1,7 @@
 export const ROLE_ALLOWED_PATHS = {
   // Members use self-scoped APIs through the standalone portal only.
   Member: ['/portal'],
-  'Finance Team': ['/dashboard', '/members', '/finance', '/archives', '/my-settings'],
+  'Finance Team': ['/dashboard', '/finance', '/archives', '/my-settings', '/reports/analytics'],
   'Ministry Leader': ['/dashboard', '/ministry', '/events', '/attendance', '/inventory', '/archives', '/my-settings'],
   'Cell Group Leader': ['/dashboard', '/cell-groups', '/attendance', '/events', '/inventory', '/archives', '/my-settings'],
   'Group Leader': ['/dashboard', '/members', '/attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
@@ -23,14 +23,13 @@ export const ROLE_TAB_SETS = {
   ],
   'Registration Team': [
     { label: 'Home', path: '/dashboard', icon: 'dashboard' },
-    { label: 'Members', path: '/members', icon: 'members' },
-    { label: 'Events', path: '/events', icon: 'events' },
-    { label: 'Services', path: '/services', icon: 'services' },
+    { label: 'Attendance', path: '/attendance', icon: 'attendance', permissions: { module: 'attendance', action: 'read' } },
+    { label: 'Events', path: '/events', icon: 'events', permissions: { module: 'events', action: 'read' } },
+    { label: 'QR Attendance', path: '/attendance/qr', icon: 'attendance', permissions: { module: 'qr_attendance', action: 'read' } },
   ],
   'Finance Team': [
     { label: 'Home', path: '/dashboard', icon: 'dashboard' },
     { label: 'Finance', path: '/finance', icon: 'finance' },
-    { label: 'Members', path: '/members', icon: 'members' },
     { label: 'Archives', path: '/archives', icon: 'archives' },
   ],
   'Cell Group Leader': [

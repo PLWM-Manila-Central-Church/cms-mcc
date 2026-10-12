@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import { groupMembersTitle, isScopedLeaderRole } from '../../utils/roleDisplay';
 import MonoIcon from '../../components/common/MonoIcon';
@@ -135,6 +136,7 @@ const actionBtnSm = (bg, color) => ({ background: bg, color, border: 'none', bor
 export default function MembersPage() {
   const navigate    = useNavigate();
   const { hasPermission, user, activeLeaderScopeKey } = useAuth();
+  const { confirm } = useConfirmation();
   const isMobile    = useIsMobile();
   const isMember    = user?.roleName === 'Member';
   const isScopedLeader = isScopedLeaderRole(user?.roleName);
@@ -249,20 +251,30 @@ export default function MembersPage() {
   const handleBulkDelete = async () => {
     if (!canBulkDelete) return;
     if (selected.size === 0) return;
-    if (!window.confirm(`Delete ${selected.size} selected member${selected.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    if (!(await confirm({
+      title: `Delete ${selected.size} selected member${selected.size > 1 ? 's' : ''}?`,
+      message: 'The selected member records will be deleted. This action cannot be undone.',
+      confirmLabel: `Delete ${selected.size} member${selected.size > 1 ? 's' : ''}`,
+      tone: 'danger',
+    }))) return;
     setBulkDeleting(true);
     try {
       await Promise.all([...selected].map(id => axiosInstance.delete(`/members/${id}`)));
       setSelected(new Set());
       fetchMembers();
     } catch (err) {
-      alert(err.response?.data?.message || 'Some deletes failed.');
+      setError(err.response?.data?.message || 'Some deletes failed.');
     } finally { setBulkDeleting(false); }
   };
 
   const handleUnassign = async (member) => {
     const name = `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'this member';
-    if (!window.confirm(`Unassign ${name} from your assigned group?`)) return;
+    if (!(await confirm({
+      title: 'Unassign member?',
+      message: `Unassign ${name} from your assigned group?`,
+      confirmLabel: 'Unassign member',
+      tone: 'warning',
+    }))) return;
     try {
       await axiosInstance.patch(`/members/${member.id}/unassign-scope`);
       setSelected(prev => {
@@ -272,7 +284,7 @@ export default function MembersPage() {
       });
       fetchMembers();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to unassign member from your assignment.');
+      setError(err.response?.data?.message || 'Failed to unassign member from your assignment.');
     }
   };
 

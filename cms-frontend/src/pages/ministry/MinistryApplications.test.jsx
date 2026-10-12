@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConfirmationProvider } from '../../context/ConfirmationContext';
 
 const fixture = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn(), patch: vi.fn(), applied: false }));
 vi.mock('../../api/axiosInstance', () => ({ default: { get: fixture.get, post: fixture.post, delete: fixture.delete, patch: fixture.patch } }));
@@ -35,7 +36,7 @@ describe('ministry application user flow', () => {
     });
     const showToast = vi.fn();
 
-    render(<MemberMinistryApplications c={{ border: '#ddd', surface: '#fff', t1: '#111' }} showToast={showToast} />);
+    render(<ConfirmationProvider><MemberMinistryApplications c={{ border: '#ddd', surface: '#fff', t1: '#111' }} showToast={showToast} /></ConfirmationProvider>);
     fireEvent.click(await screen.findByRole('button', { name: 'Apply' }));
 
     await waitFor(() => expect(fixture.post).toHaveBeenCalledWith('/ministry-applications', expect.objectContaining({ ministry_role_id: 4 })));

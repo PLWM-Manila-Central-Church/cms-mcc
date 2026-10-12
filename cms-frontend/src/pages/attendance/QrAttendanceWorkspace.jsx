@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import QrScannerDialog from '../../components/attendance/QrScannerDialog';
 import '../../components/attendance/qrAttendance.css';
 
@@ -27,6 +28,7 @@ const makeInitialTimes = () => {
 
 export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targetId: targetIdProp }) {
   const { user, hasPermission, activeLeaderScopeKey } = useAuth();
+  const { confirm, prompt } = useConfirmation();
   const [searchParams] = useSearchParams();
   const targetType = targetTypeProp || searchParams.get('target_type') || '';
   const targetId = targetIdProp || searchParams.get('target_id') || '';
@@ -297,9 +299,25 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
     try {
       await axiosInstance.post(`/qr-attendance/sessions/${session.id}/${action}`, body);
       setNotice(action === 'open' ? 'Attendance session opened.' : action === 'close' ? 'Attendance session closed.' : 'Attendance session cancelled.');
-      await loadSessionData(session.id);
+      await Promise.all([
+        loadSessionData(session.id),
+        loadSessions(String(session.id)),
+      ]);
     } catch (requestError) { setError(apiError(requestError, 'Could not update this attendance session.')); }
     finally { setBusy(false); }
+  };
+
+  const cancelSession = async () => {
+    const reason = await prompt({
+      title: 'Cancel attendance session?',
+      message: 'A reason is required for the audit record.',
+      inputLabel: 'Cancellation reason',
+      minLength: 5,
+      maxLength: 500,
+      confirmLabel: 'Cancel session',
+      tone: 'danger',
+    });
+    if (reason) await updateSession('cancel', { reason });
   };
 
   const finalizeAttendance = async (event) => {
@@ -480,7 +498,12 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
   };
 
   const withdrawBatch = async () => {
-    if (!draftDetail?.batch || !window.confirm('Withdraw this draft or pending batch?')) return;
+    if (!draftDetail?.batch || !(await confirm({
+      title: 'Withdraw attendance batch?',
+      message: 'This draft or pending batch will be withdrawn and will no longer be available for review.',
+      confirmLabel: 'Withdraw batch',
+      tone: 'warning',
+    }))) return;
     setBusy(true); setError('');
     try {
       await axiosInstance.post(`/qr-attendance/batches/${draftDetail.batch.id}/withdraw`, {
@@ -495,8 +518,17 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
 
   const correctRecord = async (record, action) => {
     const name = `${record.Member?.first_name || record.member?.first_name || ''} ${record.Member?.last_name || record.member?.last_name || ''}`.trim();
-    const reason = window.prompt(`${action === 'void' ? 'Void' : 'Reinstate'} attendance for ${name}. Enter a reason (at least 5 characters):`);
-    if (!reason || reason.trim().length < 5) return;
+    const actionLabel = action === 'void' ? 'Void' : 'Reinstate';
+    const reason = await prompt({
+      title: `${actionLabel} attendance record?`,
+      message: `${actionLabel} attendance for ${name}. A reason is required for the audit record.`,
+      inputLabel: 'Reason',
+      minLength: 5,
+      maxLength: 500,
+      confirmLabel: `${actionLabel} attendance`,
+      tone: 'warning',
+    });
+    if (!reason) return;
     setBusy(true); setError('');
     try {
       await axiosInstance.post(`/qr-attendance/sessions/${session.id}/members/${record.member_id}/correction`, {
@@ -517,8 +549,13 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
       const link = document.createElement('a');
       link.href = url;
       link.download = `attendance-session-${session.id}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
+      document.body.appendChild(link);
+      try {
+        link.click();
+      } finally {
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
     } catch (requestError) { setError(apiError(requestError, 'Could not export this session.')); }
     finally { setBusy(false); }
   };
@@ -571,7 +608,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
               {sessions.map((row) => <option key={row.id} value={row.id}>{row.title} · {row.status} · {new Date(row.starts_at).toLocaleString()}</option>)}
             </select>
           </label>
-          {canConfigure && targetType && targetId && <span className="qr-state-pill">Admin session setup</span>}
+          {canConfigure && targetType && targetId && <span className="qr-state-pill">Session setup</span>}
         </div>
 
         {canConfigure && targetType && targetId && (
@@ -580,13 +617,13 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
             <form className="qr-workspace-card qr-section" onSubmit={createSession}>
               <div className="qr-form-grid">
                 <label className="qr-form-field">Session title
-                  <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required maxLength={150} />
+                  <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} required maxLength={150} />
                 </label>
                 <label className="qr-form-field">Session key
-                  <input value={form.session_key} onChange={(event) => setForm({ ...form, session_key: event.target.value })} required maxLength={80} />
+                  <input value={form.session_key} onChange={(event) => setForm((current) => ({ ...current, session_key: event.target.value }))} required maxLength={80} />
                 </label>
                 <label className="qr-form-field">Expected attendance
-                  <select value={form.expected_basis} onChange={(event) => setForm({ ...form, expected_basis: event.target.value, registration_required: event.target.value === 'registrations' })}>
+                  <select value={form.expected_basis} onChange={(event) => setForm((current) => ({ ...current, expected_basis: event.target.value, registration_required: event.target.value === 'registrations' }))}>
                     <option value="none">No expected roster</option>
                     {targetType === 'event' && <option value="registrations">Event registrations</option>}
                     <option value="explicit_roster">Explicit member list</option>
@@ -600,7 +637,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
                   approval_deadline: 'Batch approval deadline',
                 }).map(([key, label]) => (
                   <label className="qr-form-field" key={key}>{label}
-                    <input type="datetime-local" value={form[key]} onChange={(event) => setForm({ ...form, [key]: event.target.value })} required />
+                    <input type="datetime-local" value={form[key]} onChange={(event) => setForm((current) => ({ ...current, [key]: event.target.value }))} required />
                   </label>
                 ))}
               </div>
@@ -684,10 +721,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
           {canConfigure && <div className="qr-action-row">
             {session.status === 'draft' && <button type="button" className="qr-primary-button" disabled={busy} onClick={() => updateSession('open')}>Open Check-in</button>}
             {session.status === 'open' && <button type="button" className="qr-secondary-button" disabled={busy} onClick={() => updateSession('close')}>Close Check-in</button>}
-            {['draft', 'open'].includes(session.status) && <button type="button" className="qr-danger-button" disabled={busy} onClick={() => {
-              const reason = window.prompt('Enter a reason for cancelling this attendance session (at least 5 characters):');
-              if (reason?.trim().length >= 5) updateSession('cancel', { reason: reason.trim() });
-            }}>Cancel Session</button>}
+            {['draft', 'open'].includes(session.status) && <button type="button" className="qr-danger-button" disabled={busy} onClick={cancelSession}>Cancel Session</button>}
             <button type="button" className="qr-secondary-button" disabled={busy} onClick={downloadCsv}>Export CSV</button>
           </div>}
 
@@ -736,6 +770,11 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
               <h3>{isGroupLeader ? 'Add a member manually' : 'Manual member lookup'}</h3>
               <input className="qr-search-input" value={rosterQuery} onChange={(event) => setRosterQuery(event.target.value)} placeholder="Search by member name or barcode" aria-label="Search members" />
               {rosterLoading && <p role="status">Searching members…</p>}
+              {!rosterLoading && rosterQuery.trim().length >= 2 && rosterResults.length === 0 && (
+                <div className="qr-muted-box" role="status">
+                  {isGroupLeader ? 'No matching members are assigned to your current team.' : 'No matching members found.'}
+                </div>
+              )}
               <div className="qr-list qr-section">{rosterResults.map((member) => <div className="qr-list-row" key={member.id}>
                 <span>{member.last_name}, {member.first_name} <small>· {member.status}</small></span>
                 {isGroupLeader

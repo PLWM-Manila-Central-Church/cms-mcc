@@ -2,6 +2,7 @@ import { lazy, Suspense, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
 const OperationalMemberQrPanel = lazy(() => import('../../components/attendance/OperationalMemberQrPanel'));
@@ -15,12 +16,16 @@ export default function MemberProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
+  const { confirm } = useConfirmation();
   const isMobile = useIsMobile();
 
   const [member, setMember]     = useState(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [statusHistory, setStatusHistory] = useState([]);
+  const [statusHistoryLoading, setStatusHistoryLoading] = useState(true);
+  const [statusHistoryError, setStatusHistoryError] = useState('');
 
   // Emergency contact form
   const [ecForm, setEcForm]     = useState({ name: '', relationship: '', phone: '' });
@@ -41,11 +46,29 @@ export default function MemberProfilePage() {
     }
   };
 
+  const fetchStatusHistory = async () => {
+    setStatusHistoryLoading(true);
+    setStatusHistoryError('');
+    try {
+      const res = await axiosInstance.get(`/members/${id}/status-history`);
+      setStatusHistory(Array.isArray(res.data.data) ? res.data.data : []);
+    } catch (err) {
+      setStatusHistoryError(err.response?.data?.message || 'Status history could not be loaded.');
+    } finally {
+      setStatusHistoryLoading(false);
+    }
+  };
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchMember(); }, [id]);
+  useEffect(() => { fetchMember(); fetchStatusHistory(); }, [id]);
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this member?')) return;
+    if (!(await confirm({
+      title: 'Delete member?',
+      message: 'This member record will be deleted. This action cannot be undone.',
+      confirmLabel: 'Delete member',
+      tone: 'danger',
+    }))) return;
     setDeleting(true);
     try {
       await axiosInstance.delete(`/members/${id}`);
@@ -73,7 +96,12 @@ export default function MemberProfilePage() {
   };
 
   const handleEcDelete = async (contactId) => {
-    if (!window.confirm('Remove this emergency contact?')) return;
+    if (!(await confirm({
+      title: 'Remove emergency contact?',
+      message: 'This emergency contact will be removed from the member profile.',
+      confirmLabel: 'Remove contact',
+      tone: 'warning',
+    }))) return;
     try {
       await axiosInstance.delete(`/members/emergency-contacts/${contactId}`);
       fetchMember();
@@ -242,6 +270,34 @@ export default function MemberProfilePage() {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>Status History</h2>
+            {statusHistoryLoading ? (
+              <p role="status" style={styles.emptyText}>Loading status history…</p>
+            ) : statusHistoryError ? (
+              <p role="alert" style={styles.ecError}>{statusHistoryError}</p>
+            ) : statusHistory.length === 0 ? (
+              <p style={styles.emptyText}>No status changes recorded.</p>
+            ) : (
+              <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {statusHistory.map((change) => (
+                  <li key={change.id} style={{ padding: '12px 0', borderTop: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <strong style={{ color: '#0f172a' }}>{change.old_status} → {change.new_status}</strong>
+                      <time style={{ color: '#64748b', fontSize: 12 }}>
+                        {change.changed_at ? new Date(change.changed_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : '—'}
+                      </time>
+                    </div>
+                    <p style={{ margin: '6px 0 0', fontSize: 12, color: '#64748b' }}>
+                      {change.changed_by ? `Changed by ${change.changed_by}` : 'Changed by system'}
+                    </p>
+                    {change.reason && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>{change.reason}</p>}
+                  </li>
+                ))}
+              </ol>
             )}
           </div>
         </div>

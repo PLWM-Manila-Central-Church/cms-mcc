@@ -1,8 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
+import { deleteRecordsWithResults } from '../../utils/bulkDelete';
+import { localDateInputValue } from '../../utils/localDateInput';
+import { getDateRangeError } from '../../utils/dateRange';
+import { getIncomeSummaryAmounts } from '../../utils/incomeSummary';
+import FinanceAttachments from '../../components/finance/FinanceAttachments';
 
 const TYPE_BADGE = {
   Tithes:    { bg: '#ecfdf5', color: '#059669' },
@@ -38,12 +45,14 @@ const CARD_ICONS = {
 };
 
 export default function FinancePage() {
+  const queryClient = useQueryClient();
   const { hasPermission, user } = useAuth();
+  const { confirm } = useConfirmation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    if (user?.roleName === 'Member') navigate('/finance/my-giving', { replace: true });
+    if (user?.roleName === 'Member') navigate('/portal?tab=tithes', { replace: true });
   }, [user, navigate]);
 
   const canCreate = hasPermission('finance', 'create');
@@ -61,6 +70,7 @@ export default function FinancePage() {
   const [incomeCategories, setIncomeCategories] = useState([]);
   const [allTimeSummary, setAllTimeSummary] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const [incFilterCategory, setIncFilterCategory] = useState('');
   const [incFilterDateFrom, setIncFilterDateFrom] = useState('');
@@ -71,7 +81,7 @@ export default function FinancePage() {
   const [editIncRecord, setEditIncRecord] = useState(null);
   const [incForm, setIncForm] = useState({
     member_id: '', category_id: '', amount: '',
-    transaction_date: new Date().toISOString().slice(0, 10),
+    transaction_date: localDateInputValue(),
     receipt_number: '', notes: '', is_anonymous: false,
   });
   const [incSaving, setIncSaving] = useState(false);
@@ -79,6 +89,16 @@ export default function FinancePage() {
 
   const [incMemberSearch, setIncMemberSearch] = useState('');
   const [incMemberResults, setIncMemberResults] = useState([]);
+  const [incMemberSearchError, setIncMemberSearchError] = useState('');
+  const [incMemberSearchLoading, setIncMemberSearchLoading] = useState(false);
+  const [incMemberSearchComplete, setIncMemberSearchComplete] = useState(false);
+  const incMemberSearchTimeout = useRef(null);
+  const incMemberSearchController = useRef(null);
+
+  useEffect(() => () => {
+    clearTimeout(incMemberSearchTimeout.current);
+    incMemberSearchController.current?.abort();
+  }, []);
 
   const fetchIncomeCategories = async () => {
     try {
@@ -95,6 +115,14 @@ export default function FinancePage() {
   }, []);
 
   const fetchIncomeRecords = useCallback(async () => {
+    const dateRangeError = getDateRangeError(incFilterDateFrom, incFilterDateTo);
+    if (dateRangeError) {
+      setIncomeRecords([]);
+      setIncomeTotal(0);
+      setIncomeError(dateRangeError);
+      setIncomeLoading(false);
+      return;
+    }
     setIncomeLoading(true); setIncomeError('');
     try {
       const params = new URLSearchParams({ page: incomePage, limit: 15 });
@@ -112,17 +140,37 @@ export default function FinancePage() {
     }
   }, [incomePage, incFilterCategory, incFilterDateFrom, incFilterDateTo]);
 
-  let searchTimeoutRef = null;
   const handleIncMemberSearch = (val) => {
     setIncMemberSearch(val);
     setIncForm(f => ({ ...f, member_id: '' }));
-    clearTimeout(searchTimeoutRef);
-    if (!val.trim()) { setIncMemberResults([]); return; }
-    searchTimeoutRef = setTimeout(async () => {
+    setIncMemberSearchError('');
+    setIncMemberSearchComplete(false);
+    setIncMemberSearchLoading(false);
+    setIncMemberResults([]);
+    clearTimeout(incMemberSearchTimeout.current);
+    incMemberSearchController.current?.abort();
+    const query = val.trim();
+    if (query.length < 2) return;
+    incMemberSearchTimeout.current = setTimeout(async () => {
+      const controller = new AbortController();
+      incMemberSearchController.current = controller;
+      setIncMemberSearchLoading(true);
       try {
-        const res = await axiosInstance.get(`/members?search=${encodeURIComponent(val)}&limit=6`);
-        setIncMemberResults(res.data.data.members || []);
-      } catch {}
+        const res = await axiosInstance.get('/finance/members/search', {
+          params: { q: query, limit: 6 },
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        setIncMemberResults(res.data.data || []);
+        setIncMemberSearchComplete(true);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setIncMemberSearchError(error.response?.data?.message || 'Could not search members. Please try again.');
+          setIncMemberSearchComplete(true);
+        }
+      } finally {
+        if (!controller.signal.aborted) setIncMemberSearchLoading(false);
+      }
     }, 300);
   };
 
@@ -130,12 +178,20 @@ export default function FinancePage() {
     setIncForm(f => ({ ...f, member_id: m.id, is_anonymous: false }));
     setIncMemberSearch(`${m.last_name}, ${m.first_name}`);
     setIncMemberResults([]);
+    setIncMemberSearchError('');
+    setIncMemberSearchComplete(false);
+    setIncMemberSearchLoading(false);
   };
 
   const resetIncForm = () => {
-    setIncForm({ member_id: '', category_id: '', amount: '', transaction_date: new Date().toISOString().slice(0, 10), receipt_number: '', notes: '', is_anonymous: false });
+    setIncForm({ member_id: '', category_id: '', amount: '', transaction_date: localDateInputValue(), receipt_number: '', notes: '', is_anonymous: false });
     setIncMemberSearch('');
     setIncMemberResults([]);
+    setIncMemberSearchError('');
+    setIncMemberSearchComplete(false);
+    setIncMemberSearchLoading(false);
+    clearTimeout(incMemberSearchTimeout.current);
+    incMemberSearchController.current?.abort();
     setEditIncRecord(null);
     setIncFormError('');
   };
@@ -160,6 +216,7 @@ export default function FinancePage() {
       } else {
         await axiosInstance.post('/finance/records', payload);
       }
+      await queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'], refetchType: 'all' });
       setShowIncForm(false);
       resetIncForm();
       fetchIncomeRecords();
@@ -172,24 +229,62 @@ export default function FinancePage() {
   };
 
   const handleIncDelete = async (id) => {
-    if (!window.confirm('Delete this record?')) return;
+    if (!(await confirm({
+      title: 'Delete financial record?',
+      message: 'This financial record will be deleted. This action cannot be undone.',
+      confirmLabel: 'Delete record',
+      tone: 'danger',
+    }))) return;
     try {
       await axiosInstance.delete(`/finance/records/${id}`);
-      fetchIncomeRecords();
-      fetchAllTimeSummary();
+      await Promise.all([
+        fetchIncomeRecords(),
+        fetchAllTimeSummary(),
+        queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'], refetchType: 'all' }),
+      ]);
     } catch (err) {
       setIncomeError(err.response?.data?.message || 'Failed to delete record.');
     }
   };
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Delete ${selectedIds.length} record(s)?`)) return;
-    for (const id of selectedIds) {
-      try { await axiosInstance.delete(`/finance/records/${id}`); } catch {}
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    if (!(await confirm({
+      title: `Delete ${ids.length} financial record${ids.length === 1 ? '' : 's'}?`,
+      message: 'Selected giving records will be deleted. This action cannot be undone.',
+      confirmLabel: `Delete ${ids.length} record${ids.length === 1 ? '' : 's'}`,
+      tone: 'danger',
+    }))) return;
+
+    setIncomeError('');
+    setBulkDeleting(true);
+    try {
+      const result = await deleteRecordsWithResults(
+        ids,
+        (id) => axiosInstance.delete(`/finance/records/${id}`),
+      );
+      const failedIds = result.failures.map(({ id }) => id);
+      setSelectedIds(failedIds);
+      await Promise.all([
+        fetchIncomeRecords(),
+        fetchAllTimeSummary(),
+        queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'], refetchType: 'all' }),
+      ]);
+
+      if (result.failures.length > 0) {
+        const firstError = result.failures[0].error?.response?.data?.message
+          || result.failures[0].error?.message;
+        const failureDetails = firstError ? ` ${firstError}` : '';
+        setIncomeError(
+          `${result.deletedCount} record(s) deleted. ${result.failures.length} could not be deleted and remain selected for retry.${failureDetails}`,
+        );
+      }
+    } catch (error) {
+      setIncomeError(error.response?.data?.message || 'Bulk delete could not finish. Refresh the records before retrying.');
+    } finally {
+      setBulkDeleting(false);
     }
-    setSelectedIds([]);
-    fetchIncomeRecords();
-    fetchAllTimeSummary();
   };
 
   useEffect(() => {
@@ -240,10 +335,7 @@ export default function FinancePage() {
 
       {/* Summary Cards */}
       {(() => {
-        const totalAll = allTimeSummary.reduce((sum, s) => sum + s.total_amount, 0);
-        const tithesAll = allTimeSummary.find(s => s.category?.name === 'Tithes')?.total_amount || 0;
-        const offeringsAll = allTimeSummary.find(s => s.category?.name === 'Offering')?.total_amount || 0;
-        const otherAll = totalAll - tithesAll - offeringsAll;
+        const { total: totalAll, tithes: tithesAll, offerings: offeringsAll, other: otherAll } = getIncomeSummaryAmounts(allTimeSummary);
 
         const cards = [
           { label: 'Total Collected', value: totalAll, icon: CARD_ICONS.total },
@@ -252,13 +344,13 @@ export default function FinancePage() {
           { label: 'Other Giving', value: otherAll, icon: CARD_ICONS.gift },
         ];
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
             {cards.map((card, i) => (
               <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ width: 56, height: 56, borderRadius: 16, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {card.icon}
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>{card.label}</div>
                   <div style={{ fontSize: 22, fontWeight: 800, color: '#059669', marginTop: 2 }}>{formatAmount(card.value)}</div>
                   <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>All time total</div>
@@ -294,21 +386,27 @@ export default function FinancePage() {
           </select>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
+        <div style={{ display: isMobile ? 'grid' : 'flex', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : undefined, alignItems: isMobile ? 'stretch' : 'center', gap: 8, flex: isMobile ? '1 1 100%' : '0 0 auto', minWidth: 0 }}>
           <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Date Range</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: isMobile ? 'grid' : 'flex', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : undefined, alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 8 : 6, minWidth: 0 }}>
+            <label htmlFor="finance-income-date-from" style={{ fontSize: 12, color: '#64748b' }}>From</label>
             <input
+              id="finance-income-date-from"
               type="date"
               value={incFilterDateFrom}
+              max={incFilterDateTo || undefined}
               onChange={e => { setIncFilterDateFrom(e.target.value); setIncomePage(1); }}
-              style={{ padding: '10px 10px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+              style={{ padding: '10px 10px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', cursor: 'pointer', width: isMobile ? '100%' : undefined, minWidth: isMobile ? 0 : undefined, boxSizing: 'border-box' }}
             />
-            <span style={{ color: '#94a3b8', fontSize: 13 }}>&ndash;</span>
+            <span style={{ color: '#94a3b8', fontSize: 13, display: isMobile ? 'none' : undefined }}>&ndash;</span>
+            <label htmlFor="finance-income-date-to" style={{ fontSize: 12, color: '#64748b' }}>To</label>
             <input
+              id="finance-income-date-to"
               type="date"
               value={incFilterDateTo}
+              min={incFilterDateFrom || undefined}
               onChange={e => { setIncFilterDateTo(e.target.value); setIncomePage(1); }}
-              style={{ padding: '10px 10px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+              style={{ padding: '10px 10px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', fontFamily: 'inherit', cursor: 'pointer', width: isMobile ? '100%' : undefined, minWidth: isMobile ? 0 : undefined, boxSizing: 'border-box' }}
             />
           </div>
         </div>
@@ -330,7 +428,7 @@ export default function FinancePage() {
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setSelectedIds([])} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Clear</button>
             {canDelete && (
-              <button onClick={handleBulkDelete} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#dc2626', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Delete Selected</button>
+              <button onClick={handleBulkDelete} disabled={bulkDeleting} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: bulkDeleting ? '#94a3b8' : '#dc2626', color: '#fff', fontWeight: 600, fontSize: 13, cursor: bulkDeleting ? 'wait' : 'pointer', fontFamily: 'inherit' }}>{bulkDeleting ? 'Deleting…' : 'Delete Selected'}</button>
             )}
           </div>
         </div>
@@ -339,11 +437,11 @@ export default function FinancePage() {
       {incomeError && <div className="cms-error-box">{incomeError}</div>}
 
       {/* Recent Records */}
-      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflowX: 'auto' }}>
         <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid #f1f5f9' }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#0f172a' }}>Recent Records</h2>
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', minWidth: 980, borderCollapse: 'collapse' }}>
           <thead>
             <tr>
               <th style={{ padding: '12px 14px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: '#64748b', borderBottom: '1px solid #e2e8f0', width: 40 }}>
@@ -354,18 +452,18 @@ export default function FinancePage() {
                   style={{ cursor: 'pointer' }}
                 />
               </th>
-              {['Name / Reference', 'Type', 'Amount', 'Date', 'Encoded By', 'Actions'].map(h => (
+              {['Name / Reference', 'Type', 'Amount', 'Date', 'Encoded By', 'Receipts', 'Actions'].map(h => (
                 <th key={h} style={{ padding: '12px 22px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#64748b', borderBottom: '1px solid #e2e8f0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {incomeLoading ? (
-              <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Loading records...</td></tr>
+              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Loading records...</td></tr>
             ) : incomeRecords.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No records found.</td></tr>
+              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No records found.</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No records match your search.</td></tr>
+              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No records match your search.</td></tr>
             ) : filtered.map((r, i) => {
               const memberName = r.is_anonymous
                 ? 'Anonymous giving'
@@ -400,6 +498,17 @@ export default function FinancePage() {
                   <td style={{ padding: '14px 22px', fontWeight: 700, color: '#059669', fontSize: 15 }}>{formatAmount(r.amount)}</td>
                   <td style={{ padding: '14px 22px', fontSize: 14, color: '#475569' }}>{formatDate(r.transaction_date)}</td>
                   <td style={{ padding: '14px 22px', fontSize: 13, color: '#64748b' }}>{r.recorder?.email || '\u2014'}</td>
+                  <td style={{ padding: '10px 14px', maxWidth: 280 }}>
+                    <FinanceAttachments
+                      attachments={r.attachments || []}
+                      targetType="income"
+                      targetId={r.id}
+                      canUpload={canCreate}
+                      canDelete={canDelete}
+                      onChanged={fetchIncomeRecords}
+                      compact
+                    />
+                  </td>
                   <td style={{ padding: '14px 22px' }}>
                     <div style={{ display: 'flex', gap: 8 }}>
                       {canUpdate && (
@@ -517,18 +626,23 @@ export default function FinancePage() {
               </label>
               {!incForm.is_anonymous && (
                 <div>
-                  <label style={F.label}>Search Giver (Member) *</label>
+                  <label htmlFor="finance-giver-search" style={F.label}>Search Giver (Member) *</label>
                   <div style={{ position: 'relative' }}>
-                    <input value={incMemberSearch} onChange={e => handleIncMemberSearch(e.target.value)} placeholder="Type name..." style={F.input} />
+                    <input id="finance-giver-search" value={incMemberSearch} onChange={e => handleIncMemberSearch(e.target.value)} placeholder="Type name..." style={F.input} />
                     {incMemberResults.length > 0 && (
-                      <div style={{ position: 'absolute', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, left: 0, right: 0, zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                      <ul aria-label="Matching members" style={{ position: 'absolute', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, left: 0, right: 0, zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', listStyle:'none', margin:0, padding:0, maxHeight:240, overflowY:'auto' }}>
                         {incMemberResults.map(m => (
-                          <div key={m.id} onClick={() => selectIncMember(m)} style={{ padding: 10, cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
-                            <strong>{m.last_name}, {m.first_name}</strong>
-                          </div>
+                          <li key={m.id}>
+                            <button type="button" onClick={() => selectIncMember(m)} style={{ display:'block',width:'100%',padding:10,textAlign:'left',border:0,background:'#fff',cursor:'pointer',borderBottom:'1px solid #f1f5f9',fontFamily:'inherit',fontSize:14,color:'#0f172a' }}>
+                              <strong>{m.last_name}, {m.first_name}</strong>
+                            </button>
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                     )}
+                    {incMemberSearchLoading && <div role="status" style={{fontSize:12,color:'#64748b',marginTop:6}}>Searching members…</div>}
+                    {incMemberSearchError && <div role="alert" style={{fontSize:12,color:'#dc2626',marginTop:6}}>{incMemberSearchError}</div>}
+                    {!incMemberSearchLoading && !incMemberSearchError && incMemberSearchComplete && incMemberResults.length === 0 && <div role="status" style={{fontSize:12,color:'#64748b',marginTop:6}}>No matching members found.</div>}
                   </div>
                 </div>
               )}

@@ -37,6 +37,8 @@ const addDays = (date, count) => {
   return result.toISOString().slice(0, 10);
 };
 
+const toSqlUtcDateTime = (date) => date.toISOString().slice(0, 19).replace("T", " ");
+
 const readRange = ({ from, to }) => {
   const today = dateFromManila(new Date());
   const toDate = to || today;
@@ -118,8 +120,8 @@ const searchPastorMembers = async ({ search, limit = 10 } = {}, user = {}) => {
 const buildPastorMemberHistoryUnion = ({ memberId, filters, range }) => {
   const branches = [];
   const replacements = { memberId: Number(memberId) };
-  if (range.start) replacements.rangeStart = range.start;
-  if (range.endExclusive) replacements.rangeEnd = range.endExclusive;
+  if (range.start) replacements.rangeStart = toSqlUtcDateTime(range.start);
+  if (range.endExclusive) replacements.rangeEnd = toSqlUtcDateTime(range.endExclusive);
   const dateCondition = range.start && range.endExclusive
     ? "AND a.checked_in_at >= :rangeStart AND a.checked_in_at < :rangeEnd"
     : "";

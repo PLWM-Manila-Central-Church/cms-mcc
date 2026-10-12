@@ -69,6 +69,7 @@ module.exports = async (req, res, next) => {
 
     req.user = {
       userId:             user.id,
+      userSessionId:      Number(decoded.userSessionId) || null,
       email:              user.email,
       roleId:             user.role_id,
       roleName:           user.role.role_name,

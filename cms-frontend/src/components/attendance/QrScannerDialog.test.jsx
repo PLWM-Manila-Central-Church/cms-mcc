@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -60,6 +60,35 @@ describe('QrScannerDialog', () => {
     await waitFor(() => expect(mocks.decodeFromVideoDevice).toHaveBeenCalledTimes(1));
     expect(mocks.decodeFromVideoDevice.mock.calls[0][0]).toBeUndefined();
     expect(await screen.findByText(/Camera is ready/i)).toBeInTheDocument();
+  });
+
+  it('times out a stalled camera start, restores image upload, and stops a late camera result', async () => {
+    let finishCameraStart;
+    mocks.decodeFromVideoDevice.mockImplementationOnce(() => new Promise((resolve) => {
+      finishCameraStart = resolve;
+    }));
+    vi.useFakeTimers();
+    try {
+      render(<QrScannerDialog onDecode={vi.fn()} onClose={vi.fn()} />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /start camera/i }));
+        for (let index = 0; index < 8; index += 1) await Promise.resolve();
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+
+      expect(mocks.decodeFromVideoDevice).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('alert')).toHaveTextContent(/camera startup timed out/i);
+      expect(screen.getByLabelText(/upload qr image/i)).toBeEnabled();
+
+      await act(async () => {
+        finishCameraStart({ stop: mocks.stop });
+        await Promise.resolve();
+      });
+      expect(mocks.stop).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('decodes an uploaded image through the shared payload callback', async () => {
