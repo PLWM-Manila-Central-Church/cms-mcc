@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
+import { apiErrorMessage } from '../../utils/apiErrorMessage';
 
 function EyeIcon({ open }) {
   return open ? (
@@ -16,7 +17,7 @@ function EyeIcon({ open }) {
 }
 
 const EMPTY_FORM = {
-  email: '', password: '', role_id: '',
+  email: '', password: '', role_id: '', member_id: null,
   // Member fields
   first_name: '', last_name: '',
   phone: '', gender: '',
@@ -48,6 +49,7 @@ export default function UserFormPage() {
   const [saving,        setSaving]        = useState(false);
   const [error,         setError]         = useState('');
   const [showPassword,  setShowPassword]  = useState(false);
+  const [memberCandidate, setMemberCandidate] = useState(null);
 
   // Fetch roles, cell groups, groups, and ministry roles for dropdowns
   useEffect(() => {
@@ -138,7 +140,8 @@ export default function UserFormPage() {
         member_ministry_role_id: '',
       }));
     } else {
-      setForm(f => ({ ...f, [name]: value }));
+      setForm(f => ({ ...f, [name]: value, ...(!isEdit && name === 'email' ? { member_id: null } : {}) }));
+      if (name === 'email') setMemberCandidate(null);
     }
     setError('');
   };
@@ -209,13 +212,17 @@ export default function UserFormPage() {
       payload.leads_ministry_id = null;
     }
     if (!isEdit) payload.password = form.password;
+    if (!isEdit && form.member_id) payload.member_id = Number(form.member_id);
 
     try {
       if (isEdit) { await axiosInstance.put(`/users/${id}`, payload); }
       else        { await axiosInstance.post('/users', payload); }
       navigate('/users');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save user.');
+      setError(apiErrorMessage(err, 'Failed to save user.'));
+      if (!isEdit && err.response?.data?.error?.code === 'MEMBER_PROFILE_EXISTS') {
+        setMemberCandidate(err.response.data.error.details?.member || null);
+      }
     } finally {
       setSaving(false);
     }
@@ -271,6 +278,16 @@ export default function UserFormPage() {
       </p>
 
       {error && <div style={S.errorBox}>{error}</div>}
+      {!isEdit && memberCandidate && !form.member_id && (
+        <div style={S.card}>
+          <p>Existing Member: {memberCandidate.first_name} {memberCandidate.last_name}. Its profile and church history will be retained.</p>
+          <button type="button" onClick={() => {
+            setForm(current => ({ ...current, member_id: memberCandidate.id, first_name: memberCandidate.first_name, last_name: memberCandidate.last_name }));
+            setError('');
+          }}>Use existing Member profile</button>
+        </div>
+      )}
+      {!isEdit && form.member_id && <p>Existing Member profile linked. Edit that profile separately in Members.</p>}
 
       <form onSubmit={handleSubmit} style={S.form}>
 
@@ -283,6 +300,7 @@ export default function UserFormPage() {
               <label style={S.label}>First Name *</label>
               <input
                 type="text" name="first_name" value={form.first_name}
+                disabled={!isEdit && Boolean(form.member_id)}
                 onChange={handleChange} required style={inputStyle}
                 placeholder="Juan" onFocus={onFocus} onBlur={onBlur}
               />
@@ -291,6 +309,7 @@ export default function UserFormPage() {
               <label style={S.label}>Last Name *</label>
               <input
                 type="text" name="last_name" value={form.last_name}
+                disabled={!isEdit && Boolean(form.member_id)}
                 onChange={handleChange} required style={inputStyle}
                 placeholder="dela Cruz" onFocus={onFocus} onBlur={onBlur}
               />
@@ -344,6 +363,7 @@ export default function UserFormPage() {
             This information appears in the member's personal portal.
           </p>
 
+          <fieldset disabled={!isEdit && Boolean(form.member_id)} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <div style={S.row}>
             <div style={S.field}>
               <label style={S.label}>Phone / Contact No</label>
@@ -434,6 +454,7 @@ export default function UserFormPage() {
               onFocus={onFocus} onBlur={onBlur}
             />
           </div>
+          </fieldset>
         </div>
 
         {/* ── Leader Assignment (conditional) ── */}

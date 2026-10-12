@@ -6,6 +6,7 @@ const sequelize = require("../config/db");
 const auditLog = require("../helpers/auditLog.helper");
 const permissionCache = require("../helpers/permissionCache.helper");
 const AppError = require("../helpers/AppError");
+const resolveAccountMember = require("../helpers/resolveAccountMember");
 const {
   LEADER_ROLE,
   assignmentProjections,
@@ -99,32 +100,7 @@ const createUserWithLeadership = async (data, role, actor) => {
     });
     if (duplicate) throw AppError.conflict("DUPLICATE", "Email already in use");
 
-    let memberId = data.member_id || null;
-    if (memberId) {
-      const member = await Member.findOne({
-        where: { id: memberId, is_deleted: 0 },
-        attributes: ["id"],
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
-      if (!member) throw AppError.notFound("MEMBER_NOT_FOUND", "Member is not available");
-    } else if (data.first_name && data.last_name) {
-      const member = await Member.create({
-        first_name: data.first_name.trim(),
-        last_name: data.last_name.trim(),
-        email: data.email || null,
-        phone: data.phone || null,
-        gender: data.gender || null,
-        birthdate: data.birthdate || null,
-        spiritual_birthday: data.spiritual_birthday || null,
-        address: data.address || null,
-        cell_group_id: data.cell_group_id ? Number(data.cell_group_id) : null,
-        group_id: data.group_id ? Number(data.group_id) : null,
-        status: "Active",
-        is_deleted: 0,
-      }, { transaction });
-      memberId = member.id;
-    }
+    const memberId = await resolveAccountMember(data, transaction);
 
     const user = await User.create({
       email: data.email,
@@ -293,24 +269,7 @@ exports.createUser = async (data, createdBy) => {
 
   const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-  let resolvedMemberId = member_id || null;
-  if (!resolvedMemberId && first_name && last_name) {
-    const member = await Member.create({
-      first_name: first_name.trim(),
-      last_name: last_name.trim(),
-      email: email || null,
-      phone: phone || null,
-      gender: gender || null,
-      birthdate: birthdate || null,
-      spiritual_birthday: spiritual_birthday || null,
-      address: address || null,
-      cell_group_id: cell_group_id ? parseInt(cell_group_id) : null,
-      group_id: group_id ? parseInt(group_id) : null,
-      status: "Active",
-      is_deleted: 0,
-    });
-    resolvedMemberId = member.id;
-  }
+  const resolvedMemberId = await resolveAccountMember(data);
 
   const user = await User.create({
     email,
