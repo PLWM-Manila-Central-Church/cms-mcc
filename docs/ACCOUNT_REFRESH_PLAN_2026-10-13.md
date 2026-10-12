@@ -4,7 +4,7 @@
 
 The user approved retaining every `demo.*` account, every existing Member account, and the original System Admin. Production Admin UI inventory: 81 active accounts, 60 retained and 21 removed. The exact private ID/email inventory is stored in ignored `tmp/account-cleanup-production-20261013.json`, not in this public report.
 
-Create one fresh account for each remaining staff role through the Admin UI: Pastor, Registration Team, Finance Team, Ministry Leader, Cell Group Leader, Group Leader, and unified Leader. Use the user-approved short church-domain login IDs. The shared test password is kept out of repository documentation.
+Create seven fresh staff accounts through the Admin UI: Pastor, Registration Team, Finance Team, Ministry Leader, plus unified Leader accounts with cell-only, group-only, and combined assignments. The current creation form intentionally hides legacy Cell Group Leader/Group Leader roles. Use the user-approved short church-domain login IDs and existing LOCAL QA team scopes. The shared test password is kept out of repository documentation.
 
 ## Analyze and repair prerequisites
 
@@ -29,3 +29,9 @@ Create one fresh account for each remaining staff role through the Admin UI: Pas
 ## Completion evidence
 
 Record retained/deleted/new account counts and role results; keep identifiers and screenshots private where appropriate. Final deliverable is the seven login IDs plus known shared password, UI results, any repaired issues, and any unresolved manual first-login steps. Membership/history preservation and least-privilege behavior are required acceptance conditions.
+
+## Execution findings
+
+- PR #21 deployed the Admin-only boundary and safe account removal. All 21 selected old logins were removed through the Admin UI; the exact 60 retained IDs remained, and Member count stayed 227.
+- Blank-form submission was blocked by required fields. The first Pastor creation then returned a duplicate-entry error because the retained Member profile still owned that unique email. No Pastor login was created in that attempt.
+- Repair: account creation offers explicit linking to the matching Member profile, preserves its data, and rejects another login when that Member already has an undeleted login. The UI uses structured server error feedback, and linked Member fields are disabled in the account form. This supports fresh login replacement without duplicating the Member.
