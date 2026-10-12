@@ -63,7 +63,7 @@ exports.hardDeleteUser = async (req, res, next) => {
   try {
     const result = await usersService.hardDeleteUser(
       req.params.id,
-      req.user.userId,
+      req.user,
     );
     res.json({ success: true, data: result });
   } catch (err) {

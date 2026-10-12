@@ -257,6 +257,7 @@ exports.getUserById = async (id) => {
 // ── Create User ──────────────────────────────────────────────
 exports.createUser = async (data, createdBy) => {
   const actor = createdBy && typeof createdBy === "object" ? createdBy : null;
+  if (!isSystemAdministrator(actor)) throw AppError.forbidden("Only System Admin can create login accounts");
   const createdById = actor?.userId ?? createdBy;
   const {
     email, password, role_id, member_id, invited_member_id,
@@ -513,6 +514,7 @@ const updateUserWithLeaderScope = async (id, data, actor, requestedRole) => {
 
 // ── Update User ──────────────────────────────────────────────
 exports.updateUser = async (id, data, actor) => {
+  if (!isSystemAdministrator(actor)) throw AppError.forbidden("Only System Admin can update login accounts");
   const updatedBy = actor?.userId ?? actor;
   const user = await User.findByPk(id);
   if (!user) throw AppError.notFound("RECORD_NOT_FOUND", "Requested resource not available");
@@ -638,47 +640,5 @@ exports.activateUser = async (id, requestingUserId) => {
   return { message: "User activated successfully." };
 };
 
-// ── Hard Delete User ──────────────────────────────────────────
-exports.hardDeleteUser = async (id, requestingUserId) => {
-  if (parseInt(id) === parseInt(requestingUserId))
-    throw AppError.badRequest("VALIDATION", "You cannot delete your own account");
-
-  const user = await User.findOne({ where: { id, is_deleted: 0 } });
-  if (!user) throw AppError.notFound("RECORD_NOT_FOUND", "Requested resource not available");
-
-  const sequelize = require("../config/db");
-
-  // Capture member_id before deletion so we can cascade
-  const linkedMemberId = user.member_id;
-
-  await sequelize.transaction(async (t) => {
-    // Nullify audit logs (preserve history but remove user reference)
-    await sequelize.query(
-      "UPDATE audit_logs SET user_id = NULL WHERE user_id = :userId",
-      { replacements: { userId: id }, transaction: t }
-    );
-
-    // Delete dependent records
-    await sequelize.query("DELETE FROM refresh_tokens WHERE user_id = :userId",        { replacements: { userId: id }, transaction: t });
-    await sequelize.query("DELETE FROM password_reset_tokens WHERE user_id = :userId", { replacements: { userId: id }, transaction: t });
-    await sequelize.query("DELETE FROM user_sessions WHERE user_id = :userId",         { replacements: { userId: id }, transaction: t });
-    await sequelize.query("DELETE FROM notifications WHERE user_id = :userId",         { replacements: { userId: id }, transaction: t });
-    await sequelize.query("DELETE FROM ministry_memberships WHERE added_by = :userId",          { replacements: { userId: id }, transaction: t });
-    await sequelize.query("DELETE FROM ministry_event_invites WHERE invited_by = :userId",      { replacements: { userId: id }, transaction: t });
-
-    // Soft-delete and deactivate the user so existing access JWTs fail the
-    // next authorization check even though refresh credentials are removed.
-    await user.update({ is_deleted: 1, is_active: 0, deleted_at: new Date() }, { transaction: t });
-
-    // Cascade: soft-delete the linked member (if any)
-    if (linkedMemberId) {
-      await sequelize.query(
-        "UPDATE members SET is_deleted = 1, deleted_at = NOW(), deleted_by = :deletedBy WHERE id = :memberId AND is_deleted = 0",
-        { replacements: { deletedBy: requestingUserId, memberId: linkedMemberId }, transaction: t }
-      );
-    }
-  });
-
-  auditLog.log({ userId: requestingUserId, action: "DELETE_USER", targetTable: "users", targetId: id });
-  return { message: "User and linked member profile permanently deleted." };
-};
+// Remove login access while retaining linked Member and church history.
+exports.hardDeleteUser = require("./delete-user-account.service");
