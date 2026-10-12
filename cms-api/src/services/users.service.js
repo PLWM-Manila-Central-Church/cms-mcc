@@ -79,14 +79,15 @@ const hasAssignedLeadershipInput = (data = {}) => Boolean(
   || data.leads_ministry_id,
 );
 
-const createUserWithLeadership = async (data, role, actor) => {
+const createAccountWithProfile = async (data, role, actor) => {
   if (!isSystemAdministrator(actor)) {
     throw AppError.forbidden("Only System Admin can create or assign a leadership account");
   }
 
   const desired = await targetsForRole(role.role_name, data, [], true);
-  const reason = String(data.leadership_reason || "").trim();
-  if (reason.length < 5) {
+  const isLeadership = LEADERSHIP_PROFILE_ROLES.has(role.role_name);
+  const reason = String(data.leadership_reason || (isLeadership ? "" : "Login account created by System Admin")).trim();
+  if (isLeadership && reason.length < 5) {
     throw AppError.badRequest("LEADERSHIP_REASON_REQUIRED", "Enter a reason of at least 5 characters for this leadership assignment");
   }
   const assignmentFields = assignmentProjections(role.role_name, desired);
@@ -94,11 +95,20 @@ const createUserWithLeadership = async (data, role, actor) => {
 
   const createdId = await sequelize.transaction(async (transaction) => {
     const duplicate = await User.findOne({
-      where: { email: data.email, is_deleted: 0 },
+      where: { email: data.email },
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
-    if (duplicate) throw AppError.conflict("DUPLICATE", "Email already in use");
+    if (duplicate && !Number(duplicate.is_deleted)) throw AppError.conflict("DUPLICATE", "Email already in use");
+    if (duplicate) {
+      const previousEmail = duplicate.email;
+      const archivedEmail = `deleted-user-${duplicate.id}@accounts.invalid`;
+      await duplicate.update({ email: archivedEmail }, { transaction });
+      await AuditLog.create({
+        user_id: actor.userId, action: "RELEASE_ARCHIVED_LOGIN_EMAIL", target_table: "users", target_id: duplicate.id,
+        old_values: { email: previousEmail }, new_values: { email: archivedEmail },
+      }, { transaction });
+    }
 
     const memberId = await resolveAccountMember(data, transaction);
 
@@ -114,10 +124,11 @@ const createUserWithLeadership = async (data, role, actor) => {
       force_password_change: 1,
     }, { transaction });
 
-    const assignmentRows = await UserLeaderAssignment.findAll({
-      where: { user_id: user.id },
-      transaction,
-      lock: transaction.LOCK.UPDATE,
+    if (isLeadership) {
+      const assignmentRows = await UserLeaderAssignment.findAll({
+        where: { user_id: user.id },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
     });
     await persistAssignments({
       userId: user.id,
@@ -128,6 +139,7 @@ const createUserWithLeadership = async (data, role, actor) => {
       existingRows: assignmentRows,
       transaction,
     });
+    }
 
     if (data.member_ministry_role_id && memberId) {
       if (role.role_name === "Ministry Leader") {
@@ -149,7 +161,7 @@ const createUserWithLeadership = async (data, role, actor) => {
 
     await AuditLog.create({
       user_id: actor.userId,
-      action: "CREATE_LEADERSHIP_USER",
+      action: isLeadership ? "CREATE_LEADERSHIP_USER" : "CREATE_USER",
       target_table: "users",
       target_id: user.id,
       new_values: {
@@ -164,7 +176,6 @@ const createUserWithLeadership = async (data, role, actor) => {
   });
 
   const created = await exports.getUserById(createdId);
-  auditLog.log({ userId: actor.userId, action: "CREATE_USER", targetTable: "users", targetId: created.id });
   return created;
 };
 const validateLeaderAssignment = async (role, data, existingUser = null) => {
@@ -231,75 +242,11 @@ exports.getUserById = async (id) => {
 };
 
 // ── Create User ──────────────────────────────────────────────
-exports.createUser = async (data, createdBy) => {
-  const actor = createdBy && typeof createdBy === "object" ? createdBy : null;
+exports.createUser = async (data, actor) => {
   if (!isSystemAdministrator(actor)) throw AppError.forbidden("Only System Admin can create login accounts");
-  const createdById = actor?.userId ?? createdBy;
-  const {
-    email, password, role_id, member_id, invited_member_id,
-    first_name, last_name, phone, gender, birthdate,
-    spiritual_birthday, address, cell_group_id, group_id,
-    leads_cell_group_id, leads_group_id, leads_ministry_id,
-    member_ministry_role_id,
-  } = data;
-
-  const existing = await User.findOne({ where: { email, is_deleted: 0 } });
-  if (existing) throw AppError.conflict("DUPLICATE", "Email already in use");
-
-  const role = await Role.findByPk(role_id);
+  const role = await Role.findByPk(data.role_id);
   if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Role not found");
-
-  if (LEADERSHIP_PROFILE_ROLES.has(role.role_name)) {
-    if (!isSystemAdministrator(actor)) {
-      throw AppError.forbidden("Only System Admin can create a leadership account or assign its teams");
-    }
-    return createUserWithLeadership(data, role, actor);
-  }
-
-  const leaderAssignment = await validateLeaderAssignment(role, {
-    leads_cell_group_id,
-    leads_group_id,
-    leads_ministry_id,
-  });
-
-  // Validate: member_ministry_role_id is NOT allowed for Ministry Leader role
-  if (member_ministry_role_id && role.role_name === 'Ministry Leader') {
-    throw AppError.badRequest("VALIDATION", "Use leads_ministry_id for Ministry Leader role, not member_ministry_role_id");
-  }
-
-  const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-
-  const resolvedMemberId = await resolveAccountMember(data);
-
-  const user = await User.create({
-    email,
-    password_hash,
-    role_id,
-    member_id: resolvedMemberId || null,
-    invited_member_id: invited_member_id || null,
-    ...leaderAssignment,
-    is_active: 1,
-    force_password_change: 1,
-  });
-
-  // If member_ministry_role_id is provided, add user to that ministry as a team member
-  if (member_ministry_role_id && resolvedMemberId) {
-    await MinistryMembership.findOrCreate({
-      where: {
-        ministry_role_id: parseInt(member_ministry_role_id),
-        member_id: resolvedMemberId,
-      },
-      defaults: {
-        ministry_role_id: parseInt(member_ministry_role_id),
-        member_id: resolvedMemberId,
-        added_by: createdBy,
-      },
-    });
-  }
-
-  const created = await exports.getUserById(user.id);
-  auditLog.log({ userId: createdById, action: "CREATE_USER", targetTable: "users", targetId: created.id });
-  return created;
+  return createAccountWithProfile(data, role, actor);
 };
 
 
