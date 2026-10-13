@@ -44,4 +44,4 @@ The local Vite server is running on port 3000. To restart it, run `npm start -- 
 
 This local pass does not establish final account, finance, archive, roster, application-review or attendance writes against a database. The live combined Leader still required its first-login password change during the preceding audit; the local preview uses synthetic assignments. Real camera decoding/upload, offline recovery, all intermediate breakpoints, and saved-password autofill behavior remain integration QA items before deployment approval.
 
-Source changes are local. No push, deployment, password change, production database write, or backend/schema change was performed in this implementation pass.
+This report covers frontend changes only. It does not certify backend/database integration flows or production transaction paths. No database migrations or backend source changes are included.
