@@ -39,6 +39,10 @@ describe('ministry application user flow', () => {
     render(<ConfirmationProvider><MemberMinistryApplications c={{ border: '#ddd', surface: '#fff', t1: '#111' }} showToast={showToast} /></ConfirmationProvider>);
     fireEvent.click(await screen.findByRole('button', { name: 'Apply' }));
 
+    expect(fixture.post).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Apply to Music' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Submit application' }));
+
     await waitFor(() => expect(fixture.post).toHaveBeenCalledWith('/ministry-applications', expect.objectContaining({ ministry_role_id: 4 })));
     expect(await screen.findByText('pending')).toBeInTheDocument();
     expect(showToast).toHaveBeenCalledWith('Your ministry application was submitted.');

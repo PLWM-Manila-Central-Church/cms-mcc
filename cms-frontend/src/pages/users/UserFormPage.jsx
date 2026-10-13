@@ -289,7 +289,7 @@ export default function UserFormPage() {
       )}
       {!isEdit && form.member_id && <p>Existing Member profile linked. Edit that profile separately in Members.</p>}
 
-      <form onSubmit={handleSubmit} style={S.form}>
+      <form autoComplete="off" onSubmit={handleSubmit} style={S.form}>
 
         {/* ── Account Details ── */}
         <div style={S.card}>
@@ -319,7 +319,7 @@ export default function UserFormPage() {
           <div style={{ ...S.field, marginTop: 16 }}>
             <label style={S.label} htmlFor="userformpage-email">Email Address *</label>
             <input id="userformpage-email"
-              type="email" name="email" value={form.email}
+              type="email" name="email" autoComplete="off" autoCapitalize="none" spellCheck={false} value={form.email}
               onChange={handleChange} required style={inputStyle}
               placeholder="user@plwmmcc.com" onFocus={onFocus} onBlur={onBlur}
             />
@@ -330,13 +330,13 @@ export default function UserFormPage() {
               <label style={S.label} htmlFor="userformpage-password">Password *</label>
               <div style={{ position: 'relative' }}>
                 <input id="userformpage-password"
-                  type={showPassword ? 'text' : 'password'} name="password"
+                  type={showPassword ? 'text' : 'password'} name="password" autoComplete="new-password"
                   value={form.password} onChange={handleChange} required
                   style={{ ...inputStyle, paddingRight: 44 }}
                   placeholder="Min. 8 characters" onFocus={onFocus} onBlur={onBlur}
                 />
                 <button
-                  type="button" onClick={() => setShowPassword(v => !v)}
+                  type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(v => !v)}
                   style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center', padding: 2 }}
                 >
                   <EyeIcon open={showPassword} />

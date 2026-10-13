@@ -25,18 +25,19 @@ const cellAssignment = { scopeType:'cell_group',scopeId:1,scopeKey:'cell_group:1
 const groupAssignment = { scopeType:'group',scopeId:1,scopeKey:'group:1',teamName:'Sample Group',permissions:leaderGrants,is_active:1 };
 const user = { id:1,userId:1,email:'sample@example.com',roleName:leader?'Leader':selectedRole,memberId:1,leadsMinistryId:selectedRole==='Ministry Leader'?1:null,leadsMinistryName:'Sample Ministry',leaderAssignments:selectedRole==='Cell Leader'?[cellAssignment]:selectedRole==='Group Leader'?[groupAssignment]:selectedRole==='Combined Leader'?[cellAssignment,groupAssignment]:[],forcePasswordChange:false };
 const permissions = selectedRole==='Pastor' ? grants.filter(grant=>(grant.endsWith(':read')&&!grant.startsWith('users:')&&!grant.startsWith('settings:'))||grant==='archives:approve'||grant==='archives:update') : selectedRole==='Finance Team' ? grants.filter(grant=>grant.startsWith('finance:')||grant==='archives:read'||grant==='dashboard:read') : selectedRole==='Registration Team' ? grants.filter(grant=>!['users:','settings:','finance:','audit:'].some(prefix=>grant.startsWith(prefix))) : grants;
+const reviewPermissions = selectedRole === 'Finance Team' ? [...permissions.filter(grant => grant !== 'finance:delete'), 'archives:create', 'archives:update'] : permissions;
 const members = [
   {id:1,first_name:'Alex',last_name:'Sample',email:'alex@example.com',phone:'',status:'Active',member_code:'DEMO-001',gender:'Male',cell_group_id:1,group_id:1,join_date:'2026-01-01',CellGroup:{id:1,name:'Sample Cell'},Group:{id:1,name:'Sample Group'}},
   {id:2,first_name:'Jamie',last_name:'Example',email:'jamie@example.com',status:'Active',member_code:'DEMO-002',gender:'Female',cell_group_id:1,group_id:1,join_date:'2026-02-01',CellGroup:{id:1,name:'Sample Cell'},Group:{id:1,name:'Sample Group'}},
 ];
 const event={id:1,title:'Community Gathering',description:'Synthetic design review event',event_date:'2099-10-18',start_date:'2099-10-18',end_date:'2099-10-18',start_time:'09:00',location:'Sample Hall',venue:'Sample Hall',capacity:100,registration_count:2,registration_deadline:'2099-10-17',status:'published',visibility:'public',category:{name:'Fellowship'}};
 const service={id:1,title:'Sunday Worship',description:'Synthetic service for local visual review',service_date:'2099-10-18',service_time:'09:00:00',status:'published',location:'Sample Hall',capacity:100,visibility:'public',attendance_count:2};
-const qrSession={id:1,title:'Sample check-in session',service_id:1,target_type:'service',status:'open',starts_at:'2099-10-18T01:00:00Z',ends_at:'2099-10-18T03:00:00Z',check_in_opens_at:'2099-10-18T00:30:00Z',check_in_closes_at:'2099-10-18T03:00:00Z',expected_basis:'none',time_zone:'Asia/Manila',target:service};
+const qrSession={id:1,title:'Sample check-in session',service_id:1,target_type:'service',status:'open',starts_at:'2099-10-18T01:00:00Z',ends_at:'2099-10-18T03:00:00Z',check_in_opens_at:'2099-10-18T00:30:00Z',check_in_closes_at:'2099-10-18T03:00:00Z',expected_basis:'none',time_zone:'Asia/Manila',service,target:service};
 const stats={roleSummary:{activeUsers:12,pendingArchives:2,upcomingServices:1,todayAttendance:2,recordsThisMonth:2,membersInScope:2,scopeName:leader?'Sample teams':selectedRole==='Ministry Leader'?'Sample Ministry':selectedRole,pendingInvites:1,pendingRequests:1,eligibleCandidates:2,assignedTeamCount:user.leaderAssignments.length},members:{total:2,active:2,inactive:0,newThisMonth:1},finance:{totalThisMonth:1200,recentRecords:[]},inventory:{lowStock:0,pendingRequests:1},events:{upcoming:[event]},services:{upcoming:1},recentActivity:[{id:1,action:'REVIEW_SAMPLE',User:{email:'sample@example.com'}}],attendanceTrend:[],cellGroupAbsences:[],latestService:null};
 let rows = [...members];
 const paged=(key,value)=>({[key]:value,total:value.length,total_pages:1,page:1});
 function responseData(path,config) {
-  if(path==='/auth/session'||path==='/auth/login') return {user,permissions,forcePasswordChange:false};
+  if(path==='/auth/session'||path==='/auth/login') return {user,permissions:reviewPermissions,forcePasswordChange:false};
   if(path==='/dashboard/stats') return stats;
   if(path==='/notifications') return [];
   if(path==='/member-portal/profile'||path==='/members/1') return {...members[0],cell_group:{name:'Sample Cell'},group:{name:'Sample Group'}};
@@ -61,18 +62,19 @@ function responseData(path,config) {
   if(path==='/services/1') return service;
   if(path==='/services/1/responses') return {responses:[]};
   if(path==='/attendance') return [];
-  if(path==='/attendance/pastor-report') return {summary:{},review_health:{},sessions:[],team_breakdown:[],trends:[],event_activity_summary:[],pagination:{page:1,total:0,total_pages:1},activity_options:[]};
+  if(path==='/attendance/pastor-report') return {filters:{time_zone:'Asia/Manila'},summary:{confirmed_visits:0,service_visits:0,event_session_visits:0,unique_attendees:0,expected_sessions:0,awaiting_review:0,provisional_missing:0,provisional_sessions:0,final_absent:0,finalized_sessions:0,event_unique_participants:0},review_health:{submitted_batches:0,awaiting_review:0,sessions_requiring_finalization:0},sessions:[],team_breakdown:{cell_groups:[],groups:[]},trends:[],event_activity_summary:[],pagination:{page:1,total:0,total_pages:1},activity_options:[]};
   if(path.startsWith('/attendance/report')) return {sessions:[],summary:{},teams:[],records:[]};
   if(path==='/events') return paged('events',[event]);
   if(path==='/events/1') return {...event,event,registrations:[]};
   if(path.startsWith('/events/1/')) return {registrations:[],attendees:[],total:0,total_pages:1};
   if(path==='/events/categories') return [{id:1,name:'Fellowship'}];
-  if(path==='/finance') return paged('records',[{id:1,amount:1200,transaction_date:'2026-10-01',category:{id:1,name:'Tithe'},member:members[0],receipt_number:'SAMPLE-001',encodedBy:{email:'sample@example.com'}}]);
+  if(path==='/finance') return paged('records',[{id:1,amount:1200,transaction_date:'2026-10-01',category:{id:1,name:'Tithe'},Member:members[0],receipt_number:'SAMPLE-001',recorder:{email:'sample@example.com'}},{id:2,amount:500,transaction_date:'2026-10-01',category:{id:2,name:'Offering'},Member:{},recorder:{email:'deleted-user-2@accounts.invalid'}}]);
   if(path==='/finance/summary') return [{category_name:'Tithe',category_id:1,total:1200}];
   if(path==='/finance/balance') return {total_income:1200,total_expense:0,net_balance:1200};
   if(path==='/finance/expenses') return paged('expenses',[]);
   if(path==='/finance/categories') return [{id:1,name:'Tithe'},{id:2,name:'Offering'}];
   if(path==='/ministry/roles') return [{id:1,name:'Sample Ministry'}];
+  if(path==='/ministry-applications/opportunities') return [{id:1,name:'Welcome Team',is_member:false},{id:2,name:'Music Ministry',is_member:false},{id:3,name:'Media Team',is_member:false,application:{id:1,status:'pending'}}];
   if(path==='/ministry/roles/1') return {id:1,name:'Sample Ministry'};
   if(path==='/ministry/members') return members.map(member=>({...member,member_id:member.id,Member:member,role:{id:1,name:'Sample Ministry'}}));
   if(path.startsWith('/ministry/')) return [];
@@ -110,4 +112,6 @@ function ReviewToolbar(){
   return <aside className="design-review-toolbar" aria-label="Local visual review controls"><strong>LOCAL DESIGN REVIEW</strong><span>Synthetic data · API disconnected</span><label>Role <select value={value} onChange={e=>{setValue(e.target.value);const url=new URL(location.href);url.searchParams.set('role',e.target.value);url.hash=e.target.value==='Member'?'/portal':'/dashboard';location.assign(url.href);}}>{roles.map(role=><option key={role}>{role}</option>)}</select></label><a href="/">Open real local app</a></aside>;
 }
 if(!location.hash) location.hash=selectedRole==='Member'?'/portal':'/dashboard';
-createRoot(document.getElementById('root')).render(<QueryClientProvider client={queryClient}><AuthProvider><HashRouter><ErrorBoundary><ReviewToolbar/><AppRoutes/></ErrorBoundary></HashRouter></AuthProvider></QueryClientProvider>);
+const reviewRoot = import.meta.hot?.data.root || createRoot(document.getElementById('root'));
+if (import.meta.hot) import.meta.hot.dispose(data => { data.root = reviewRoot; });
+reviewRoot.render(<QueryClientProvider client={queryClient}><AuthProvider><HashRouter><ErrorBoundary><ReviewToolbar/><AppRoutes/></ErrorBoundary></HashRouter></AuthProvider></QueryClientProvider>);

@@ -500,11 +500,11 @@ function getDashboardConfig({ role, stats, hasPermission }) {
           metric('This month', fmtMoney(stats.finance.totalThisMonth), 'Recorded giving', '/finance'),
           metric('Records', fmtNumber(summary.recordsThisMonth), 'Transactions this month', '/finance'),
           metric('Members', fmtNumber(stats.members.total), 'Search names while recording giving', '/finance'),
-          metric('Archives', fmtNumber(summary.pendingArchives), 'Public/restricted queue', '/archives'),
+          metric('Pending archives', fmtNumber(summary.pendingArchives), 'Awaiting review', '/archives'),
         ],
         primary: [
           row('Finance records', 'Record and review contributions.', '/finance'),
-          row('Member lookup', 'Search a member when recording a contribution.', '/finance'),
+          row('Giving entry', 'Choose a contributor in the giving form.', '/finance?new=giving'),
           row('Archives', 'Access finance-related documents.', '/archives'),
         ],
         watch: [

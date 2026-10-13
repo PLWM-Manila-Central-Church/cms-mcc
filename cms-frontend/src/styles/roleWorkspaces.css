@@ -42,7 +42,8 @@
 .workspace-finance .mcc-module table { font-size:13px; }
 .workspace-finance .mcc-module table tbody tr:nth-child(even) { background:#f8fafb; }
 .mcc-module tbody tr:hover { background:#f8fbfd; }
-.mcc-module td { overflow-wrap:anywhere; }
+.mcc-module td { overflow-wrap:break-word; }
+.mcc-module td button { white-space:nowrap; flex-shrink:0; }
 .mcc-module form { scroll-margin-top:100px; }
 .mcc-module :is(button,a) { transition:background-color .15s,border-color .15s,box-shadow .15s; }
 .mcc-module button:disabled { cursor:not-allowed; }
@@ -115,3 +116,23 @@
   .role-action-bar > span { width:100%; }.role-action-bar button { flex:1 1 130px; }
   .member-welcome { padding:20px; flex-direction:column; align-items:flex-start; }.member-welcome-actions { width:100%; }.member-welcome-actions button { flex:1; }
 }
+
+/* Keep working pages focused while retaining each role's dashboard identity. */
+.mcc-workspace .workspace-context { padding:10px 0 14px; margin-bottom:20px; border:0; border-bottom:1px solid var(--mcc-border); border-radius:0; background:transparent; gap:16px; align-items:center; flex-direction:row; }
+.mcc-workspace .workspace-breadcrumb, .mcc-workspace .workspace-breadcrumb a { color:var(--mcc-secondary); }
+.workspace-help { margin-top:5px; font-size:12px; color:var(--mcc-secondary); }
+.workspace-help summary { cursor:pointer; width:max-content; padding:3px 0; }
+.workspace-help p { margin-top:8px; font-size:13px; max-width:680px; }
+.workspace-help .workspace-scope-note { display:block; margin-top:4px; }
+.mcc-workspace .workspace-context-actions a { min-height:36px; padding:7px 10px; background:transparent; color:var(--mcc-brand); }
+.mcc-module-user-form-page :is(input,select) { scroll-margin-top:90px; }
+.mcc-module-users-page td :is(button,span) { word-break:normal; }
+@media(max-width:700px) {
+ .mcc-workspace .workspace-context { align-items:flex-start; }
+ .mcc-workspace .workspace-context-actions { display:none; }
+ .mcc-module td button { min-height:44px; }
+}
+
+.mcc-workspace .workspace-context .workspace-help :is(p,span) { color:var(--mcc-secondary); }
+.mcc-workspace .workspace-context .workspace-breadcrumb,
+.mcc-workspace .workspace-context .workspace-breadcrumb a { color:var(--mcc-secondary); }

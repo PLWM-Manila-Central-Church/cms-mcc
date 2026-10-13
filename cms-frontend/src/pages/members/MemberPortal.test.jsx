@@ -8,6 +8,11 @@ vi.mock('../../context/ConfirmationContext', () => ({ useConfirmation: () => ({ 
 vi.mock('../../utils/langUtils', () => ({ LANGS: [], getLangCode: () => 'en', saveLangCode: vi.fn(), loadGTScript: vi.fn(), applyGTLang: vi.fn() }));
 vi.mock('../../components/common/MemberNotificationCenter', () => ({ default: () => null }));
 import MemberPortal from './MemberPortal';
+test('shows a neutral attendance state when the period contains no services', async () => {
+  render(<MemoryRouter initialEntries={['/portal?tab=attendance']}><MemberPortal /></MemoryRouter>);
+  expect(await screen.findByText('No services in this period')).toBeInTheDocument();
+  expect(screen.queryByText('Needs Improvement')).not.toBeInTheDocument();
+});
 beforeEach(() => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 });
   localStorage.clear();

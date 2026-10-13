@@ -250,6 +250,7 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
           </>
         )}
 
+        <button type="button" aria-label="My Settings" title="My Settings" onClick={() => navigate('/my-settings')} style={S.logoutBtn}>{isMobile ? <MonoIcon name="settings" size={17} /> : 'Settings'}</button>
         {/* Language picker */}
         <div ref={langRef} style={{ position: 'relative' }}>
           <button

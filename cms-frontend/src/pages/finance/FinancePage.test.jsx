@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import FinancePage from './FinancePage';
 
@@ -29,6 +29,15 @@ const renderPage = () => render(<MemoryRouter><FinancePage /></MemoryRouter>);
 const summaryGrid = () => screen.getByText('Total Collected').parentElement.parentElement.parentElement;
 
 describe('FinancePage responsive layout', () => {
+  it('opens the giving shortcut as a named dialog and cancels without saving', async () => {
+    render(<MemoryRouter initialEntries={['/finance?new=giving']}><FinancePage /></MemoryRouter>);
+    expect(await screen.findByRole('dialog', { name: 'New Giving Record' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Income Category' })).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: 'Amount (PHP)' })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mockAxios.post).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     setViewportWidth(390);

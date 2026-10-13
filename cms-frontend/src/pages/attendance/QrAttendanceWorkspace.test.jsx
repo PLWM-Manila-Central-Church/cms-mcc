@@ -63,6 +63,16 @@ function renderWorkspace() {
 }
 
 describe('QR attendance workspace role flows', () => {
+  it('requires a session choice on the standalone page before exposing check-in controls', async () => {
+    render(<ConfirmationProvider><MemoryRouter><QrAttendanceWorkspace /></MemoryRouter></ConfirmationProvider>);
+    const choice = await screen.findByRole('combobox', { name: 'Attendance session' });
+    await screen.findByRole('option', { name: /Event: Test Event/ });
+    expect(choice).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Scan Member QR' })).not.toBeInTheDocument();
+    expect(fixture.get.mock.calls.some(([url]) => url === '/qr-attendance/sessions/1')).toBe(false);
+    fireEvent.change(choice, { target: { value: '1' } });
+    expect(await screen.findByRole('button', { name: 'Scan Member QR' })).toBeInTheDocument();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     batchRows = [];

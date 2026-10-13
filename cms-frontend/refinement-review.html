@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MCC local UI refinements</title>
+<style>*{box-sizing:border-box}body{margin:0;font:14px/1.5 system-ui,sans-serif;background:#f5f7fa;color:#0f172a}header{background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 22px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}h1{font-size:18px;margin:0;color:#005599}p{margin:0;color:#52647a}nav{padding:12px 20px;display:flex;gap:8px;flex-wrap:wrap}button{font:inherit;min-height:44px;padding:8px 14px;border:1px solid #dbe4ee;border-radius:9px;background:white;color:#005599;cursor:pointer}button[aria-pressed=true]{background:#005599;color:white}button:focus-visible{outline:3px solid #13b5ea;outline-offset:2px}iframe{display:block;width:100%;height:calc(100dvh - 150px);min-height:600px;border:0;background:white}</style><style>body{height:100dvh;display:flex;flex-direction:column;overflow:hidden}header,nav{flex-shrink:0}iframe{flex:1;min-height:0;height:auto}</style></head>
+<body><header><h1>PLWM-MCC · Local UI review</h1><p>Interactive role workspaces with synthetic data. Choose a role, then use its navigation to review the updated modules.</p></header><nav aria-label="Review roles"></nav><iframe title="Selected role workspace"></iframe>
+<script type="module">
+if (!import.meta.env.DEV) throw new Error('Local review only');
+const roles=['System Admin','Pastor','Registration Team','Finance Team','Ministry Leader','Cell Leader','Group Leader','Combined Leader','Member'];
+const frame=document.querySelector('iframe'), nav=document.querySelector('nav');
+const pages={'System Admin':'/users','Pastor':'/attendance','Registration Team':'/attendance/qr','Finance Team':'/finance','Ministry Leader':'/ministry','Cell Leader':'/leader/teams','Group Leader':'/members','Combined Leader':'/leader/teams','Member':'/portal?tab=ministries'};
+function select(role){frame.src='/role-review.html?embedded=1&role='+encodeURIComponent(role)+'#'+pages[role];for(const button of nav.children)button.setAttribute('aria-pressed',String(button.textContent===role));}
+for(const role of roles){const button=document.createElement('button');button.textContent=role;button.onclick=()=>select(role);nav.append(button);}select('Member');
+</script></body></html>

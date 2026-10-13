@@ -163,7 +163,7 @@ export default function MySettingsPage() {
   // ── Styles ──────────────────────────────────────────────────
   const card     = { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', border: '1px solid var(--mcc-border, #e2e8f0)', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: '20px 22px', marginBottom: 14 };
   const secTitle = { fontSize: 16, fontWeight: 700, color: 'var(--mcc-ink, #0f172a)', marginBottom: 4, marginTop: 0 };
-  const secSub   = { fontSize: 13, color: '#94a3b8', marginBottom: 16, marginTop: 0 };
+  const secSub   = { fontSize: 13, color: '#52647a', marginBottom: 16, marginTop: 0 };
   const lbl      = { fontSize: 12, color: '#374151', fontWeight: 600, display: 'block', marginBottom: 6 };
   const inp      = { width: '100%', padding: '10px 13px', fontSize: 14, border: '1.5px solid #e2e8f0', borderRadius: 8, outline: 'none', color: 'var(--mcc-ink, #0f172a)', background: '#fafbfc', boxSizing: 'border-box', minHeight: 42, fontFamily: 'inherit' };
 
@@ -238,28 +238,28 @@ export default function MySettingsPage() {
 
           {/* Font family */}
           <div style={{ marginBottom: 18 }}>
-            <label style={lbl}>Font</label>
-            <select value={fontFamily} onChange={e => updatePref('fontFamily', e.target.value)}
+            <label htmlFor="staff-preference-font" style={lbl}>Font</label>
+            <select id="staff-preference-font" value={fontFamily} onChange={e => updatePref('fontFamily', e.target.value)}
               style={{ ...inp, width: 'auto', minWidth: 200, cursor: 'pointer' }}>
-              {FONTS.map(fn => <option key={fn.name} value={fn.name}>{fn.name}{fn.system ? ' (system)' : ''}</option>)}
+              {FONTS.filter(fn => ['DM Sans', 'Inter', 'Helvetica', fontFamily].includes(fn.name)).map(fn => <option key={fn.name} value={fn.name}>{fn.name}{fn.system ? ' (system)' : ''}</option>)}
             </select>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
+            <div style={{ fontSize: 11, color: '#52647a', marginTop: 6 }}>
               Preview: <span style={{ fontFamily: `'${fontFamily}', system-ui, sans-serif`, fontWeight: 500 }}>The quick brown fox</span>
             </div>
           </div>
 
           {/* Font size */}
           <div style={{ marginBottom: 18 }}>
-            <label style={lbl}>Font Size (12–40 px)</label>
+            <label htmlFor="staff-preference-size" style={lbl}>Text size</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <input
-                type="number" min={12} max={40} value={fontSizeInput}
+                id="staff-preference-size" type="number" min={12} max={40} value={fontSizeInput}
                 onChange={e => setFontSizeInput(e.target.value)}
                 onBlur={handleFontSizeBlur}
                 onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
                 style={{ ...inp, width: 84, textAlign: 'center' }}
               />
-              <span style={{ fontSize: 13, color: '#94a3b8' }}>current: <strong>{fontSize}px</strong></span>
+              <span style={{ fontSize: 13, color: '#52647a' }}>current: <strong>{fontSize}px</strong></span>
             </div>
             <div style={{ marginTop: 8, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid var(--mcc-border, #e2e8f0)' }}>
               <span style={{ fontSize: `${fontSize}px`, fontFamily: `'${fontFamily}', system-ui`, color: 'var(--mcc-ink, #0f172a)' }}>Sample text at {fontSize}px</span>
@@ -267,8 +267,8 @@ export default function MySettingsPage() {
           </div>
 
           {/* Display scale */}
-          <div style={{ marginBottom: 18 }}>
-            <label style={lbl}>Display Scale</label>
+          <details style={{ marginBottom: 18 }}>
+            <summary style={{ ...lbl, cursor: 'pointer' }}>Advanced display scale</summary>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {RESOLUTIONS.map(r => (
                 <ChipBtn key={r.value} active={(prefs.resolution || 1) === r.value} onClick={() => updatePref('resolution', r.value)}>
@@ -276,8 +276,8 @@ export default function MySettingsPage() {
                 </ChipBtn>
               ))}
             </div>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>Scales the entire interface.</div>
-          </div>
+            <div style={{ fontSize: 11, color: '#52647a', marginTop: 6 }}>Scales the entire interface.</div>
+          </details>
 
           {/* Language */}
           <div>
@@ -314,10 +314,10 @@ export default function MySettingsPage() {
               { label: 'Confirm New Password', key: 'confirm_password',showKey: 'cf' },
             ].map(({ label: l2, key, showKey, hint }) => (
               <div key={key} style={{ marginBottom: 14 }}>
-                <label style={lbl}>{l2}</label>
+                <label htmlFor={`staff-password-${key}`} style={lbl}>{l2}</label>
                 <div style={{ position: 'relative' }}>
                   <input
-                    type={show[showKey] ? 'text' : 'password'}
+                    id={`staff-password-${key}`} autoComplete={key === 'current_password' ? 'current-password' : 'new-password'} type={show[showKey] ? 'text' : 'password'}
                     value={pwForm[key]}
                     onChange={e => { setPwForm({ ...pwForm, [key]: e.target.value }); setPwError(''); setPwSuccess(''); }}
                     style={{ ...inp, paddingRight: 44 }}
@@ -325,8 +325,8 @@ export default function MySettingsPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShow({ ...show, [showKey]: !show[showKey] })}
-                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, display: 'flex', alignItems: 'center', minHeight: 40, minWidth: 36, justifyContent: 'center' }}
+                    aria-label={(show[showKey] ? 'Hide ' : 'Show ') + l2.toLowerCase()} onClick={() => setShow({ ...show, [showKey]: !show[showKey] })}
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#52647a', padding: 4, display: 'flex', alignItems: 'center', minHeight: 40, minWidth: 36, justifyContent: 'center' }}
                   >
                     <EyeIcon open={show[showKey]} />
                   </button>

@@ -1,3 +1,4 @@
+import { displayAccount } from '../../utils/displayIdentity';
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
@@ -256,12 +257,12 @@ export default function ArchivesPage() {
         </div>
         <div style={s.detailRow}>
           <span style={s.detailLabel}>Uploaded by</span>
-          <span style={s.detailValue}>{detailRecord.uploadedByUser?.email}</span>
+          <span style={s.detailValue}>{displayAccount(detailRecord.uploadedByUser?.email)}</span>
         </div>
         {detailRecord.approvedByUser && (
           <div style={s.detailRow}>
             <span style={s.detailLabel}>Approved by</span>
-            <span style={s.detailValue}>{detailRecord.approvedByUser?.email}</span>
+            <span style={s.detailValue}>{displayAccount(detailRecord.approvedByUser?.email)}</span>
           </div>
         )}
         {detailRecord.description && (
@@ -278,7 +279,7 @@ export default function ArchivesPage() {
             {detailRecord.ArchiveVersions.map(v => (
               <div key={v.id} style={s.versionRow}>
                 <span style={s.versionNum}>v{v.version_number}</span>
-                <span style={s.versionMeta}>{v.file_type?.toUpperCase()} · {v.uploadedByUser?.email}</span>
+                <span style={s.versionMeta}>{v.file_type?.toUpperCase()} · {displayAccount(v.uploadedByUser?.email)}</span>
                 <button onClick={() => handleDownloadFile(detailRecord, v)} style={s.versionLink}>Download</button>
               </div>
             ))}
@@ -308,7 +309,7 @@ export default function ArchivesPage() {
               <div style={{ color: '#94a3b8', fontSize: '13px' }}>No access logs yet.</div>
             ) : accessLogs.map(log => (
               <div key={log.id} style={s.logRow}>
-                <span style={s.logUser}>{log.accessedByUser?.email}</span>
+                <span style={s.logUser}>{displayAccount(log.accessedByUser?.email)}</span>
                 <span style={s.logTime}>{new Date(log.accessed_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
               </div>
             ))}
@@ -451,7 +452,7 @@ export default function ArchivesPage() {
                     </div>
                     <div style={s.recordTitle}>{record.title}</div>
                     <div style={s.recordSub}>{record.category?.name} · {formatDate(record.document_date)}</div>
-                    <div style={s.recordSub}>Uploaded by {record.uploadedByUser?.email}</div>
+                    <div style={s.recordSub}>Uploaded by {displayAccount(record.uploadedByUser?.email)}</div>
 
                     {record.status === 'pending' && isApprover && (
                       <div style={s.pendingActions} onClick={e => e.stopPropagation()}>

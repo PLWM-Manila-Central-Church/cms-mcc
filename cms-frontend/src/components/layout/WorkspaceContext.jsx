@@ -12,8 +12,11 @@ export default function WorkspaceContext() {
   return <section className="workspace-context" aria-label={`${workspace.title} workspace`}>
     <div className="workspace-context-copy">
       <div className="workspace-breadcrumb"><Link to="/dashboard">{workspace.title}</Link><span aria-hidden="true">/</span><span>{module.label}</span></div>
-      <p>{module.description}</p>
-      <span className="workspace-scope-note">{workspace.note}</span>
+      <details className="workspace-help">
+        <summary>Page guidance</summary>
+        <p>{module.description}</p>
+        <span className="workspace-scope-note">{workspace.note}</span>
+      </details>
     </div>
     {!!actions.length && <nav className="workspace-context-actions" aria-label="Related work">{actions.slice(0, 3).map(item => <Link key={item.path} to={item.path}>{item.label}<span aria-hidden="true"> ↗</span></Link>)}</nav>}
   </section>;
