@@ -49,6 +49,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
 
   const [availability, setAvailability] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -83,6 +84,11 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
     expected_basis: 'none',
     registration_required: false,
   }));
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 15_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const selectedTeam = user?.leaderAssignments?.find(item => item.scopeKey === activeLeaderScopeKey);
   const teamName = selectedTeam?.teamName || user?.leadsCellGroupName || user?.leadsGroupName || 'Selected team';
@@ -578,6 +584,14 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
   const submittedBatches = batchRows.filter((batch) => batch.state === 'submitted');
   const isLate = forceLateApproval || (reviewDetail?.batch && Date.now() > new Date(reviewDetail.batch.approval_deadline).getTime());
   const sessionTarget = session?.target || {};
+  const windowOpensAt = session?.check_in_opens_at ? new Date(session.check_in_opens_at).getTime() : Number.NaN;
+  const windowClosesAt = session?.check_in_closes_at ? new Date(session.check_in_closes_at).getTime() : Number.NaN;
+  const canCaptureAttendance = Boolean(session?.status === 'open' && Number.isFinite(windowOpensAt) && Number.isFinite(windowClosesAt) && currentTime >= windowOpensAt && currentTime <= windowClosesAt);
+  const checkInWindowMessage = !session || session.status !== 'open' ? ''
+    : !Number.isFinite(windowOpensAt) || !Number.isFinite(windowClosesAt) ? 'Check-in window times are unavailable. Contact an administrator.'
+      : currentTime < windowOpensAt ? `Check-in opens ${new Date(windowOpensAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: session.time_zone || 'Asia/Manila' })}.`
+        : currentTime > windowClosesAt ? `Check-in ended ${new Date(windowClosesAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: session.time_zone || 'Asia/Manila' })}. Scanning and manual check-in are closed.`
+          : '';
 
   return (
     <div className="qr-workspace mcc-module mcc-module-qr">
@@ -667,8 +681,10 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
               <h2>{session.title}</h2>
               <p>{sessionTarget.title || (session.service_id ? 'Service session' : 'Event session')} · {new Date(session.starts_at).toLocaleString()} · {session.time_zone || 'Asia/Manila'}</p>
             </div>
-            <span className={`qr-session-status qr-status-${session.status}`}>{session.status}</span>
+            <span className={`qr-session-status qr-status-${session.status}`}>{checkInWindowMessage && session.status === 'open' ? (currentTime < windowOpensAt ? 'Check-in upcoming' : currentTime > windowClosesAt ? 'Check-in closed' : 'Check-in unavailable') : session.status}</span>
           </div>
+
+          {checkInWindowMessage && <div className="qr-muted-box" role="status">{checkInWindowMessage}</div>}
 
           {summary && <div className="qr-summary-grid">
             <div className="qr-summary-tile"><strong>{summary.confirmed_count}</strong><span>Confirmed</span></div>
@@ -747,14 +763,14 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
             </section>
           )}
 
-          {session.status === 'open' && canCheckIn && <section className="qr-section qr-workspace-card">
+          {session.status === 'open' && canCheckIn && canCaptureAttendance && <section className="qr-section qr-workspace-card">
             <h3>Registration Team · Individual check-in</h3>
             <p>Scan a fixed member QR or find the member manually. Confirm after checking the member at the desk.</p>
             <div className="qr-action-row"><button type="button" className="qr-primary-button" disabled={busy} onClick={() => { setCandidate(null); setScannerMode('member'); }}>Scan Member QR</button></div>
             {candidate && <div className="qr-result-box">
               <strong>{candidate.member.first_name} {candidate.member.last_name}</strong>
               <div>{candidate.outcome === 'ready' ? 'Ready to check in' : candidate.outcome === 'already_confirmed' ? `Already checked in at ${new Date(candidate.checked_in_at).toLocaleTimeString()}` : 'This attendance was voided. Use the audited correction action.'}</div>
-              {candidate.outcome === 'ready' && <button type="button" className="qr-primary-button qr-section" disabled={busy} onClick={confirmCandidate}>Confirm Check-in</button>}
+              {candidate.outcome === 'ready' && <button type="button" className="qr-primary-button qr-section" disabled={busy || !canCaptureAttendance} onClick={confirmCandidate}>Confirm Check-in</button>}
               <button type="button" className="qr-secondary-button qr-section" onClick={() => setCandidate(null)}>Clear</button>
             </div>}
           </section>}
@@ -762,15 +778,15 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
           {session.status === 'open' && canRecordBatch && isGroupLeader && <section className="qr-section qr-workspace-card">
             <h3>Attendance draft · {teamName}</h3>
             <p>Scan or select members of this {teamType}: {teamName}. Draft entries need Registration approval before they count as confirmed attendance.</p>
-            {!draftDetail?.batch && <button type="button" className="qr-primary-button" onClick={startDraft} disabled={busy}>Start Leader Batch</button>}
+            {!draftDetail?.batch && canCaptureAttendance && <button type="button" className="qr-primary-button" onClick={startDraft} disabled={busy}>Start Leader Batch</button>}
             {draftDetail?.batch?.state === 'draft' && <div className="qr-action-row">
-              <button type="button" className="qr-primary-button" disabled={busy} onClick={() => setScannerMode('leader')}>Scan Member into Draft</button>
+              {canCaptureAttendance && <button type="button" className="qr-primary-button" disabled={busy} onClick={() => setScannerMode('leader')}>Scan Member into Draft</button>}
               <button type="button" className="qr-secondary-button" disabled={busy} onClick={submitDraft}>Submit Batch for Review</button>
               <button type="button" className="qr-danger-button" disabled={busy} onClick={withdrawBatch}>Withdraw</button>
             </div>}
           </section>}
 
-          {(canCheckIn || (canRecordBatch && isGroupLeader && session.status === 'open')) && session.status === 'open' && (
+          {(canCheckIn || (canRecordBatch && isGroupLeader && session.status === 'open')) && canCaptureAttendance && (
             <section className="qr-section qr-workspace-card">
               <h3>{isGroupLeader ? 'Add a member manually' : 'Manual member lookup'}</h3>
               <input className="qr-search-input" value={rosterQuery} onChange={(event) => setRosterQuery(event.target.value)} placeholder="Search by member name or barcode" aria-label="Search members" />
