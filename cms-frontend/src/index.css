@@ -182,7 +182,7 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 
 /* ── Bottom nav spacer (mobile) ──────────────────────────────── */
 @media (max-width: 768px) {
-  main { padding-bottom: calc(var(--nav-bottom-h) + var(--sab) + 8px) !important; }
+  .mcc-main { padding-bottom: calc(var(--nav-bottom-h) + var(--sab) + 16px) !important; }
 }
 
 /* ── Bottom sheet backdrop ───────────────────────────────────── */

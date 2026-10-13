@@ -23,6 +23,7 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
   const [unread,    setUnread]    = useState(0);
   const [panelOpen, setPanelOpen] = useState(false);
   const [loading,   setLoading]   = useState(false);
+  const [actionError, setActionError] = useState('');
   const panelRef = useRef(null);
 
   // Language state
@@ -32,6 +33,15 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
     return saved ? saved.label : 'English';
   });
   const langRef = useRef(null);
+  useEffect(() => {
+    const handleEscape = event => {
+      if (event.key !== 'Escape') return;
+      if (panelOpen) { setPanelOpen(false); panelRef.current?.querySelector('button')?.focus(); }
+      if (langOpen) { setLangOpen(false); langRef.current?.querySelector('button')?.focus(); }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [panelOpen, langOpen]);
 
   // Close lang dropdown on outside click
   useEffect(() => {
@@ -75,25 +85,28 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
   }, []);
 
   const markOne = async (id) => {
+    setActionError('');
     try {
       await axiosInstance.patch(`/notifications/${id}/read`);
       setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: 1 } : n));
       setUnread(prev => Math.max(0, prev - 1));
-    } catch (_) {}
+    } catch (_) { setActionError('Could not mark the notification as read. Try again.'); }
   };
 
   const markAll = async () => {
+    setActionError('');
     setLoading(true);
     try {
       await axiosInstance.patch('/notifications/read-all');
       setNotifs(prev => prev.map(n => ({ ...n, is_read: 1 })));
       setUnread(0);
-    } catch (_) {}
+    } catch (_) { setActionError('Could not mark notifications as read. Try again.'); }
     setLoading(false);
   };
 
   const deleteOne = async (e, id) => {
     e.stopPropagation();
+    setActionError('');
     try {
       await axiosInstance.delete(`/notifications/${id}`);
       setNotifs(prev => {
@@ -101,15 +114,16 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
         setUnread(next.filter(n => !n.is_read).length);
         return next;
       });
-    } catch (_) {}
+    } catch (_) { setActionError('Could not dismiss the notification. Try again.'); }
   };
 
   const clearAll = async () => {
+    setActionError('');
     setLoading(true);
     try {
       await axiosInstance.delete('/notifications/clear-all');
       setNotifs([]); setUnread(0);
-    } catch (_) {}
+    } catch (_) { setActionError('Could not clear notifications. Try again.'); }
     setLoading(false);
   };
 
@@ -117,6 +131,7 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
   const handleNotifClick = (n) => {
     if (!n.is_read) markOne(n.id);
     if (!n.reference_id || !n.reference_type) return;
+    setPanelOpen(false);
     switch (n.reference_type) {
       case 'service':
         if (user?.roleName === 'Member') {
@@ -167,14 +182,14 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
   const panelWidth = isMobile ? 'calc(100vw - 24px)' : '360px';
 
   return (
-    <div style={{ ...S.header, left: sidebarWidth, padding: isNarrowDesktop ? '0 12px' : '0 16px' }}>
+    <header className="mcc-header" data-has-scopes={leaderAssignments.length > 0} style={{ ...S.header, left: sidebarWidth, padding: isNarrowDesktop ? '0 12px' : '0 16px' }}>
       <div style={{ ...S.left, minWidth: 0, flex: '1 1 auto', gap: isNarrowDesktop ? 8 : 10 }}>
         {/* NO hamburger on mobile — navigation is via bottom tab bar + More drawer */}
-        <span style={S.plwmBadge}>PLWM-MCC</span>
+        <span className="mcc-header-brand" style={S.plwmBadge}>PLWM-MCC</span>
         {!isMobile && (
           <>
             <div style={S.divider} />
-            <h2 style={{
+            <h2 className="mcc-header-title" style={{
               ...S.pageTitle,
               maxWidth: isTablet ? 140 : isNarrowDesktop ? 240 : 300,
               minWidth: 0,
@@ -228,23 +243,26 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
         {!isMobile && !isTablet && (
           <>
             <div style={S.divider} />
-            <span style={{ ...S.email, maxWidth: isNarrowDesktop ? 120 : 200, minWidth: 0 }}>{user?.email}</span>
+            <span className="mcc-header-email" title={user?.email} style={{ ...S.email, maxWidth: isNarrowDesktop ? 120 : 200, minWidth: 0 }}>{user?.email}</span>
           </>
         )}
 
         {/* Language picker */}
         <div ref={langRef} style={{ position: 'relative' }}>
           <button
-            onClick={() => setLangOpen(p => !p)}
+            onClick={() => { setLangOpen(p => !p); setPanelOpen(false); }}
+            aria-label={`Language: ${currentLang}`}
+            aria-expanded={langOpen}
+            aria-controls="mcc-language-options"
             style={{ background: langOpen ? '#e8f4fd' : 'transparent', border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', color: '#374151', fontFamily: 'inherit', fontWeight: 500 }}
             title="Change language"
           >
             <span style={{ fontSize: 11, fontWeight: 800 }}>{LANGS.find(l => l.label === currentLang)?.code.toUpperCase() || 'EN'}</span>
-            {!isMobile && <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{currentLang === 'English' ? 'EN' : currentLang.slice(0, 2).toUpperCase()}</span>}
+            {!isMobile && !isNarrowDesktop && <span style={{ fontSize: 12, fontWeight: 600, color: '#475569' }}>{currentLang}</span>}
           </button>
 
           {langOpen && (
-            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', zIndex: 300, minWidth: 200, overflow: 'hidden', animation: 'slideDown 0.18s ease' }}>
+            <div id="mcc-language-options" aria-label="Languages" style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', zIndex: 300, minWidth: 200, overflow: 'hidden', animation: 'slideDown 0.18s ease' }}>
               <div style={{ padding: '8px 14px 6px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Language</div>
               {[{ groupLabel: 'International', langs: LANGS.slice(0, 2) }, { groupLabel: 'Filipino Languages', langs: LANGS.slice(2) }].map(group => (
                 <div key={group.groupLabel}>
@@ -273,7 +291,10 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
         <div ref={panelRef} style={S.bellWrap}>
           <button
             style={{ ...S.bellBtn, background: panelOpen ? '#e8f4fd' : 'transparent' }}
-            onClick={() => setPanelOpen(p => !p)}
+            onClick={() => { setPanelOpen(p => !p); setLangOpen(false); }}
+            aria-label="Notifications"
+            aria-expanded={panelOpen}
+            aria-controls="mcc-notification-panel"
             title="Notifications"
           >
             <MonoIcon name="bell" size={17} style={S.bellIcon} />
@@ -281,7 +302,7 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
           </button>
 
           {panelOpen && (
-            <div style={{ ...S.panel, width: panelWidth, right: isMobile ? '-8px' : 0 }}>
+            <section id="mcc-notification-panel" aria-label="Notifications" style={{ ...S.panel, width: panelWidth, ...(isMobile ? { position: 'fixed', top: 72, right: 12 } : { right: 0 }) }}>
               <div style={S.panelHeader}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={S.panelTitle}>Notifications</span>
@@ -292,6 +313,7 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
                   {notifs.length > 0 && <button style={{ ...S.actionLink, color: '#ef4444' }} onClick={clearAll} disabled={loading}>Clear all</button>}
                 </div>
               </div>
+              {actionError && <p role="alert" style={{ margin: 0, padding: '12px 16px', color: '#b91c1c', background: '#fef2f2', fontSize: 13 }}>{actionError}</p>}
 
               <div style={S.panelList}>
                 {notifs.length === 0 ? (
@@ -306,22 +328,21 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
                     return (
                       <div key={n.id}
                         style={{ ...S.notifRow, background: n.is_read ? '#fff' : '#f0f6ff', borderLeft: `3px solid ${n.is_read ? 'transparent' : t.dot}` }}
-                        onClick={() => handleNotifClick(n)}
                       >
                         <div style={{ ...S.notifIconWrap, background: t.bg }}>
                           <MonoIcon name={t.icon} size={15} style={S.notifIcon} />
                         </div>
-                        <div style={S.notifContent}>
-                          <p style={S.notifMsg}>{n.message}</p>
+                        <button type="button" onClick={() => handleNotifClick(n)} style={{ ...S.notifContent, border: 0, background: 'transparent', padding: 0, textAlign: 'left', font: 'inherit', cursor: 'pointer' }}>
+                          <span style={{ ...S.notifMsg, display: 'block' }}>{n.message}</span>
                           <span style={S.notifTime}>{timeAgo(n.created_at ?? n.createdAt)}</span>
-                        </div>
-                        <button style={S.deleteNotif} onClick={(e) => deleteOne(e, n.id)} title="Dismiss"><MonoIcon name="close" size={12} /></button>
+                        </button>
+                        <button type="button" style={S.deleteNotif} onClick={(e) => deleteOne(e, n.id)} aria-label={`Dismiss notification: ${n.message}`} title="Dismiss"><MonoIcon name="close" size={12} /></button>
                       </div>
                     );
                   })
                 )}
               </div>
-            </div>
+            </section>
           )}
         </div>
 
@@ -331,12 +352,12 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
       </div>
 
       <style>{`@keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }`}</style>
-    </div>
+    </header>
   );
 }
 
 const S = {
-  header:      { position: 'fixed', top: 0, right: 0, height: '64px', background: '#fff', borderBottom: '2px solid #e8f4fd', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', zIndex: 99, transition: 'left 0.25s ease', boxShadow: '0 2px 12px rgba(0,85,153,0.08)' },
+  header:      { position: 'fixed', top: 0, right: 0, height: '64px', background: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', zIndex: 99, transition: 'left 0.25s ease' },
   left:        { display: 'flex', alignItems: 'center', gap: '10px' },
   plwmBadge:   { fontSize: '11px', fontWeight: '800', color: '#005599', letterSpacing: '1.5px', background: '#e8f4fd', padding: '3px 10px', borderRadius: '6px', whiteSpace: 'nowrap' },
   divider:     { width: '1px', height: '20px', background: '#e2e8f0', flexShrink: 0 },
@@ -346,7 +367,7 @@ const S = {
   roleDot:     { width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0 },
   roleText:    { fontSize: '12px', fontWeight: '700' },
   email:       { fontSize: '13px', color: '#64748b', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  logoutBtn:   { background: 'linear-gradient(135deg,#005599,#13B5EA)', border: 'none', color: '#fff', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', letterSpacing: '0.2px', whiteSpace: 'nowrap' },
+  logoutBtn:   { background: '#fff', border: '1px solid #dbe4ee', color: '#334155', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', letterSpacing: '0.2px', whiteSpace: 'nowrap' },
   bellWrap:    { position: 'relative' },
   bellBtn:     { position: 'relative', border: 'none', borderRadius: '8px', width: '38px', height: '38px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' },
   bellIcon:    { fontSize: '18px', lineHeight: 1 },

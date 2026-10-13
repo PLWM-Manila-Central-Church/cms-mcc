@@ -24,6 +24,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError('');
     try {
@@ -42,7 +43,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={S.page}>
+    <div className="mcc-auth" style={S.page}>
       {/* ── Left panel — church photo with overlay ── */}
       <div style={S.left} className="login-left">
         {/* Background photo */}
@@ -93,21 +94,22 @@ export default function LoginPage() {
             <p style={S.subtitle}>Sign in to your account to continue</p>
 
             {error && (
-              <div style={S.errorBox}>
+              <div id="login-error" role="alert" style={S.errorBox}>
                 <MonoIcon name="warning" size={16} style={S.errorIcon} />
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} style={S.form}>
+            <form onSubmit={handleSubmit} style={S.form} aria-busy={loading} aria-describedby={error ? 'login-error' : undefined}>
               {/* Email */}
               <div style={S.field}>
-                <label style={S.label}>Email Address</label>
+                <label htmlFor="login-email" style={S.label}>Email Address</label>
                 <div style={{ position: 'relative' }}>
                   <span style={S.fieldIcon}><MonoIcon name="mail" size={17} /></span>
                   <input
                     type="email"
                     name="email"
+                    id="login-email"
                     value={form.email}
                     onChange={handleChange}
                     onFocus={() => setFocused('email')}
@@ -126,12 +128,13 @@ export default function LoginPage() {
 
               {/* Password */}
               <div style={S.field}>
-                <label style={S.label}>Password</label>
+                <label htmlFor="login-password" style={S.label}>Password</label>
                 <div style={{ position: 'relative' }}>
                   <span style={S.fieldIcon}><MonoIcon name="lock" size={17} /></span>
                   <input
                     type={showPass ? 'text' : 'password'}
                     name="password"
+                    id="login-password"
                     value={form.password}
                     onChange={handleChange}
                     onFocus={() => setFocused('pass')}
@@ -150,7 +153,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => setShowPass(!showPass)}
                     style={S.eyeBtn}
-                    tabIndex={-1}
+                    aria-pressed={showPass}
                     aria-label={showPass ? 'Hide password' : 'Show password'}
                   >
                     <MonoIcon name={showPass ? 'eyeOff' : 'eye'} size={17} />

@@ -51,12 +51,12 @@ describe('FinancePage responsive layout', () => {
     expect(screen.getByLabelText('To')).toHaveStyle({ width: '100%' });
   });
 
-  it('keeps four summary columns and inline date filters on desktop', async () => {
+  it('lets summary columns fit available desktop space and keeps inline date filters', async () => {
     setViewportWidth(1280);
     renderPage();
     await screen.findByText('No records found.');
 
-    expect(summaryGrid()).toHaveStyle({ gridTemplateColumns: 'repeat(4, 1fr)' });
+    expect(summaryGrid()).toHaveStyle({ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))' });
     expect(screen.getByText('Date Range').parentElement).toHaveStyle({ display: 'flex' });
   });
 });

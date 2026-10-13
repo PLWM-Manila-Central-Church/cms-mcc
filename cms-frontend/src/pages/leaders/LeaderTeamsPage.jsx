@@ -17,7 +17,7 @@ export default function LeaderTeamsPage() {
   };
 
   return (
-    <main style={styles.page}>
+    <section aria-label="My Teams" style={styles.page}>
       <header style={styles.header}>
         <div>
           <p style={styles.eyebrow}>LEADERSHIP</p>
@@ -85,7 +85,7 @@ export default function LeaderTeamsPage() {
           <strong>Combined view is read-only.</strong> Select an individual team before recording, editing, submitting, or correcting attendance.
         </aside>
       )}
-    </main>
+    </section>
   );
 }
 

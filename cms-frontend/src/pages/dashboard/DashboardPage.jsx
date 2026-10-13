@@ -730,7 +730,7 @@ const S = {
   page: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 18,
+    gap: 24,
     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
   },
   header: {
@@ -741,7 +741,7 @@ const S = {
     padding: '22px 24px',
     background: '#fff',
     border: '1px solid #dfe7f1',
-    borderRadius: 10,
+    borderRadius: 16,
     boxShadow: '0 1px 4px rgba(15, 23, 42, 0.04)',
   },
   scopePill: {
@@ -758,7 +758,7 @@ const S = {
     color: '#0f172a',
     fontSize: 26,
     lineHeight: 1.15,
-    fontWeight: 800,
+    fontWeight: 700,
   },
   subtitle: {
     margin: '8px 0 0',
@@ -782,7 +782,7 @@ const S = {
     textAlign: 'left',
     background: '#fff',
     border: '1px solid #dfe7f1',
-    borderRadius: 10,
+    borderRadius: 14,
     padding: 16,
     minHeight: 116,
     display: 'flex',
@@ -814,7 +814,7 @@ const S = {
   panel: {
     background: '#fff',
     border: '1px solid #dfe7f1',
-    borderRadius: 10,
+    borderRadius: 14,
     overflow: 'hidden',
     boxShadow: '0 1px 4px rgba(15, 23, 42, 0.04)',
   },

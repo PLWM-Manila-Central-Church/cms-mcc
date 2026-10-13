@@ -344,15 +344,15 @@ export default function FinancePage() {
           { label: 'Other Giving', value: otherAll, icon: CARD_ICONS.gift },
         ];
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+          <div className="mcc-finance-stats" style={{ gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))' }}>
             {cards.map((card, i) => (
-              <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div className="mcc-finance-card" key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ width: 56, height: 56, borderRadius: 16, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {card.icon}
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>{card.label}</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#059669', marginTop: 2 }}>{formatAmount(card.value)}</div>
+                  <div className="mcc-finance-card-value" style={{ fontSize: 22, fontWeight: 700, color: '#059669', marginTop: 2 }}>{formatAmount(card.value)}</div>
                   <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>All time total</div>
                 </div>
               </div>
