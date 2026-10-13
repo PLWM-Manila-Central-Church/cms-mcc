@@ -1,6 +1,8 @@
+import { displayMemberName, displayAccount } from '../../utils/displayIdentity';
+import useDialogFocus from '../../hooks/useDialogFocus';
 import ResponsiveTable from '../../components/common/ResponsiveTable';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
@@ -50,6 +52,7 @@ export default function FinancePage() {
   const { hasPermission, user } = useAuth();
   const { confirm } = useConfirmation();
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -61,7 +64,7 @@ export default function FinancePage() {
   const canDelete = hasPermission('finance', 'delete');
 
   const formatAmount = (a) => parseFloat(a || 0).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' });
-  const formatDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '\u2014';
+  const formatDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
 
   const [incomeRecords, setIncomeRecords] = useState([]);
   const [incomeTotal, setIncomeTotal] = useState(0);
@@ -79,6 +82,8 @@ export default function FinancePage() {
   const [incFilterSearch, setIncFilterSearch] = useState('');
 
   const [showIncForm, setShowIncForm] = useState(false);
+  const givingDialogRef = useRef(null);
+  useDialogFocus(showIncForm, givingDialogRef, () => { if (!incSaving) { resetIncForm(); setShowIncForm(false); } });
   const [editIncRecord, setEditIncRecord] = useState(null);
   const [incForm, setIncForm] = useState({
     member_id: '', category_id: '', amount: '',
@@ -196,6 +201,13 @@ export default function FinancePage() {
     setEditIncRecord(null);
     setIncFormError('');
   };
+
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('new') === 'giving' && canCreate) {
+      setShowIncForm(true);
+      navigate('/finance', { replace: true });
+    }
+  }, [location.search, canCreate, navigate]);
 
   const handleIncSubmit = async (e) => {
     e.preventDefault();
@@ -445,7 +457,7 @@ export default function FinancePage() {
         <ResponsiveTable style={{ width: '100%', minWidth: 980, borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th style={{ padding: '12px 14px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--mcc-secondary, #52647a)', borderBottom: '1px solid var(--mcc-border, #e2e8f0)', width: 40 }}>
+              <th style={{ display: canDelete ? 'table-cell' : 'none', padding: '12px 14px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--mcc-secondary, #52647a)', borderBottom: '1px solid var(--mcc-border, #e2e8f0)', width: 40 }}>
                 <input
                   type="checkbox"
                   checked={filtered.length > 0 && filtered.every(r => selectedIds.includes(r.id))}
@@ -468,11 +480,11 @@ export default function FinancePage() {
             ) : filtered.map((r, i) => {
               const memberName = r.is_anonymous
                 ? 'Anonymous giving'
-                : `${r.Member?.last_name || ''}, ${r.Member?.first_name || ''}`;
+                : displayMemberName(r.Member);
               const badge = TYPE_BADGE[r.category?.name] || TYPE_BADGE.default;
               return (
                 <tr key={r.id} style={{ background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '14px 14px', textAlign: 'center' }}>
+                  <td style={{ display: canDelete ? 'table-cell' : 'none', padding: '14px 14px', textAlign: 'center' }}>
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(r.id)}
@@ -493,12 +505,12 @@ export default function FinancePage() {
                   </td>
                   <td style={{ padding: '14px 22px' }}>
                     <span style={{ background: badge.bg, color: badge.color, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                      {r.category?.name || '\u2014'}
+                      {r.category?.name || '—'}
                     </span>
                   </td>
                   <td style={{ padding: '14px 22px', fontWeight: 700, color: '#059669', fontSize: 15 }}>{formatAmount(r.amount)}</td>
                   <td style={{ padding: '14px 22px', fontSize: 14, color: '#475569' }}>{formatDate(r.transaction_date)}</td>
-                  <td style={{ padding: '14px 22px', fontSize: 13, color: 'var(--mcc-secondary, #52647a)' }}>{r.recorder?.email || '\u2014'}</td>
+                  <td style={{ padding: '14px 22px', fontSize: 13, color: 'var(--mcc-secondary, #52647a)' }}>{displayAccount(r.recorder?.email)}</td>
                   <td style={{ padding: '10px 14px', maxWidth: 280 }}>
                     <FinanceAttachments
                       attachments={r.attachments || []}
@@ -603,11 +615,11 @@ export default function FinancePage() {
 
       {/* Add / Edit Modal */}
       {showIncForm && (
-        <div onClick={() => { resetIncForm(); setShowIncForm(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', padding: 28, maxWidth: 600, width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 48px rgba(0,0,0,0.2)' }}>
+        <div onClick={() => { if (!incSaving) { resetIncForm(); setShowIncForm(false); } }} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div ref={givingDialogRef} role="dialog" aria-modal="true" aria-labelledby="giving-dialog-title" tabIndex={-1} onClick={e => e.stopPropagation()} style={{ background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', padding: 28, maxWidth: 600, width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 48px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--mcc-ink, #0f172a)' }}>{editIncRecord ? 'Edit Giving Log' : 'New Giving Record'}</h3>
-              <button onClick={() => { resetIncForm(); setShowIncForm(false); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>&times;</button>
+              <h3 id="giving-dialog-title" style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--mcc-ink, #0f172a)' }}>{editIncRecord ? 'Edit Giving Log' : 'New Giving Record'}</h3>
+              <button disabled={incSaving} aria-label="Close giving form" onClick={() => { resetIncForm(); setShowIncForm(false); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>&times;</button>
             </div>
             {incFormError && <div className="cms-error-box">{incFormError}</div>}
             <form onSubmit={handleIncSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -650,27 +662,27 @@ export default function FinancePage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={F.label}>Income Category *</label>
-                  <select value={incForm.category_id} onChange={e => setIncForm(f => ({ ...f, category_id: e.target.value }))} required style={{ padding: '11px 12px', fontSize: 15, border: '1.5px solid #d1d5db', borderRadius: 9, outline: 'none', background: 'var(--mcc-surface, #fff)', width: '100%', fontFamily: 'inherit' }}>
-                    <option value="">\u2014 Select \u2014</option>
+                  <select aria-label="Income Category" value={incForm.category_id} onChange={e => setIncForm(f => ({ ...f, category_id: e.target.value }))} required style={{ padding: '11px 12px', fontSize: 15, border: '1.5px solid #d1d5db', borderRadius: 9, outline: 'none', background: 'var(--mcc-surface, #fff)', width: '100%', fontFamily: 'inherit' }}>
+                    <option value="">Choose a category</option>
                     {incomeCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label style={F.label}>Amount (PHP) *</label>
-                  <input type="number" step="0.01" value={incForm.amount} onChange={e => setIncForm(f => ({ ...f, amount: e.target.value }))} required style={F.input} />
+                  <input aria-label="Amount (PHP)" type="number" min="0.01" step="0.01" value={incForm.amount} onChange={e => setIncForm(f => ({ ...f, amount: e.target.value }))} required style={F.input} />
                 </div>
                 <div>
                   <label style={F.label}>Date *</label>
-                  <input type="date" value={incForm.transaction_date} onChange={e => setIncForm(f => ({ ...f, transaction_date: e.target.value }))} required style={F.input} />
+                  <input aria-label="Transaction date" type="date" value={incForm.transaction_date} onChange={e => setIncForm(f => ({ ...f, transaction_date: e.target.value }))} required style={F.input} />
                 </div>
                 <div>
                   <label style={F.label}>Receipt Number</label>
-                  <input value={incForm.receipt_number || ''} onChange={e => setIncForm(f => ({ ...f, receipt_number: e.target.value }))} placeholder="Optional" style={F.input} />
+                  <input aria-label="Receipt Number" value={incForm.receipt_number || ''} onChange={e => setIncForm(f => ({ ...f, receipt_number: e.target.value }))} placeholder="Optional" style={F.input} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-                <button type="button" onClick={() => { resetIncForm(); setShowIncForm(false); }} style={{ padding: '10px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: 'var(--mcc-surface, #fff)', color: '#475569', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>Cancel</button>
-                <button type="submit" style={{ background: '#059669', color: 'var(--mcc-surface, #fff)', padding: '10px 24px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
+                <button disabled={incSaving} type="button" onClick={() => { resetIncForm(); setShowIncForm(false); }} style={{ padding: '10px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: 'var(--mcc-surface, #fff)', color: '#475569', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>Cancel</button>
+                <button disabled={incSaving} type="submit" style={{ background: '#059669', color: 'var(--mcc-surface, #fff)', padding: '10px 24px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
                   {incSaving ? 'Saving...' : 'Save Record'}
                 </button>
               </div>

@@ -1,3 +1,4 @@
+import { displayMemberName } from '../../utils/displayIdentity';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
@@ -83,7 +84,10 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
     registration_required: false,
   }));
 
-  const title = targetType === 'event' ? 'Event QR Attendance' : 'Service QR Attendance';
+  const selectedTeam = user?.leaderAssignments?.find(item => item.scopeKey === activeLeaderScopeKey);
+  const teamName = selectedTeam?.teamName || user?.leadsCellGroupName || user?.leadsGroupName || 'Selected team';
+  const teamType = selectedLeaderScopeType === 'cell_group' || user?.roleName === 'Cell Group Leader' ? 'cell group' : 'group';
+  const title = targetType === 'event' ? 'Event QR Attendance' : targetType === 'service' ? 'Service QR Attendance' : 'QR Attendance';
   const query = useMemo(() => ({
     ...(targetType && targetId && { target_type: targetType, target_id: Number(targetId) }),
     limit: 100,
@@ -107,10 +111,10 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
     const rows = response.data.data.sessions || [];
     setSessions(rows);
     const preferred = preferredId || sessionId;
-    const selected = rows.find((row) => String(row.id) === String(preferred)) || rows[0];
+    const selected = rows.find((row) => String(row.id) === String(preferred)) || (targetType && targetId ? rows[0] : null);
     setSessionId(selected ? String(selected.id) : '');
     return selected || null;
-  }, [query, sessionId]);
+  }, [query, sessionId, targetType, targetId]);
 
   const loadSessionData = useCallback(async (id) => {
     if (!id) {
@@ -594,7 +598,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
         )}
 
         {!targetType || !targetId ? (
-          <div className="qr-muted-box">Open QR attendance from a specific Service or Event to manage its sessions.</div>
+          <div className="qr-muted-box">Choose an activity below, or open QR attendance from its Service or Event page.</div>
         ) : null}
 
         <div className="qr-section-heading">
@@ -605,7 +609,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
               if (!nextId) loadSessionData('');
             }}>
               <option value="">Select a session</option>
-              {sessions.map((row) => <option key={row.id} value={row.id}>{row.title} · {row.status} · {new Date(row.starts_at).toLocaleString()}</option>)}
+              {sessions.map((row) => <option key={row.id} value={row.id}>{row.event_id ? 'Event' : 'Service'}: {row.event?.title || row.service?.title || row.target?.title || `Activity #${row.event_id || row.service_id}`} · {(row.event?.start_date || row.service?.service_date) && `${new Date((row.event?.start_date || row.service?.service_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-PH', { dateStyle: 'medium' })} · `}{row.title} · {row.status} · Check-in {new Date(row.starts_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: row.time_zone || 'Asia/Manila' })}</option>)}
             </select>
           </label>
           {canConfigure && targetType && targetId && <span className="qr-state-pill">Session setup</span>}
@@ -653,6 +657,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
         {sessions.length === 0 && targetType && targetId && !canConfigure && <div className="qr-muted-box">No QR attendance session has been created for this activity yet.</div>}
       </div>
 
+      {!loading && !sessionId && <div className="qr-muted-box" role="status">Select an attendance session to see its roster and check-in tools.</div>}
       {loading && sessionId && !session && <div className="qr-workspace-card qr-section" role="status">Loading the selected session…</div>}
 
       {session && (
@@ -736,7 +741,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
                 <input className="qr-search-input" value={expectedReason} onChange={(event) => setExpectedReason(event.target.value)} minLength={5} maxLength={500} />
               </label>
               <div className="qr-list qr-section">{expectedResults.map((member) => <div className="qr-list-row" key={member.id}>
-                <span>{member.last_name}, {member.first_name}</span>
+                <span>{displayMemberName(member)}</span>
                 <button className="qr-secondary-button" type="button" disabled={busy} onClick={() => addExpectedMember(member)}>Add</button>
               </div>)}</div>
             </section>
@@ -755,8 +760,8 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
           </section>}
 
           {session.status === 'open' && canRecordBatch && isGroupLeader && <section className="qr-section qr-workspace-card">
-            <h3>Leader attendance batch · {user.roleName}</h3>
-            <p>Scan or select members assigned to your current group. Scans are saved as pending draft entries and do not affect confirmed totals.</p>
+            <h3>Attendance draft · {teamName}</h3>
+            <p>Scan or select members of this {teamType}: {teamName}. Draft entries need Registration approval before they count as confirmed attendance.</p>
             {!draftDetail?.batch && <button type="button" className="qr-primary-button" onClick={startDraft} disabled={busy}>Start Leader Batch</button>}
             {draftDetail?.batch?.state === 'draft' && <div className="qr-action-row">
               <button type="button" className="qr-primary-button" disabled={busy} onClick={() => setScannerMode('leader')}>Scan Member into Draft</button>
@@ -776,7 +781,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
                 </div>
               )}
               <div className="qr-list qr-section">{rosterResults.map((member) => <div className="qr-list-row" key={member.id}>
-                <span>{member.last_name}, {member.first_name} <small>· {member.status}</small></span>
+                <span>{displayMemberName(member)} <small>· {member.status}</small></span>
                 {isGroupLeader
                   ? <button type="button" className="qr-secondary-button" disabled={busy || !draftDetail?.batch} onClick={() => addMemberToDraft(member.id, null)}>Add to Draft</button>
                   : <button type="button" className="qr-secondary-button" disabled={busy} onClick={() => {
@@ -804,7 +809,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
             <p>{reviewDetail.session?.target?.title || sessionTarget.title} · {reviewDetail.session?.title || session.title} · submitted by {reviewDetail.submitter?.name || `Leader #${reviewDetail.submitter?.id || reviewDetail.batch.submitted_by}`} · {reviewDetail.scope?.name || 'Group not listed'} · {reviewDetail.batch.submitted_at ? new Date(reviewDetail.batch.submitted_at).toLocaleString() : ''}</p>
             <p>Review the complete attendee list before approval. Capture times and duplicates are preserved.</p>
             <div className="qr-table-wrap"><table className="qr-table"><thead><tr><th>Member</th><th>Captured at</th><th>Capture</th><th>Outcome</th></tr></thead><tbody>
-              {(reviewDetail.items || []).map((item) => <tr key={item.id}><td>{item.member?.last_name}, {item.member?.first_name}</td><td>{new Date(item.captured_at).toLocaleString()}</td><td>{item.capture_method}</td><td>{item.outcome}</td></tr>)}
+              {(reviewDetail.items || []).map((item) => <tr key={item.id}><td>{displayMemberName(item.member)}</td><td>{new Date(item.captured_at).toLocaleString()}</td><td>{item.capture_method}</td><td>{item.outcome}</td></tr>)}
             </tbody></table></div>
             {reviewDetail.batch.state === 'submitted' && canReviewBatch && <>
               {isLate && <label className="qr-form-field qr-section">Reason for late approval
@@ -825,7 +830,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
           {draftDetail?.batch && <section className="qr-section qr-workspace-card">
             <div className="qr-section-heading"><h3>Your batch · #{draftDetail.batch.id}</h3><span className={`qr-state-pill qr-status-${draftDetail.batch.state}`}>{draftDetail.batch.state}</span></div>
             {(draftDetail.items || []).length ? <div className="qr-table-wrap"><table className="qr-table"><thead><tr><th>Member</th><th>Captured</th><th>Outcome</th>{draftDetail.batch.state === 'draft' && <th>Action</th>}</tr></thead><tbody>
-              {(draftDetail.items || []).map((item) => <tr key={item.id}><td>{item.member?.last_name}, {item.member?.first_name}</td><td>{new Date(item.captured_at).toLocaleTimeString()}</td><td>{item.outcome}</td>{draftDetail.batch.state === 'draft' && <td><button type="button" className="qr-danger-button" disabled={busy} onClick={() => removeDraftMember(item.member_id)}>Remove</button></td>}</tr>)}
+              {(draftDetail.items || []).map((item) => <tr key={item.id}><td>{displayMemberName(item.member)}</td><td>{new Date(item.captured_at).toLocaleTimeString()}</td><td>{item.outcome}</td>{draftDetail.batch.state === 'draft' && <td><button type="button" className="qr-danger-button" disabled={busy} onClick={() => removeDraftMember(item.member_id)}>Remove</button></td>}</tr>)}
             </tbody></table></div> : <div className="qr-muted-box">No members added yet.</div>}
             {draftDetail.batch.state === 'draft' && session.status !== 'open' && <div className="qr-action-row">
               <button type="button" className="qr-primary-button" disabled={busy} onClick={submitDraft}>Submit Batch for Review</button>
@@ -852,7 +857,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
                   const member = record.Member || record.member;
                   const qrRecord = session.service_id ? record.entry_source !== 'legacy' : true;
                   return <tr key={`${session.service_id ? 's' : 'e'}-${record.id}`}>
-                    <td>{member?.last_name}, {member?.first_name}</td>
+                    <td>{displayMemberName(member)}</td>
                     <td>{new Date(record.checked_in_at).toLocaleString()}</td>
                     <td>{record.entry_source !== 'legacy' && record.check_in_method === 'barcode' ? 'QR' : record.check_in_method}</td>
                     <td>{record.entry_source}</td>

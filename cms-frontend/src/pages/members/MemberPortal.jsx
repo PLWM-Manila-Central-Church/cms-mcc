@@ -363,15 +363,15 @@ function OverviewTab({profile,attendance,finance,editing,editForm,setEditForm,ed
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:isMobile?'12px':'14px 20px'}}>
             {[{label:'First Name',key:'first_name'},{label:'Last Name',key:'last_name'},{label:t.contact,key:'phone',type:'tel'},{label:'Email',key:'email',type:'email'},{label:t.birthdate,key:'birthdate',type:'date'},{label:t.spiritual,key:'spiritual_birthday',type:'date'}].map(({label,key,type='text'})=>(
               <div key={key}>
-                <label style={{fontSize:f.xs,color:c.t2,fontWeight:600,display:'block',marginBottom:5}}>{label}</label>
-                <input type={type} value={editForm[key]||''} onChange={e=>setEditForm(prev=>({...prev,[key]:e.target.value}))}
+                <label htmlFor={`member-profile-${key}`} style={{fontSize:f.xs,color:c.t2,fontWeight:600,display:'block',marginBottom:5}}>{label}</label>
+                <input id={`member-profile-${key}`} type={type} value={editForm[key]||''} onChange={e=>setEditForm(prev=>({...prev,[key]:e.target.value}))}
                   style={{width:'100%',padding:'10px 12px',fontSize:16,border:`1.5px solid ${c.border}`,borderRadius:8,outline:'none',fontFamily:'inherit',color:c.t1,background:c.surfaceAlt,boxSizing:'border-box',minHeight:44}}
                   onFocus={e=>e.target.style.borderColor='#005599'} onBlur={e=>e.target.style.borderColor=c.border}/>
               </div>
             ))}
             <div style={{gridColumn:'1/-1'}}>
-              <label style={{fontSize:f.xs,color:c.t2,fontWeight:600,display:'block',marginBottom:5}}>{t.address}</label>
-              <textarea value={editForm.address||''} onChange={e=>setEditForm(prev=>({...prev,address:e.target.value}))} rows={3}
+              <label htmlFor="member-profile-address" style={{fontSize:f.xs,color:c.t2,fontWeight:600,display:'block',marginBottom:5}}>{t.address}</label>
+              <textarea id="member-profile-address" value={editForm.address||''} onChange={e=>setEditForm(prev=>({...prev,address:e.target.value}))} rows={3}
                 style={{width:'100%',padding:'10px 12px',fontSize:16,border:`1.5px solid ${c.border}`,borderRadius:8,outline:'none',fontFamily:'inherit',color:c.t1,background:c.surfaceAlt,resize:'vertical',boxSizing:'border-box'}}
                 onFocus={e=>e.target.style.borderColor='#005599'} onBlur={e=>e.target.style.borderColor=c.border}/>
             </div>
@@ -385,6 +385,10 @@ function OverviewTab({profile,attendance,finance,editing,editForm,setEditForm,ed
 function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,doRegister,doCancel,doConfirm,onServiceClick,onEventDetailsClick,onInviteRespond,c,f,t,fmtDate,fmtShort,fmtSvcT,isMobile}) {
   const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
   const bdg  = (bg,color,border)=>({padding:'3px 10px',borderRadius:20,fontSize:f.xs,fontWeight:700,background:bg,color,border});
+  const [eventPeriod, setEventPeriod] = useState('upcoming');
+  const isPastEvent = event => { const value = event.end_date || event.start_date || event.event_date; return value ? new Date(`${value.slice(0, 10)}T23:59:59`).getTime() < Date.now() : false; };
+  const visibleEvents = events.filter(event => eventPeriod === 'all' || (eventPeriod === 'past' ? isPastEvent(event) : !isPastEvent(event)));
+  const eventFilter = <label style={{display:'flex',alignItems:'center',gap:10,padding:'12px 16px',color:c.t2,fontSize:f.sm}}>Show events<select aria-label="Event period" value={eventPeriod} onChange={event => setEventPeriod(event.target.value)} style={{padding:8,border:`1px solid ${c.border}`,borderRadius:8,background:c.surface,color:c.t1}}><option value="upcoming">Upcoming</option><option value="past">Past events</option><option value="all">All events</option></select></label>;
   const myRegs = events.filter(e=>e.is_registered);
   const pending = assigns.filter(a=>!a.confirmed);
 
@@ -490,10 +494,11 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
         {/* Events */}
         <div style={{...card,padding:'0',overflow:'hidden'}}>
           <div style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,fontSize:f.base,fontWeight:700,color:c.t1}}>Events</div>
-          {events.length===0
-            ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{t.noEvents}</div>
-            : events.map((e,i)=>(
-              <div key={e.id} style={{padding:'14px 16px',borderBottom:i<events.length-1?`1px solid ${c.borderL}`:'none',borderLeft:`3px solid ${e.is_registered?c.success:c.border}`}}>
+          {eventFilter}
+          {visibleEvents.length===0
+            ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{eventPeriod === 'past' ? 'No past events.' : eventPeriod === 'all' ? 'No events.' : t.noEvents}</div>
+            : visibleEvents.map((e,i)=>(
+              <div key={e.id} style={{padding:'14px 16px',borderBottom:i<visibleEvents.length-1?`1px solid ${c.borderL}`:'none',borderLeft:`3px solid ${e.is_registered?c.success:c.border}`}}>
                 <div style={{fontSize:f.sm,fontWeight:800,color:c.t1,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.2px'}}>{e.title}</div>
                 <div style={{fontSize:f.xs,color:c.t2,marginBottom:2,display:'flex',alignItems:'center',gap:5}}><MonoIcon name="calendar" size={13} /> {fmtDate(e.start_date)}</div>
                 {e.location&&<div style={{fontSize:f.xs,color:c.t2,marginBottom:2,display:'flex',alignItems:'center',gap:5}}><MonoIcon name="location" size={13} /> {e.location}</div>}
@@ -593,8 +598,9 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
         {/* Ministry event invites */}
         <InviteCards/>
 
-        {events.length===0
-          ? <div style={{...card,padding:'40px 24px',textAlign:'center',color:c.t3,fontSize:f.base}}>{t.noEvents}</div>
+        {eventFilter}
+          {visibleEvents.length===0
+          ? <div style={{...card,padding:'40px 24px',textAlign:'center',color:c.t3,fontSize:f.base}}>{eventPeriod === 'past' ? 'No past events.' : eventPeriod === 'all' ? 'No events.' : t.noEvents}</div>
           : events.map(e=>(
             <div key={e.id} style={{...card,padding:'18px 20px',border:`1.5px solid ${e.is_registered?c.successB:c.border}`,transition:'border-color 0.2s'}}>
               <div style={{display:'flex',gap:14,alignItems:'flex-start'}}>
@@ -668,7 +674,8 @@ function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile,language}) {
   const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
   const bdg  = (bg,color,border)=>({padding:'4px 12px',borderRadius:20,fontSize:f.xs,fontWeight:700,background:bg,color,border});
   const rate = attendance?.attendanceRate||0;
-  const rateColor = rate>=80?c.success:rate>=50?c.amber:c.danger;
+  const hasServices = Number(attendance?.totalServices) > 0;
+  const rateColor = !hasServices ? c.t2 : rate>=80?c.success:rate>=50?c.amber:c.danger;
   const [eventRecords, setEventRecords] = useState([]);
   const [eventHistoryAvailable, setEventHistoryAvailable] = useState(true);
   const [historyFilter, setHistoryFilter] = useState('all');
@@ -719,7 +726,7 @@ function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile,language}) {
               </div>
             </div>
             <div>
-              <div style={{fontSize:f.md,fontWeight:700,color:rateColor,marginBottom:4}}>{rate>=80?t.excellent:rate>=50?t.good:t.improve}</div>
+              <div style={{fontSize:f.md,fontWeight:700,color:rateColor,marginBottom:4}}>{!hasServices ? 'No services in this period' : rate>=80?t.excellent:rate>=50?t.good:t.improve}</div>
               <div style={{fontSize:f.xs,color:c.t3}}>{attendance?.attended||0} {t.of} {attendance?.totalServices||0} services</div>
               <div style={{fontSize:f.xs,color:c.t3}}>{t.last2mo}</div>
             </div>
@@ -795,7 +802,7 @@ function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile,language}) {
               <div style={{fontSize:f.lg,fontWeight:900,color:c.t1,lineHeight:1}}>{rate}%</div>
             </div>
           </div>
-          <div style={{fontSize:f.md,fontWeight:700,color:rateColor,marginBottom:6}}>{rate>=80?t.excellent:rate>=50?t.good:t.improve}</div>
+          <div style={{fontSize:f.md,fontWeight:700,color:rateColor,marginBottom:6}}>{!hasServices ? 'No services in this period' : rate>=80?t.excellent:rate>=50?t.good:t.improve}</div>
           <div style={{fontSize:f.xs,color:c.t3}}>{attendance?.attended||0} {t.of} {attendance?.totalServices||0} services</div>
           <div style={{fontSize:f.xs,color:c.t3,marginTop:2}}>{t.last2mo}</div>
         </div>
@@ -1055,7 +1062,7 @@ export default function MemberPortal() {
     stat: Math.round(fontSize * 1.9),
   };
 
-  const [tab, setTab]           = useState(() => { const p = new URLSearchParams(location.search); if (p.get('tab') === 'events') return 1; if (p.get('tab') === 'services') return 1; if (p.get('tab') === 'tithes' || p.get('tab') === 'giving') return 3; return 0; });
+  const [tab, setTab]           = useState(() => { const p = new URLSearchParams(location.search); if (p.get('tab') === 'events' || p.get('tab') === 'services') return 1; if (p.get('tab') === 'attendance') return 2; if (p.get('tab') === 'tithes' || p.get('tab') === 'giving') return 3; if (p.get('tab') === 'ministries') return 4; return 0; });
   const [profile, setProfile]   = useState(null);
   const [attendance, setAtt]    = useState(null);
   const [finance, setFin]       = useState(null);
@@ -1135,7 +1142,9 @@ export default function MemberPortal() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('tab') === 'events' || params.get('tab') === 'services') setTab(1);
+    if (params.get('tab') === 'attendance') setTab(2);
     if (params.get('tab') === 'tithes' || params.get('tab') === 'giving') setTab(3);
+    if (params.get('tab') === 'ministries') setTab(4);
   }, [location.search]);
 
   const startEdit = useCallback(()=>{
@@ -1378,8 +1387,8 @@ export default function MemberPortal() {
             {tab===2&&<AttendanceTab attendance={attendance} c={c} f={f} t={t} fmtDate={fmtDate} fmtTime={fmtTime} isMobile={isMobile} language={lang}/>}
             {tab===3&&<FinanceTab finance={finance} initialError={financeError} c={c} f={f} t={t} fmtDate={fmtDate} PHP={PHP} isMobile={isMobile} language={lang}/>}
             {tab===4&&<>
-              <MemberSubstituteRequests c={c} isMobile={isMobile}/>
               <MemberMinistryApplications c={c} f={f} showToast={showToast}/>
+              <div style={{marginTop:24}}><MemberSubstituteRequests c={c} isMobile={isMobile}/></div>
             </>}
           </>
         )}

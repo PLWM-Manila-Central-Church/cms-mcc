@@ -38,7 +38,7 @@ const savePrefs  = (p) => {
 const makeC = (dk) => ({
   bg:dk?'#0e1420':'#f0f4f8', surface:dk?'#1a2332':'var(--mcc-surface, #fff)',
   surfaceAlt:dk?'#141d2b':'#f8fafc', border:dk?'#2d3a4e':'#e2e8f0',
-  t1:dk?'#f1f5f9':'var(--mcc-ink, #0f172a)', t2:dk?'#94a3b8':'#475569', t3:dk?'var(--mcc-secondary, #52647a)':'#94a3b8',
+  t1:dk?'#f1f5f9':'var(--mcc-ink, #0f172a)', t2:dk?'#94a3b8':'#475569', t3:dk?'#b8c6d9':'#52647a',
   success:'#16a34a', successL:dk?'#14532d':'#dcfce7', successB:dk?'#166534':'#bbf7d0',
   danger:'#dc2626', dangerL:dk?'#7f1d1d':'#fef2f2', dangerB:dk?'#991b1b':'#fecaca',
   accentL:dk?'#1e3a5f':'#eff6ff', accentT:dk?'#60a5fa':'#005599',
@@ -239,10 +239,10 @@ export default function MemberPortalSettings() {
           </div>
 
           <div style={{marginBottom:20}}>
-            <label style={lbl}>Font</label>
-            <select value={fontFamily} onChange={e=>updatePref('fontFamily',e.target.value)}
+            <label htmlFor="member-preference-font" style={lbl}>Font</label>
+            <select id="member-preference-font" value={fontFamily} onChange={e=>updatePref('fontFamily',e.target.value)}
               style={{...inp,width:'auto',minWidth:200,cursor:'pointer',paddingRight:32}}>
-              {FONTS.map(fn=>(
+              {FONTS.filter(fn => ['DM Sans', 'Inter', 'Helvetica', fontFamily].includes(fn.name)).map(fn=>(
                 <option key={fn.name} value={fn.name}>{fn.name}{fn.system?' (system)':''}</option>
               ))}
             </select>
@@ -250,9 +250,9 @@ export default function MemberPortalSettings() {
           </div>
 
           <div style={{marginBottom:20}}>
-            <label style={lbl}>Font Size (12–40 px)</label>
+            <label htmlFor="member-preference-size" style={lbl}>Text size</label>
             <div style={{display:'flex',alignItems:'center',gap:12}}>
-              <input type="number" min={12} max={40} value={fontSizeInput}
+              <input id="member-preference-size" type="number" min={12} max={40} value={fontSizeInput}
                 onChange={e=>setFontSizeInput(e.target.value)}
                 onBlur={handleFontSizeBlur}
                 onKeyDown={e=>{ if(e.key==='Enter') { e.target.blur(); } }}
@@ -264,15 +264,15 @@ export default function MemberPortalSettings() {
             </div>
           </div>
 
-          <div style={{marginBottom:20}}>
-            <label style={lbl}>Display Scale</label>
+          <details style={{marginBottom:20}}>
+            <summary style={{...lbl,cursor:'pointer'}}>Advanced display scale</summary>
             <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
               {RESOLUTIONS.map(r=>(
                 <ChipBtn key={r.value} active={(prefs.resolution||1)===r.value} onClick={()=>updatePref('resolution',r.value)}>{r.label}</ChipBtn>
               ))}
             </div>
-            <div style={{fontSize:11,color:c.t3,marginTop:6}}>Scales the entire portal.</div>
-          </div>
+            <div style={{fontSize:11,color:c.t3,marginTop:6}}>Scales the entire portal. Use browser zoom for additional accessibility options.</div>
+          </details>
 
           <div>
             <label style={lbl}>Language</label>
@@ -304,13 +304,13 @@ export default function MemberPortalSettings() {
               {label:'Confirm New Password', key:'confirm_password',showKey:'cf'},
             ].map(({label:lbl2,key,showKey,hint})=>(
               <div key={key} style={{marginBottom:16}}>
-                <label style={lbl}>{lbl2}</label>
+                <label htmlFor={`member-password-${key}`} style={lbl}>{lbl2}</label>
                 <div style={{position:'relative'}}>
-                  <input type={show[showKey]?'text':'password'} value={pwForm[key]}
+                  <input id={`member-password-${key}`} autoComplete={key==='current_password'?'current-password':'new-password'} type={show[showKey]?'text':'password'} value={pwForm[key]}
                     onChange={e=>{setPwForm({...pwForm,[key]:e.target.value});setPwError('');setPwSuccess('');}}
                     style={{...inp,paddingRight:48}} placeholder={hint||''}
                     onFocus={e=>e.target.style.borderColor='#005599'} onBlur={e=>e.target.style.borderColor=c.border}/>
-                  <button type="button" onClick={()=>setShow({...show,[showKey]:!show[showKey]})}
+                  <button type="button" aria-label={(show[showKey]?'Hide ':'Show ')+lbl2.toLowerCase()} onClick={()=>setShow({...show,[showKey]:!show[showKey]})}
                     style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:c.t3,display:'flex',alignItems:'center',padding:4,minHeight:44,minWidth:44,justifyContent:'center'}}>
                     <EyeIcon open={show[showKey]}/>
                   </button>
