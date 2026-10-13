@@ -10,7 +10,7 @@ import { archiveDownloadName, archiveDownloadPath } from '../../utils/archiveDow
 const STATUS_META = {
   pending:  { bg: '#fffbeb', color: '#d97706', label: 'Pending' },
   approved: { bg: '#f0fdf4', color: '#16a34a', label: 'Approved' },
-  deleted:  { bg: '#f1f5f9', color: '#64748b', label: 'Deleted' },
+  deleted:  { bg: '#f1f5f9', color: 'var(--mcc-secondary, #52647a)', label: 'Deleted' },
 };
 
 const VISIBILITY_META = {
@@ -319,13 +319,13 @@ export default function ArchivesPage() {
   );
 
   return (
-    <div style={s.page}>
+    <div className="mcc-module mcc-module-archives-page" style={s.page}>
       <div style={{ ...s.layout, flexDirection: isMobile ? 'column' : 'row' }}>
         {/* ── LEFT PANEL ────────────────────────────────── */}
         <div style={s.leftPanel}>
           <div style={s.pageHeader}>
             <div>
-              <h1 style={s.title}>Archives</h1>
+              <h1 className="workspace-page-title" style={s.title}>Archives</h1>
               <p style={s.subtitle}>{total} records</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
@@ -441,7 +441,7 @@ export default function ArchivesPage() {
                 return (
                   <div key={record.id}
                     onClick={() => openDetail(record)}
-                    style={{ ...s.recordCard, background: isSelected ? '#e8f4fd' : '#fff', borderColor: isSelected ? '#0066b3' : '#e2e8f0', cursor: 'pointer' }}>
+                    style={{ ...s.recordCard, background: isSelected ? '#e8f4fd' : 'var(--mcc-surface, #fff)', borderColor: isSelected ? '#0066b3' : '#e2e8f0', cursor: 'pointer' }}>
                     <div style={s.recordTop}>
                       <span style={s.fileIcon}><MonoIcon name={icon} size={24} /></span>
                       <div style={s.recordMeta}>
@@ -499,7 +499,7 @@ export default function ArchivesPage() {
           <div style={{
             position: 'fixed',
             left: 0, right: 0, bottom: 0,
-            background: '#fff',
+            background: 'var(--mcc-surface, #fff)',
             borderRadius: '20px 20px 0 0',
             zIndex: 401,
             maxHeight: '85vh',
@@ -523,57 +523,57 @@ const s = {
   page:           { fontFamily: "'Inter', sans-serif" },
   layout:         { display: 'flex', gap: '24px', alignItems: 'flex-start' },
   leftPanel:      { flex: 1, minWidth: 0 },
-  detailPanel:    { width: 'min(360px, 100%)', flexShrink: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', position: 'sticky', top: '24px' },
+  detailPanel:    { width: 'min(360px, 100%)', flexShrink: 0, background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', position: 'sticky', top: '24px' },
   pageHeader:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
-  title:          { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
-  subtitle:       { fontSize: '14px', color: '#64748b', margin: '4px 0 0' },
-  addBtn:         { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  formCard:       { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
-  formTitle:      { fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: '0 0 16px' },
+  title:          { fontSize: '24px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
+  subtitle:       { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0' },
+  addBtn:         { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  formCard:       { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '24px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+  formTitle:      { fontSize: '15px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 16px' },
   form:           { display: 'flex', flexDirection: 'column', gap: '14px' },
   formRow:        { display: 'flex', gap: '14px', flexWrap: 'wrap' },
   field:          { display: 'flex', flexDirection: 'column', gap: '5px', flex: 1, minWidth: '140px' },
   label:          { fontSize: '12px', fontWeight: '600', color: '#374151' },
   input:          { padding: '9px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', width: '100%', boxSizing: 'border-box' },
-  select:         { padding: '9px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: '#fff' },
+  select:         { padding: '9px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)' },
   fileInput:      { fontSize: '13px', color: '#475569' },
   fileName:       { fontSize: '12px', color: '#0066b3', fontWeight: '500' },
   formActions:    { display: 'flex', gap: '10px', justifyContent: 'flex-end' },
   cancelBtn:      { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
-  submitBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 22px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
+  submitBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '9px 22px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   filterBar:      { display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' },
   filterInput:    { padding: '8px 12px', fontSize: '13px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', flex: 1, minWidth: '140px' },
-  filterSelect:   { padding: '8px 12px', fontSize: '13px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: '#fff' },
+  filterSelect:   { padding: '8px 12px', fontSize: '13px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)' },
   errorBox:       { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', marginBottom: '14px' },
   centerCell:     { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   recordList:     { display: 'flex', flexDirection: 'column', gap: '10px' },
-  recordCard:     { border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '16px', transition: 'border-color 0.15s, background 0.15s' },
+  recordCard:     { border: '1.5px solid #e2e8f0', borderRadius: 'var(--mcc-radius, 16px)', padding: '16px', transition: 'border-color 0.15s, background 0.15s' },
   recordTop:      { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
   fileIcon:       { fontSize: '22px' },
   recordMeta:     { display: 'flex', gap: '6px' },
   badge:          { padding: '3px 9px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' },
-  recordTitle:    { fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' },
-  recordSub:      { fontSize: '12px', color: '#64748b' },
+  recordTitle:    { fontSize: '15px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', marginBottom: '4px' },
+  recordSub:      { fontSize: '12px', color: 'var(--mcc-secondary, #52647a)' },
   pendingActions: { display: 'flex', gap: '8px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' },
   approveBtn:     { background: '#f0fdf4', color: '#16a34a', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   rejectBtn:      { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   pagination:     { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '20px' },
-  pageBtn:        { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', cursor: 'pointer' },
-  pageInfo:       { fontSize: '13px', color: '#64748b' },
+  pageBtn:        { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', cursor: 'pointer' },
+  pageInfo:       { fontSize: '13px', color: 'var(--mcc-secondary, #52647a)' },
   detailHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '16px 20px 14px', borderBottom: '1px solid #f1f5f9' },
-  detailTitle:    { fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0, flex: 1, paddingRight: '10px', wordBreak: 'break-word' },
+  detailTitle:    { fontSize: '15px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: 0, flex: 1, paddingRight: '10px', wordBreak: 'break-word' },
   closeBtn:       { background: 'none', border: 'none', fontSize: '18px', color: '#94a3b8', cursor: 'pointer', flexShrink: 0, padding: '0 4px' },
   detailBody:     { padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' },
   detailRow:      { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   detailLabel:    { fontSize: '12px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  detailValue:    { fontSize: '13px', color: '#0f172a', fontWeight: '500' },
+  detailValue:    { fontSize: '13px', color: 'var(--mcc-ink, #0f172a)', fontWeight: '500' },
   detailDesc:     { fontSize: '13px', color: '#475569', lineHeight: '1.5', background: '#f8fafc', borderRadius: '8px', padding: '10px' },
-  downloadBtn:    { display: 'block', width: '100%', textAlign: 'center', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px', fontSize: '14px', fontWeight: '600', textDecoration: 'none', marginTop: '4px', cursor: 'pointer', fontFamily: 'inherit' },
+  downloadBtn:    { display: 'block', width: '100%', textAlign: 'center', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '12px', fontSize: '14px', fontWeight: '600', textDecoration: 'none', marginTop: '4px', cursor: 'pointer', fontFamily: 'inherit' },
   versionsSection:{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', marginTop: '4px' },
-  sectionTitle:   { fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' },
+  sectionTitle:   { fontSize: '12px', fontWeight: '700', color: 'var(--mcc-secondary, #52647a)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' },
   versionRow:     { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '1px solid #f8fafc' },
   versionNum:     { fontSize: '12px', fontWeight: '700', color: '#0066b3', minWidth: '24px' },
-  versionMeta:    { fontSize: '12px', color: '#64748b', flex: 1 },
+  versionMeta:    { fontSize: '12px', color: 'var(--mcc-secondary, #52647a)', flex: 1 },
   versionLink:    { fontSize: '12px', color: '#0066b3', textDecoration: 'none', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 },
   detailActions:  { display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '4px' },
   editBtn:        { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },

@@ -1,0 +1,117 @@
+/* Deliberate role surfaces and module interiors; status colors stay semantic. */
+.mcc-workspace { --mcc-radius: 16px; --mcc-panel-shadow: 0 6px 24px rgba(11,36,71,.035); --mcc-title-font: inherit; --mcc-title-size: clamp(26px,2.8vw,34px); --mcc-field-bg: #f8fafc; }
+.workspace-admin { --mcc-brand:#003d70; --mcc-canvas:#f3f6fa; --mcc-radius:12px; --mcc-title-size:clamp(26px,2.6vw,32px); }
+.workspace-pastor { --mcc-brand:#005599; --mcc-canvas:#f6f8fb; --mcc-radius:18px; --mcc-title-font:'Lora',Georgia,serif; --mcc-title-size:clamp(28px,3vw,38px); }
+.workspace-registration { --mcc-brand:#005599; --mcc-canvas:#f0f7fb; --mcc-radius:12px; --mcc-field-bg:#fff; }
+.workspace-finance { --mcc-brand:#003d70; --mcc-canvas:#f4f7f9; --mcc-radius:10px; --mcc-title-size:clamp(25px,2.6vw,32px); font-variant-numeric:tabular-nums; }
+.workspace-ministry { --mcc-brand:#0066b3; --mcc-canvas:#f4f8fc; --mcc-radius:18px; }
+.workspace-cell { --mcc-brand:#005599; --mcc-canvas:#f3f8fb; --mcc-radius:18px; }
+.workspace-group { --mcc-brand:#003d70; --mcc-canvas:#f5f7fb; --mcc-radius:14px; }
+.workspace-leader { --mcc-brand:#003d70; --mcc-canvas:#f1f6fb; --mcc-radius:16px; }
+.workspace-page { width:100%; min-width:0; max-width:1280px; margin-inline:auto; }
+.workspace-page > .mcc-module { min-width:0; width:100%; }
+.workspace-nav-group { display:grid; gap:3px; }
+.workspace-nav-heading { padding:17px 14px 7px; color:#a9c6df; text-transform:uppercase; letter-spacing:.11em; font-size:10px; font-weight:700; }
+.workspace-context { max-width:1280px; margin:0 auto 24px; display:flex; gap:24px; justify-content:space-between; align-items:center; border-bottom:1px solid var(--mcc-border); padding:0 0 20px; }
+.workspace-context-copy { min-width:0; }
+.workspace-breadcrumb { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--mcc-secondary); margin-bottom:8px; }
+.workspace-breadcrumb a { color:var(--mcc-brand); text-decoration:none; font-weight:700; }
+.workspace-context p { font-size:14px; color:var(--mcc-ink); margin:0; line-height:1.6; }
+.workspace-scope-note { display:block; color:var(--mcc-secondary); font-size:12px; margin-top:5px; max-width:720px; }
+.workspace-context-actions { display:flex; gap:8px; flex-wrap:wrap; flex-shrink:0; max-width:40%; }
+.workspace-context-actions a { min-height:40px; padding:9px 12px; border:1px solid var(--mcc-border); border-radius:9px; background:var(--mcc-surface); color:var(--mcc-brand); font-size:12px; font-weight:600; text-decoration:none; }
+.workspace-pastor .workspace-context { border-left:3px solid #13b5ea; border-bottom:0; padding:18px 22px; background:#fff; border-radius:0 16px 16px 0; }
+.workspace-registration .workspace-context { background:#005599; padding:20px 24px; border:0; border-radius:12px; }
+.workspace-registration .workspace-context :is(p,.workspace-breadcrumb,.workspace-breadcrumb a) { color:#fff; }
+.workspace-registration .workspace-scope-note { color:#dcefff; }
+.workspace-registration .workspace-context-actions a { color:#005599; }
+.workspace-finance .workspace-context { border-top:3px solid #003d70; padding-top:18px; }
+.workspace-ministry .workspace-context { background:#fff; padding:22px; border:1px solid var(--mcc-border); border-radius:18px; }
+.workspace-cell .workspace-context { border-bottom:2px solid #b9dcf0; }
+.workspace-group .workspace-context { border-left:3px solid #003d70; padding-left:18px; }
+.workspace-leader .workspace-context { background:#e9f2fa; padding:20px 24px; border:0; border-radius:16px; }
+.workspace-page-title { font-family:var(--mcc-title-font) !important; font-size:var(--mcc-title-size) !important; font-weight:650 !important; line-height:1.2 !important; letter-spacing:-.035em; }
+.mcc-module :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea) { min-height:44px; color:var(--mcc-ink); }
+.mcc-module :is(input:not([type=checkbox]):not([type=radio]),select,textarea):disabled { cursor:not-allowed; }
+.mcc-module table { font-variant-numeric:tabular-nums; }
+.mcc-module th { line-height:1.5; }
+.mcc-module :is(table th, table td) { padding:16px 18px !important; }
+.mcc-module table thead { background:#f8fafc; }
+.workspace-admin .mcc-module :is(table th,table td), .workspace-registration .mcc-module :is(table th,table td) { padding:12px 16px !important; }
+.workspace-pastor .mcc-module table th { color:#005599 !important; background:#eef5fa; }
+.workspace-finance .mcc-module table { font-size:13px; }
+.workspace-finance .mcc-module table tbody tr:nth-child(even) { background:#f8fafb; }
+.mcc-module tbody tr:hover { background:#f8fbfd; }
+.mcc-module td { overflow-wrap:anywhere; }
+.mcc-module form { scroll-margin-top:100px; }
+.mcc-module :is(button,a) { transition:background-color .15s,border-color .15s,box-shadow .15s; }
+.mcc-module button:disabled { cursor:not-allowed; }
+.role-dashboard { margin-inline:auto; }
+.role-dashboard-hero { position:relative; overflow:hidden; flex-wrap:wrap; }
+.role-dashboard-greeting { display:block; color:#52647a; font-size:13px; margin-bottom:8px; }
+.role-dashboard-hero h1 { font-family:var(--mcc-title-font); font-size:var(--mcc-title-size) !important; letter-spacing:-.035em; }
+.role-action-bar { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.role-action-bar > span { color:#52647a; font-size:12px; font-weight:600; margin-right:6px; }
+.role-action-bar button { padding:10px 16px; border:1px solid var(--mcc-border); border-radius:10px; background:#fff; color:var(--mcc-brand); font-size:13px; font-weight:600; }
+.role-action-bar .role-action-primary { background:var(--mcc-brand); border-color:var(--mcc-brand); color:#fff; }
+.role-dashboard-metrics > button { min-width:0; border-radius:var(--mcc-radius) !important; }
+.role-dashboard-work > section, .role-dashboard-secondary > section { min-width:0; border-radius:var(--mcc-radius) !important; }
+.role-workflow-guide { list-style:none; counter-reset:step; display:grid; gap:16px; padding:22px; margin:0; }
+.role-workflow-guide li { counter-increment:step; display:flex; align-items:flex-start; gap:12px; color:#52647a; font-size:13px; line-height:1.6; }
+.role-workflow-guide li::before { content:counter(step); display:grid; place-items:center; width:24px; height:24px; flex-shrink:0; background:#eaf4fc; border-radius:50%; color:#005599; font-size:11px; font-weight:700; }
+.role-dashboard-admin .role-dashboard-hero { border-top:3px solid #003d70 !important; }
+.role-dashboard-pastor .role-dashboard-hero { padding:32px !important; border:0 !important; background:#eaf3fa !important; }
+.role-dashboard-registration .role-action-bar { background:#fff; padding:20px; border:1px solid var(--mcc-border); border-radius:12px; }
+.role-dashboard-finance .role-dashboard-metrics strong { font-variant-numeric:tabular-nums; font-size:clamp(22px,2vw,30px) !important; overflow-wrap:anywhere; }
+.role-dashboard-finance .role-dashboard-work { display:grid; grid-template-columns:1.2fr .8fr !important; }
+.role-dashboard-ministry .role-dashboard-hero { border-left:4px solid #13b5ea !important; }
+.role-dashboard-cell .role-dashboard-metrics > button { flex-direction:row !important; flex-wrap:wrap; align-items:center; gap:12px; }
+.role-dashboard-cell .role-dashboard-metrics > button > span:last-child { flex-basis:100%; margin-top:0 !important; }
+.role-dashboard-group .role-dashboard-hero { background:#003d70 !important; }
+.role-dashboard-group .role-dashboard-hero :is(h1,p,.role-dashboard-greeting) { color:#fff !important; }
+.role-dashboard-group .role-dashboard-hero > div:last-child { color:#d3e9f9 !important; }
+.role-dashboard-group .role-dashboard-hero > div:last-child strong { color:#fff !important; }
+.role-dashboard-group .role-dashboard-hero > div:first-child > div { background:#ffffff14 !important; border-color:#ffffff44 !important; color:#dcefff !important; }
+.role-dashboard-leader .role-dashboard-hero { border-bottom:4px solid #13b5ea !important; }
+.workspace-page-qr, .workspace-page-attendance-qr { --mcc-field-bg:#fff; }
+.mcc-workspace .qr-workspace { max-width:1280px; }
+.mcc-workspace .qr-workspace-card { border-radius:var(--mcc-radius); box-shadow:var(--mcc-panel-shadow); border-color:var(--mcc-border); }
+.mcc-workspace .qr-workspace h1 { font-size:var(--mcc-title-size); letter-spacing:-.035em; }
+.mcc-workspace .qr-primary-button { background:var(--mcc-brand); }
+.mcc-workspace .qr-stat-grid { gap:16px; }
+.member-welcome { margin:0 0 24px; padding:26px; border:1px solid var(--mcc-border); border-radius:18px; display:flex; justify-content:space-between; align-items:center; gap:20px; }
+.member-welcome h2 { margin:4px 0 8px; font-size:clamp(25px,3vw,34px); letter-spacing:-.035em; font-weight:650; }
+.member-welcome p { margin:0; line-height:1.6; }
+.member-welcome-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.member-welcome-actions button { border:1px solid #cbd5e1; border-radius:10px; padding:11px 16px; font-weight:600; background:transparent; color:inherit; }
+.member-welcome-actions button:first-child { background:#005599; border-color:#005599; color:#fff; }
+.member-tab-intro { display:flex; gap:14px; align-items:center; margin-bottom:22px; }
+.member-tab-intro h2 { margin:0 0 4px; font-size:23px; font-weight:650; letter-spacing:-.02em; }
+.member-tab-intro p { margin:0; font-size:14px; line-height:1.6; }
+.design-review-toolbar { position:fixed; left:0; right:0; bottom:0; z-index:2500; min-height:54px; padding:9px 20px; display:flex; align-items:center; justify-content:center; gap:20px; flex-wrap:wrap; background:#fff; color:#003d70; border-top:2px solid #13b5ea; box-shadow:0 -4px 20px #003d7012; font-size:12px; }
+.design-review-toolbar label { display:flex; gap:8px; align-items:center; }.design-review-toolbar select { max-width:210px; padding:5px 10px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; min-height:34px; }
+.design-review-toolbar a { color:#005599; }.design-review-toolbar + .mcc-workspace .mcc-main { padding-bottom:90px !important; }
+@media(max-width:1100px) { .workspace-context { align-items:flex-start; flex-direction:column; gap:14px; }.workspace-context-actions { max-width:100%; } }
+@media(max-width:768px) {
+  .mcc-responsive-table { display:block; width:100% !important; min-width:0 !important; }
+  .mcc-responsive-table thead { display:block; background:transparent; }
+  .mcc-responsive-table thead tr { display:block; }
+  .mcc-responsive-table th { display:none; }
+  .mcc-responsive-table th.mcc-selection-header { display:flex; align-items:center; gap:10px; }
+  .mcc-responsive-table th.mcc-selection-header::after { content:'Select all'; font-size:12px; color:#52647a; }
+  .mcc-responsive-table tbody { display:grid; gap:12px; padding:12px; }
+  .mcc-responsive-table tbody tr { display:block; border:1px solid var(--mcc-border) !important; border-radius:var(--mcc-radius); padding:8px 12px; background:var(--mcc-surface); }
+  .mcc-module .mcc-responsive-table tbody td { display:grid; grid-template-columns:96px minmax(0,1fr); align-items:start; gap:12px; padding:9px 0 !important; border-bottom:1px solid #f1f5f9; width:auto !important; min-width:0; white-space:normal !important; }
+  .mcc-responsive-table tbody td::before { content:attr(data-label); color:#52647a; font-size:11px; font-weight:600; padding-top:2px; }
+  .mcc-responsive-table tbody td:last-child { border-bottom:0; }
+  .mcc-responsive-table tbody td[colspan] { display:block; }
+  .mcc-responsive-table tbody td[colspan]::before { content:none; }
+  .mcc-responsive-table td > * { min-width:0; max-width:100%; }
+  .workspace-context { margin-bottom:20px; }.workspace-scope-note { font-size:12px; }.workspace-context-actions { gap:8px; }
+  .workspace-context-actions a { min-height:44px; }
+  .role-dashboard-work, .role-dashboard-secondary, .role-dashboard-finance .role-dashboard-work { grid-template-columns:minmax(0,1fr) !important; }
+  .role-dashboard-metrics { grid-template-columns:minmax(0,1fr) !important; }
+  .role-dashboard-hero { gap:18px; padding:24px 20px !important; }
+  .role-action-bar > span { width:100%; }.role-action-bar button { flex:1 1 130px; }
+  .member-welcome { padding:20px; flex-direction:column; align-items:flex-start; }.member-welcome-actions { width:100%; }.member-welcome-actions button { flex:1; }
+}

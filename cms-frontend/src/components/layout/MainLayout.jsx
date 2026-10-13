@@ -13,6 +13,8 @@ import useIdleTimer from '../../hooks/useIdleTimer';
 import IdleLockScreen from '../common/IdleLockScreen';
 import { currentNavPath } from '../../utils/navigationState';
 import useDialogFocus from '../../hooks/useDialogFocus';
+import WorkspaceContext from './WorkspaceContext';
+import { getRoleWorkspace, getWorkspaceModule } from '../../utils/roleWorkspace';
 
 function NavIcon({ name, size = 20 }) {
   const MORE_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
@@ -227,6 +229,10 @@ function MobileMoreDrawer({ open, onClose }) {
 }
 
 export default function MainLayout({ children }) {
+  const { user } = useAuth();
+  const { pathname } = useLocation();
+  const workspace = getRoleWorkspace(user);
+  const module = getWorkspaceModule(pathname);
   const width    = useWindowWidth();
   const isMobile = width <= BP_MOBILE;
   const isTablet = width > BP_MOBILE && width <= BP_TABLET;
@@ -287,7 +293,7 @@ export default function MainLayout({ children }) {
   const mainPadLeft  = isMobile ? '0px' : sidebarWidth;
 
   return (
-    <div className="mcc-workspace" style={S.root}>
+    <div className={`mcc-workspace workspace-${workspace.key}`} data-workspace={workspace.key} data-module={module?.key || 'dashboard'} style={S.root}>
       <a className="mcc-skip-link" href="#mcc-main">Skip to content</a>
       {/* Hidden Google Translate widget for CMS */}
       <div id="google_translate_element_cms" style={{ position: 'fixed', bottom: -200, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1 }} />
@@ -330,7 +336,8 @@ export default function MainLayout({ children }) {
             : '80px 28px 28px',
         paddingBottom: isMobile ? 'calc(68px + env(safe-area-inset-bottom, 0px))' : (isTablet ? '20px' : '28px'),
       }}>
-        {children}
+        <WorkspaceContext />
+        <div className={`workspace-page mcc-module workspace-page-${module?.key || 'dashboard'}`}>{children}</div>
       </main>
 
       {/* Mobile bottom tab bar */}

@@ -1,3 +1,4 @@
+import ResponsiveTable from '../../components/common/ResponsiveTable';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
@@ -244,11 +245,11 @@ export default function ServicesPage() {
   };
 
   return (
-    <div style={styles.page}>
+    <div className="mcc-module mcc-module-services-page" style={styles.page}>
       {/* Header */}
       <div style={styles.pageHeader}>
         <div>
-          <h1 style={styles.title}>Services</h1>
+          <h1 className="workspace-page-title" style={styles.title}>Services</h1>
           <p style={styles.subtitle}>{total} total services</p>
         </div>
         {canCreate && !isMember && (
@@ -277,13 +278,13 @@ export default function ServicesPage() {
           <form onSubmit={handleCreate} style={styles.form}>
             <div style={styles.formRow}>
               <div style={styles.field}>
-                <label style={styles.label}>Title *</label>
-                <input name="title" value={form.title} onChange={handleFormChange}
+                <label style={styles.label} htmlFor="servicespage-title">Title *</label>
+                <input id="servicespage-title" name="title" value={form.title} onChange={handleFormChange}
                   placeholder="e.g. Sunday Service - March 9" required style={styles.input} />
               </div>
               {!editingService && <div style={styles.field}>
-                <label style={styles.label}>Status</label>
-                <select name="status" value={form.status} onChange={handleFormChange} style={styles.select}>
+                <label style={styles.label} htmlFor="servicespage-status">Status</label>
+                <select id="servicespage-status" name="status" value={form.status} onChange={handleFormChange} style={styles.select}>
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
                 </select>
@@ -291,28 +292,28 @@ export default function ServicesPage() {
             </div>
             <div style={styles.formRow}>
               <div style={styles.field}>
-                <label style={styles.label}>Date *</label>
-                <input type="date" name="service_date" value={form.service_date} onChange={handleFormChange} required style={styles.input} />
+                <label style={styles.label} htmlFor="servicespage-service_date">Date *</label>
+                <input id="servicespage-service_date" type="date" name="service_date" value={form.service_date} onChange={handleFormChange} required style={styles.input} />
               </div>
               <div style={styles.field}>
-                <label style={styles.label}>Time *</label>
-                <input type="time" name="service_time" value={form.service_time} onChange={handleFormChange} required style={styles.input} />
+                <label style={styles.label} htmlFor="servicespage-service_time">Time *</label>
+                <input id="servicespage-service_time" type="time" name="service_time" value={form.service_time} onChange={handleFormChange} required style={styles.input} />
               </div>
             </div>
             <div style={styles.formRow}>
               <div style={styles.field}>
-                <label style={styles.label}>Capacity *</label>
-                <input type="number" name="capacity" value={form.capacity} onChange={handleFormChange}
+                <label style={styles.label} htmlFor="servicespage-capacity">Capacity *</label>
+                <input id="servicespage-capacity" type="number" name="capacity" value={form.capacity} onChange={handleFormChange}
                   min="1" placeholder="500" required style={styles.input} />
               </div>
               <div style={styles.field}>
-                <label style={styles.label}>Parking Slots *</label>
-                <input type="number" name="total_parking_slots" value={form.total_parking_slots}
+                <label style={styles.label} htmlFor="servicespage-total_parking_slots">Parking Slots *</label>
+                <input id="servicespage-total_parking_slots" type="number" name="total_parking_slots" value={form.total_parking_slots}
                   onChange={handleFormChange} min="0" placeholder="100" required style={styles.input} />
               </div>
               <div style={styles.field}>
-                <label style={styles.label}>Response Deadline</label>
-                <input type="datetime-local" name="response_deadline" value={form.response_deadline}
+                <label style={styles.label} htmlFor="servicespage-response_deadline">Response Deadline</label>
+                <input id="servicespage-response_deadline" type="datetime-local" name="response_deadline" value={form.response_deadline}
                   onChange={handleFormChange} style={styles.input} />
               </div>
             </div>
@@ -336,7 +337,7 @@ export default function ServicesPage() {
             style={{
               ...styles.filterChip,
               background: statusFilter === opt.key ? '#005599' : '#f1f5f9',
-              color:      statusFilter === opt.key ? '#fff'    : '#475569',
+              color:      statusFilter === opt.key ? 'var(--mcc-surface, #fff)'    : '#475569',
             }}>
             {opt.label}
           </button>
@@ -347,7 +348,7 @@ export default function ServicesPage() {
 
       {/* Table */}
       <div style={styles.tableWrap}>
-        <div style={styles.tableScroll}><table style={styles.table}>
+        <div style={styles.tableScroll}><ResponsiveTable style={styles.table}>
           <thead>
             <tr style={styles.thead}>
               <th style={styles.th}>Service</th>
@@ -372,11 +373,11 @@ export default function ServicesPage() {
 
               return (
                 <tr key={s.id}
-                  style={{ ...styles.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
+                  style={{ ...styles.row, background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
-                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
+                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc'}
                 >
-                  <td style={{ ...styles.td, fontWeight: '600', color: '#0f172a' }}>{s.title}</td>
+                  <td style={{ ...styles.td, fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' }}>{s.title}</td>
                   <td style={styles.td}>{formatDate(s.service_date)}</td>
                   <td style={styles.td}>{formatTime(s.service_time)}</td>
                   <td style={styles.td}>{s.capacity}</td>
@@ -451,7 +452,7 @@ export default function ServicesPage() {
               );
             })}
           </tbody>
-        </table></div>
+        </ResponsiveTable></div>
       </div>
 
       {/* Pagination */}
@@ -561,30 +562,30 @@ const STATUS_ACTION_STYLE = {
 const styles = {
   page:        { fontFamily: "'Inter', sans-serif" },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
-  title:       { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
-  subtitle:    { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
-  addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+  title:       { fontSize: '24px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
+  subtitle:    { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0 0' },
+  addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
   memberHint:  { background: '#e8f4fd', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', fontSize: '14px', color: '#0066b3', display: 'flex', alignItems: 'center', gap: '8px' },
-  formCard:    { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
-  formTitle:   { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px 0' },
+  formCard:    { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+  formTitle:   { fontSize: '16px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 20px 0' },
   form:        { display: 'flex', flexDirection: 'column', gap: '16px' },
   formRow:     { display: 'flex', gap: '16px', flexWrap: 'wrap' },
   field:       { display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '160px' },
   label:       { fontSize: '13px', fontWeight: '600', color: '#374151' },
-  input:       { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', color: '#0f172a' },
-  select:      { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: '#fff' },
+  input:       { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', color: 'var(--mcc-ink, #0f172a)' },
+  select:      { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)' },
   formActions: { display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '4px' },
   cancelBtn:   { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  submitBtn:   { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  submitBtn:   { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   filterBar:   { display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' },
   filterChip:  { border: 'none', borderRadius: '20px', padding: '6px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
   successBox:  { background: '#dcfce7', border: '1px solid #86efac', color: '#16a34a', borderRadius: '8px', padding: '16px', fontSize: '14px', textAlign: 'center', margin: '16px 0' },
-  tableWrap:   { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  tableWrap:   { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', border: '1px solid var(--mcc-border, #e2e8f0)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   tableScroll: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:       { width: '100%', borderCollapse: 'collapse' },
   thead:       { background: '#f8fafc' },
-  th:          { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },
+  th:          { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: 'var(--mcc-secondary, #52647a)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--mcc-border, #e2e8f0)' },
   row:         { transition: 'background 0.15s' },
   td:          { padding: '14px 16px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
   centerCell:  { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
@@ -592,16 +593,16 @@ const styles = {
   actions:     { display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' },
   viewBtn:     { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   statusBtn:   { border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
-  preRegBtn:   { background: 'linear-gradient(135deg, #005599,#13B5EA)', color: '#fff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' },
+  preRegBtn:   { background: 'linear-gradient(135deg, #005599,#13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' },
   pagination:  { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px' },
-  pageBtn:     { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', cursor: 'pointer', fontWeight: '500' },
-  pageInfo:    { fontSize: '14px', color: '#64748b' },
+  pageBtn:     { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', cursor: 'pointer', fontWeight: '500' },
+  pageInfo:    { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)' },
   // Modal
   overlay:     { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal:       { background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '480px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
-  modalTitle:  { fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '8px' },
+  modal:       { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', padding: '32px', maxWidth: '480px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
+  modalTitle:  { fontSize: '20px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '8px' },
   modalService:{ fontSize: '16px', fontWeight: '600', color: '#0066b3', margin: '0 0 4px' },
-  modalDate:   { fontSize: '13px', color: '#64748b', margin: '0 0 20px' },
+  modalDate:   { fontSize: '13px', color: 'var(--mcc-secondary, #52647a)', margin: '0 0 20px' },
   preRegForm:  { display: 'flex', flexDirection: 'column', gap: '16px' },
   radioGroup:  { display: 'flex', gap: '10px', flexWrap: 'wrap' },
   radioOption: { flex: 1, minWidth: '120px', padding: '10px 14px', borderRadius: '8px', border: '2px solid', cursor: 'pointer', fontSize: '13px', fontWeight: '600', textAlign: 'center', transition: 'all 0.15s' },

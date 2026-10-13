@@ -49,34 +49,34 @@ const detailPathFor = (session) => session.session_id
     : `/events/${session.target_id}`;
 
 const styles = {
-  page: { display: 'flex', flexDirection: 'column', gap: 20, color: '#0f172a' },
+  page: { display: 'flex', flexDirection: 'column', gap: 20, color: 'var(--mcc-ink, #0f172a)' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' },
   title: { margin: 0, fontSize: 24, fontWeight: 750 },
-  subtitle: { margin: '6px 0 0', color: '#64748b', fontSize: 14, lineHeight: 1.5 },
-  panel: { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 18, boxShadow: '0 1px 3px rgba(15,23,42,0.04)' },
+  subtitle: { margin: '6px 0 0', color: 'var(--mcc-secondary, #52647a)', fontSize: 14, lineHeight: 1.5 },
+  panel: { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: 18, boxShadow: '0 1px 3px rgba(15,23,42,0.04)' },
   filterGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, alignItems: 'end' },
   field: { display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, color: '#475569', fontSize: 12, fontWeight: 700 },
-  input: { minHeight: 40, width: '100%', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: 8, padding: '8px 10px', background: '#fff', color: '#0f172a', font: 'inherit', fontSize: 14 },
-  button: { minHeight: 40, border: 0, borderRadius: 8, padding: '9px 14px', background: '#005599', color: '#fff', fontWeight: 700, cursor: 'pointer', font: 'inherit' },
-  secondaryButton: { minHeight: 36, border: '1px solid #cbd5e1', borderRadius: 8, padding: '7px 11px', background: '#fff', color: '#334155', fontWeight: 650, cursor: 'pointer', font: 'inherit', fontSize: 13 },
+  input: { minHeight: 40, width: '100%', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: 8, padding: '8px 10px', background: 'var(--mcc-surface, #fff)', color: 'var(--mcc-ink, #0f172a)', font: 'inherit', fontSize: 14 },
+  button: { minHeight: 40, border: 0, borderRadius: 8, padding: '9px 14px', background: '#005599', color: 'var(--mcc-surface, #fff)', fontWeight: 700, cursor: 'pointer', font: 'inherit' },
+  secondaryButton: { minHeight: 36, border: '1px solid #cbd5e1', borderRadius: 8, padding: '7px 11px', background: 'var(--mcc-surface, #fff)', color: '#334155', fontWeight: 650, cursor: 'pointer', font: 'inherit', fontSize: 13 },
   sectionTitle: { margin: '0 0 12px', fontSize: 16, fontWeight: 750 },
-  muted: { color: '#64748b', fontSize: 13, lineHeight: 1.5 },
+  muted: { color: 'var(--mcc-secondary, #52647a)', fontSize: 13, lineHeight: 1.5 },
   summaryGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: 10 },
-  summaryCard: { minHeight: 92, border: '1px solid #e2e8f0', borderRadius: 12, padding: '13px 14px', background: '#fff' },
-  summaryValue: { display: 'block', fontSize: 25, fontWeight: 800, color: '#0f172a' },
-  summaryLabel: { display: 'block', marginTop: 4, fontSize: 12, color: '#64748b', fontWeight: 650 },
+  summaryCard: { minHeight: 92, border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '13px 14px', background: 'var(--mcc-surface, #fff)' },
+  summaryValue: { display: 'block', fontSize: 25, fontWeight: 800, color: 'var(--mcc-ink, #0f172a)' },
+  summaryLabel: { display: 'block', marginTop: 4, fontSize: 12, color: 'var(--mcc-secondary, #52647a)', fontWeight: 650 },
   summaryDetail: { display: 'block', marginTop: 4, fontSize: 11, color: '#94a3b8' },
   twoColumns: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 310px), 1fr))', gap: 16 },
   list: { display: 'flex', flexDirection: 'column', gap: 8 },
   listRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderBottom: '1px solid #f1f5f9' },
   tableWrap: { overflowX: 'auto', width: '100%' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 760, fontSize: 13 },
-  th: { padding: '10px 9px', textAlign: 'left', color: '#64748b', background: '#f8fafc', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', whiteSpace: 'nowrap' },
+  th: { padding: '10px 9px', textAlign: 'left', color: 'var(--mcc-secondary, #52647a)', background: '#f8fafc', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', whiteSpace: 'nowrap' },
   td: { padding: '11px 9px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'top' },
   link: { color: '#005599', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' },
   status: { display: 'inline-block', borderRadius: 999, padding: '4px 8px', background: '#f1f5f9', color: '#475569', fontSize: 11, fontWeight: 700, textTransform: 'capitalize' },
   error: { border: '1px solid #fecaca', borderRadius: 10, background: '#fef2f2', color: '#991b1b', padding: 13, fontSize: 13 },
-  empty: { borderRadius: 10, background: '#f8fafc', padding: 20, color: '#64748b', textAlign: 'center', fontSize: 13 },
+  empty: { borderRadius: 10, background: '#f8fafc', padding: 20, color: 'var(--mcc-secondary, #52647a)', textAlign: 'center', fontSize: 13 },
   pager: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 14 },
 };
 
@@ -296,10 +296,10 @@ export default function PastorAttendanceReport() {
   );
 
   return (
-    <div style={styles.page}>
+    <div className="mcc-module mcc-module-pastor-attendance-report" style={styles.page}>
       <header style={styles.header}>
         <div>
-          <h1 style={styles.title}>Pastor Attendance Report</h1>
+          <h1 className="workspace-page-title" style={styles.title}>Pastor Attendance Report</h1>
           <p style={styles.subtitle}>Church-wide Service and Event attendance. Use the activity and session filters to drill into the records; this view is read-only.</p>
         </div>
         <button type="button" style={styles.secondaryButton} disabled={exporting || !report?.sessions?.length} onClick={exportCsv}>
@@ -464,7 +464,7 @@ export default function PastorAttendanceReport() {
               {memberSearch.trim().length > 0 && memberSearch.trim().length < 2 && <div style={styles.muted}>Enter at least two characters.</div>}
               {memberSearch.length >= 2 && !memberSearchLoading && memberResults.length === 0 && !memberHistoryError && <div style={styles.muted}>No matching members.</div>}
               {memberResults.length > 0 && (
-                <div role="listbox" aria-label="Matching members" style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 20, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 9, boxShadow: '0 8px 22px rgba(15,23,42,.14)', maxHeight: 260, overflowY: 'auto' }}>
+                <div role="listbox" aria-label="Matching members" style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 20, background: 'var(--mcc-surface, #fff)', border: '1px solid #cbd5e1', borderRadius: 9, boxShadow: '0 8px 22px rgba(15,23,42,.14)', maxHeight: 260, overflowY: 'auto' }}>
                   {memberResults.map((member) => (
                     <button
                       type="button"
@@ -472,7 +472,7 @@ export default function PastorAttendanceReport() {
                       aria-selected="false"
                       key={member.id}
                       onClick={() => selectMember(member)}
-                      style={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 12, padding: '10px 12px', border: 0, borderBottom: '1px solid #f1f5f9', background: '#fff', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}
+                      style={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 12, padding: '10px 12px', border: 0, borderBottom: '1px solid #f1f5f9', background: 'var(--mcc-surface, #fff)', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}
                     >
                       <span>{member.last_name}, {member.first_name}</span>
                       <span style={styles.muted}>{member.status}</span>

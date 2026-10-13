@@ -234,10 +234,10 @@ export default function EventsPage() {
       ];
 
   return (
-    <div style={s.page}>
+    <div className="mcc-module mcc-module-events-page" style={s.page}>
       <div style={s.pageHeader}>
         <div>
-          <h1 style={s.title}>Events</h1>
+          <h1 className="workspace-page-title" style={s.title}>Events</h1>
           <p style={s.subtitle}>{total} total events</p>
         </div>
         {canCreate && !isMember && (
@@ -291,7 +291,7 @@ export default function EventsPage() {
             <div style={s.field}>
               <label htmlFor="event-photo-upload" style={s.label}>Event Photo</label>
               <input id="event-photo-upload" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { setImageFile(e.target.files?.[0] || null); setRemoveImage(false); }} style={s.input} />
-              <small style={{ color: '#64748b' }}>JPG, PNG, or WebP. Maximum 5 MB.</small>
+              <small style={{ color: 'var(--mcc-secondary, #52647a)' }}>JPG, PNG, or WebP. Maximum 5 MB.</small>
               {(imageFile || (editEvent?.image_url && !removeImage)) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <img src={imageFile ? imagePreview : eventImageSrc(editEvent)} alt="Event preview" style={{ width: 120, height: 72, objectFit: 'cover', borderRadius: 8 }} />
@@ -421,7 +421,7 @@ export default function EventsPage() {
             style={{
               ...s.filterChip,
               background: statusFilter === opt.key ? '#005599' : '#f1f5f9',
-              color:      statusFilter === opt.key ? '#fff'    : '#475569',
+              color:      statusFilter === opt.key ? 'var(--mcc-surface, #fff)'    : '#475569',
             }}
           >
             {opt.label}
@@ -475,7 +475,7 @@ export default function EventsPage() {
                   <div style={{
                     ...s.cardMeta,
                     color: new Date() > new Date(ev.registration_deadline)
-                      ? '#dc2626' : '#64748b',
+                      ? '#dc2626' : 'var(--mcc-secondary, #52647a)',
                   }}>
                     <MonoIcon name="clock" size={14} /> Deadline: {new Date(ev.registration_deadline).toLocaleDateString(
                       'en-PH', { month: 'short', day: 'numeric', year: 'numeric' }
@@ -538,20 +538,20 @@ export default function EventsPage() {
 const s = {
   page:        { fontFamily: "'Inter', sans-serif" },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
-  title:       { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
-  subtitle:    { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
-  addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
-  formCard:    { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
-  formTitle:   { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px 0' },
+  title:       { fontSize: '24px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
+  subtitle:    { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0 0' },
+  addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+  formCard:    { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+  formTitle:   { fontSize: '16px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 20px 0' },
   form:        { display: 'flex', flexDirection: 'column', gap: '16px' },
   formRow:     { display: 'flex', gap: '16px', flexWrap: 'wrap' },
   field:       { display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '160px' },
   label:       { fontSize: '13px', fontWeight: '600', color: '#374151' },
   input:       { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', width: '100%', boxSizing: 'border-box' },
-  select:      { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: '#fff' },
+  select:      { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)' },
   formActions: { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
   cancelBtn:   { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  submitBtn:   { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  submitBtn:   { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   filtersBar:  { display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' },
   searchInput: { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', flex: 1, minWidth: '200px' },
   filterBar:   { display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' },
@@ -559,19 +559,19 @@ const s = {
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
   centerCell:  { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   grid:        { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' },
-  card:        { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '8px' },
+  card:        { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '8px' },
   cardTop:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   badge:       { padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' },
   category:    { fontSize: '12px', color: '#94a3b8', fontWeight: '500' },
-  cardTitle:   { fontSize: '16px', fontWeight: '700', color: '#0f172a' },
-  cardDesc:    { fontSize: '13px', color: '#64748b', lineHeight: '1.5' },
-  cardMeta:    { fontSize: '13px', color: '#64748b' },
+  cardTitle:   { fontSize: '16px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)' },
+  cardDesc:    { fontSize: '13px', color: 'var(--mcc-secondary, #52647a)', lineHeight: '1.5' },
+  cardMeta:    { fontSize: '13px', color: 'var(--mcc-secondary, #52647a)' },
   cardActions: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' },
   viewBtn:     { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   editBtn:     { background: '#f8fafc', color: '#475569', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   statusBtn:   { border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   deleteBtn:   { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   pagination:  { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px' },
-  pageBtn:     { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', cursor: 'pointer' },
-  pageInfo:    { fontSize: '14px', color: '#64748b' },
+  pageBtn:     { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', cursor: 'pointer' },
+  pageInfo:    { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)' },
 };

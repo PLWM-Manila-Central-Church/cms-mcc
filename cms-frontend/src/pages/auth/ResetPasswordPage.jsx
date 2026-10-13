@@ -60,7 +60,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div style={S.page}>
+    <div className="mcc-auth mcc-module mcc-module-reset-password-page" style={S.page}>
       {/* ── Left panel ── */}
       <div style={S.left} className="reset-left">
         <div style={{ ...S.bgPhoto, backgroundImage: `url(${BG_URL})` }} />
@@ -278,7 +278,7 @@ const S = {
   logoBlock:   { display:'flex', alignItems:'center', gap:'16px', marginBottom:'40px' },
   logoImg:     { width:'72px', height:'72px', objectFit:'contain', filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.4))', borderRadius:'50%', background:'rgba(255,255,255,0.08)', padding:'4px' },
   logoTextBlock: { display:'flex', flexDirection:'column' },
-  logoName:    { color:'#fff', fontSize:'28px', fontWeight:'900', letterSpacing:'3px', lineHeight:1, textShadow:'0 2px 12px rgba(0,0,0,0.3)' },
+  logoName:    { color:'var(--mcc-surface, #fff)', fontSize:'28px', fontWeight:'900', letterSpacing:'3px', lineHeight:1, textShadow:'0 2px 12px rgba(0,0,0,0.3)' },
   logoSub:     { color:'rgba(255,255,255,0.7)', fontSize:'11px', fontWeight:'500', letterSpacing:'2.5px', textTransform:'uppercase', marginTop:'5px' },
   dividerLine: { width:'56px', height:'3px', background:'linear-gradient(90deg,#13B5EA,rgba(255,255,255,0.3))', borderRadius:'2px', marginBottom:'32px' },
   quoteBlock:  { margin:0, padding:0, borderLeft:'3px solid rgba(19,181,234,0.6)', paddingLeft:'20px' },
@@ -288,15 +288,15 @@ const S = {
   leftFooterText: { color:'rgba(255,255,255,0.4)', fontSize:'11px', letterSpacing:'1.5px', textTransform:'uppercase', fontWeight:'500' },
 
   right:       { flex:1, background:'#f0f6ff', display:'flex', alignItems:'center', justifyContent:'center', padding:'40px 32px' },
-  card:        { background:'#fff', borderRadius:'20px', width:'100%', maxWidth:'420px', boxShadow:'0 8px 48px rgba(0,85,153,0.12),0 2px 12px rgba(0,0,0,0.06)', overflow:'hidden', animation:'fadeUp 0.6s 0.1s ease both' },
+  card:        { background:'var(--mcc-surface, #fff)', borderRadius:'20px', width:'100%', maxWidth:'420px', boxShadow:'0 8px 48px rgba(0,85,153,0.12),0 2px 12px rgba(0,0,0,0.06)', overflow:'hidden', animation:'fadeUp 0.6s 0.1s ease both' },
   cardAccent:  { height:'5px', background:'linear-gradient(90deg,#003d70,#005599,#13B5EA)' },
   cardBody:    { padding:'36px 40px 32px' },
   formLogoRow: { display:'flex', alignItems:'center', gap:'10px', marginBottom:'28px' },
   formLogo:    { width:'36px', height:'36px', objectFit:'contain', borderRadius:'50%', background:'#e8f4fd', padding:'3px' },
   formLogoLabel: { fontSize:'13px', fontWeight:'800', color:'#005599', letterSpacing:'1.5px' },
 
-  title:       { fontSize:'24px', fontWeight:'800', color:'#0f172a', margin:'0 0 6px 0', letterSpacing:'-0.3px' },
-  subtitle:    { fontSize:'14px', color:'#64748b', margin:'0 0 28px 0', lineHeight:'1.5' },
+  title:       { fontSize:'24px', fontWeight:'800', color:'var(--mcc-ink, #0f172a)', margin:'0 0 6px 0', letterSpacing:'-0.3px' },
+  subtitle:    { fontSize:'14px', color:'var(--mcc-secondary, #52647a)', margin:'0 0 28px 0', lineHeight:'1.5' },
 
   errorBox:    { background:'#fef2f2', border:'1px solid #fecaca', color:'#dc2626', borderRadius:'10px', padding:'11px 14px', fontSize:'13px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'8px' },
   errorIcon:   { fontSize:'15px', flexShrink:0 },
@@ -305,7 +305,7 @@ const S = {
   field:       { display:'flex', flexDirection:'column', gap:'7px' },
   label:       { fontSize:'12px', fontWeight:'700', color:'#374151', letterSpacing:'0.4px', textTransform:'uppercase' },
   fieldIcon:   { position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', fontSize:'14px', opacity:0.5, pointerEvents:'none' },
-  input:       { padding:'12px 16px 12px 40px', fontSize:'16px', border:'1.5px solid #e2e8f0', borderRadius:'10px', outline:'none', transition:'border-color 0.2s,box-shadow 0.2s', width:'100%', boxSizing:'border-box', color:'#0f172a', background:'#fafbfc' },
+  input:       { padding:'12px 16px 12px 40px', fontSize:'16px', border:'1.5px solid #e2e8f0', borderRadius:'10px', outline:'none', transition:'border-color 0.2s,box-shadow 0.2s', width:'100%', boxSizing:'border-box', color:'var(--mcc-ink, #0f172a)', background:'#fafbfc' },
   eyeBtn:      { position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:'15px', padding:'4px', opacity:0.6 },
   matchIcon:   { position:'absolute', right:'14px', top:'50%', transform:'translateY(-50%)', fontSize:'16px', fontWeight:'700', color:'inherit', pointerEvents:'none' },
 
@@ -319,13 +319,13 @@ const S = {
   ruleDot:     { fontSize:'13px', fontWeight:'700', width:'16px', flexShrink:0, textAlign:'center' },
   ruleText:    { fontSize:'12px', transition:'color 0.2s' },
 
-  submitBtn:   { background:'linear-gradient(135deg,#003d70 0%,#005599 50%,#13B5EA 100%)', color:'#fff', border:'none', borderRadius:'10px', padding:'14px', fontSize:'15px', fontWeight:'700', cursor:'pointer', transition:'opacity 0.2s', letterSpacing:'0.3px', width:'100%' },
+  submitBtn:   { background:'linear-gradient(135deg,#003d70 0%,#005599 50%,#13B5EA 100%)', color:'var(--mcc-surface, #fff)', border:'none', borderRadius:'10px', padding:'14px', fontSize:'15px', fontWeight:'700', cursor:'pointer', transition:'opacity 0.2s', letterSpacing:'0.3px', width:'100%' },
   loadingRow:  { display:'flex', alignItems:'center', justifyContent:'center', gap:'10px' },
   spinner:     { display:'inline-block', width:'16px', height:'16px', border:'2.5px solid rgba(255,255,255,0.3)', borderTop:'2.5px solid #fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' },
 
   successBox:  { textAlign:'center', padding:'8px 0 20px', animation:'fadeUp 0.4s ease both' },
-  successIcon: { width:'56px', height:'56px', borderRadius:'50%', background:'linear-gradient(135deg,#005599,#13B5EA)', color:'#fff', fontSize:'24px', fontWeight:'700', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' },
-  successTitle:{ fontSize:'20px', fontWeight:'800', color:'#0f172a', margin:'0 0 12px' },
+  successIcon: { width:'56px', height:'56px', borderRadius:'50%', background:'linear-gradient(135deg,#005599,#13B5EA)', color:'var(--mcc-surface, #fff)', fontSize:'24px', fontWeight:'700', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' },
+  successTitle:{ fontSize:'20px', fontWeight:'800', color:'var(--mcc-ink, #0f172a)', margin:'0 0 12px' },
   successText: { fontSize:'14px', color:'#374151', lineHeight:'1.65', margin:'0 0 24px' },
 
   backRow:     { marginTop:'24px', textAlign:'center' },

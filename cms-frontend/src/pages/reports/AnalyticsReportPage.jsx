@@ -96,9 +96,9 @@ export default function AnalyticsReportPage() {
 
   const maxGrowth = Math.max(1, ...(data?.member_growth || []).map((row) => Number(row.total || 0)));
   return (
-    <main style={{ ...S.page, padding: isMobile ? 14 : 28 }}>
+    <section className="mcc-module mcc-module-analytics-report" aria-label="Analytics report" style={{ ...S.page, padding: 0 }}>
       <header style={S.header}>
-        <div><h1 style={S.title}>Consolidated Analytics</h1><p style={S.subtitle}>{reportDescription}</p></div>
+        <div><h1 className="workspace-page-title" style={S.title}>Consolidated Analytics</h1><p style={S.subtitle}>{reportDescription}</p></div>
         <button type="button" onClick={downloadCsv} disabled={!data || loading} style={{ ...S.download, opacity: !data || loading ? 0.6 : 1 }}>Download CSV</button>
       </header>
       <section style={{ ...S.filters, flexDirection: isMobile ? 'column' : 'row' }}>
@@ -146,41 +146,41 @@ export default function AnalyticsReportPage() {
           <p style={S.footnote}>This report shows aggregate totals. Member names and individual giving records are not included.</p>
         </>
       )}
-    </main>
+    </section>
   );
 }
 
 const S = {
-  page: { maxWidth: 1240, margin: '0 auto', fontFamily: "'Inter', sans-serif", color: '#0f172a' },
+  page: { maxWidth: 1240, margin: '0 auto', fontFamily: "'Inter', sans-serif", color: 'var(--mcc-ink, #0f172a)' },
   header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginBottom: 20 },
   title: { fontSize: 26, margin: 0, fontWeight: 800 },
-  subtitle: { color: '#64748b', fontSize: 14, margin: '5px 0 0' },
-  download: { border: 0, borderRadius: 8, background: '#0f6aa3', color: '#fff', padding: '10px 16px', fontWeight: 700, cursor: 'pointer' },
-  filters: { display: 'flex', alignItems: 'center', gap: 12, padding: 14, marginBottom: 18, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10 },
+  subtitle: { color: 'var(--mcc-secondary, #52647a)', fontSize: 14, margin: '5px 0 0' },
+  download: { border: 0, borderRadius: 8, background: '#0f6aa3', color: 'var(--mcc-surface, #fff)', padding: '10px 16px', fontWeight: 700, cursor: 'pointer' },
+  filters: { display: 'flex', alignItems: 'center', gap: 12, padding: 14, marginBottom: 18, background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 10 },
   filterLabel: { display: 'flex', alignItems: 'center', gap: 8, color: '#475569', fontWeight: 600, fontSize: 13 },
-  dateInput: { padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 7, color: '#0f172a', fontFamily: 'inherit' },
-  refresh: { border: 0, borderRadius: 7, background: '#0f6aa3', color: '#fff', padding: '9px 14px', fontWeight: 700, cursor: 'pointer' },
-  muted: { color: '#64748b', fontSize: 13 },
+  dateInput: { padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 7, color: 'var(--mcc-ink, #0f172a)', fontFamily: 'inherit' },
+  refresh: { border: 0, borderRadius: 7, background: '#0f6aa3', color: 'var(--mcc-surface, #fff)', padding: '9px 14px', fontWeight: 700, cursor: 'pointer' },
+  muted: { color: 'var(--mcc-secondary, #52647a)', fontSize: 13 },
   error: { padding: 12, marginBottom: 16, borderRadius: 8, color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca' },
-  state: { padding: 48, textAlign: 'center', color: '#64748b' },
+  state: { padding: 48, textAlign: 'center', color: 'var(--mcc-secondary, #52647a)' },
   metricGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 12, marginBottom: 16 },
-  metric: { display: 'flex', flexDirection: 'column', gap: 8, padding: 18, borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff' },
-  metricLabel: { color: '#64748b', fontSize: 13 },
+  metric: { display: 'flex', flexDirection: 'column', gap: 8, padding: 18, borderRadius: 10, border: '1px solid var(--mcc-border, #e2e8f0)', background: 'var(--mcc-surface, #fff)' },
+  metricLabel: { color: 'var(--mcc-secondary, #52647a)', fontSize: 13 },
   twoCols: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 14, marginBottom: 14 },
-  panel: { padding: 18, marginBottom: 14, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10 },
+  panel: { padding: 18, marginBottom: 14, background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 10 },
   panelTitle: { margin: '0 0 16px', fontSize: 16 },
   barRow: { marginBottom: 12 },
   barLabel: { display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 5, color: '#475569', fontSize: 13 },
   track: { height: 8, borderRadius: 8, background: '#f1f5f9', overflow: 'hidden' },
   bar: { height: '100%', borderRadius: 8 },
-  legend: { display: 'flex', gap: 14, color: '#64748b', fontSize: 12, marginBottom: 8 },
+  legend: { display: 'flex', gap: 14, color: 'var(--mcc-secondary, #52647a)', fontSize: 12, marginBottom: 8 },
   legendItem: { display: 'inline-flex', gap: 5 },
   trend: { display: 'flex', alignItems: 'stretch', gap: 8, height: 190, overflowX: 'auto', paddingTop: 8 },
-  monthColumn: { display: 'flex', flex: '1 0 34px', minWidth: 34, flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 7, color: '#64748b', fontSize: 10 },
+  monthColumn: { display: 'flex', flex: '1 0 34px', minWidth: 34, flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 7, color: 'var(--mcc-secondary, #52647a)', fontSize: 10 },
   barPair: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', height: '100%', gap: 3 },
   trendBar: { width: 10, minHeight: 2, borderRadius: '3px 3px 0 0' },
   growth: { display: 'flex', gap: 8, alignItems: 'stretch', height: 130, overflowX: 'auto' },
-  growthCol: { display: 'flex', flex: '1 0 34px', minWidth: 34, flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 6, color: '#64748b' },
+  growthCol: { display: 'flex', flex: '1 0 34px', minWidth: 34, flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 6, color: 'var(--mcc-secondary, #52647a)' },
   growthBar: { width: '65%', minHeight: 2, background: '#0f7a55', borderRadius: '3px 3px 0 0' },
-  footnote: { color: '#64748b', fontSize: 12, margin: '4px 0 0' },
+  footnote: { color: 'var(--mcc-secondary, #52647a)', fontSize: 12, margin: '4px 0 0' },
 };

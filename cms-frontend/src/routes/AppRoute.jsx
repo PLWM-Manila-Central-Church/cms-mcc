@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ConfirmationProvider } from '../context/ConfirmationContext';
 import ProtectedRoute from './ProtectedRoute';
@@ -49,12 +49,19 @@ const IntroductionPage = lazy(() => import('../pages/public/OtherPages').then((p
 const WhatWeBelievePage = lazy(() => import('../pages/public/OtherPages').then((pages) => ({ default: pages.WhatWeBelievePage })));
 const CIPage = lazy(() => import('../pages/public/OtherPages').then((pages) => ({ default: pages.CIPage })));
 
-const UnauthorizedPage = () => (
-  <div style={{ padding: 48, textAlign: 'center' }}>
-    <h1>Unauthorized</h1>
-    <p>You do not have permission to view this page.</p>
-  </div>
-);
+const UnauthorizedPage = () => {
+  const { user } = useAuth();
+  const destination = !user ? '/login' : user.roleName === 'Member' ? '/portal' : '/dashboard';
+  return <main className="mcc-auth" style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,background:'var(--mcc-canvas)'}}>
+    <section style={{maxWidth:480,width:'100%',padding:36,border:'1px solid #e2e8f0',borderRadius:18,background:'#fff',textAlign:'center'}}>
+      <img src="/logo.jpg" alt="PLWM-MCC" style={{width:48,height:48,borderRadius:'50%'}}/>
+      <p style={{fontSize:11,fontWeight:700,color:'#005599',letterSpacing:'.1em'}}>ACCESS RESTRICTED</p>
+      <h1 style={{fontSize:28,lineHeight:1.25,letterSpacing:'-.03em'}}>This page is outside your workspace</h1>
+      <p style={{fontSize:14,color:'#52647a',lineHeight:1.6}}>You do not have permission to view this page. Return to your workspace to continue with the modules available to your account.</p>
+      <Link to={destination} style={{display:'inline-block',marginTop:12,padding:'12px 18px',borderRadius:10,background:'#005599',color:'#fff',textDecoration:'none',fontWeight:600}}>Return to {user ? 'my workspace' : 'sign in'}</Link>
+    </section>
+  </main>;
+};
 
 // Members can ONLY access /portal — redirect everyone else away from it
 const PortalRoute = ({ children }) => {

@@ -274,7 +274,7 @@ const S = {
     flexDirection: 'column',
   },
   logoName: {
-    color: '#fff',
+    color: 'var(--mcc-surface, #fff)',
     fontSize: '28px',
     fontWeight: '900',
     letterSpacing: '3px',
@@ -345,7 +345,7 @@ const S = {
     position: 'relative',
   },
   card: {
-    background: '#ffffff',
+    background: 'var(--mcc-surface, #fff)',
     borderRadius: '20px',
     width: '100%',
     maxWidth: '400px',
@@ -383,13 +383,13 @@ const S = {
   title: {
     fontSize: '26px',
     fontWeight: '800',
-    color: '#0f172a',
+    color: 'var(--mcc-ink, #0f172a)',
     margin: '0 0 6px 0',
     letterSpacing: '-0.3px',
   },
   subtitle: {
     fontSize: '14px',
-    color: '#64748b',
+    color: 'var(--mcc-secondary, #52647a)',
     margin: '0 0 28px 0',
     lineHeight: '1.5',
   },
@@ -444,7 +444,7 @@ const S = {
     transition: 'border-color 0.2s, box-shadow 0.2s',
     width: '100%',
     boxSizing: 'border-box',
-    color: '#0f172a',
+    color: 'var(--mcc-ink, #0f172a)',
     background: '#fafbfc',
   },
   eyeBtn: {
@@ -461,7 +461,7 @@ const S = {
   },
   submitBtn: {
     background: 'linear-gradient(135deg, #003d70 0%, #005599 50%, #13B5EA 100%)',
-    color: '#fff',
+    color: 'var(--mcc-surface, #fff)',
     border: 'none',
     borderRadius: '10px',
     padding: '14px',

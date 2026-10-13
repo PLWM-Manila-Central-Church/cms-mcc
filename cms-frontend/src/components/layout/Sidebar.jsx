@@ -4,6 +4,7 @@ import { NAV_ITEMS, NAV_ICONS } from '../../utils/constants';
 import { isVisibleNavItem } from '../../utils/roleAccess';
 import SafeIcon from '../common/SafeIcon';
 import { currentNavPath } from '../../utils/navigationState';
+import { getRoleWorkspace, workspaceNavigation } from '../../utils/roleWorkspace';
 
 const LOGO = process.env.PUBLIC_URL + '/logo.jpg';
 
@@ -19,6 +20,8 @@ export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
   const visibleItems = NAV_ITEMS.filter(item => isVisibleNavItem(item, user, hasPermission));
   const location = useLocation();
   const activePath = currentNavPath(visibleItems, location.pathname);
+  const workspace = getRoleWorkspace(user);
+  const groups = workspaceNavigation(visibleItems, workspace);
 
   const showText = isMobile || !collapsed;
 
@@ -30,14 +33,16 @@ export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
         {showText && (
           <div style={S.logoTextWrap}>
             <span style={S.logoText}>PLWM-MCC</span>
-            <span style={S.logoSub}>Church Management</span>
+            <span style={S.logoSub}>{workspace.title}</span>
           </div>
         )}
       </div>
 
       {/* Navigation */}
       <nav style={S.nav} aria-label="Main navigation">
-        {visibleItems.map(item => (
+        {groups.map(group => <div className="workspace-nav-group" key={group.title}>
+          {showText && group.title !== 'Overview' && <div className="workspace-nav-heading">{group.title}</div>}
+          {group.items.map(item => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -60,7 +65,8 @@ export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
             <NavIcon name={item.icon} size={18} />
             {showText && <span style={S.navLabel}>{item.label}</span>}
           </NavLink>
-        ))}
+          ))}
+        </div>)}
       </nav>
 
       {!isMobile && (

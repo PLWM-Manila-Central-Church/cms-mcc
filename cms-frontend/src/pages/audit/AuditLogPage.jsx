@@ -79,10 +79,10 @@ export default function AuditLogPage() {
   const hasFilters = filterAction || filterTable || filterUserId || filterDateFrom || filterDateTo;
 
   return (
-    <div style={s.page}>
+    <div className="mcc-module mcc-module-audit-log-page" style={s.page}>
       <div style={s.pageHeader}>
         <div>
-          <h1 style={s.title}>Audit Logs</h1>
+          <h1 className="workspace-page-title" style={s.title}>Audit Logs</h1>
           <p style={s.subtitle}>{total.toLocaleString()} total entries</p>
         </div>
       </div>
@@ -153,15 +153,15 @@ export default function AuditLogPage() {
               return (
                 <Fragment key={log.id}>
                   <tr
-                    style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc', cursor: hasValues ? 'pointer' : 'default' }}
+                    style={{ ...s.row, background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc', cursor: hasValues ? 'pointer' : 'default' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
-                    onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
+                    onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc'}
                     onClick={() => hasValues && setExpanded(isExpanded ? null : log.id)}
                   >
                     <td style={{ ...s.td, color: '#94a3b8', fontSize: '12px' }}>
                       {(page - 1) * limit + i + 1}
                     </td>
-                    <td style={{ ...s.td, fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                    <td style={{ ...s.td, fontSize: '12px', color: 'var(--mcc-secondary, #52647a)', whiteSpace: 'nowrap' }}>
                       {formatTs(log.created_at)}
                     </td>
                     <td style={s.td}>
@@ -175,10 +175,10 @@ export default function AuditLogPage() {
                         {log.action}
                       </span>
                     </td>
-                    <td style={{ ...s.td, fontSize: '13px', color: '#64748b' }}>
+                    <td style={{ ...s.td, fontSize: '13px', color: 'var(--mcc-secondary, #52647a)' }}>
                       {TABLE_LABELS[log.target_table] || log.target_table || '—'}
                     </td>
-                    <td style={{ ...s.td, fontSize: '13px', color: '#64748b', fontFamily: 'monospace' }}>
+                    <td style={{ ...s.td, fontSize: '13px', color: 'var(--mcc-secondary, #52647a)', fontFamily: 'monospace' }}>
                       {log.target_id || '—'}
                     </td>
                     <td style={{ ...s.td, fontSize: '12px', color: '#94a3b8', fontFamily: 'monospace' }}>
@@ -239,34 +239,34 @@ export default function AuditLogPage() {
 const s = {
   page:        { fontFamily: "'Inter', sans-serif" },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
-  title:       { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
-  subtitle:    { fontSize: '14px', color: '#64748b', margin: '4px 0 0' },
-  filterCard:  { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' },
+  title:       { fontSize: '24px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
+  subtitle:    { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0' },
+  filterCard:  { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '16px 20px', marginBottom: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' },
   filterRow:   { display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' },
   filterField: { display: 'flex', flexDirection: 'column', gap: '5px', flex: 1, minWidth: '140px' },
-  filterLabel: { fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  filterLabel: { fontSize: '11px', fontWeight: '700', color: 'var(--mcc-secondary, #52647a)', textTransform: 'uppercase', letterSpacing: '0.05em' },
   filterInput: { padding: '8px 12px', fontSize: '13px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none' },
-  filterSelect:{ padding: '8px 12px', fontSize: '13px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: '#fff' },
+  filterSelect:{ padding: '8px 12px', fontSize: '13px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)' },
   clearBtn:    { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', alignSelf: 'flex-end' },
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', marginBottom: '14px' },
-  tableWrap:   { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  tableWrap:   { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', border: '1px solid var(--mcc-border, #e2e8f0)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   tableScroll: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:       { width: '100%', borderCollapse: 'collapse' },
   thead:       { background: '#f8fafc' },
-  th:          { padding: '10px 14px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' },
+  th:          { padding: '10px 14px', fontSize: '11px', fontWeight: '700', color: 'var(--mcc-secondary, #52647a)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--mcc-border, #e2e8f0)', whiteSpace: 'nowrap' },
   row:         { transition: 'background 0.1s' },
   td:          { padding: '11px 14px', fontSize: '13px', color: '#374151', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' },
   centerCell:  { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   userCell:    { display: 'flex', alignItems: 'center', gap: '8px' },
-  avatar:      { width: '26px', height: '26px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
+  avatar:      { width: '26px', height: '26px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
   actionBadge: { padding: '3px 9px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', fontFamily: 'monospace', whiteSpace: 'nowrap' },
   expandBtn:   { fontSize: '11px', color: '#0066b3', fontWeight: '600', whiteSpace: 'nowrap' },
   diffCell:    { padding: '0 14px 14px' },
   diffGrid:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' },
-  diffPanel:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' },
+  diffPanel:   { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '8px', padding: '12px' },
   diffTitle:   { fontSize: '11px', fontWeight: '700', color: '#dc2626', textTransform: 'uppercase', marginBottom: '8px' },
   diffPre:     { fontSize: '11px', color: '#374151', fontFamily: 'monospace', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '200px', overflowY: 'auto' },
   pagination:  { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '20px' },
-  pageBtn:     { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', cursor: 'pointer' },
-  pageInfo:    { fontSize: '13px', color: '#64748b' },
+  pageBtn:     { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', cursor: 'pointer' },
+  pageInfo:    { fontSize: '13px', color: 'var(--mcc-secondary, #52647a)' },
 };

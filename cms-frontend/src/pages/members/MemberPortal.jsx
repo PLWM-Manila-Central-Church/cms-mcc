@@ -1337,7 +1337,7 @@ export default function MemberPortal() {
   );
 
   return (
-    <div className="mcc-portal" style={{minHeight:'100vh',background:c.bg,fontFamily:`'${fontFamily}',system-ui,sans-serif`,fontSize:`${fontSize}px`,zoom}}>
+    <div className="mcc-portal workspace-member" data-workspace="member" style={{minHeight:'100vh',background:c.bg,fontFamily:`'${fontFamily}',system-ui,sans-serif`,fontSize:`${fontSize}px`,zoom,'--mcc-border':c.border,'--mcc-radius':'18px'}}>
       <div id="google_translate_element_portal" style={{position:'fixed',bottom:-200,left:0,opacity:0,pointerEvents:'none',zIndex:-1}}/>
       <style>{`
         @keyframes shimmer{0%{background-position:400% 0}100%{background-position:-400% 0}}
@@ -1363,12 +1363,13 @@ export default function MemberPortal() {
         padding:isMobile?'14px 12px':'24px 20px',
         paddingBottom:isMobile?`calc(80px + env(safe-area-inset-bottom,0px))`:'24px',
       }}>
-        {/* Mobile: show tab title */}
-        {isMobile&&(
-          <div style={{fontSize:f.lg,fontWeight:800,color:c.t1,marginBottom:14,paddingBottom:10,borderBottom:`1px solid ${c.border}`,display:'flex',alignItems:'center',gap:8}}>
-            <MonoIcon name={TAB_ICON_NAMES[tab]} size={20} /> {t.tabs[tab]}
-          </div>
-        )}
+        {tab===0 ? <section className="member-welcome" style={{background:c.surface,color:c.t1}} aria-label="Personal church workspace">
+          <div><span style={{fontSize:11,fontWeight:700,letterSpacing:'.12em',color:c.accentT}}>PLWM-MCC · {t.portal}</span><h2>{t.welcome}, {profile?.first_name||user?.email?.split('@')[0]||'Friend'}</h2><p style={{color:c.t2}}>Your QR, upcoming gatherings and personal church activity in one place.</p></div>
+          <div className="member-welcome-actions"><button type="button" onClick={()=>setTab(2)}>Attendance &amp; QR</button><button type="button" onClick={()=>setTab(1)}>{t.tabs[1]}</button></div>
+        </section> : <section className="member-tab-intro" style={{color:c.t1}} aria-label={`${t.tabs[tab]} overview`}>
+          <span style={{display:'grid',placeItems:'center',width:44,height:44,borderRadius:12,background:c.accentL,color:c.accentT,flexShrink:0}}><MonoIcon name={TAB_ICON_NAMES[tab]} size={20}/></span>
+          <div><h2>{t.tabs[tab]}</h2><p style={{color:c.t2}}>{['','Find your next gathering and follow your registrations.','Show your QR and review your personal check-in history.','Your recorded giving, dates and supporting receipts.','Explore ways to serve and follow ministry requests.'][tab]}</p></div>
+        </section>}
 
         {loading ? <LoadSkeleton/> : (
           <>

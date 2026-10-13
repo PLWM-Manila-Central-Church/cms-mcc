@@ -122,12 +122,12 @@ export default function MemberFormPage() {
   if (loading) return <div style={styles.loading}>Loading...</div>;
 
   return (
-    <div style={styles.page}>
+    <div className="mcc-module mcc-module-member-form-page" style={styles.page}>
       <div style={styles.header}>
         <button onClick={() => navigate('/members')} style={styles.backBtn}>
           ← Back to Members
         </button>
-        <h1 style={styles.title}>{isEdit ? 'Edit Member' : 'Add New Member'}</h1>
+        <h1 className="workspace-page-title" style={styles.title}>{isEdit ? 'Edit Member' : 'Add New Member'}</h1>
       </div>
 
       {error && <div style={styles.errorBox}>{error}</div>}
@@ -146,8 +146,8 @@ export default function MemberFormPage() {
             <Field label="Spiritual Birthday" name="spiritual_birthday" value={form.spiritual_birthday} onChange={handleChange} type="date" />
           </div>
           <div style={{ marginTop: '16px' }}>
-            <label style={styles.label}>Address</label>
-            <textarea
+            <label style={styles.label} htmlFor="memberformpage-address">Address</label>
+            <textarea id="memberformpage-address"
               name="address"
               value={form.address}
               onChange={handleChange}
@@ -182,8 +182,8 @@ export default function MemberFormPage() {
             </div>
 
             <div style={styles.fieldWrap}>
-              <label style={styles.label}>Cell Group</label>
-              <select name="cell_group_id" value={form.cell_group_id} onChange={handleChange} style={styles.select}>
+              <label style={styles.label} htmlFor="memberformpage-cell_group_id">Cell Group</label>
+              <select id="memberformpage-cell_group_id" name="cell_group_id" value={form.cell_group_id} onChange={handleChange} style={styles.select}>
                 <option value="">— Select —</option>
                 {cellGroups.map(cg => (
                   <option key={cg.id} value={cg.id}>{cg.name}</option>
@@ -192,8 +192,8 @@ export default function MemberFormPage() {
             </div>
 
             <div style={styles.fieldWrap}>
-              <label style={styles.label}>Group</label>
-              <select name="group_id" value={form.group_id} onChange={handleChange} style={styles.select}>
+              <label style={styles.label} htmlFor="memberformpage-group_id">Group</label>
+              <select id="memberformpage-group_id" name="group_id" value={form.group_id} onChange={handleChange} style={styles.select}>
                 <option value="">— Select —</option>
                 {groups.map(g => (
                   <option key={g.id} value={g.id}>{g.name}</option>
@@ -202,8 +202,8 @@ export default function MemberFormPage() {
             </div>
 
             <div style={styles.fieldWrap}>
-              <label style={styles.label}>Referred By</label>
-              <select name="referred_by" value={form.referred_by} onChange={handleChange} style={styles.select}>
+              <label style={styles.label} htmlFor="memberformpage-referred_by">Referred By</label>
+              <select id="memberformpage-referred_by" name="referred_by" value={form.referred_by} onChange={handleChange} style={styles.select}>
                 <option value="">— None —</option>
                 {members
                   .filter(m => String(m.id) !== String(id))
@@ -217,8 +217,8 @@ export default function MemberFormPage() {
 
             {!isEdit && (
               <div style={styles.fieldWrap}>
-                <label style={styles.label}>Ministry</label>
-                <select name="ministry_role_id" value={form.ministry_role_id} onChange={handleChange} style={styles.select}>
+                <label style={styles.label} htmlFor="memberformpage-ministry_role_id">Ministry</label>
+                <select id="memberformpage-ministry_role_id" name="ministry_role_id" value={form.ministry_role_id} onChange={handleChange} style={styles.select}>
                   <option value="">— None —</option>
                   {ministryRoles.map(mr => (
                     <option key={mr.id} value={mr.id}>{mr.name}</option>
@@ -248,8 +248,9 @@ export default function MemberFormPage() {
 function Field({ label, name, value, onChange, type = 'text', required }) {
   return (
     <div style={styles.fieldWrap}>
-      <label style={styles.label}>{label}</label>
+      <label htmlFor={`member-${name}`} style={styles.label}>{label}</label>
       <input
+        id={`member-${name}`}
         type={type}
         name={name}
         value={value}
@@ -272,14 +273,14 @@ const styles = {
     background: 'none', border: 'none', color: '#0066b3',
     fontSize: '14px', cursor: 'pointer', padding: '0 0 8px 0', fontWeight: '500'
   },
-  title:   { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
+  title:   { fontSize: '24px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
   errorBox: {
     background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
     borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', fontSize: '14px'
   },
   form:    { display: 'flex', flexDirection: 'column', gap: '24px' },
   section: {
-    background: '#fff', borderRadius: '12px', padding: 'clamp(16px,4vw,24px)',
+    background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', padding: 'clamp(16px,4vw,24px)',
     boxShadow: '0 1px 8px rgba(0,0,0,0.06)'
   },
   sectionTitle: {
@@ -292,17 +293,17 @@ const styles = {
   input: {
     padding: '10px 14px', fontSize: '14px', border: '1.5px solid #e2e8f0',
     borderRadius: '8px', outline: 'none', transition: 'border-color 0.2s',
-    color: '#0f172a', width: '100%', boxSizing: 'border-box'
+    color: 'var(--mcc-ink, #0f172a)', width: '100%', boxSizing: 'border-box'
   },
   textarea: {
     padding: '10px 14px', fontSize: '14px', border: '1.5px solid #e2e8f0',
     borderRadius: '8px', outline: 'none', width: '100%',
-    boxSizing: 'border-box', resize: 'vertical', color: '#0f172a'
+    boxSizing: 'border-box', resize: 'vertical', color: 'var(--mcc-ink, #0f172a)'
   },
   select: {
     padding: '10px 14px', fontSize: '14px', border: '1.5px solid #e2e8f0',
-    borderRadius: '8px', outline: 'none', background: '#fff',
-    color: '#0f172a', width: '100%', boxSizing: 'border-box'
+    borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)',
+    color: 'var(--mcc-ink, #0f172a)', width: '100%', boxSizing: 'border-box'
   },
   formActions: { display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' },
   cancelBtn: {
@@ -312,7 +313,7 @@ const styles = {
   },
   saveBtn: {
     background: 'linear-gradient(135deg, #005599, #13B5EA)',
-    color: '#fff', border: 'none', borderRadius: '8px',
+    color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px',
     padding: '12px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer'
   },
 };

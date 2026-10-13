@@ -36,9 +36,9 @@ const savePrefs  = (p) => {
 };
 
 const makeC = (dk) => ({
-  bg:dk?'#0e1420':'#f0f4f8', surface:dk?'#1a2332':'#fff',
+  bg:dk?'#0e1420':'#f0f4f8', surface:dk?'#1a2332':'var(--mcc-surface, #fff)',
   surfaceAlt:dk?'#141d2b':'#f8fafc', border:dk?'#2d3a4e':'#e2e8f0',
-  t1:dk?'#f1f5f9':'#0f172a', t2:dk?'#94a3b8':'#475569', t3:dk?'#64748b':'#94a3b8',
+  t1:dk?'#f1f5f9':'var(--mcc-ink, #0f172a)', t2:dk?'#94a3b8':'#475569', t3:dk?'var(--mcc-secondary, #52647a)':'#94a3b8',
   success:'#16a34a', successL:dk?'#14532d':'#dcfce7', successB:dk?'#166534':'#bbf7d0',
   danger:'#dc2626', dangerL:dk?'#7f1d1d':'#fef2f2', dangerB:dk?'#991b1b':'#fecaca',
   accentL:dk?'#1e3a5f':'#eff6ff', accentT:dk?'#60a5fa':'#005599',
@@ -169,7 +169,7 @@ export default function MemberPortalSettings() {
   const fontFamily = prefs.fontFamily||'DM Sans';
   const fontSize   = prefs.fontSize||16;
 
-  const card    = {background:c.surface,borderRadius:14,border:`1px solid ${c.border}`,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',padding:isMobile?'18px 16px':'24px 28px',marginBottom:14};
+  const card    = {background:c.surface,borderRadius: 'var(--mcc-radius, 16px)',border:`1px solid ${c.border}`,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',padding:isMobile?'18px 16px':'24px 28px',marginBottom:14};
   const secTitle = {fontSize:isMobile?15:17,fontWeight:700,color:c.t1,marginBottom:4};
   const secSub   = {fontSize:13,color:c.t3,marginBottom:16};
   const lbl      = {fontSize:12,color:c.t2,fontWeight:600,display:'block',marginBottom:6};
@@ -182,13 +182,13 @@ export default function MemberPortalSettings() {
   );
 
   return (
-    <div style={{minHeight:'100vh',background:c.bg,fontFamily:`'${fontFamily}',system-ui,sans-serif`,fontSize:`${fontSize}px`}}>
+    <div className="mcc-portal mcc-module mcc-module-member-settings" style={{minHeight:'100vh',background:c.bg,fontFamily:`'${fontFamily}',system-ui,sans-serif`,fontSize:`${fontSize}px`}}>
       <style>{`*{box-sizing:border-box}@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
       {/* Header */}
       <div style={{background:BRAND,padding:isMobile?'10px 16px':'12px 24px',display:'flex',alignItems:'center',gap:12}}>
-        <button onClick={()=>navigate('/portal')} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.28)',color:'#fff',borderRadius:8,padding:'8px 14px',fontSize:13,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:40}}>← Back</button>
-        <div style={{color:'#fff',fontWeight:800,fontSize:16}}>Settings</div>
+        <button onClick={()=>navigate('/portal')} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.28)',color:'var(--mcc-surface, #fff)',borderRadius:8,padding:'8px 14px',fontSize:13,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:40}}>← Back</button>
+        <h1 style={{color:'#fff',fontWeight:700,fontSize:20,margin:0}}>My settings</h1>
       </div>
 
       <div style={{maxWidth:isMobile?'100%':600,margin:isMobile?0:'24px auto',padding:isMobile?'14px 12px 80px':'0 20px 60px'}}>
@@ -201,7 +201,7 @@ export default function MemberPortalSettings() {
             <div style={{position:'relative',flexShrink:0}}>
               {photoUrl
                 ? <img src={photoUrl} alt="preview" style={{width:72,height:72,borderRadius:'50%',objectFit:'cover',border:`2px solid ${c.border}`}}/>
-                : <div style={{width:72,height:72,borderRadius:'50%',background:BRAND,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:800,color:'#fff'}}>{initials}</div>}
+                : <div style={{width:72,height:72,borderRadius:'50%',background:BRAND,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:800,color:'var(--mcc-surface, #fff)'}}>{initials}</div>}
               {photoUploading&&<div style={{position:'absolute',inset:0,borderRadius:'50%',background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center'}}><div style={{width:20,height:20,border:'3px solid rgba(255,255,255,0.3)',borderTop:'3px solid #fff',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/></div>}
             </div>
             <div style={{flex:1}}>
@@ -318,7 +318,7 @@ export default function MemberPortalSettings() {
               </div>
             ))}
             <button type="submit" disabled={pwSaving}
-              style={{width:'100%',padding:'14px',background:BRAND,color:'#fff',border:'none',borderRadius:10,fontSize:15,fontWeight:700,cursor:pwSaving?'not-allowed':'pointer',fontFamily:'inherit',opacity:pwSaving?0.7:1,marginTop:4,minHeight:52}}>
+              style={{width:'100%',padding:'14px',background:BRAND,color:'var(--mcc-surface, #fff)',border:'none',borderRadius:10,fontSize:15,fontWeight:700,cursor:pwSaving?'not-allowed':'pointer',fontFamily:'inherit',opacity:pwSaving?0.7:1,marginTop:4,minHeight:52}}>
               {pwSaving?'Changing Password…':'Change Password'}
             </button>
           </form>
@@ -327,7 +327,7 @@ export default function MemberPortalSettings() {
       </div>
 
       {toast&&(
-        <div style={{position:'fixed',bottom:isMobile?24:28,right:isMobile?12:28,left:isMobile?12:'auto',background:toast.type==='success'?'#16a34a':'#dc2626',color:'#fff',padding:'12px 18px',borderRadius:12,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',zIndex:9999,display:'flex',alignItems:'center',gap:10,fontSize:14,fontWeight:500,animation:'slideUp 0.3s ease'}}>
+        <div style={{position:'fixed',bottom:isMobile?24:28,right:isMobile?12:28,left:isMobile?12:'auto',background:toast.type==='success'?'#16a34a':'#dc2626',color:'var(--mcc-surface, #fff)',padding:'12px 18px',borderRadius: 'var(--mcc-radius, 16px)',boxShadow:'0 4px 20px rgba(0,0,0,0.2)',zIndex:9999,display:'flex',alignItems:'center',gap:10,fontSize:14,fontWeight:500,animation:'slideUp 0.3s ease'}}>
           <span style={{display:'inline-flex'}}><MonoIcon name={toast.type==='success'?'check':'close'} size={15}/></span>{toast.msg}
         </div>
       )}

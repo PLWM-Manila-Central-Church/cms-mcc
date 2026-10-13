@@ -161,11 +161,11 @@ export default function MySettingsPage() {
   const photoUrl = photoPreview || currentPhoto;
 
   // ── Styles ──────────────────────────────────────────────────
-  const card     = { background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: '20px 22px', marginBottom: 14 };
-  const secTitle = { fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 4, marginTop: 0 };
+  const card     = { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', border: '1px solid var(--mcc-border, #e2e8f0)', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: '20px 22px', marginBottom: 14 };
+  const secTitle = { fontSize: 16, fontWeight: 700, color: 'var(--mcc-ink, #0f172a)', marginBottom: 4, marginTop: 0 };
   const secSub   = { fontSize: 13, color: '#94a3b8', marginBottom: 16, marginTop: 0 };
   const lbl      = { fontSize: 12, color: '#374151', fontWeight: 600, display: 'block', marginBottom: 6 };
-  const inp      = { width: '100%', padding: '10px 13px', fontSize: 14, border: '1.5px solid #e2e8f0', borderRadius: 8, outline: 'none', color: '#0f172a', background: '#fafbfc', boxSizing: 'border-box', minHeight: 42, fontFamily: 'inherit' };
+  const inp      = { width: '100%', padding: '10px 13px', fontSize: 14, border: '1.5px solid #e2e8f0', borderRadius: 8, outline: 'none', color: 'var(--mcc-ink, #0f172a)', background: '#fafbfc', boxSizing: 'border-box', minHeight: 42, fontFamily: 'inherit' };
 
   const ChipBtn = ({ active, onClick, children }) => (
     <button onClick={onClick} style={{
@@ -192,7 +192,7 @@ export default function MySettingsPage() {
         >
           ← Back
         </button>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#0f172a' }}>My Settings</h1>
+        <h1 className="workspace-page-title" style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--mcc-ink, #0f172a)' }}>My Settings</h1>
       </div>
 
       <div style={{ maxWidth: 600 }}>
@@ -206,7 +206,7 @@ export default function MySettingsPage() {
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 {photoUrl
                   ? <img src={photoUrl} alt="preview" style={{ width: 68, height: 68, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />
-                  : <div style={{ width: 68, height: 68, borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#fff' }}>
+                  : <div style={{ width: 68, height: 68, borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: 'var(--mcc-surface, #fff)' }}>
                       {initials || '?'}
                     </div>
                 }
@@ -220,7 +220,7 @@ export default function MySettingsPage() {
                 <button
                   onClick={() => fileRef.current?.click()}
                   disabled={photoUploading}
-                  style={{ padding: '10px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: '#e8f4fd', color: '#005599', border: '1px solid #e2e8f0', fontFamily: 'inherit', minHeight: 40, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  style={{ padding: '10px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: '#e8f4fd', color: '#005599', border: '1px solid var(--mcc-border, #e2e8f0)', fontFamily: 'inherit', minHeight: 40, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
                   {photoUploading ? 'Uploading…' : <><MonoIcon name="camera" size={15} /> Choose Photo</>}
                 </button>
@@ -261,8 +261,8 @@ export default function MySettingsPage() {
               />
               <span style={{ fontSize: 13, color: '#94a3b8' }}>current: <strong>{fontSize}px</strong></span>
             </div>
-            <div style={{ marginTop: 8, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: `${fontSize}px`, fontFamily: `'${fontFamily}', system-ui`, color: '#0f172a' }}>Sample text at {fontSize}px</span>
+            <div style={{ marginTop: 8, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid var(--mcc-border, #e2e8f0)' }}>
+              <span style={{ fontSize: `${fontSize}px`, fontFamily: `'${fontFamily}', system-ui`, color: 'var(--mcc-ink, #0f172a)' }}>Sample text at {fontSize}px</span>
             </div>
           </div>
 
@@ -293,7 +293,7 @@ export default function MySettingsPage() {
                 </ChipBtn>
               ))}
             </div>
-            <div style={{ marginTop: 10, padding: '10px 13px', background: '#eff6ff', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, color: '#005599' }}>
+            <div style={{ marginTop: 10, padding: '10px 13px', background: '#eff6ff', borderRadius: 8, border: '1px solid var(--mcc-border, #e2e8f0)', fontSize: 12, color: '#005599' }}>
               Selecting a language reloads the page to apply translation fully.
             </div>
           </div>
@@ -335,7 +335,7 @@ export default function MySettingsPage() {
             ))}
             <button
               type="submit" disabled={pwSaving}
-              style={{ width: '100%', padding: '13px', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: pwSaving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: pwSaving ? 0.7 : 1, marginTop: 4, minHeight: 48 }}
+              style={{ width: '100%', padding: '13px', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: pwSaving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: pwSaving ? 0.7 : 1, marginTop: 4, minHeight: 48 }}
             >
               {pwSaving ? 'Changing Password…' : 'Change Password'}
             </button>
@@ -346,7 +346,7 @@ export default function MySettingsPage() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', right: 16, left: 16, background: toast.type === 'success' ? '#16a34a' : '#dc2626', color: '#fff', padding: '12px 16px', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.2)', zIndex: 9999, display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 500, animation: 'slideUp 0.3s ease' }}>
+        <div style={{ position: 'fixed', bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', right: 16, left: 16, background: toast.type === 'success' ? '#16a34a' : '#dc2626', color: 'var(--mcc-surface, #fff)', padding: '12px 16px', borderRadius: 'var(--mcc-radius, 16px)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', zIndex: 9999, display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 500, animation: 'slideUp 0.3s ease' }}>
           <span style={{ display: 'inline-flex' }}><MonoIcon name={toast.type === 'success' ? 'check' : 'close'} size={15} /></span>{toast.msg}
         </div>
       )}

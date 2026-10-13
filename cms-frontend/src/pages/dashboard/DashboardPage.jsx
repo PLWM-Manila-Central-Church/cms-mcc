@@ -5,6 +5,7 @@ import { useDashboardStats } from '../../hooks/useDashboardStats';
 import useIsMobile from '../../hooks/useIsMobile';
 import { greetingTarget } from '../../utils/roleDisplay';
 import { getFinanceRecordLabel } from '../../utils/financeRecordLabel';
+import { DASHBOARD_LAYOUTS, getRoleWorkspace, workspaceActions } from '../../utils/roleWorkspace';
 
 const R = {
   ADMIN: 'System Admin',
@@ -20,11 +21,11 @@ const R = {
 
 const ACCENTS = {
   [R.ADMIN]: '#0f5f8f',
-  [R.PASTOR]: '#6d5bd0',
+  [R.PASTOR]: '#005599',
   [R.REG]: '#0f6aa3',
-  [R.FINANCE]: '#0f7a55',
-  [R.CG]: '#b76b16',
-  [R.GROUP]: '#12748a',
+  [R.FINANCE]: '#003d70',
+  [R.CG]: '#005599',
+  [R.GROUP]: '#005599',
   [R.MINISTRY]: '#0f6aa3',
   [R.LEADER]: '#075985',
   [R.MEMBER]: '#64748b',
@@ -112,7 +113,7 @@ function RowList({ rows, accent, empty = 'No items to show.' }) {
         <strong style={S.rowLabel}>{item.label}</strong>
         <span style={S.rowDetail}>{item.detail}</span>
       </span>
-      <span style={{ ...S.rowValue, color: item.path ? accent : '#64748b' }}>
+      <span style={{ ...S.rowValue, color: item.path ? accent : 'var(--mcc-secondary, #52647a)' }}>
         {item.value || (item.path ? 'Open' : 'Read')}
       </span>
     </button>
@@ -134,7 +135,7 @@ function AttendanceTrendChart({ data, accent, onNavigate }) {
           <span style={{ width: 10, height: 10, borderRadius: 2, background: '#16a34a' }} /> Active
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#64748b' }} /> Inactive
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--mcc-secondary, #52647a)' }} /> Inactive
         </span>
         <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94a3b8' }}>
           Max: {maxTotal}
@@ -188,7 +189,7 @@ function AttendanceTrendChart({ data, accent, onNavigate }) {
                     position: 'relative', fontFamily: 'inherit',
                   }}>
                   <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: chartHeight }}>
-                    {hInactive > 0 && <div style={{ height: hInactive, background: '#64748b', borderRadius: '3px 3px 0 0', transition: 'height 0.3s' }} />}
+                    {hInactive > 0 && <div style={{ height: hInactive, background: 'var(--mcc-secondary, #52647a)', borderRadius: '3px 3px 0 0', transition: 'height 0.3s' }} />}
                     {hActive > 0 && <div style={{ height: hActive, background: '#16a34a', borderRadius: '0 0 3px 3px', transition: 'height 0.3s' }} />}
                   </div>
                 </button>
@@ -264,12 +265,12 @@ function CellGroupAlertsPanel({ data, latestService }) {
     cursor: 'pointer',
     userSelect: 'none',
     textAlign: align,
-    color: sort.key === key ? '#0f172a' : '#64748b',
+    color: sort.key === key ? 'var(--mcc-ink, #0f172a)' : 'var(--mcc-secondary, #52647a)',
   });
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, fontSize: 13, color: '#64748b', fontWeight: 600, flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, fontSize: 13, color: 'var(--mcc-secondary, #52647a)', fontWeight: 600, flexWrap: 'wrap', gap: 8 }}>
         <span>Latest: {latestService.title} — {latestDate}</span>
         <button type="button" onClick={() => setView(v => v === 'table' ? 'graph' : 'table')} style={S.viewToggle}>
           {view === 'table' ? '📊 Show Graph' : '📋 Show Table'}
@@ -293,12 +294,12 @@ function CellGroupAlertsPanel({ data, latestService }) {
               {sorted.map((g, i) => {
                 const rate = g.totalMembers > 0 ? Math.round((g.attended / g.totalMembers) * 100) : 0;
                 return (
-                  <tr key={g.cellGroupId} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                  <tr key={g.cellGroupId} style={{ background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc' }}>
                     <td style={S.reportTd}>{i + 1}</td>
-                    <td style={{ ...S.reportTd, fontWeight: 700, color: '#0f172a' }}>{g.cellGroupName}</td>
+                    <td style={{ ...S.reportTd, fontWeight: 700, color: 'var(--mcc-ink, #0f172a)' }}>{g.cellGroupName}</td>
                     <td style={{ ...S.reportTd, textAlign: 'right' }}>{g.totalMembers}</td>
                     <td style={{ ...S.reportTd, textAlign: 'right' }}>{g.attended}</td>
-                    <td style={{ ...S.reportTd, textAlign: 'right', color: g.absent > 10 ? '#dc2626' : '#0f172a', fontWeight: g.absent > 10 ? 700 : 500 }}>{g.absent}</td>
+                    <td style={{ ...S.reportTd, textAlign: 'right', color: g.absent > 10 ? '#dc2626' : 'var(--mcc-ink, #0f172a)', fontWeight: g.absent > 10 ? 700 : 500 }}>{g.absent}</td>
                     <td style={{ ...S.reportTd, textAlign: 'right', color: rateColor(rate), fontWeight: 700 }}>{rate}%</td>
                   </tr>
                 );
@@ -307,10 +308,10 @@ function CellGroupAlertsPanel({ data, latestService }) {
             <tfoot>
               <tr style={{ ...S.reportTotalRow, borderTop: '2px solid #e2e8f0' }}>
                 <td style={S.reportTd}></td>
-                <td style={{ ...S.reportTd, fontWeight: 800, color: '#0f172a' }}>TOTAL</td>
+                <td style={{ ...S.reportTd, fontWeight: 800, color: 'var(--mcc-ink, #0f172a)' }}>TOTAL</td>
                 <td style={{ ...S.reportTd, textAlign: 'right', fontWeight: 800 }}>{totalMembers}</td>
                 <td style={{ ...S.reportTd, textAlign: 'right', fontWeight: 800 }}>{totalAttended}</td>
-                <td style={{ ...S.reportTd, textAlign: 'right', fontWeight: 800, color: totalAbsent > 0 ? '#dc2626' : '#0f172a' }}>{totalAbsent}</td>
+                <td style={{ ...S.reportTd, textAlign: 'right', fontWeight: 800, color: totalAbsent > 0 ? '#dc2626' : 'var(--mcc-ink, #0f172a)' }}>{totalAbsent}</td>
                 <td style={{ ...S.reportTd, textAlign: 'right', fontWeight: 800, color: rateColor(avgRate) }}>{avgRate}%</td>
               </tr>
             </tfoot>
@@ -382,7 +383,7 @@ function CellGroupAlertsPanel({ data, latestService }) {
             {sorted.map((g) => {
               return (
                 <div key={g.cellGroupId} style={{
-                  fontSize: 11, color: '#64748b', height: Math.max(18, Math.min(26, 380 / sorted.length - 4)),
+                  fontSize: 11, color: 'var(--mcc-secondary, #52647a)', height: Math.max(18, Math.min(26, 380 / sorted.length - 4)),
                   display: 'flex', alignItems: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                   {g.cellGroupName}
@@ -394,7 +395,7 @@ function CellGroupAlertsPanel({ data, latestService }) {
             })}
           </div>
 
-          <div style={{ marginTop: 14, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, display: 'flex', gap: 20, fontSize: 12, color: '#64748b', fontWeight: 600, flexWrap: 'wrap' }}>
+          <div style={{ marginTop: 14, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, display: 'flex', gap: 20, fontSize: 12, color: 'var(--mcc-secondary, #52647a)', fontWeight: 600, flexWrap: 'wrap' }}>
             <span>Total: {totalAbsent} absent of {totalMembers} members</span>
             <span>Avg Rate: <span style={{ color: rateColor(avgRate) }}>{avgRate}%</span></span>
           </div>
@@ -625,6 +626,9 @@ export default function DashboardPage() {
   const canOpenAnalytics = [R.ADMIN, R.PASTOR, R.REG, R.FINANCE].includes(role);
   const accent = ACCENTS[role] || ACCENTS[R.MEMBER];
   const displayName = greetingTarget(user || {});
+  const workspace = getRoleWorkspace(user);
+  const layout = DASHBOARD_LAYOUTS[workspace.key];
+  const actions = workspaceActions(user, hasPermission);
 
   const { data: stats, isLoading, error } = useDashboardStats();
 
@@ -632,8 +636,10 @@ export default function DashboardPage() {
 
   const config = useMemo(() => {
     if (!stats) return null;
-    return getDashboardConfig({ role, stats, hasPermission });
-  }, [role, stats, hasPermission]);
+    const dashboardRole = role === R.LEADER && workspace.key === 'cell' ? R.CG
+      : role === R.LEADER && workspace.key === 'group' ? R.GROUP : role;
+    return getDashboardConfig({ role: dashboardRole, stats, hasPermission });
+  }, [role, workspace.key, stats, hasPermission]);
 
   if (isLoading) {
     return (
@@ -652,23 +658,29 @@ export default function DashboardPage() {
   const summary = stats.roleSummary || {};
 
   return (
-    <div style={{ ...S.page, maxWidth: isMobile ? '100%' : 1180 }}>
-      <header style={S.header}>
+    <div className={`role-dashboard role-dashboard-${workspace.key}`} style={{ ...S.page, maxWidth: isMobile ? '100%' : 1240 }}>
+      <header className="role-dashboard-hero" style={S.header}>
         <div>
           <div style={{ ...S.scopePill, color: accent, background: `${accent}12`, borderColor: `${accent}28` }}>
             {summary.scopeName || role || 'Dashboard'}
           </div>
-          <h1 style={S.title}>{greeting()}, {displayName}</h1>
-          <p style={S.subtitle}>{ROLE_SUBTITLE[role] || 'Your role-specific workspace.'}</p>
+          <span className="role-dashboard-greeting">{greeting()}, {displayName}</span>
+          <h1 className="workspace-page-title" style={S.title}>{workspace.lead}</h1>
+          <p style={S.subtitle}>{workspace.purpose}</p>
         </div>
         <div style={S.headerMeta}>
           <span>{new Date().toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
           <strong style={{ color: accent }}>{role}</strong>
-          {canOpenAnalytics && <button type="button" onClick={() => navigate('/reports/analytics')} style={{ border: 0, borderRadius: 7, padding: '8px 12px', background: accent, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Open analytics</button>}
+          {canOpenAnalytics && <button type="button" onClick={() => navigate('/reports/analytics')} style={{ border: 0, borderRadius: 7, padding: '8px 12px', background: accent, color: 'var(--mcc-surface, #fff)', fontWeight: 700, cursor: 'pointer' }}>Open analytics</button>}
         </div>
       </header>
 
-      <section style={{ ...S.metrics, gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, minmax(0, 1fr))' }}>
+      <nav className="role-action-bar" aria-label={`${workspace.title} main actions`}>
+        <span>{workspace.key === 'registration' ? 'Start check-in' : workspace.key === 'finance' ? 'Finance tools' : 'Start here'}</span>
+        {actions.map((item, index) => <button className={index === 0 ? 'role-action-primary' : ''} type="button" key={item.path} onClick={() => navigate(item.path)}>{item.label}<span aria-hidden="true"> ↗</span></button>)}
+      </nav>
+
+      <section className="role-dashboard-metrics" style={{ ...S.metrics, gridTemplateColumns: isMobile ? '1fr' : workspace.key === 'pastor' || workspace.key === 'cell' ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))' }}>
         {metrics.map((item) => (
           <MetricCard key={item.label} item={item} accent={accent} onOpen={navigate} />
         ))}
@@ -689,16 +701,16 @@ export default function DashboardPage() {
         </>
       ) : (
         <>
-          <section style={{ ...S.grid, gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr' }}>
-            <Panel title="Primary Work">
+          <section className="role-dashboard-work" style={{ ...S.grid, gridTemplateColumns: isMobile ? '1fr' : layout.primary }}>
+            <Panel title={layout.tasks}>
               <RowList rows={config.primary} accent={accent} />
             </Panel>
-            <Panel title="Watch List">
+            <Panel title={layout.watch}>
               <RowList rows={config.watch} accent={accent} />
             </Panel>
           </section>
 
-          <section style={{ ...S.grid, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
+          <section className="role-dashboard-secondary" style={{ ...S.grid, gridTemplateColumns: isMobile ? '1fr' : layout.secondary }}>
             <Panel
               title={config.secondaryTitle}
               action={config.secondaryRows.length ? 'Open' : null}
@@ -709,15 +721,8 @@ export default function DashboardPage() {
             >
               <RowList rows={config.secondaryRows} accent={accent} empty="Nothing needs attention right now." />
             </Panel>
-            <Panel title="Access Summary">
-              <RowList
-                rows={[
-                  row('Read access', 'Pages shown in the sidebar are available to this role.', null, 'Active'),
-                  row('Write controls', 'Buttons appear only when the role has the matching permission.', null, 'Guarded'),
-                  row('Current session', 'Log out and back in after permission changes.', null, 'Fresh login'),
-                ]}
-                accent={accent}
-              />
+            <Panel title={layout.guide}>
+              <ol className="role-workflow-guide">{layout.steps.map(step => <li key={step}>{step}</li>)}</ol>
             </Panel>
           </section>
         </>
@@ -739,10 +744,10 @@ const S = {
     gap: 18,
     alignItems: 'flex-start',
     padding: '22px 24px',
-    background: '#fff',
-    border: '1px solid #dfe7f1',
-    borderRadius: 16,
-    boxShadow: '0 1px 4px rgba(15, 23, 42, 0.04)',
+    background: 'var(--mcc-surface, #fff)',
+    border: '1px solid var(--mcc-border, #e2e8f0)',
+    borderRadius: 'var(--mcc-radius, 16px)',
+    boxShadow: 'var(--mcc-panel-shadow, 0 4px 20px rgba(11,36,71,.04))',
   },
   scopePill: {
     display: 'inline-flex',
@@ -755,14 +760,14 @@ const S = {
   },
   title: {
     margin: 0,
-    color: '#0f172a',
+    color: 'var(--mcc-ink, #0f172a)',
     fontSize: 26,
     lineHeight: 1.15,
     fontWeight: 700,
   },
   subtitle: {
     margin: '8px 0 0',
-    color: '#64748b',
+    color: 'var(--mcc-secondary, #52647a)',
     fontSize: 14,
   },
   headerMeta: {
@@ -770,7 +775,7 @@ const S = {
     flexDirection: 'column',
     alignItems: 'flex-end',
     gap: 4,
-    color: '#64748b',
+    color: 'var(--mcc-secondary, #52647a)',
     fontSize: 13,
     whiteSpace: 'nowrap',
   },
@@ -780,19 +785,19 @@ const S = {
   },
   metricCard: {
     textAlign: 'left',
-    background: '#fff',
-    border: '1px solid #dfe7f1',
-    borderRadius: 14,
+    background: 'var(--mcc-surface, #fff)',
+    border: '1px solid var(--mcc-border, #e2e8f0)',
+    borderRadius: 'var(--mcc-radius, 16px)',
     padding: 16,
     minHeight: 116,
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
     fontFamily: 'inherit',
-    boxShadow: '0 1px 4px rgba(15, 23, 42, 0.04)',
+    boxShadow: 'var(--mcc-panel-shadow, 0 4px 20px rgba(11,36,71,.04))',
   },
   metricLabel: {
-    color: '#64748b',
+    color: 'var(--mcc-secondary, #52647a)',
     fontSize: 12,
     fontWeight: 700,
     textTransform: 'uppercase',
@@ -803,7 +808,7 @@ const S = {
     marginTop: 12,
   },
   metricSub: {
-    color: '#64748b',
+    color: 'var(--mcc-secondary, #52647a)',
     fontSize: 13,
     marginTop: 8,
   },
@@ -812,11 +817,11 @@ const S = {
     gap: 14,
   },
   panel: {
-    background: '#fff',
-    border: '1px solid #dfe7f1',
-    borderRadius: 14,
+    background: 'var(--mcc-surface, #fff)',
+    border: '1px solid var(--mcc-border, #e2e8f0)',
+    borderRadius: 'var(--mcc-radius, 16px)',
     overflow: 'hidden',
-    boxShadow: '0 1px 4px rgba(15, 23, 42, 0.04)',
+    boxShadow: 'var(--mcc-panel-shadow, 0 4px 20px rgba(11,36,71,.04))',
   },
   panelHeader: {
     minHeight: 52,
@@ -828,7 +833,7 @@ const S = {
   },
   panelTitle: {
     margin: 0,
-    color: '#0f172a',
+    color: 'var(--mcc-ink, #0f172a)',
     fontSize: 15,
     fontWeight: 800,
   },
@@ -846,7 +851,7 @@ const S = {
   row: {
     width: '100%',
     border: 0,
-    background: '#fff',
+    background: 'var(--mcc-surface, #fff)',
     borderBottom: '1px solid #f1f5f9',
     padding: '13px 16px',
     display: 'flex',
@@ -863,7 +868,7 @@ const S = {
     gap: 3,
   },
   rowLabel: {
-    color: '#0f172a',
+    color: 'var(--mcc-ink, #0f172a)',
     fontSize: 13,
     fontWeight: 750,
     overflow: 'hidden',
@@ -871,7 +876,7 @@ const S = {
     whiteSpace: 'nowrap',
   },
   rowDetail: {
-    color: '#64748b',
+    color: 'var(--mcc-secondary, #52647a)',
     fontSize: 12,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -884,7 +889,7 @@ const S = {
   },
   empty: {
     padding: 24,
-    color: '#64748b',
+    color: 'var(--mcc-secondary, #52647a)',
     fontSize: 13,
     textAlign: 'center',
   },
@@ -894,7 +899,7 @@ const S = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    color: '#64748b',
+    color: 'var(--mcc-secondary, #52647a)',
     fontSize: 14,
   },
   spinner: {
@@ -926,7 +931,7 @@ const S = {
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
-    color: '#64748b',
+    color: 'var(--mcc-secondary, #52647a)',
     borderBottom: '2px solid #e2e8f0',
     textAlign: 'left',
     whiteSpace: 'nowrap',

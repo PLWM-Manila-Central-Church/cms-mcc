@@ -134,9 +134,9 @@ const styles = {
     padding: '24px'
   },
   card: {
-    background: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '16px',
+    background: 'var(--mcc-surface, #fff)',
+    border: '1px solid var(--mcc-border, #e2e8f0)',
+    borderRadius: 'var(--mcc-radius, 16px)',
     padding: 'clamp(24px, 5vw, 48px)',
     width: '100%',
     maxWidth: '420px',
@@ -150,12 +150,12 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: '700',
-    color: '#0f172a',
+    color: 'var(--mcc-ink, #0f172a)',
     margin: '0 0 8px 0'
   },
   subtitle: {
     fontSize: '14px',
-    color: '#64748b',
+    color: 'var(--mcc-secondary, #52647a)',
     margin: '0 0 32px 0',
     lineHeight: '1.6'
   },
@@ -194,12 +194,12 @@ const styles = {
     transition: 'border-color 0.2s',
     width: '100%',
     boxSizing: 'border-box',
-    color: '#0f172a',
+    color: 'var(--mcc-ink, #0f172a)',
     minHeight: '48px',
   },
   submitBtn: {
     background: '#005599',
-    color: '#fff',
+    color: 'var(--mcc-surface, #fff)',
     border: 'none',
     borderRadius: '8px',
     padding: '14px',

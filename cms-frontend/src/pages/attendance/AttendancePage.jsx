@@ -215,7 +215,7 @@ export default function AttendancePage() {
   const meta = STATUS_META[service?.status] || STATUS_META.draft;
 
   return (
-    <div style={styles.page}>
+    <div className="mcc-module mcc-module-attendance-page" style={styles.page}>
       {/* Back */}
       <button onClick={() => navigate('/attendance')} style={styles.backBtn}>← Back to Attendance</button>
 
@@ -262,7 +262,7 @@ export default function AttendancePage() {
         <button
           type="button"
           onClick={() => navigate(`/attendance/qr?target_type=service&target_id=${serviceId}`)}
-          style={{ background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', border: 0, borderRadius: 9, padding: '11px 16px', fontWeight: 700, cursor: 'pointer' }}
+          style={{ background: 'linear-gradient(135deg,#005599,#13B5EA)', color: 'var(--mcc-surface, #fff)', border: 0, borderRadius: 9, padding: '11px 16px', fontWeight: 700, cursor: 'pointer' }}
         >Open QR Attendance Workspace</button>
       </div>}
 
@@ -347,7 +347,7 @@ export default function AttendancePage() {
                   const checked = alreadyCheckedIn(m.id);
                   return (
                     <div key={m.id}
-                      style={{ ...styles.dropdownItem, background: checked ? '#f0fdf4' : '#fff' }}
+                      style={{ ...styles.dropdownItem, background: checked ? '#f0fdf4' : 'var(--mcc-surface, #fff)' }}
                       onClick={() => !checked && handleCheckIn(m)}
                     >
                       <div style={styles.dropdownAvatar}>
@@ -412,9 +412,9 @@ export default function AttendancePage() {
               <tr><td colSpan={canUndo && isPublished ? 6 : 5} style={styles.centerCell}>No check-ins yet.</td></tr>
             ) : records.map((r, i) => (
               <tr key={r.id}
-                style={{ ...styles.row, background: r.is_pre_reg ? '#faf5ff' : (i % 2 === 0 ? '#fff' : '#f8fafc') }}
+                style={{ ...styles.row, background: r.is_pre_reg ? '#faf5ff' : (i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc') }}
                 onMouseEnter={e => e.currentTarget.style.background = r.is_pre_reg ? '#f3e8ff' : '#e8f4fd'}
-                onMouseLeave={e => e.currentTarget.style.background = r.is_pre_reg ? '#faf5ff' : (i % 2 === 0 ? '#fff' : '#f8fafc')}
+                onMouseLeave={e => e.currentTarget.style.background = r.is_pre_reg ? '#faf5ff' : (i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc')}
               >
                 <td style={{ ...styles.td, color: '#94a3b8', fontWeight: '600' }}>{i + 1}</td>
                 <td style={styles.td}>
@@ -432,7 +432,7 @@ export default function AttendancePage() {
                     </div>
                   </div>
                 </td>
-                <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: '12px', color: '#64748b' }}>
+                <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: '12px', color: 'var(--mcc-secondary, #52647a)' }}>
                   {r.Member?.barcode || '—'}
                 </td>
                 <td style={styles.td}>
@@ -440,7 +440,7 @@ export default function AttendancePage() {
                     {r.check_in_method === 'pre-reg' ? 'pre-reg' : r.entry_source !== 'legacy' && r.check_in_method === 'barcode' ? 'QR' : r.check_in_method}
                   </span>
                 </td>
-                <td style={{ ...styles.td, color: '#64748b' }}>
+                <td style={{ ...styles.td, color: 'var(--mcc-secondary, #52647a)' }}>
                   {r.is_pre_reg ? <span style={{ color: '#a78bfa', fontSize: 12 }}>Pending check-in</span> : formatCheckedIn(r.checked_in_at)}
                 </td>
                 {canUndo && isPublished && (
@@ -490,51 +490,51 @@ const styles = {
   page:          { fontFamily: "'Inter', sans-serif" },
   loading:       { padding: '48px', textAlign: 'center', color: '#94a3b8' },
   backBtn:       { background: 'none', border: 'none', color: '#0066b3', fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: '0 0 20px 0', display: 'block' },
-  serviceCard:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px 24px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  serviceCard:   { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '20px 24px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   serviceInfo:   {},
-  serviceTitle:  { fontSize: '20px', fontWeight: '700', color: '#0f172a', marginBottom: '6px' },
-  serviceMeta:   { fontSize: '14px', color: '#64748b' },
+  serviceTitle:  { fontSize: '20px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', marginBottom: '6px' },
+  serviceMeta:   { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)' },
   badge:         { padding: '5px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '700' },
   summaryRow:    { display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' },
-  summaryCard:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px 24px', flex: 1, minWidth: '120px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
-  summaryNum:    { fontSize: '32px', fontWeight: '800', color: '#0f172a' },
-  summaryLabel:  { fontSize: '13px', color: '#64748b', marginTop: '4px', fontWeight: '500' },
-  checkInCard:   { background: '#fff', border: '2px solid #2563eb', borderRadius: '12px', padding: '24px', marginBottom: '24px', position: 'relative' },
-  checkInTitle:  { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0' },
-  checkInHint:   { fontSize: '13px', color: '#64748b', margin: '0 0 16px 0' },
+  summaryCard:   { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '20px 24px', flex: 1, minWidth: '120px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  summaryNum:    { fontSize: '32px', fontWeight: '800', color: 'var(--mcc-ink, #0f172a)' },
+  summaryLabel:  { fontSize: '13px', color: 'var(--mcc-secondary, #52647a)', marginTop: '4px', fontWeight: '500' },
+  checkInCard:   { background: 'var(--mcc-surface, #fff)', border: '2px solid #2563eb', borderRadius: 'var(--mcc-radius, 16px)', padding: '24px', marginBottom: '24px', position: 'relative' },
+  checkInTitle:  { fontSize: '16px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 4px 0' },
+  checkInHint:   { fontSize: '13px', color: 'var(--mcc-secondary, #52647a)', margin: '0 0 16px 0' },
   searchWrap:    { position: 'relative' },
   searchInput:   { width: '100%', padding: '12px 16px', fontSize: '15px', border: '1.5px solid #d1d5db', borderRadius: '10px', outline: 'none', boxSizing: 'border-box' },
   searchSpinner: { fontSize: '13px', color: '#94a3b8', padding: '8px 0' },
-  dropdown:      { position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, overflow: 'hidden', marginTop: '4px' },
+  dropdown:      { position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, overflow: 'hidden', marginTop: '4px' },
   dropdownItem:  { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' },
-  dropdownAvatar:{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', flexShrink: 0 },
+  dropdownAvatar:{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', flexShrink: 0 },
   dropdownInfo:  { flex: 1 },
-  dropdownName:  { fontSize: '14px', fontWeight: '600', color: '#0f172a' },
+  dropdownName:  { fontSize: '14px', fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' },
   dropdownMeta:  { fontSize: '12px', color: '#94a3b8', marginTop: '2px' },
   alreadyTag:    { color: '#16a34a', fontSize: '12px', fontWeight: '600' },
-  checkInBtn:    { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', flexShrink: 0 },
+  checkInBtn:    { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', flexShrink: 0 },
   checkboxGrid:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '10px' },
-  checkboxRow:    { display: 'grid', gridTemplateColumns: '20px minmax(0, 1fr) auto', alignItems: 'center', gap: '10px', padding: '12px 14px', border: '1px solid #e2e8f0', borderRadius: '10px', background: '#fff', cursor: 'pointer' },
+  checkboxRow:    { display: 'grid', gridTemplateColumns: '20px minmax(0, 1fr) auto', alignItems: 'center', gap: '10px', padding: '12px 14px', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '10px', background: 'var(--mcc-surface, #fff)', cursor: 'pointer' },
   checkbox:       { width: '16px', height: '16px', accentColor: '#005599' },
-  checkboxName:   { fontSize: '14px', fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  checkboxMeta:   { fontSize: '12px', color: '#64748b', background: '#f1f5f9', borderRadius: '999px', padding: '3px 8px' },
+  checkboxName:   { fontSize: '14px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  checkboxMeta:   { fontSize: '12px', color: 'var(--mcc-secondary, #52647a)', background: '#f1f5f9', borderRadius: '999px', padding: '3px 8px' },
   successBox:    { background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginTop: '12px' },
   errorBox:      { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginTop: '12px' },
   warningBox:    { background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '20px' },
   listHeader:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
-  listTitle:     { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0 },
-  listCount:     { fontSize: '14px', color: '#64748b', fontWeight: '600' },
-  tableWrap:     { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  listTitle:     { fontSize: '16px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
+  listCount:     { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', fontWeight: '600' },
+  tableWrap:     { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', border: '1px solid var(--mcc-border, #e2e8f0)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   tableScroll:   { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:         { width: '100%', borderCollapse: 'collapse' },
   thead:         { background: '#f8fafc' },
-  th:            { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },
+  th:            { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: 'var(--mcc-secondary, #52647a)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--mcc-border, #e2e8f0)' },
   row:           { transition: 'background 0.15s' },
   td:            { padding: '14px 16px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
   centerCell:    { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   memberCell:    { display: 'flex', alignItems: 'center', gap: '10px' },
-  avatar:        { width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
-  memberName:    { fontWeight: '600', color: '#0f172a' },
+  avatar:        { width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
+  memberName:    { fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' },
   methodBadge:   { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' },
   undoBtn:       { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
 };

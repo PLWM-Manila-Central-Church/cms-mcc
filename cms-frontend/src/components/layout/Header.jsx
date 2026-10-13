@@ -6,6 +6,7 @@ import useNotificationPolling from '../../hooks/useNotificationPolling';
 import { LANGS, getLangCode, saveLangCode } from '../../utils/langUtils';
 import { timeAgo } from '../../utils/timeAgo';
 import MonoIcon from '../common/MonoIcon';
+import { getRoleWorkspace } from '../../utils/roleWorkspace';
 
 const TYPE_ICON = {
   info:    { icon: 'file', bg: '#eff6ff', dot: '#3b82f6' },
@@ -178,6 +179,7 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
   const rc = roleColors[displayRole] || roleColors['Member'];
   const leaderAssignments = user?.roleName === 'Leader' ? (user.leaderAssignments || []) : [];
   const currentLeaderScope = activeLeaderScopeKey || user?.activeLeaderScopeKey || '';
+  const workspace = getRoleWorkspace(user);
 
   const panelWidth = isMobile ? 'calc(100vw - 24px)' : '360px';
 
@@ -194,7 +196,7 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
               maxWidth: isTablet ? 140 : isNarrowDesktop ? 240 : 300,
               minWidth: 0,
               flex: '1 1 auto',
-            }}>Church Management System</h2>
+            }}>{workspace.title}</h2>
           </>
         )}
       </div>
@@ -207,6 +209,7 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
             </span>
             <select
               aria-label="Active leadership team"
+              title={currentLeaderScope === 'all' ? 'All assigned teams · read only' : leaderAssignments.find(assignment => assignment.scopeKey === currentLeaderScope)?.teamName || 'Select your working team'}
               value={currentLeaderScope}
               onChange={(event) => selectLeaderScope(event.target.value, { reload: true })}
               style={{

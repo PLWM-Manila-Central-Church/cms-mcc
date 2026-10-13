@@ -1,3 +1,4 @@
+import ResponsiveTable from '../../components/common/ResponsiveTable';
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
@@ -11,7 +12,7 @@ const CONDITION_STYLE = {
   'Good':         { bg: '#f0fdf4', color: '#16a34a' },
   'Fair':         { bg: '#fffbeb', color: '#d97706' },
   'Poor':         { bg: '#fef2f2', color: '#dc2626' },
-  'For Disposal': { bg: '#f1f5f9', color: '#64748b' },
+  'For Disposal': { bg: '#f1f5f9', color: 'var(--mcc-secondary, #52647a)' },
 };
 
 const STATUS_STYLE = {
@@ -377,10 +378,10 @@ export default function InventoryPage() {
   };
 
   return (
-    <div style={s.page}>
+    <div className="mcc-module mcc-module-inventory-page" style={s.page}>
       <div style={s.pageHeader}>
         <div>
-          <h1 style={s.title}>Inventory</h1>
+          <h1 className="workspace-page-title" style={s.title}>Inventory</h1>
           <p style={s.subtitle}>{totalItems} items tracked</p>
         </div>
         <div style={s.headerActions}>
@@ -406,7 +407,7 @@ export default function InventoryPage() {
       <div style={s.tabBar}>
         {['items', 'requests', ...(canViewUsage ? ['usage'] : []), ...(canViewReports ? ['reports'] : [])].map(t => (
           <button key={t} onClick={() => setTab(t)}
-            style={{ ...s.tab, background: tab === t ? '#005599' : '#f1f5f9', color: tab === t ? '#fff' : '#475569' }}>
+            style={{ ...s.tab, background: tab === t ? '#005599' : '#f1f5f9', color: tab === t ? 'var(--mcc-surface, #fff)' : '#475569' }}>
             <MonoIcon name={t === 'items' ? 'inventory' : t === 'requests' ? 'clipboard' : t === 'usage' ? 'document' : 'dashboard'} size={15} /> {t === 'items' ? 'Items' : t === 'requests' ? 'Requests' : t === 'usage' ? 'Usage' : 'Reports'}
           </button>
         ))}
@@ -457,7 +458,7 @@ export default function InventoryPage() {
                     <select id="inventory-item-status" value={itemForm.status} onChange={e => setItemForm(f => ({ ...f, status: e.target.value }))} style={s.select}>
                       <option value="Available">Automatic</option><option value="Under Repair">Under Repair</option>
                     </select>
-                    <small style={{ color: '#64748b' }}>Quantity and the low-stock alert determine availability: <strong>{getFormAvailability()}</strong>.</small>
+                    <small style={{ color: 'var(--mcc-secondary, #52647a)' }}>Quantity and the low-stock alert determine availability: <strong>{getFormAvailability()}</strong>.</small>
                   </div>
                   <div style={s.field}>
                     <label style={s.label}>Low Stock Alert</label>
@@ -494,7 +495,7 @@ export default function InventoryPage() {
 
           {/* Items table */}
           <div style={s.tableWrap}>
-            <div style={s.tableScroll}><table style={s.table}>
+            <div style={s.tableScroll}><ResponsiveTable style={s.table}>
               <thead>
                 <tr style={s.thead}>
                   <th style={s.th}>Item</th>
@@ -517,17 +518,17 @@ export default function InventoryPage() {
                   const lowStock  = isLowStock(item);
                   return (
                     <tr key={item.id}
-                      style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
+                      style={{ ...s.row, background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
-                      onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc'}
                     >
                       <td style={s.td}>
-                        <span style={{ fontWeight: '600', color: '#0f172a' }}>{item.name}</span>
+                        <span style={{ fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' }}>{item.name}</span>
                         {lowStock && <span style={s.lowStockTag}><MonoIcon name="warning" size={12} /> {item.status === 'Out of Stock' ? 'Out' : 'Low'}</span>}
                       </td>
                       <td style={s.td}>{item.category?.name || '—'}</td>
-                      <td style={{ ...s.td, fontWeight: '700', color: lowStock ? '#dc2626' : '#0f172a', fontSize: '16px' }}>{item.quantity}</td>
-                      <td style={{ ...s.td, color: '#64748b' }}>{item.unit || '—'}</td>
+                      <td style={{ ...s.td, fontWeight: '700', color: lowStock ? '#dc2626' : 'var(--mcc-ink, #0f172a)', fontSize: '16px' }}>{item.quantity}</td>
+                      <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)' }}>{item.unit || '—'}</td>
                       <td style={s.td}>
                         <span style={{ ...s.badge, background: item.category?.is_returnable ? '#e8f4fd' : '#f0fdf4', color: item.category?.is_returnable ? '#0066b3' : '#16a34a' }}>
                           {item.category?.is_returnable ? 'Returnable' : 'Consumable'}
@@ -553,7 +554,7 @@ export default function InventoryPage() {
                   );
                 })}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
 
           {itemPages > 1 && (
@@ -631,7 +632,7 @@ export default function InventoryPage() {
             <div style={s.filterBar}>
               {['', 'pending', 'approved', 'rejected'].map(st => (
                 <button key={st} onClick={() => { setReqFilter(st); setReqPage(1); }}
-                  style={{ ...s.filterChip, background: reqFilter === st ? '#005599' : '#f1f5f9', color: reqFilter === st ? '#fff' : '#475569' }}>
+                  style={{ ...s.filterChip, background: reqFilter === st ? '#005599' : '#f1f5f9', color: reqFilter === st ? 'var(--mcc-surface, #fff)' : '#475569' }}>
                   {st ? st.charAt(0).toUpperCase() + st.slice(1) : 'All'}
                 </button>
               ))}
@@ -642,7 +643,7 @@ export default function InventoryPage() {
 
           {/* Requests table */}
           <div style={s.tableWrap}>
-            <div style={s.tableScroll}><table style={s.table}>
+            <div style={s.tableScroll}><ResponsiveTable style={s.table}>
               <thead>
                 <tr style={s.thead}>
                   <th style={s.th}>Item</th>
@@ -663,24 +664,24 @@ export default function InventoryPage() {
                   const stStyle = STATUS_STYLE[r.status] || STATUS_STYLE.pending;
                   return (
                     <tr key={r.id}
-                      style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
+                      style={{ ...s.row, background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#e8f4fd'}
-                      onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc'}
                     >
-                      <td style={{ ...s.td, fontWeight: '600', color: '#0f172a' }}>{r.item?.name}</td>
-                      <td style={{ ...s.td, fontSize: '13px', color: '#64748b' }}>{r.requestedByUser?.email}</td>
+                      <td style={{ ...s.td, fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' }}>{r.item?.name}</td>
+                      <td style={{ ...s.td, fontSize: '13px', color: 'var(--mcc-secondary, #52647a)' }}>{r.requestedByUser?.email}</td>
                       <td style={s.td}>{r.quantity} {r.item?.unit || ''}</td>
-                      <td style={{ ...s.td, color: '#64748b', fontSize: '13px' }}>
+                      <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)', fontSize: '13px' }}>
                         <div>{r.purpose || '—'}</div>
                         {(r.event || r.service || r.ministryRole) && <small style={{ color: '#005599' }}>{r.event ? `Event: ${r.event.title}` : r.service ? `Service: ${r.service.title}` : `Ministry: ${r.ministryRole.name}`}</small>}
-                        {r.review_note && <small style={{ display: 'block', marginTop: '4px', color: '#64748b' }}>Review note: {r.review_note}</small>}
+                        {r.review_note && <small style={{ display: 'block', marginTop: '4px', color: 'var(--mcc-secondary, #52647a)' }}>Review note: {r.review_note}</small>}
                       </td>
                       <td style={s.td}>
                         <span style={{ ...s.badge, background: stStyle.bg, color: stStyle.color }}>
                           {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                         </span>
                       </td>
-                      <td style={{ ...s.td, color: '#64748b', fontSize: '13px' }}>
+                      <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)', fontSize: '13px' }}>
                         {formatDate(r.created_at ?? r.createdAt)}
                       </td>
                       {canManage && (
@@ -702,7 +703,7 @@ export default function InventoryPage() {
                   );
                 })}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
 
           {canManage && reqPages > 1 && (
@@ -740,7 +741,7 @@ export default function InventoryPage() {
                         </option>;
                       })}
                     </select>
-                    {usageItems.length === 0 && <small style={{ color: '#64748b' }}>No items matched. Try another search.</small>}
+                    {usageItems.length === 0 && <small style={{ color: 'var(--mcc-secondary, #52647a)' }}>No items matched. Try another search.</small>}
                   </div>
                   <div style={s.field}>
                     <label htmlFor="inventory-usage-quantity" style={s.label}>Quantity used *</label>
@@ -748,7 +749,7 @@ export default function InventoryPage() {
                       max={usageItems.find(item => String(item.id) === String(usageForm.item_id))?.quantity}
                       value={usageForm.quantity_used} required
                       onChange={e => setUsageForm(f => ({ ...f, quantity_used: e.target.value }))} style={s.input} />
-                    <small style={{ color: '#64748b' }}>
+                    <small style={{ color: 'var(--mcc-secondary, #52647a)' }}>
                       {usageItems.find(item => String(item.id) === String(usageForm.item_id))
                         ? `Available: ${usageItems.find(item => String(item.id) === String(usageForm.item_id)).quantity}`
                         : 'Select an item first.'}
@@ -777,7 +778,7 @@ export default function InventoryPage() {
           )}
           {usageError && <div role="alert" style={s.errorBox}>{usageError}</div>}
           <div style={s.tableWrap}>
-            <div style={s.tableScroll}><table style={s.table}>
+            <div style={s.tableScroll}><ResponsiveTable style={s.table}>
               <thead><tr style={s.thead}>
                 <th style={s.th}>Used At</th><th style={s.th}>Item</th><th style={s.th}>Quantity</th>
                 <th style={s.th}>Purpose / Event</th><th style={s.th}>Recorded By</th>
@@ -787,9 +788,9 @@ export default function InventoryPage() {
                 {loadingUsages ? <tr><td colSpan={canDelete ? 6 : 5} style={s.centerCell}>Loading usage records...</td></tr>
                   : usages.length === 0 ? <tr><td colSpan={canDelete ? 6 : 5} style={s.centerCell}>No inventory usage records found.</td></tr>
                     : usages.map((usage, index) => (
-                      <tr key={usage.id} style={{ ...s.row, background: index % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                      <tr key={usage.id} style={{ ...s.row, background: index % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc' }}>
                         <td style={s.td}>{new Date(usage.used_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</td>
-                        <td style={{ ...s.td, fontWeight: '600', color: '#0f172a' }}>{usage.item?.name || `Item #${usage.item_id}`}</td>
+                        <td style={{ ...s.td, fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' }}>{usage.item?.name || `Item #${usage.item_id}`}</td>
                         <td style={s.td}>{usage.quantity_used} {usage.item?.unit || ''}</td>
                         <td style={s.td}>{usage.used_for || '—'}</td>
                         <td style={s.td}>{usage.usedByUser?.email || '—'}</td>
@@ -797,7 +798,7 @@ export default function InventoryPage() {
                       </tr>
                     ))}
               </tbody>
-            </table></div>
+            </ResponsiveTable></div>
           </div>
           {usagePages > 1 && (
             <div style={s.pagination}>
@@ -834,7 +835,7 @@ export default function InventoryPage() {
                   <h3 style={s.reportCardTitle}>Availability</h3>
                   {report.statuses?.map(entry => (
                     <div key={entry.status} style={s.reportRow}>
-                      <span><span style={{ ...s.statusDot, background: AVAILABILITY_STYLE[entry.status]?.color || '#64748b' }} />{entry.status}</span>
+                      <span><span style={{ ...s.statusDot, background: AVAILABILITY_STYLE[entry.status]?.color || 'var(--mcc-secondary, #52647a)' }} />{entry.status}</span>
                       <strong>{entry.count}</strong>
                     </div>
                   ))}
@@ -917,33 +918,33 @@ function ReportMetric({ label, value }) {
 const s = {
   page:         { fontFamily: "'Inter', sans-serif" },
   pageHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
-  title:        { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
-  subtitle:     { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
+  title:        { fontSize: '24px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
+  subtitle:     { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0 0' },
   headerActions:{ display: 'flex', gap: '10px' },
-  addBtn:       { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+  addBtn:       { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
   tabBar:       { display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' },
   tab:          { border: 'none', borderRadius: '20px', padding: '8px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
-  formCard:     { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
-  formTitle:    { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 16px 0' },
+  formCard:     { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+  formTitle:    { fontSize: '16px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 16px 0' },
   form:         { display: 'flex', flexDirection: 'column', gap: '16px' },
   formRow:      { display: 'flex', gap: '16px', flexWrap: 'wrap' },
   field:        { display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '140px' },
   label:        { fontSize: '13px', fontWeight: '600', color: '#374151' },
   input:        { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', width: '100%', boxSizing: 'border-box' },
-  select:       { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: '#fff' },
+  select:       { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)' },
   formActions:  { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
   cancelBtn:    { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  submitBtn:    { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  submitBtn:    { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   filterBar:    { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
   filterInput:  { padding: '8px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', flex: 1, minWidth: '160px' },
-  filterSelect: { padding: '8px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: '#fff' },
+  filterSelect: { padding: '8px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)' },
   filterChip:   { border: 'none', borderRadius: '20px', padding: '6px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   errorBox:     { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
-  tableWrap:    { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  tableWrap:    { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', border: '1px solid var(--mcc-border, #e2e8f0)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   tableScroll:  { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:        { width: '100%', borderCollapse: 'collapse' },
   thead:        { background: '#f8fafc' },
-  th:           { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },
+  th:           { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: 'var(--mcc-secondary, #52647a)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--mcc-border, #e2e8f0)' },
   row:          { transition: 'background 0.15s' },
   td:           { padding: '14px 16px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
   centerCell:   { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
@@ -954,24 +955,24 @@ const s = {
   approveBtn:   { background: '#f0fdf4', color: '#16a34a', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   rejectBtn:    { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
   pagination:   { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px' },
-  pageBtn:      { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', cursor: 'pointer' },
-  pageInfo:     { fontSize: '14px', color: '#64748b' },
+  pageBtn:      { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', cursor: 'pointer' },
+  pageInfo:     { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)' },
   reportSection:{ display: 'flex', flexDirection: 'column', gap: '18px' },
   reportHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' },
-  reportTitle:  { fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px' },
+  reportTitle:  { fontSize: '18px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 4px' },
   reportCards:  { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px' },
-  reportCard:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' },
-  reportMetricLabel: { display: 'block', color: '#64748b', fontSize: '13px', marginBottom: '8px' },
-  reportMetricValue: { color: '#0f172a', fontSize: '24px' },
+  reportCard:   { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' },
+  reportMetricLabel: { display: 'block', color: 'var(--mcc-secondary, #52647a)', fontSize: '13px', marginBottom: '8px' },
+  reportMetricValue: { color: 'var(--mcc-ink, #0f172a)', fontSize: '24px' },
   reportColumns:{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' },
-  reportCardTitle: { margin: '0 0 14px', color: '#0f172a', fontSize: '15px' },
+  reportCardTitle: { margin: '0 0 14px', color: 'var(--mcc-ink, #0f172a)', fontSize: '15px' },
   reportRow:    { display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '9px 0', borderTop: '1px solid #f1f5f9', color: '#475569', fontSize: '14px' },
   statusDot:    { display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', marginRight: '8px' },
   reportGenerated: { margin: 0, color: '#94a3b8', fontSize: '12px' },
   reviewOverlay: { position: 'fixed', inset: 0, zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'rgba(15, 23, 42, 0.48)' },
-  reviewDialog: { width: '100%', maxWidth: '520px', padding: '24px', borderRadius: '14px', background: '#fff', boxShadow: '0 20px 48px rgba(15, 23, 42, 0.22)' },
-  reviewTitle: { margin: '0 0 8px', color: '#0f172a', fontSize: '18px', fontWeight: '700' },
+  reviewDialog: { width: '100%', maxWidth: '520px', padding: '24px', borderRadius: 'var(--mcc-radius, 16px)', background: 'var(--mcc-surface, #fff)', boxShadow: '0 20px 48px rgba(15, 23, 42, 0.22)' },
+  reviewTitle: { margin: '0 0 8px', color: 'var(--mcc-ink, #0f172a)', fontSize: '18px', fontWeight: '700' },
   reviewDescription: { margin: '0 0 18px', color: '#475569', fontSize: '14px', lineHeight: 1.5 },
   reviewTextarea: { minHeight: '104px', padding: '10px 12px', font: 'inherit', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', resize: 'vertical' },
-  reviewHint: { color: '#64748b', fontSize: '12px', textAlign: 'right' },
+  reviewHint: { color: 'var(--mcc-secondary, #52647a)', fontSize: '12px', textAlign: 'right' },
 };
