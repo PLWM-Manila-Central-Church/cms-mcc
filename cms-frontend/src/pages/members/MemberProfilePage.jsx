@@ -116,7 +116,7 @@ export default function MemberProfilePage() {
   const initials = `${member.first_name[0]}${member.last_name[0]}`;
 
   return (
-    <div style={styles.page}>
+    <div className="mcc-module mcc-module-member-profile-page" style={styles.page}>
       {/* Top Bar */}
       <div style={styles.topBar}>
         <button onClick={() => navigate('/members')} style={styles.backBtn}>
@@ -141,7 +141,7 @@ export default function MemberProfilePage() {
       <div style={styles.profileCard}>
         <div style={styles.avatarLg}>{initials}</div>
         <div style={styles.profileInfo}>
-          <h1 style={styles.profileName}>{fullName}</h1>
+          <h1 className="workspace-page-title" style={styles.profileName}>{fullName}</h1>
           <div style={styles.profileMeta}>
             <span style={{
               ...styles.badge,
@@ -286,15 +286,15 @@ export default function MemberProfilePage() {
                 {statusHistory.map((change) => (
                   <li key={change.id} style={{ padding: '12px 0', borderTop: '1px solid #f1f5f9' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                      <strong style={{ color: '#0f172a' }}>{change.old_status} → {change.new_status}</strong>
-                      <time style={{ color: '#64748b', fontSize: 12 }}>
+                      <strong style={{ color: 'var(--mcc-ink, #0f172a)' }}>{change.old_status} → {change.new_status}</strong>
+                      <time style={{ color: 'var(--mcc-secondary, #52647a)', fontSize: 12 }}>
                         {change.changed_at ? new Date(change.changed_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : '—'}
                       </time>
                     </div>
-                    <p style={{ margin: '6px 0 0', fontSize: 12, color: '#64748b' }}>
+                    <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--mcc-secondary, #52647a)' }}>
                       {change.changed_by ? `Changed by ${change.changed_by}` : 'Changed by system'}
                     </p>
-                    {change.reason && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>{change.reason}</p>}
+                    {change.reason && <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--mcc-secondary, #52647a)' }}>{change.reason}</p>}
                   </li>
                 ))}
               </ol>
@@ -344,18 +344,18 @@ const styles = {
   },
   profileCard: {
     background: 'linear-gradient(135deg, #003d70 0%, #005599 60%, #13B5EA 100%)',
-    borderRadius: '16px', padding: 'clamp(16px,4vw,32px)', display: 'flex',
+    borderRadius: 'var(--mcc-radius, 16px)', padding: 'clamp(16px,4vw,32px)', display: 'flex',
     alignItems: 'center', gap: 'clamp(12px,3vw,24px)', marginBottom: '24px', flexWrap: 'wrap'
   },
   avatarLg: {
     width: '72px', height: '72px', borderRadius: '50%',
-    background: 'rgba(255,255,255,0.2)', color: '#fff',
+    background: 'rgba(255,255,255,0.2)', color: 'var(--mcc-surface, #fff)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: '24px', fontWeight: '800', flexShrink: 0,
     border: '3px solid rgba(255,255,255,0.3)'
   },
   profileInfo:  {},
-  profileName:  { fontSize: '26px', fontWeight: '800', color: '#fff', margin: '0 0 8px 0' },
+  profileName:  { fontSize: '26px', fontWeight: '800', color: 'var(--mcc-surface, #fff)', margin: '0 0 8px 0' },
   profileMeta:  { display: 'flex', gap: '12px', alignItems: 'center' },
   badge: {
     padding: '4px 12px', borderRadius: '20px',
@@ -366,7 +366,7 @@ const styles = {
   colLeft:  { display: 'flex', flexDirection: 'column', gap: '20px' },
   colRight: {},
   card: {
-    background: '#fff', borderRadius: '12px', padding: '24px',
+    background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', padding: '24px',
     boxShadow: '0 1px 8px rgba(0,0,0,0.06)'
   },
   cardHeader: {
@@ -380,7 +380,7 @@ const styles = {
   detailGrid: { display: 'flex', flexDirection: 'column', gap: '12px' },
   detailRow:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
   detailLabel:{ fontSize: '13px', color: '#94a3b8', fontWeight: '500', flexShrink: 0, marginRight: '16px' },
-  detailValue:{ fontSize: '14px', color: '#0f172a', fontWeight: '500', textAlign: 'right' },
+  detailValue:{ fontSize: '14px', color: 'var(--mcc-ink, #0f172a)', fontWeight: '500', textAlign: 'right' },
   addEcBtn: {
     background: '#eff6ff', color: '#005599', border: 'none',
     borderRadius: '6px', padding: '5px 12px', fontSize: '13px',
@@ -397,7 +397,7 @@ const styles = {
   },
   ecSaveBtn: {
     background: 'linear-gradient(135deg, #005599, #13B5EA)',
-    color: '#fff', border: 'none', borderRadius: '8px',
+    color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px',
     padding: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer'
   },
   emptyText: { color: '#94a3b8', fontSize: '14px', textAlign: 'center', padding: '24px 0' },
@@ -409,11 +409,11 @@ const styles = {
   ecAvatar: {
     width: '36px', height: '36px', borderRadius: '50%',
     background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
-    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: 'var(--mcc-surface, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: '14px', fontWeight: '700', flexShrink: 0
   },
   ecInfo:     { flex: 1 },
-  ecName:     { fontSize: '14px', fontWeight: '600', color: '#0f172a' },
+  ecName:     { fontSize: '14px', fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' },
   ecMeta:     { fontSize: '12px', color: '#94a3b8', marginTop: '2px' },
   ecDeleteBtn:{
     background: 'none', border: 'none', color: '#dc2626',

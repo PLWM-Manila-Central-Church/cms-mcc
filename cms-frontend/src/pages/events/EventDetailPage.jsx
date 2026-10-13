@@ -216,19 +216,19 @@ export default function EventDetailPage() {
   const hasRegistrationActions = canManageRegistrations || canManageEventReservation;
 
   return (
-    <div style={s.page}>
+    <div className="mcc-module mcc-module-event-detail-page" style={s.page}>
       <button onClick={() => navigate('/events')} style={s.backBtn}>← Back to Events</button>
 
       {/* Header card */}
       <div style={s.headerCard}>
-        {event.image_url && <img src={eventImageSrc(event)} alt={`${event.title} event`} style={{ width: '100%', maxHeight: 360, objectFit: 'cover', borderRadius: 12, marginBottom: 18 }} />}
+        {event.image_url && <img src={eventImageSrc(event)} alt={`${event.title} event`} style={{ width: '100%', maxHeight: 360, objectFit: 'cover', borderRadius: 'var(--mcc-radius, 16px)', marginBottom: 18 }} />}
         <div style={s.headerTop}>
           <div>
             <span style={{ ...s.badge, background: meta.bg, color: meta.color }}>{meta.label}</span>
             <span style={s.categoryTag}>{event.EventCategory?.name}</span>
           </div>
         </div>
-        <h1 style={s.eventTitle}>{event.title}</h1>
+        <h1 className="workspace-page-title" style={s.eventTitle}>{event.title}</h1>
         {event.description && <p style={s.eventDesc}>{event.description}</p>}
 
         <div style={s.detailsRow}>
@@ -273,7 +273,7 @@ export default function EventDetailPage() {
               <span style={s.detailIcon}>⏰</span>
               <div>
                 <div style={s.detailLabel}>Registration Deadline</div>
-                <div style={{ ...s.detailValue, color: deadlinePassed ? '#dc2626' : '#0f172a' }}>
+                <div style={{ ...s.detailValue, color: deadlinePassed ? '#dc2626' : 'var(--mcc-ink, #0f172a)' }}>
                   {new Date(event.registration_deadline).toLocaleDateString('en-PH', {
                     year: 'numeric', month: 'short', day: 'numeric',
                     hour: '2-digit', minute: '2-digit',
@@ -338,7 +338,7 @@ export default function EventDetailPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div>
             <h2 style={{ ...s.regTitle, marginBottom: 4 }}>Event Attendance</h2>
-            <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>Manage a separate attendance session and review leader batch check-ins.</p>
+            <p style={{ fontSize: 13, color: 'var(--mcc-secondary, #52647a)', margin: 0 }}>Manage a separate attendance session and review leader batch check-ins.</p>
           </div>
           <button type="button" style={s.registerBtn} onClick={() => navigate(`/attendance/qr?target_type=event&target_id=${id}`)}>Open QR Attendance</button>
         </div>
@@ -377,26 +377,26 @@ export default function EventDetailPage() {
                 </thead>
                 <tbody>
                   {visibleRegistrations.map((r, i) => (
-                    <tr key={r.id} style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                    <tr key={r.id} style={{ ...s.row, background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc' }}>
                       <td style={{ ...s.td, color: '#94a3b8' }}>{i + 1}</td>
                       <td style={s.td}>
                         <div style={s.memberCell}>
                           <div style={s.avatar}>
                             {r.member?.first_name?.[0]}{r.member?.last_name?.[0]}
                           </div>
-                          <span style={{ fontWeight: '600', color: '#0f172a' }}>
+                          <span style={{ fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' }}>
                             {r.member?.last_name}, {r.member?.first_name}
                           </span>
                         </div>
                       </td>
-                      <td style={{ ...s.td, color: '#64748b' }}>{r.member?.email || '—'}</td>
-                      <td style={{ ...s.td, color: '#64748b' }}>{r.member?.phone || '—'}</td>
-                      <td style={{ ...s.td, fontFamily: 'monospace', fontSize: '12px', color: '#64748b' }}>
+                      <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)' }}>{r.member?.email || '—'}</td>
+                      <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)' }}>{r.member?.phone || '—'}</td>
+                      <td style={{ ...s.td, fontFamily: 'monospace', fontSize: '12px', color: 'var(--mcc-secondary, #52647a)' }}>
                         {r.member?.barcode || '—'}
                       </td>
                       <td style={s.td}>{r.seat_number ?? '—'}</td>
                       <td style={s.td}>{r.parking_slot ?? '—'}</td>
-                      <td style={{ ...s.td, color: '#64748b' }}>
+                      <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)' }}>
                         {r.registered_at
                           ? new Date(r.registered_at).toLocaleDateString('en-PH', {
                               month: 'short', day: 'numeric', year: 'numeric',
@@ -466,7 +466,7 @@ export default function EventDetailPage() {
       {user?.leadsMinistryId && (
         <div style={{ ...s.regSection, marginTop: 24 }}>
           <h2 style={s.regTitle}><MonoIcon name="ministry" size={18} /> Ministry Invites</h2>
-          <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px 0' }}>
+          <p style={{ fontSize: 13, color: 'var(--mcc-secondary, #52647a)', margin: '0 0 16px 0' }}>
             Invite members of your ministry to participate in this event.
           </p>
 
@@ -491,7 +491,7 @@ export default function EventDetailPage() {
                 <span style={{ fontSize: 12, color: '#94a3b8' }}>(optional)</span>
               </div>
 
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', marginBottom: 12 }}>
+              <div style={{ border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 8, overflow: 'hidden', marginBottom: 12 }}>
                 {ministryMembers.map((mem, i) => {
                   const checked = selectedIds.has(mem.id);
                   // Check if already invited
@@ -503,7 +503,7 @@ export default function EventDetailPage() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '10px 14px',
-                        background: checked ? '#e8f4fd' : i % 2 === 0 ? '#fff' : '#f8fafc',
+                        background: checked ? '#e8f4fd' : i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc',
                         borderBottom: i < ministryMembers.length - 1 ? '1px solid #f1f5f9' : 'none',
                         cursor: existing ? 'default' : 'pointer',
                         opacity: existing ? 0.6 : 1,
@@ -514,11 +514,11 @@ export default function EventDetailPage() {
                         disabled={!!existing}
                         style={{ cursor: existing ? 'default' : 'pointer', flexShrink: 0 }}
                       />
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: 'var(--mcc-surface, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
                         {mem.first_name?.[0]}{mem.last_name?.[0]}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--mcc-ink, #0f172a)' }}>
                           {mem.first_name} {mem.last_name}
                         </div>
                         {mem.email && <div style={{ fontSize: 12, color: '#94a3b8' }}>{mem.email}</div>}
@@ -529,7 +529,7 @@ export default function EventDetailPage() {
                           background: existing.response_status === 'attending'     ? '#dcfce7' :
                                       existing.response_status === 'not_attending' ? '#fef2f2' : '#f1f5f9',
                           color:      existing.response_status === 'attending'     ? '#16a34a' :
-                                      existing.response_status === 'not_attending' ? '#dc2626' : '#64748b',
+                                      existing.response_status === 'not_attending' ? '#dc2626' : 'var(--mcc-secondary, #52647a)',
                         }}>
                           {existing.response_status === 'attending'     ? 'Attending' :
                            existing.response_status === 'not_attending' ? 'Not Attending' : 'Pending'}
@@ -546,7 +546,7 @@ export default function EventDetailPage() {
                   disabled={sendingInvites || selectedIds.size === 0}
                   style={{
                     background: selectedIds.size === 0 ? '#e2e8f0' : 'linear-gradient(135deg,#7c3aed,#9333ea)',
-                    color: selectedIds.size === 0 ? '#94a3b8' : '#fff',
+                    color: selectedIds.size === 0 ? '#94a3b8' : 'var(--mcc-surface, #fff)',
                     border: 'none', borderRadius: 8, padding: '10px 20px',
                     fontSize: 14, fontWeight: 700, cursor: selectedIds.size === 0 ? 'not-allowed' : 'pointer',
                     opacity: sendingInvites ? 0.7 : 1,
@@ -575,38 +575,38 @@ const s = {
   page:         { fontFamily: "'Segoe UI', sans-serif" },
   loading:      { padding: '48px', textAlign: 'center', color: '#94a3b8' },
   backBtn:      { background: 'none', border: 'none', color: '#0066b3', fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: '0 0 20px 0', display: 'block' },
-  headerCard:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: 'clamp(16px,4vw,32px)', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  headerCard:   { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: 'clamp(16px,4vw,32px)', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   headerTop:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
   badge:        { padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', marginRight: '8px' },
   categoryTag:  { fontSize: '13px', color: '#94a3b8', fontWeight: '500' },
-  eventTitle:   { fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 12px 0' },
+  eventTitle:   { fontSize: '26px', fontWeight: '800', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 12px 0' },
   eventDesc:    { fontSize: '15px', color: '#475569', lineHeight: '1.6', margin: '0 0 20px 0' },
   detailsRow:   { display: 'flex', gap: '24px', flexWrap: 'wrap' },
   detailItem:   { display: 'flex', gap: '10px', alignItems: 'flex-start' },
   detailIcon:   { fontSize: '18px', marginTop: '2px' },
   detailLabel:  { fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600' },
-  detailValue:  { fontSize: '14px', color: '#0f172a', fontWeight: '500', marginTop: '2px' },
+  detailValue:  { fontSize: '14px', color: 'var(--mcc-ink, #0f172a)', fontWeight: '500', marginTop: '2px' },
   regRow:       { display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' },
   regConfirmed: { fontSize: '14px', color: '#16a34a', fontWeight: '600' },
-  registerBtn:  { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' },
+  registerBtn:  { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '10px', padding: '12px 24px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' },
   cancelRegBtn: { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   closedBox:    { background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: '8px', padding: '10px 16px', fontSize: '14px', display: 'inline-block' },
   successBox:   { background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', borderRadius: '8px', padding: '10px 16px', fontSize: '14px', marginBottom: '12px' },
   errorBox:     { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '12px' },
-  regSection:   { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
-  regTitle:     { fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 16px 0' },
+  regSection:   { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  regTitle:     { fontSize: '16px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 16px 0' },
   filterTabs:   { display: 'inline-flex', background: '#f1f5f9', borderRadius: '10px', padding: 4, gap: 4 },
-  filterTab:    { border: 'none', background: 'transparent', color: '#64748b', borderRadius: '8px', padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
-  filterTabActive: { background: '#fff', color: '#005599', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' },
+  filterTab:    { border: 'none', background: 'transparent', color: 'var(--mcc-secondary, #52647a)', borderRadius: '8px', padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
+  filterTabActive: { background: 'var(--mcc-surface, #fff)', color: '#005599', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' },
   emptyReg:     { padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
-  tableWrap:    { borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' },
+  tableWrap:    { borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--mcc-border, #e2e8f0)' },
   tableScroll:  { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:        { width: '100%', borderCollapse: 'collapse' },
   thead:        { background: '#f8fafc' },
-  th:           { padding: '10px 14px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },
+  th:           { padding: '10px 14px', fontSize: '11px', fontWeight: '700', color: 'var(--mcc-secondary, #52647a)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--mcc-border, #e2e8f0)' },
   row:          {},
   td:           { padding: '12px 14px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
   memberCell:   { display: 'flex', alignItems: 'center', gap: '10px' },
-  avatar:       { width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
+  avatar:       { width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
   removeBtn:    { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', fontWeight: '600' },
 };

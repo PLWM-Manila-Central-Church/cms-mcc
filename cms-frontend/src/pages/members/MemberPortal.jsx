@@ -13,10 +13,11 @@ import MemberSubstituteRequests from '../../components/ministry/MemberSubstitute
 import { uploadUrl } from '../../utils/uploadUrl';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
 import useWindowWidth from '../../hooks/useWindowWidth';
+import useDialogFocus from '../../hooks/useDialogFocus';
 const MemberQrPanel = lazy(() => import('../../components/attendance/MemberQrPanel'));
 
 // ── Constants ─────────────────────────────────────────────────
-const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
+const BRAND   = '#005599';
 const PHP     = (n) => `₱${Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2})}`;
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'}) : '—';
 const fmtShort= (d) => d ? new Date(d).toLocaleDateString('en-PH',{month:'short',day:'numeric'}) : '—';
@@ -28,10 +29,10 @@ const getPrefs = () => { try { return JSON.parse(localStorage.getItem('plwm_pref
 const makeC = (prefs) => {
   const dk = prefs.theme==='dark';
   return {
-    bg:dk?'#0e1420':'#f0f4f8',surface:dk?'#1a2332':'#ffffff',
+    bg:dk?'#0e1420':'#f5f7fa',surface:dk?'#1a2332':'#ffffff',
     surfaceAlt:dk?'#141d2b':'#f8fafc',border:dk?'#2d3a4e':'#e2e8f0',
     borderL:dk?'#243040':'#f1f5f9',t1:dk?'#f1f5f9':'#0f172a',
-    t2:dk?'#94a3b8':'#475569',t3:dk?'#64748b':'#94a3b8',
+    t2:dk?'#cbd5e1':'#475569',t3:dk?'#94a3b8':'#64748b',
     accent:'#005599',accentL:dk?'#1e3a5f':'#eff6ff',accentT:dk?'#60a5fa':'#005599',
     success:'#16a34a',successL:dk?'#14532d':'#dcfce7',successB:dk?'#166534':'#bbf7d0',
     danger:'#dc2626',dangerL:dk?'#7f1d1d':'#fef2f2',dangerB:dk?'#991b1b':'#fecaca',
@@ -93,11 +94,13 @@ function Skel({w='100%',h=14,r=6,mt=0}) {
 
 // ── Modal / Sheet backdrop ─────────────────────────────────────
 // On desktop: right-side panel. On mobile: bottom sheet.
-function Backdrop({onClose,children,isMobile}) {
+function Backdrop({onClose,children,isMobile,label='Details'}) {
+  const panelRef = useRef(null);
+  useDialogFocus(true, panelRef, onClose);
   if (isMobile) {
     return (
       <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:500,display:'flex',alignItems:'flex-end'}}>
-        <div onClick={e=>e.stopPropagation()} style={{
+        <div ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={e=>e.stopPropagation()} style={{
           width:'100%', maxHeight:'92dvh', overflowY:'auto',
           background:'#fff', borderRadius:'20px 20px 0 0',
           boxShadow:'0 -4px 32px rgba(0,0,0,0.18)',
@@ -112,7 +115,7 @@ function Backdrop({onClose,children,isMobile}) {
   }
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',zIndex:500,display:'flex',alignItems:'flex-start',justifyContent:'flex-end'}}>
-      <div onClick={e=>e.stopPropagation()} style={{width:'min(460px,95vw)',height:'100vh',overflowY:'auto',background:'#fff',boxShadow:'-4px 0 32px rgba(0,0,0,0.18)',animation:'slideInRight 0.25s ease'}}>
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={e=>e.stopPropagation()} style={{width:'min(460px,95vw)',height:'100dvh',overflowY:'auto',background:'#fff',boxShadow:'-4px 0 32px rgba(0,0,0,0.18)',animation:'slideInRight 0.25s ease'}}>
         {children}
       </div>
     </div>
@@ -131,11 +134,11 @@ function ServiceModal({svc,onClose,onRespond,responding,error,onClearError,c,f,t
   const current = svc.my_response?.attendance_status;
   const rsvpMeta = current ? RSVP_META[current] : null;
   return (
-    <Backdrop onClose={onClose} isMobile={isMobile}>
+    <Backdrop onClose={onClose} isMobile={isMobile} label={t?.serviceDetails||'Service Details'}>
       <div style={{padding:'20px 20px 8px'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
           <div style={{fontSize:f?.lg||18,fontWeight:800,color:'#0f172a'}}>{t?.serviceDetails||'Service Details'}</div>
-          <button onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:32,height:32,cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1}}><MonoIcon name="close" size={16} /></button>
+          <button type="button" aria-label="Close service details" onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:44,height:44,cursor:'pointer',color:'#475569',display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1}}><MonoIcon name="close" size={16} /></button>
         </div>
 
         <div style={{background:'linear-gradient(135deg,#003d70,#005599)',borderRadius:12,padding:'16px',color:'#fff',marginBottom:16}}>
@@ -207,11 +210,11 @@ function EventModal({evt,onClose,onRegister,onUpdateReservation,onCancel,evtLoad
   const reservationChanged = String(evt.my_seat_number ?? '') !== String(seatNumber)
     || String(evt.my_parking_slot ?? '') !== String(parkingSlot);
   return (
-    <Backdrop onClose={onClose} isMobile={isMobile}>
+    <Backdrop onClose={onClose} isMobile={isMobile} label={t?.eventDetails||'Event Details'}>
       <div style={{padding:'20px 20px 8px'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
           <div style={{fontSize:f?.lg||18,fontWeight:800,color:'#0f172a'}}>{t?.eventDetails||'Event Details'}</div>
-          <button onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:32,height:32,cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1}}><MonoIcon name="close" size={16} /></button>
+          <button type="button" aria-label="Close event details" onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:44,height:44,cursor:'pointer',color:'#475569',display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1}}><MonoIcon name="close" size={16} /></button>
         </div>
 
         <div style={{background:evt.is_registered?'linear-gradient(135deg,#14532d,#16a34a)':'linear-gradient(135deg,#003d70,#005599)',borderRadius:12,padding:'16px',color:'#fff',marginBottom:16}}>
@@ -1260,22 +1263,22 @@ export default function MemberPortal() {
 
   // ── Header ────────────────────────────────────────────────────
   const Header = () => (
-    <div style={{background:BRAND,padding:isMobile?'10px 16px':'12px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:200}}>
+    <header className="mcc-portal-header" style={{background:BRAND,padding:isMobile?'10px 16px':'12px 24px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
       <div style={{display:'flex',alignItems:'center',gap:isMobile?10:14}}>
-        <div style={{width:isMobile?32:38,height:isMobile?32:38,borderRadius:10,background:'rgba(255,255,255,0.18)',display:'flex',alignItems:'center',justifyContent:'center',border:'1.5px solid rgba(255,255,255,0.28)',color:'#fff',flexShrink:0}}><MonoIcon name="cross" size={isMobile?17:20} /></div>
+        <img src="/logo.jpg" alt="PLWM-MCC" style={{width:isMobile?32:38,height:isMobile?32:38,borderRadius:'50%',objectFit:'contain',flexShrink:0}} />
         <div>
-          <div style={{color:'#fff',fontWeight:800,fontSize:isMobile?f.base:f.md,lineHeight:1.1}}>{t.portal}</div>
+          <h1 style={{color:'#fff',fontWeight:700,fontSize:isMobile?f.base:f.md,lineHeight:1.1,margin:0}}>{t.portal}</h1>
           {!isMobile&&<div style={{color:'rgba(255,255,255,0.75)',fontSize:f.xs,marginTop:1}}>{t.welcome}, {greeting}</div>}
         </div>
       </div>
       <div style={{display:'flex',alignItems:'center',gap:isMobile?8:10}}>
         {/* Avatar + name */}
-        <div style={{display:'flex',alignItems:'center',gap:isMobile?6:9,background:'rgba(255,255,255,0.12)',borderRadius:24,padding:isMobile?'3px 10px 3px 3px':'4px 14px 4px 4px',border:'1px solid rgba(255,255,255,0.2)',cursor:'pointer'}} onClick={()=>{setTab(0);startEdit();}}>
+        <button type="button" aria-label={t.editProfile} style={{display:'flex',alignItems:'center',gap:isMobile?6:9,background:'rgba(255,255,255,0.12)',borderRadius:24,padding:isMobile?'3px 10px 3px 3px':'4px 14px 4px 4px',border:'1px solid rgba(255,255,255,0.2)',cursor:'pointer',fontFamily:'inherit'}} onClick={()=>{setTab(0);startEdit();}}>
           {avatarUrl
             ? <img src={avatarUrl} alt="avatar" style={{width:isMobile?26:28,height:isMobile?26:28,borderRadius:'50%',objectFit:'cover'}}/>
             : <div style={{width:isMobile?26:28,height:isMobile?26:28,borderRadius:'50%',background:'rgba(255,255,255,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:isMobile?9:10,fontWeight:800,color:'#fff'}}>{initials}</div>}
           <span style={{color:'rgba(255,255,255,0.9)',fontSize:f.sm,fontWeight:600}}>{profile?.first_name||'—'}</span>
-        </div>
+        </button>
         <MemberNotificationCenter colors={c} isMobile={isMobile} language={getLangCode()} />
         {/* Settings — icon only on mobile */}
         <button aria-label={t.settings} title={t.settings} onClick={()=>navigate('/portal/settings')} style={{background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.22)',color:'#fff',borderRadius:8,padding:isMobile?'6px 10px':'6px 14px',fontSize:isMobile?16:f.sm,cursor:'pointer',fontFamily:'inherit',fontWeight:500,minHeight:36,minWidth:36,display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -1286,22 +1289,22 @@ export default function MemberPortal() {
           {isMobile ? <MonoIcon name="logout" size={17} /> : t.logout}
         </button>
       </div>
-    </div>
+    </header>
   );
 
   // ── Tab Bar — top on desktop, bottom on mobile ────────────────
   const TopTabBar = () => (
-    <div style={{borderBottom:`1px solid ${c.border}`,background:c.surface,display:'flex',padding:'0 24px',overflowX:'auto',position:'sticky',top:isMobile?58:62,zIndex:100}}>
+    <nav aria-label="Member navigation" style={{borderBottom:`1px solid ${c.border}`,background:c.surface,display:'flex',padding:'0 24px',overflowX:'auto'}}>
       {t.tabs.map((tb,i)=>(
-        <button key={i} onClick={()=>setTab(i)} style={{padding:'13px 18px',fontSize:f.base,fontWeight:tab===i?700:500,color:tab===i?c.tabActive:c.t2,background:'none',border:'none',borderBottom:tab===i?`2.5px solid ${c.tabActive}`:'2.5px solid transparent',cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',transition:'color 0.15s'}}>
+        <button key={i} aria-pressed={tab===i} onClick={()=>setTab(i)} style={{padding:'13px 18px',fontSize:f.base,fontWeight:tab===i?700:500,color:tab===i?c.tabActive:c.t2,background:'none',border:'none',borderBottom:tab===i?`2.5px solid ${c.tabActive}`:'2.5px solid transparent',cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',transition:'color 0.15s'}}>
           {tb}
         </button>
       ))}
-    </div>
+    </nav>
   );
 
   const MobileBottomTabBar = () => (
-    <nav style={{
+    <nav aria-label="Member navigation" style={{
       position:'fixed',bottom:0,left:0,right:0,
       height:`calc(60px + env(safe-area-inset-bottom,0px))`,
       background:c.surface,borderTop:`1px solid ${c.border}`,
@@ -1309,7 +1312,7 @@ export default function MemberPortal() {
       paddingBottom:'env(safe-area-inset-bottom,0px)',
     }}>
       {t.tabs.map((tb,i)=>(
-        <button key={i} onClick={()=>setTab(i)} style={{
+        <button key={i} aria-pressed={tab===i} onClick={()=>setTab(i)} style={{
           flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
           gap:3,border:'none',background:'none',cursor:'pointer',padding:'6px 4px',
           color:tab===i?c.tabActive:c.t3,fontFamily:'inherit',position:'relative',
@@ -1334,7 +1337,7 @@ export default function MemberPortal() {
   );
 
   return (
-    <div style={{minHeight:'100vh',background:c.bg,fontFamily:`'${fontFamily}',system-ui,sans-serif`,fontSize:`${fontSize}px`,zoom}}>
+    <div className="mcc-portal workspace-member" data-workspace="member" style={{minHeight:'100vh',background:c.bg,fontFamily:`'${fontFamily}',system-ui,sans-serif`,fontSize:`${fontSize}px`,zoom,'--mcc-border':c.border,'--mcc-radius':'18px'}}>
       <div id="google_translate_element_portal" style={{position:'fixed',bottom:-200,left:0,opacity:0,pointerEvents:'none',zIndex:-1}}/>
       <style>{`
         @keyframes shimmer{0%{background-position:400% 0}100%{background-position:-400% 0}}
@@ -1347,22 +1350,26 @@ export default function MemberPortal() {
         ::-webkit-scrollbar-thumb{background:${c.border};border-radius:10px}
       `}</style>
 
-      <Header/>
-      {/* Desktop: top tab bar. Mobile: none here (bottom bar below) */}
-      {!isMobile&&<TopTabBar/>}
+      <a className="mcc-skip-link" href="#member-main">Skip to content</a>
+      <div style={{position:'sticky',top:0,zIndex:200}}>
+        <Header/>
+        {/* Keep header and navigation in one sticky stack as text grows. */}
+        {!isMobile&&<TopTabBar/>}
+      </div>
 
-      <div style={{
+      <main id="member-main" tabIndex={-1} style={{
         maxWidth:isMobile?'100%':1240,
         margin:'0 auto',
         padding:isMobile?'14px 12px':'24px 20px',
         paddingBottom:isMobile?`calc(80px + env(safe-area-inset-bottom,0px))`:'24px',
       }}>
-        {/* Mobile: show tab title */}
-        {isMobile&&(
-          <div style={{fontSize:f.lg,fontWeight:800,color:c.t1,marginBottom:14,paddingBottom:10,borderBottom:`1px solid ${c.border}`,display:'flex',alignItems:'center',gap:8}}>
-            <MonoIcon name={TAB_ICON_NAMES[tab]} size={20} /> {t.tabs[tab]}
-          </div>
-        )}
+        {tab===0 ? <section className="member-welcome" style={{background:c.surface,color:c.t1}} aria-label="Personal church workspace">
+          <div><span style={{fontSize:11,fontWeight:700,letterSpacing:'.12em',color:c.accentT}}>PLWM-MCC · {t.portal}</span><h2>{t.welcome}, {profile?.first_name||user?.email?.split('@')[0]||'Friend'}</h2><p style={{color:c.t2}}>Your QR, upcoming gatherings and personal church activity in one place.</p></div>
+          <div className="member-welcome-actions"><button type="button" onClick={()=>setTab(2)}>Attendance &amp; QR</button><button type="button" onClick={()=>setTab(1)}>{t.tabs[1]}</button></div>
+        </section> : <section className="member-tab-intro" style={{color:c.t1}} aria-label={`${t.tabs[tab]} overview`}>
+          <span style={{display:'grid',placeItems:'center',width:44,height:44,borderRadius:12,background:c.accentL,color:c.accentT,flexShrink:0}}><MonoIcon name={TAB_ICON_NAMES[tab]} size={20}/></span>
+          <div><h2>{t.tabs[tab]}</h2><p style={{color:c.t2}}>{['','Find your next gathering and follow your registrations.','Show your QR and review your personal check-in history.','Your recorded giving, dates and supporting receipts.','Explore ways to serve and follow ministry requests.'][tab]}</p></div>
+        </section>}
 
         {loading ? <LoadSkeleton/> : (
           <>
@@ -1376,7 +1383,7 @@ export default function MemberPortal() {
             </>}
           </>
         )}
-      </div>
+      </main>
 
       {/* Mobile bottom tab bar */}
       {isMobile&&<MobileBottomTabBar/>}
@@ -1398,7 +1405,7 @@ export default function MemberPortal() {
 
       {/* Toast — above bottom tab bar on mobile */}
       {toast&&(
-        <div style={{position:'fixed',bottom:isMobile?`calc(72px + env(safe-area-inset-bottom,0px))`:28,right:isMobile?12:28,left:isMobile?12:'auto',background:toast.type==='success'?c.success:c.danger,color:'#fff',padding:'12px 18px',borderRadius:12,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',zIndex:9999,display:'flex',alignItems:'center',gap:10,fontSize:f.base,fontWeight:500,animation:'slideUp 0.3s ease'}}>
+        <div role={toast.type==='success'?'status':'alert'} style={{position:'fixed',bottom:isMobile?`calc(72px + env(safe-area-inset-bottom,0px))`:28,right:isMobile?12:28,left:isMobile?12:'auto',background:toast.type==='success'?c.success:c.danger,color:'#fff',padding:'12px 18px',borderRadius:12,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',zIndex:9999,display:'flex',alignItems:'center',gap:10,fontSize:f.base,fontWeight:500,animation:'slideUp 0.3s ease'}}>
           <span style={{display:'inline-flex'}}><MonoIcon name={toast.type==='success'?'check':'close'} size={15} /></span>{toast.msg}
         </div>
       )}

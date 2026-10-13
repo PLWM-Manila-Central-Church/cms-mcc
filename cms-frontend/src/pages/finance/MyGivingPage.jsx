@@ -65,19 +65,19 @@ export default function MyGivingPage() {
 
   if (!hasMemberProfile) {
     return (
-      <section style={{maxWidth:640,margin:'32px auto',padding:24,border:'1px solid #e2e8f0',borderRadius:12,background:'#fff'}}>
-        <h1 style={{marginTop:0,color:'#0f172a'}}>Personal giving history unavailable</h1>
+      <section style={{maxWidth:640,margin:'32px auto',padding:24,border:'1px solid var(--mcc-border, #e2e8f0)',borderRadius: 'var(--mcc-radius, 16px)',background:'var(--mcc-surface, #fff)'}}>
+        <h1 className="workspace-page-title" style={{marginTop:0,color:'var(--mcc-ink, #0f172a)'}}>Personal giving history unavailable</h1>
         <p style={{color:'#475569',lineHeight:1.6}}>This account is not linked to a member profile, so it has no personal giving history. Finance staff can view church records in the Finance workspace.</p>
-        <Link to="/finance" style={{display:'inline-block',padding:'10px 14px',borderRadius:8,background:'#005599',color:'#fff',fontWeight:700,textDecoration:'none'}}>Go to Finance workspace</Link>
+        <Link to="/finance" style={{display:'inline-block',padding:'10px 14px',borderRadius:8,background:'#005599',color:'var(--mcc-surface, #fff)',fontWeight:700,textDecoration:'none'}}>Go to Finance workspace</Link>
       </section>
     );
   }
 
   return (
-    <div style={s.page}>
+    <div className="mcc-module mcc-module-my-giving-page" style={s.page}>
       <div style={s.pageHeader}>
         <div>
-          <h1 style={s.title}>My Giving</h1>
+          <h1 className="workspace-page-title" style={s.title}>My Giving</h1>
           <p style={s.subtitle}>Your personal tithes &amp; offerings history</p>
         </div>
       </div>
@@ -149,18 +149,18 @@ export default function MyGivingPage() {
               <tr><td colSpan={5} style={s.centerCell}>No giving records found.</td></tr>
             ) : records.map((r, i) => (
               <tr key={r.id}
-                style={{ ...s.row, background: i % 2 === 0 ? '#fff' : '#f8fafc' }}
+                style={{ ...s.row, background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc' }}
               >
                 <td style={s.td}>{formatDate(r.transaction_date)}</td>
                 <td style={s.td}>
                   {/* Fixed: was r.FinancialCategory?.name — the association alias is 'category' */}
                   <span style={s.categoryTag}>{r.category?.name || '—'}</span>
                 </td>
-                <td style={{ ...s.td, fontWeight: '700', color: '#0f172a', fontSize: '15px' }}>
+                <td style={{ ...s.td, fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', fontSize: '15px' }}>
                   {formatAmount(r.amount)}
                 </td>
                 <td style={s.td}>{PAYMENT_LABELS[r.payment_method] || r.payment_method}</td>
-                <td style={{ ...s.td, fontFamily: 'monospace', fontSize: '12px', color: '#64748b' }}>
+                <td style={{ ...s.td, fontFamily: 'monospace', fontSize: '12px', color: 'var(--mcc-secondary, #52647a)' }}>
                   {r.receipt_number || '—'}
                 </td>
               </tr>
@@ -184,13 +184,13 @@ export default function MyGivingPage() {
 const s = {
   page:           { fontFamily: "'Inter', sans-serif" },
   pageHeader:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
-  title:          { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0 },
-  subtitle:       { fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' },
-  totalCard:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', borderRadius: '16px', padding: '28px 32px', marginBottom: '20px', textAlign: 'center' },
+  title:          { fontSize: '24px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
+  subtitle:       { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0 0' },
+  totalCard:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', padding: '28px 32px', marginBottom: '20px', textAlign: 'center' },
   totalLabel:     { fontSize: '13px', opacity: 0.8, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' },
   totalNum:       { fontSize: '40px', fontWeight: '800', letterSpacing: '-1px' },
   totalSub:       { fontSize: '13px', opacity: 0.7, marginTop: '6px' },
-  infoCard:       { background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '20px 24px', marginBottom: '24px' },
+  infoCard:       { background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 'var(--mcc-radius, 16px)', padding: '20px 24px', marginBottom: '24px' },
   infoTitle:      { fontSize: '15px', fontWeight: '700', color: '#92400e', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' },
   infoText:       { fontSize: '14px', color: '#78350f', margin: '0 0 16px 0', lineHeight: '1.5' },
   paymentDetails: { display: 'flex', flexDirection: 'column', gap: '12px' },
@@ -203,16 +203,16 @@ const s = {
   filterInput:    { padding: '8px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none' },
   clearBtn:       { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' },
   errorBox:       { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
-  tableWrap:      { background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  tableWrap:      { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', border: '1px solid var(--mcc-border, #e2e8f0)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
   tableScroll:    { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:          { width: '100%', borderCollapse: 'collapse' },
   thead:          { background: '#f8fafc' },
-  th:             { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },
+  th:             { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: 'var(--mcc-secondary, #52647a)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--mcc-border, #e2e8f0)' },
   row:            { transition: 'background 0.15s' },
   td:             { padding: '14px 16px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
   centerCell:     { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
   categoryTag:    { background: '#e8f4fd', color: '#0066b3', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' },
   pagination:     { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px' },
-  pageBtn:        { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', cursor: 'pointer' },
-  pageInfo:       { fontSize: '14px', color: '#64748b' },
+  pageBtn:        { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', cursor: 'pointer' },
+  pageInfo:       { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)' },
 };

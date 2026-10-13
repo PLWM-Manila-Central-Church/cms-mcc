@@ -1,0 +1,49 @@
+/* Scoped design foundation: church palette and user preferences stay intact. */
+:root {
+  --mcc-brand: #005599;
+  --mcc-cyan: #13b5ea;
+  --mcc-canvas: #f5f7fa;
+  --mcc-surface: #fff;
+  --mcc-border: #e2e8f0;
+  --mcc-ink: #0f172a;
+  --mcc-secondary: #52647a;
+  --mcc-radius: 14px;
+}
+.mcc-workspace :is(button, input, select, textarea),
+.mcc-auth :is(button, input, select, textarea) { font-family: inherit; }
+.mcc-workspace :is(button, [role="button"]), .mcc-auth button { min-height: 44px; }
+.mcc-workspace :is(button, a, input, select, textarea, [tabindex]):focus-visible,
+.mcc-auth :is(button, a, input, select, textarea):focus-visible,
+.mcc-portal :is(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid var(--mcc-cyan) !important;
+  outline-offset: 3px;
+}
+.mcc-skip-link { position: fixed; top: -100px; left: 16px; padding: 12px 18px; z-index: 2100; border-radius: 8px; background: #fff; color: var(--mcc-brand); }
+.mcc-skip-link:focus { top: 12px; }
+.mcc-nav-link:hover { background: rgba(255,255,255,.07) !important; }
+.mcc-nav-current:hover { background: rgba(19,181,234,.18) !important; }
+.mcc-main > * { min-width: 0; }
+.mcc-main .cms-page { max-width: 1240px; margin-inline: auto; }
+.mcc-main .cms-page-title { font-size: clamp(24px, 2.5vw, 30px); font-weight: 700; letter-spacing: -.035em; }
+.mcc-main .cms-page-sub { color: var(--mcc-secondary); line-height: 1.6; }
+.mcc-main .cms-add-btn { background: var(--mcc-brand); border-radius: 10px; min-height: 44px; }
+.mcc-main .cms-filter-bar { gap: 12px; }
+.mcc-main .cms-error-box { color: #b91c1c; }
+.mcc-header button { min-width: 44px; }
+.mcc-finance-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px; margin-bottom: 24px; }
+.mcc-finance-card { min-width: 0; }
+.mcc-finance-card-value { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.mcc-portal { --mcc-secondary: #52647a; }
+.mcc-portal button { min-height: 44px; }
+.mcc-auth { background: var(--mcc-canvas); }
+@media(max-width:1250px) { .mcc-header-email { display: none; } }
+@media(max-width:1100px) { .mcc-header-title { display: none; } }
+@media(max-width:600px) {
+  .mcc-header[data-has-scopes="true"] .mcc-header-brand { display: none; }
+  .mcc-portal-header { gap: 8px; flex-wrap: wrap; }
+  .mcc-portal-header > div { min-width: 0; }
+}
+@media(prefers-reduced-motion:reduce) {
+  html { scroll-behavior: auto; }
+  .mcc-workspace *, .mcc-auth *, .mcc-portal * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

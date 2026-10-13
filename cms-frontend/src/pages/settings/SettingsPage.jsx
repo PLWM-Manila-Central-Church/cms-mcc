@@ -222,11 +222,11 @@ export default function SettingsPage() {
   );
 
   return (
-    <div style={s.page}>
+    <div className="mcc-module mcc-module-settings-page" style={s.page}>
       {/* ── Page header ──────────────────────────────────── */}
       <div style={s.pageHeader}>
         <div>
-          <h1 style={s.title}>Settings</h1>
+          <h1 className="workspace-page-title" style={s.title}>Settings</h1>
           <p style={s.subtitle}>System configuration — Admin only</p>
         </div>
         <div style={s.headerRight}>
@@ -254,19 +254,19 @@ export default function SettingsPage() {
           <div style={{ marginBottom: 16 }}>
             <button
               onClick={() => setMobileNavOpen(o => !o)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, fontSize: 14, fontWeight: 700, color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--mcc-surface, #fff)', border: '1.5px solid #e2e8f0', borderRadius: 'var(--mcc-radius, 16px)', fontSize: 14, fontWeight: 700, color: 'var(--mcc-ink, #0f172a)', cursor: 'pointer', fontFamily: 'inherit' }}
             >
               <span style={{ display:'inline-flex', alignItems:'center', gap:8 }}>{groupIcon(activeGroup, 16)} {activeGroup || 'Select Category'}</span>
               <MonoIcon name="chevronDown" size={13} style={{ color:'#94a3b8', transform: mobileNavOpen ? 'rotate(180deg)' : 'none' }} />
             </button>
             {mobileNavOpen && (
-              <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, marginTop: 4, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+              <div style={{ background: 'var(--mcc-surface, #fff)', border: '1.5px solid #e2e8f0', borderRadius: 'var(--mcc-radius, 16px)', marginTop: 4, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
                 {groups.map(group => {
                   const count = Object.values(settings).filter(s => s.group === group).length;
                   const isActive = group === activeGroup;
                   return (
                     <button key={group} onClick={() => { setActiveGroup(group); setMobileNavOpen(false); }}
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: isActive ? '#e8f4fd' : '#fff', border: 'none', borderBottom: '1px solid #f1f5f9', fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? '#005599' : '#374151', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: isActive ? '#e8f4fd' : 'var(--mcc-surface, #fff)', border: 'none', borderBottom: '1px solid #f1f5f9', fontSize: 14, fontWeight: isActive ? 700 : 500, color: isActive ? '#005599' : '#374151', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                       <span style={{ display:'inline-flex', color:'currentColor' }}>{groupIcon(group, 18)}</span>
                       <span style={{ flex: 1 }}>{group}</span>
                       <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: isActive ? '#bde3f5' : '#f3f4f6', color: isActive ? '#005599' : '#6b7280' }}>{count}</span>
@@ -355,11 +355,11 @@ const s = {
   centered:    { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px' },
   spinner:     { width: '36px', height: '36px', border: '3px solid #e5e7eb', borderTop: '3px solid #1e4080', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
-  title:       { fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: 0 },
-  subtitle:    { fontSize: '14px', color: '#64748b', marginTop: '4px' },
+  title:       { fontSize: '26px', fontWeight: '800', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
+  subtitle:    { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', marginTop: '4px' },
   headerRight: { display: 'flex', alignItems: 'center', gap: '12px' },
   savedBadge:  { background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '20px', padding: '6px 14px', fontSize: '13px', fontWeight: '600' },
-  saveBtn:     { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 24px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'opacity 0.15s' },
+  saveBtn:     { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '10px', padding: '10px 24px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'opacity 0.15s' },
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '10px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
   changesBanner: { background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', marginBottom: '16px' },
   layout:      { display: 'flex', gap: '24px', alignItems: 'flex-start', flexWrap: 'wrap' },
@@ -372,21 +372,21 @@ const s = {
   navCount:    { fontSize: '11px', fontWeight: '700', padding: '2px 7px', borderRadius: '10px' },
   // Panel
   panel:       { flex: 1, minWidth: 0 },
-  panelHeader: { display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px 14px 0 0', borderBottom: '2px solid #eff6ff' },
+  panelHeader: { display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '14px 14px 0 0', borderBottom: '2px solid #eff6ff' },
   panelIcon:   { fontSize: '28px' },
-  panelTitle:  { fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 },
-  panelSub:    { fontSize: '13px', color: '#64748b', margin: '2px 0 0' },
-  settingsList:{ background: '#fff', border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 14px 14px', overflow: 'hidden' },
+  panelTitle:  { fontSize: '18px', fontWeight: '800', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
+  panelSub:    { fontSize: '13px', color: 'var(--mcc-secondary, #52647a)', margin: '2px 0 0' },
+  settingsList:{ background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderTop: 'none', borderRadius: '0 0 14px 14px', overflow: 'hidden' },
   settingRow:  { display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px 16px', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s', flexWrap: 'wrap' },
   settingRowDirty: { background: '#fefce8' },
   settingLeft: { width: '100%', flexShrink: 0 },
   settingLabel:{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '3px' },
   settingKey:  { fontSize: '11px', color: '#94a3b8', fontFamily: "'Fira Code', 'Courier New', monospace", background: '#f8fafc', padding: '1px 6px', borderRadius: '4px' },
   settingRight:{ flex: 1, minWidth: '160px', display: 'flex', alignItems: 'center', gap: '8px' },
-  input:       { flex: 1, padding: '9px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: '#fff', fontFamily: 'inherit', transition: 'border-color 0.15s' },
-  revertBtn:   { background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', color: '#64748b', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  input:       { flex: 1, padding: '9px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)', fontFamily: 'inherit', transition: 'border-color 0.15s' },
+  revertBtn:   { background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', color: 'var(--mcc-secondary, #52647a)', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   toggleRow:   { display: 'flex', alignItems: 'center', gap: '10px' },
-  toggle:      { width: '46px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 },
-  toggleThumb: { position: 'absolute', top: '3px', left: '3px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' },
+  toggle:      { width: '46px', height: '24px', borderRadius: 'var(--mcc-radius, 16px)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 },
+  toggleThumb: { position: 'absolute', top: '3px', left: '3px', width: '18px', height: '18px', background: 'var(--mcc-surface, #fff)', borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' },
   toggleLabel: { fontSize: '13px', fontWeight: '600' },
 };

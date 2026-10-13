@@ -231,12 +231,12 @@ export default function UserFormPage() {
   const inputStyle = {
     padding: '10px 14px', fontSize: '14px',
     border: '1.5px solid #e2e8f0', borderRadius: '8px',
-    outline: 'none', color: '#0f172a',
+    outline: 'none', color: 'var(--mcc-ink, #0f172a)',
     width: '100%', boxSizing: 'border-box',
-    background: '#fff', transition: 'border-color 0.2s',
+    background: 'var(--mcc-surface, #fff)', transition: 'border-color 0.2s',
     minHeight: 42,
   };
-  const selectStyle = { ...inputStyle, background: '#fff', cursor: 'pointer' };
+  const selectStyle = { ...inputStyle, background: 'var(--mcc-surface, #fff)', cursor: 'pointer' };
   const onFocus = e => e.target.style.borderColor = '#0066b3';
   const onBlur  = e => e.target.style.borderColor = '#e2e8f0';
 
@@ -268,9 +268,9 @@ export default function UserFormPage() {
   if (loading) return <div style={S.loading}>Loading...</div>;
 
   return (
-    <div style={S.page}>
+    <div className="mcc-module mcc-module-user-form-page" style={S.page}>
       <button onClick={() => navigate('/users')} style={S.backBtn}>← Back to Users</button>
-      <h1 style={S.title}>{isEdit ? 'Edit User' : 'Add New User'}</h1>
+      <h1 className="workspace-page-title" style={S.title}>{isEdit ? 'Edit User' : 'Add New User'}</h1>
       <p style={S.subtitle}>
         {isEdit
           ? 'Update user account details, role, and member profile.'
@@ -297,8 +297,8 @@ export default function UserFormPage() {
 
           <div style={S.row}>
             <div style={S.field}>
-              <label style={S.label}>First Name *</label>
-              <input
+              <label style={S.label} htmlFor="userformpage-first_name">First Name *</label>
+              <input id="userformpage-first_name"
                 type="text" name="first_name" value={form.first_name}
                 disabled={!isEdit && Boolean(form.member_id)}
                 onChange={handleChange} required style={inputStyle}
@@ -306,8 +306,8 @@ export default function UserFormPage() {
               />
             </div>
             <div style={S.field}>
-              <label style={S.label}>Last Name *</label>
-              <input
+              <label style={S.label} htmlFor="userformpage-last_name">Last Name *</label>
+              <input id="userformpage-last_name"
                 type="text" name="last_name" value={form.last_name}
                 disabled={!isEdit && Boolean(form.member_id)}
                 onChange={handleChange} required style={inputStyle}
@@ -317,8 +317,8 @@ export default function UserFormPage() {
           </div>
 
           <div style={{ ...S.field, marginTop: 16 }}>
-            <label style={S.label}>Email Address *</label>
-            <input
+            <label style={S.label} htmlFor="userformpage-email">Email Address *</label>
+            <input id="userformpage-email"
               type="email" name="email" value={form.email}
               onChange={handleChange} required style={inputStyle}
               placeholder="user@plwmmcc.com" onFocus={onFocus} onBlur={onBlur}
@@ -327,9 +327,9 @@ export default function UserFormPage() {
 
           {!isEdit && (
             <div style={{ ...S.field, marginTop: 16 }}>
-              <label style={S.label}>Password *</label>
+              <label style={S.label} htmlFor="userformpage-password">Password *</label>
               <div style={{ position: 'relative' }}>
-                <input
+                <input id="userformpage-password"
                   type={showPassword ? 'text' : 'password'} name="password"
                   value={form.password} onChange={handleChange} required
                   style={{ ...inputStyle, paddingRight: 44 }}
@@ -347,8 +347,8 @@ export default function UserFormPage() {
           )}
 
           <div style={{ ...S.field, marginTop: 16 }}>
-            <label style={S.label}>Role *</label>
-            <select name="role_id" value={form.role_id} onChange={handleChange} required style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
+            <label style={S.label} htmlFor="userformpage-role_id">Role *</label>
+            <select id="userformpage-role_id" name="role_id" value={form.role_id} onChange={handleChange} required style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
               <option value="">— Select Role —</option>
               {roles.map(r => <option key={r.id} value={r.id}>{r.role_name}</option>)}
             </select>
@@ -359,23 +359,23 @@ export default function UserFormPage() {
         {/* ── Member Profile ── */}
         <div style={S.card}>
           <h2 style={S.cardTitle}>Member Profile</h2>
-          <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 20px 0' }}>
+          <p style={{ fontSize: 13, color: 'var(--mcc-secondary, #52647a)', margin: '0 0 20px 0' }}>
             This information appears in the member's personal portal.
           </p>
 
           <fieldset disabled={!isEdit && Boolean(form.member_id)} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <div style={S.row}>
             <div style={S.field}>
-              <label style={S.label}>Phone / Contact No</label>
-              <input
+              <label style={S.label} htmlFor="userformpage-phone">Phone / Contact No</label>
+              <input id="userformpage-phone"
                 type="tel" name="phone" value={form.phone}
                 onChange={handleChange} style={inputStyle}
                 placeholder="+63 9XX XXX XXXX" onFocus={onFocus} onBlur={onBlur}
               />
             </div>
             <div style={S.field}>
-              <label style={S.label}>Gender</label>
-              <select name="gender" value={form.gender} onChange={handleChange} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
+              <label style={S.label} htmlFor="userformpage-gender">Gender</label>
+              <select id="userformpage-gender" name="gender" value={form.gender} onChange={handleChange} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
                 <option value="">— Select —</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -385,16 +385,16 @@ export default function UserFormPage() {
 
           <div style={{ ...S.row, marginTop: 16 }}>
             <div style={S.field}>
-              <label style={S.label}>Birthdate (Flesh Birthday)</label>
-              <input
+              <label style={S.label} htmlFor="userformpage-birthdate">Birthdate (Flesh Birthday)</label>
+              <input id="userformpage-birthdate"
                 type="date" name="birthdate" value={form.birthdate}
                 onChange={handleChange} style={inputStyle}
                 onFocus={onFocus} onBlur={onBlur}
               />
             </div>
             <div style={S.field}>
-              <label style={S.label}>Spiritual Birthday</label>
-              <input
+              <label style={S.label} htmlFor="userformpage-spiritual_birthday">Spiritual Birthday</label>
+              <input id="userformpage-spiritual_birthday"
                 type="date" name="spiritual_birthday" value={form.spiritual_birthday}
                 onChange={handleChange} style={inputStyle}
                 onFocus={onFocus} onBlur={onBlur}
@@ -404,8 +404,8 @@ export default function UserFormPage() {
 
           <div style={{ ...S.row, marginTop: 16 }}>
             <div style={S.field}>
-              <label style={S.label}>Cell Group</label>
-              <select name="cell_group_id" value={form.cell_group_id} onChange={handleChange} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
+              <label style={S.label} htmlFor="userformpage-cell_group_id">Cell Group</label>
+              <select id="userformpage-cell_group_id" name="cell_group_id" value={form.cell_group_id} onChange={handleChange} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
                 <option value="">— None —</option>
                 {cellGroups.map(cg => (
                   <option key={cg.id} value={cg.id}>
@@ -415,8 +415,8 @@ export default function UserFormPage() {
               </select>
             </div>
             <div style={S.field}>
-              <label style={S.label}>Group</label>
-              <select name="group_id" value={form.group_id} onChange={handleChange} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
+              <label style={S.label} htmlFor="userformpage-group_id">Group</label>
+              <select id="userformpage-group_id" name="group_id" value={form.group_id} onChange={handleChange} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
                 <option value="">— None —</option>
                 {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
@@ -426,8 +426,8 @@ export default function UserFormPage() {
           {/* Member ministry sub-role (only for non-leader roles) */}
           {!isMinistryLeader && (
             <div style={{ ...S.field, marginTop: 16 }}>
-              <label style={S.label}>Ministry Role (Team Member)</label>
-              <select
+              <label style={S.label} htmlFor="userformpage-member_ministry_role_id">Ministry Role (Team Member)</label>
+              <select id="userformpage-member_ministry_role_id"
                 name="member_ministry_role_id"
                 value={form.member_ministry_role_id}
                 onChange={handleChange}
@@ -445,8 +445,8 @@ export default function UserFormPage() {
           )}
 
           <div style={{ ...S.field, marginTop: 16 }}>
-            <label style={S.label}>Address</label>
-            <textarea
+            <label style={S.label} htmlFor="userformpage-address">Address</label>
+            <textarea id="userformpage-address"
               name="address" value={form.address}
               onChange={handleChange} rows={3}
               style={{ ...inputStyle, resize: 'vertical', minHeight: 80 }}
@@ -461,7 +461,7 @@ export default function UserFormPage() {
         {showLeaderSection && (
           <div style={S.card}>
             <h2 style={S.cardTitle}>Leader Assignment</h2>
-            <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 20px 0' }}>
+            <p style={{ fontSize: 13, color: 'var(--mcc-secondary, #52647a)', margin: '0 0 20px 0' }}>
               Assign which cell group, group, or ministry this user leads.
             </p>
 
@@ -512,8 +512,8 @@ export default function UserFormPage() {
 
             {isCGLeader && (
               <div style={S.field}>
-                <label style={S.label}>Leads Cell Group</label>
-                <select
+                <label style={S.label} htmlFor="userformpage-leads_cell_group_id">Leads Cell Group</label>
+                <select id="userformpage-leads_cell_group_id"
                   name="leads_cell_group_id" value={form.leads_cell_group_id}
                   onChange={handleChange} style={selectStyle}
                   onFocus={onFocus} onBlur={onBlur}
@@ -531,8 +531,8 @@ export default function UserFormPage() {
 
             {isGroupLeader && (
               <div style={S.field}>
-                <label style={S.label}>Leads Group</label>
-                <select
+                <label style={S.label} htmlFor="userformpage-leads_group_id">Leads Group</label>
+                <select id="userformpage-leads_group_id"
                   name="leads_group_id" value={form.leads_group_id}
                   onChange={handleChange} style={selectStyle}
                   onFocus={onFocus} onBlur={onBlur}
@@ -548,8 +548,8 @@ export default function UserFormPage() {
 
             {isMinistryLeader && (
               <div style={{ ...S.field, marginTop: isCGLeader || isGroupLeader ? 16 : 0 }}>
-                <label style={S.label}>Leads Ministry</label>
-                <select
+                <label style={S.label} htmlFor="userformpage-leads_ministry_id">Leads Ministry</label>
+                <select id="userformpage-leads_ministry_id"
                   name="leads_ministry_id" value={form.leads_ministry_id}
                   onChange={handleChange} style={selectStyle}
                   onFocus={onFocus} onBlur={onBlur}
@@ -603,11 +603,11 @@ const S = {
   page:      { fontFamily: "'Segoe UI',sans-serif", maxWidth: 760, margin: '0 auto' },
   loading:   { padding: '48px', textAlign: 'center', color: '#94a3b8' },
   backBtn:   { background: 'none', border: 'none', color: '#0066b3', fontSize: '14px', cursor: 'pointer', padding: '0 0 8px 0', fontWeight: '500', display: 'block' },
-  title:     { fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0' },
-  subtitle:  { fontSize: '14px', color: '#64748b', margin: '0 0 24px 0' },
+  title:     { fontSize: '24px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 4px 0' },
+  subtitle:  { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', margin: '0 0 24px 0' },
   errorBox:  { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', fontSize: '14px' },
   form:      { display: 'flex', flexDirection: 'column', gap: '24px' },
-  card:      { background: '#fff', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' },
+  card:      { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', padding: '24px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' },
   cardTitle: { fontSize: '15px', fontWeight: '700', color: '#005599', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' },
   row:       { display: 'flex', gap: '16px', flexWrap: 'wrap' },
   field:     { display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 160 },
@@ -615,5 +615,5 @@ const S = {
   hint:      { fontSize: '12px', color: '#94a3b8', margin: '4px 0 0 0' },
   actions:   { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
   cancelBtn: { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  saveBtn:   { background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  saveBtn:   { background: 'linear-gradient(135deg,#005599,#13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
 };

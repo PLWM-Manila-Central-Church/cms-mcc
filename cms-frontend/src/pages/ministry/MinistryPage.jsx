@@ -63,11 +63,11 @@ function ministryPageTitle(name = '') {
   const [tab, setTab] = useState(defaultTab);
 
   return (
-    <div style={{ ...S.page, padding: isMobile ? '16px 12px' : '28px 32px' }}>
+    <div className="mcc-module mcc-module-ministry-page" style={{ ...S.page, padding: 0 }}>
       <div style={S.header}>
         <div>
           {/* CHANGE 1: Dynamic ministry name for ministry leaders */}
-          <h1 style={S.title}>{isMinistryLeader ? ministryPageTitle(ministryName) : 'Ministry'}</h1>
+          <h1 className="workspace-page-title" style={S.title}>{isMinistryLeader ? ministryPageTitle(ministryName) : 'Ministry'}</h1>
           <p style={S.subtitle}>
             {isMinistryLeader
               ? 'Manage your ministry roster and event invites'
@@ -240,12 +240,12 @@ function ScopedRosterTab() {
           autoComplete="off"
           style={S.searchInput}
         />
-        {addLoading && <div style={{ marginTop: 8, fontSize: 13, color: '#64748b' }}>Searching...</div>}
+        {addLoading && <div style={{ marginTop: 8, fontSize: 13, color: 'var(--mcc-secondary, #52647a)' }}>Searching...</div>}
         {addSearch.trim() && !addLoading && addResults.length === 0 && (
           <div style={{ marginTop: 8, fontSize: 13, color: '#94a3b8' }}>No assignable members found.</div>
         )}
         {addResults.length > 0 && (
-          <div style={{ marginTop: 12, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ marginTop: 12, border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 10, overflow: 'hidden' }}>
             {addResults.map((member, index) => (
               <div
                 key={member.id}
@@ -255,13 +255,13 @@ function ScopedRosterTab() {
                   justifyContent: 'space-between',
                   gap: 12,
                   padding: '11px 14px',
-                  background: index % 2 === 0 ? '#fff' : '#f8fafc',
+                  background: index % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc',
                   borderBottom: index < addResults.length - 1 ? '1px solid #f1f5f9' : 'none',
                 }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{member.last_name}, {member.first_name}</div>
-                  <div style={{ fontSize: 12, color: '#64748b' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--mcc-ink, #0f172a)', fontSize: 14 }}>{member.last_name}, {member.first_name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--mcc-secondary, #52647a)' }}>
                     {member.group?.name || 'No group'} - {member.cellGroup?.name || 'No cell group'}
                   </div>
                 </div>
@@ -296,7 +296,7 @@ function ScopedRosterTab() {
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.6fr) minmax(300px, 0.9fr)', gap: 20, alignItems: 'start' }}>
         <div style={S.tableCard}>
           {loading ? (
-            <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color: '#64748b', marginTop: 12 }}>Loading...</span></div>
+            <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color: 'var(--mcc-secondary, #52647a)', marginTop: 12 }}>Loading...</span></div>
           ) : filtered.length === 0 ? (
             <div style={S.centerMsg}>
               <span style={S.emptyTitle}>{search ? 'No matches found' : 'No members in ministry yet'}</span>
@@ -322,7 +322,7 @@ function ScopedRosterTab() {
                       <tr
                         key={member.id}
                         onClick={() => setSelectedId(member.id)}
-                        style={{ ...S.row, cursor: 'pointer', background: active ? '#f0f6ff' : '#fff' }}
+                        style={{ ...S.row, cursor: 'pointer', background: active ? '#f0f6ff' : 'var(--mcc-surface, #fff)' }}
                       >
                         <td style={S.td}>
                           <div style={S.nameCell}>
@@ -360,10 +360,10 @@ function ScopedRosterTab() {
           ) : (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-                <div style={{ ...S.avatar, width: 44, height: 44, borderRadius: 12, fontSize: 16 }}>{fullName(selected)[0]?.toUpperCase() || '?'}</div>
+                <div style={{ ...S.avatar, width: 44, height: 44, borderRadius: 'var(--mcc-radius, 16px)', fontSize: 16 }}>{fullName(selected)[0]?.toUpperCase() || '?'}</div>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>{fullName(selected)}</div>
-                  <div style={{ fontSize: 13, color: '#64748b' }}>{selected.phone || 'No contact number'}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--mcc-ink, #0f172a)' }}>{fullName(selected)}</div>
+                  <div style={{ fontSize: 13, color: 'var(--mcc-secondary, #52647a)' }}>{selected.phone || 'No contact number'}</div>
                 </div>
               </div>
 
@@ -375,9 +375,9 @@ function ScopedRosterTab() {
                 <ProfileLine label="Contact No." value={selected.phone || '-'} />
               </div>
 
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
+              <div style={{ borderTop: '1px solid var(--mcc-border, #e2e8f0)', paddingTop: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>Attendance</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--mcc-ink, #0f172a)' }}>Attendance</div>
                   <span style={S.countBadge}>{selectedAttendance.length} recorded</span>
                 </div>
                 {recentAttendance.length === 0 ? (
@@ -386,8 +386,8 @@ function ScopedRosterTab() {
                   <div style={{ display: 'grid', gap: 8 }}>
                     {recentAttendance.map(record => (
                       <div key={record.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '9px 10px', background: '#f8fafc', borderRadius: 8 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{record.Service?.title || 'Service'}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{record.checked_in_at ? fmtDate(record.checked_in_at) : '-'}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--mcc-ink, #0f172a)' }}>{record.Service?.title || 'Service'}</div>
+                        <div style={{ fontSize: 12, color: 'var(--mcc-secondary, #52647a)' }}>{record.checked_in_at ? fmtDate(record.checked_in_at) : '-'}</div>
                       </div>
                     ))}
                   </div>
@@ -404,8 +404,8 @@ function ScopedRosterTab() {
 function ProfileLine({ label, value }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13 }}>
-      <span style={{ color: '#64748b', fontWeight: 600 }}>{label}</span>
-      <span style={{ color: '#0f172a', fontWeight: 700, textAlign: 'right' }}>{value}</span>
+      <span style={{ color: 'var(--mcc-secondary, #52647a)', fontWeight: 600 }}>{label}</span>
+      <span style={{ color: 'var(--mcc-ink, #0f172a)', fontWeight: 700, textAlign: 'right' }}>{value}</span>
     </div>
   );
 }
@@ -559,7 +559,7 @@ function RosterTab({ leadsMinistryId }) {
         </div>
         <div ref={dropRef} style={{ position: 'relative' }}>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.45, pointerEvents: 'none', color: '#64748b', display: 'inline-flex' }}><MonoIcon name="search" size={15} /></span>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.45, pointerEvents: 'none', color: 'var(--mcc-secondary, #52647a)', display: 'inline-flex' }}><MonoIcon name="search" size={15} /></span>
             <input
               ref={addInputRef}
               value={addSearch}
@@ -571,7 +571,7 @@ function RosterTab({ leadsMinistryId }) {
                 width: '100%', boxSizing: 'border-box',
                 padding: '10px 36px 10px 36px', fontSize: '14px',
                 border: '1.5px solid #e2e8f0', borderRadius: '10px',
-                outline: 'none', color: '#0f172a', background: '#fafbfc',
+                outline: 'none', color: 'var(--mcc-ink, #0f172a)', background: '#fafbfc',
                 transition: 'border-color 0.15s',
               }}
               onFocusCapture={e => { e.target.style.borderColor = '#005599'; }}
@@ -585,7 +585,7 @@ function RosterTab({ leadsMinistryId }) {
             )}
           </div>
           {addDropOpen && addResults.length > 0 && (
-            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 50, overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 50, overflow: 'hidden' }}>
               <div style={{ padding: '8px 14px 6px', fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9' }}>
                 {addResults.length} result{addResults.length !== 1 ? 's' : ''}
               </div>
@@ -595,18 +595,18 @@ function RosterTab({ leadsMinistryId }) {
                   onMouseDown={e => { e.preventDefault(); if (!adding) handleAdd(m); }}
                   style={{ padding: '11px 14px', cursor: adding ? 'not-allowed' : 'pointer', fontSize: '14px', borderBottom: '1px solid #f8faff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: adding ? 0.6 : 1 }}
                   onMouseEnter={e => { if (!adding) e.currentTarget.style.background = '#f0f6ff'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--mcc-surface, #fff)'; }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '7px', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '7px', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: 'var(--mcc-surface, #fff)', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {(m.first_name?.[0] || '?').toUpperCase()}
                     </div>
                     <div>
-                      <div style={{ fontWeight: '600', color: '#0f172a' }}>{m.last_name}, {m.first_name}</div>
-                      {m.cellGroup?.name && <div style={{ fontSize: '12px', color: '#64748b' }}>{m.cellGroup.name}</div>}
+                      <div style={{ fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' }}>{m.last_name}, {m.first_name}</div>
+                      {m.cellGroup?.name && <div style={{ fontSize: '12px', color: 'var(--mcc-secondary, #52647a)' }}>{m.cellGroup.name}</div>}
                     </div>
                   </div>
-                  <span style={{ fontSize: '11px', color: '#fff', fontWeight: '700', background: 'linear-gradient(135deg,#003d70,#005599)', padding: '3px 10px', borderRadius: '20px' }}>+ Add</span>
+                  <span style={{ fontSize: '11px', color: 'var(--mcc-surface, #fff)', fontWeight: '700', background: 'linear-gradient(135deg,#003d70,#005599)', padding: '3px 10px', borderRadius: '20px' }}>+ Add</span>
                 </div>
               ))}
             </div>
@@ -632,7 +632,7 @@ function RosterTab({ leadsMinistryId }) {
             <select 
               value={filterCellGroup} 
               onChange={e => setFilterCellGroup(e.target.value)}
-              style={{ padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', outline: 'none', color: '#0f172a', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', outline: 'none', color: 'var(--mcc-ink, #0f172a)', background: 'var(--mcc-surface, #fff)', cursor: 'pointer', fontFamily: 'inherit' }}
             >
               <option value="">All Cell Groups</option>
               {uniqueCellGroups.map(cg => <option key={cg} value={cg}>{cg}</option>)}
@@ -643,7 +643,7 @@ function RosterTab({ leadsMinistryId }) {
             <select 
               value={filterGroup} 
               onChange={e => setFilterGroup(e.target.value)}
-              style={{ padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', outline: 'none', color: '#0f172a', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', outline: 'none', color: 'var(--mcc-ink, #0f172a)', background: 'var(--mcc-surface, #fff)', cursor: 'pointer', fontFamily: 'inherit' }}
             >
               <option value="">All Groups</option>
               {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
@@ -656,7 +656,7 @@ function RosterTab({ leadsMinistryId }) {
         {selected.size > 0 && (
           <button
             onClick={() => setConfirmBulk(true)}
-            style={{ background: 'linear-gradient(135deg,#dc2626,#ef4444)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+            style={{ background: 'linear-gradient(135deg,#dc2626,#ef4444)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
           >
             <MonoIcon name="delete" size={15} /> Remove {selected.size} selected
           </button>
@@ -694,7 +694,7 @@ function RosterTab({ leadsMinistryId }) {
       {/* ── Members Table ─────────────────────────────────────── */}
       <div style={S.tableCard}>
         {loading ? (
-          <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color: '#64748b', marginTop: '12px' }}>Loading…</span></div>
+          <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color: 'var(--mcc-secondary, #52647a)', marginTop: '12px' }}>Loading…</span></div>
         ) : filtered.length === 0 ? (
           <div style={S.centerMsg}>
             <span style={S.emptyIcon}><MonoIcon name="members" size={36} /></span>
@@ -736,7 +736,7 @@ function RosterTab({ leadsMinistryId }) {
                   return (
                     <tr
                       key={row.id}
-                      style={{ ...S.row, background: isChecked ? '#f0f6ff' : '#fff' }}
+                      style={{ ...S.row, background: isChecked ? '#f0f6ff' : 'var(--mcc-surface, #fff)' }}
                     >
                       <td style={{ ...S.td, textAlign: 'center', width: '40px' }}>
                         <input
@@ -755,10 +755,10 @@ function RosterTab({ leadsMinistryId }) {
                           <span style={S.nameTxt}>{name}</span>
                         </div>
                       </td>
-                      <td style={{ ...S.td, color: '#64748b' }}>{m.cellGroup?.name || '—'}</td>
-                      <td style={{ ...S.td, color: '#64748b' }}>{m.group?.name || '—'}</td>
-                      <td style={{ ...S.td, color: '#64748b' }}>{sbd}</td>
-                      <td style={{ ...S.td, color: '#64748b' }}>{m.phone || '—'}</td>
+                      <td style={{ ...S.td, color: 'var(--mcc-secondary, #52647a)' }}>{m.cellGroup?.name || '—'}</td>
+                      <td style={{ ...S.td, color: 'var(--mcc-secondary, #52647a)' }}>{m.group?.name || '—'}</td>
+                      <td style={{ ...S.td, color: 'var(--mcc-secondary, #52647a)' }}>{sbd}</td>
+                      <td style={{ ...S.td, color: 'var(--mcc-secondary, #52647a)' }}>{m.phone || '—'}</td>
                       <td style={{ ...S.td, textAlign: 'right' }}>
                         <button
                           style={{ ...S.editBtn, marginRight: '6px' }}
@@ -879,7 +879,7 @@ function AssignmentsTab() {
       {error && <div style={S.errBanner}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><MonoIcon name="warning" size={15} /> {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
       <div style={S.tableCard}>
         {loading ? (
-          <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color:'#64748b', marginTop:'12px' }}>Loading…</span></div>
+          <div style={S.centerMsg}><div style={S.spinner} /><span style={{ color:'var(--mcc-secondary, #52647a)', marginTop:'12px' }}>Loading…</span></div>
         ) : filtered.length === 0 ? (
           <div style={S.centerMsg}><span style={S.emptyIcon}><MonoIcon name="clipboard" size={36} /></span><span style={S.emptyTitle}>{search ? 'No matches found' : 'No assignments yet'}</span><span style={S.emptyHint}>{search ? `No results for "${search}"` : 'Click "+ New Assignment" to get started.'}</span></div>
         ) : (
@@ -1068,35 +1068,35 @@ function RolesTab() {
 const S = {
   page:       { padding:'28px 32px', fontFamily:"'Inter',-apple-system,sans-serif" },
   header:     { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px' },
-  title:      { fontSize:'24px', fontWeight:'800', color:'#0f172a', margin:'0 0 4px', letterSpacing:'-0.3px' },
-  subtitle:   { fontSize:'14px', color:'#64748b', margin:0 },
+  title:      { fontSize:'24px', fontWeight:'800', color:'var(--mcc-ink, #0f172a)', margin:'0 0 4px', letterSpacing:'-0.3px' },
+  subtitle:   { fontSize:'14px', color:'var(--mcc-secondary, #52647a)', margin:0 },
   tabs:       { display:'flex', gap:'4px', marginBottom:'24px', background:'#f1f5f9', padding:'4px', borderRadius:'10px', width:'fit-content', flexWrap:'wrap' },
-  tab:        { background:'transparent', border:'none', borderRadius:'8px', padding:'8px 20px', fontSize:'13px', fontWeight:'600', color:'#64748b', cursor:'pointer', transition:'all 0.15s' },
-  tabActive:  { background:'#fff', color:'#005599', boxShadow:'0 1px 4px rgba(0,0,0,0.1)' },
+  tab:        { background:'transparent', border:'none', borderRadius:'8px', padding:'8px 20px', fontSize:'13px', fontWeight:'600', color:'var(--mcc-secondary, #52647a)', cursor:'pointer', transition:'all 0.15s' },
+  tabActive:  { background:'var(--mcc-surface, #fff)', color:'#005599', boxShadow:'0 1px 4px rgba(0,0,0,0.1)' },
   toolbar:    { display:'flex', alignItems:'center', gap:'12px', marginBottom:'20px', flexWrap:'wrap' },
   searchWrap: { position:'relative', flex:1, minWidth: 0 },
-  searchIcon: { position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', opacity:0.45, pointerEvents:'none', display:'inline-flex', color:'#64748b' },
-  searchInput:{ width:'100%', padding:'10px 36px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'14px', outline:'none', boxSizing:'border-box', background:'#fff', color:'#0f172a' },
+  searchIcon: { position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', opacity:0.45, pointerEvents:'none', display:'inline-flex', color:'var(--mcc-secondary, #52647a)' },
+  searchInput:{ width:'100%', padding:'10px 36px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'14px', outline:'none', boxSizing:'border-box', background:'var(--mcc-surface, #fff)', color:'var(--mcc-ink, #0f172a)' },
   clearBtn:   { position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#94a3b8', padding:'2px 4px', display:'inline-flex', alignItems:'center', justifyContent:'center' },
-  countBadge: { fontSize:'13px', color:'#64748b', fontWeight:'600', background:'#f1f5f9', padding:'6px 14px', borderRadius:'20px' },
-  addBtn:     { background:'linear-gradient(135deg,#003d70,#005599)', color:'#fff', border:'none', borderRadius:'10px', padding:'11px 20px', fontSize:'14px', fontWeight:'700', cursor:'pointer', whiteSpace:'nowrap' },
+  countBadge: { fontSize:'13px', color:'var(--mcc-secondary, #52647a)', fontWeight:'600', background:'#f1f5f9', padding:'6px 14px', borderRadius:'20px' },
+  addBtn:     { background:'linear-gradient(135deg,#003d70,#005599)', color:'var(--mcc-surface, #fff)', border:'none', borderRadius:'10px', padding:'11px 20px', fontSize:'14px', fontWeight:'700', cursor:'pointer', whiteSpace:'nowrap' },
   errBanner:  { background:'#fef2f2', border:'1px solid #fecaca', color:'#dc2626', borderRadius:'10px', padding:'12px 16px', fontSize:'13px', marginBottom:'16px', display:'flex', justifyContent:'space-between', alignItems:'center' },
   retryBtn:   { background:'none', border:'1px solid #dc2626', borderRadius:'6px', color:'#dc2626', fontSize:'12px', fontWeight:'600', cursor:'pointer', padding:'4px 10px' },
-  tableCard:  { background:'#fff', borderRadius:'16px', border:'1px solid #e8f0fe', overflow:'hidden', boxShadow:'0 2px 12px rgba(0,85,153,0.06)' },
+  tableCard:  { background:'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', border:'1px solid #e8f0fe', overflow:'hidden', boxShadow:'0 2px 12px rgba(0,85,153,0.06)' },
   tableScroll:{ overflowX:'auto', WebkitOverflowScrolling:'touch' },
   table:      { width:'100%', borderCollapse:'collapse' },
   thead:      { background:'linear-gradient(90deg,#f8faff,#f0f6ff)' },
-  th:         { padding:'13px 16px', fontSize:'11px', fontWeight:'700', color:'#64748b', textAlign:'left', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #e8f0fe' },
+  th:         { padding:'13px 16px', fontSize:'11px', fontWeight:'700', color:'var(--mcc-secondary, #52647a)', textAlign:'left', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #e8f0fe' },
   row:        { borderBottom:'1px solid #f1f5f9' },
-  td:         { padding:'14px 16px', fontSize:'14px', color:'#1e293b', background:'#fff', transition:'background 0.15s' },
+  td:         { padding:'14px 16px', fontSize:'14px', color:'#1e293b', background:'var(--mcc-surface, #fff)', transition:'background 0.15s' },
   nameCell:   { display:'flex', alignItems:'center', gap:'10px' },
-  avatar:     { width:'32px', height:'32px', borderRadius:'8px', background:'linear-gradient(135deg,#005599,#13B5EA)', color:'#fff', fontSize:'13px', fontWeight:'800', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
-  nameTxt:    { fontWeight:'600', color:'#0f172a' },
+  avatar:     { width:'32px', height:'32px', borderRadius:'8px', background:'linear-gradient(135deg,#005599,#13B5EA)', color:'var(--mcc-surface, #fff)', fontSize:'13px', fontWeight:'800', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
+  nameTxt:    { fontWeight:'600', color:'var(--mcc-ink, #0f172a)' },
   rolePill:   { background:'#f5f3ff', color:'#7c3aed', fontSize:'12px', fontWeight:'600', padding:'3px 10px', borderRadius:'20px' },
   statusCol:  { display:'flex', flexDirection:'column', gap:'4px' },
   pill:       { fontSize:'11px', fontWeight:'700', padding:'2px 8px', borderRadius:'20px', display:'inline-block' },
   pillGreen:  { background:'#f0fdf4', color:'#16a34a' },
-  pillGray:   { background:'#f1f5f9', color:'#64748b' },
+  pillGray:   { background:'#f1f5f9', color:'var(--mcc-secondary, #52647a)' },
   pillOrange: { background:'#fffbeb', color:'#d97706' },
   editBtn:    { background:'#e8f4fd', color:'#005599', border:'none', borderRadius:'7px', padding:'6px 14px', fontSize:'12px', fontWeight:'700', cursor:'pointer', marginRight:'6px' },
   deleteBtn:  { background:'#fef2f2', color:'#ef4444', border:'none', borderRadius:'7px', padding:'6px 14px', fontSize:'12px', fontWeight:'700', cursor:'pointer' },
@@ -1106,20 +1106,20 @@ const S = {
   emptyTitle: { fontSize:'16px', fontWeight:'700', color:'#374151' },
   emptyHint:  { fontSize:'13px', color:'#94a3b8' },
   backdrop:   { position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:'24px' },
-  modalBox:   { background:'#fff', borderRadius:'20px', width:'100%', maxWidth:'520px', overflow:'hidden', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' },
+  modalBox:   { background:'var(--mcc-surface, #fff)', borderRadius:'20px', width:'100%', maxWidth:'520px', overflow:'hidden', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' },
   modalAccent:{ height:'5px', background:'linear-gradient(90deg,#003d70,#005599,#13B5EA)' },
   modalBody:  { padding:'32px 36px 28px' },
-  modalTitle: { fontSize:'20px', fontWeight:'800', color:'#0f172a', margin:'0 0 6px', letterSpacing:'-0.2px' },
-  modalSub:   { fontSize:'13px', color:'#64748b', margin:'0 0 24px', lineHeight:'1.5' },
+  modalTitle: { fontSize:'20px', fontWeight:'800', color:'var(--mcc-ink, #0f172a)', margin:'0 0 6px', letterSpacing:'-0.2px' },
+  modalSub:   { fontSize:'13px', color:'var(--mcc-secondary, #52647a)', margin:'0 0 24px', lineHeight:'1.5' },
   formErr:    { background:'#fef2f2', border:'1px solid #fecaca', color:'#dc2626', borderRadius:'8px', padding:'10px 14px', fontSize:'13px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'6px' },
   fieldGroup: { display:'flex', flexDirection:'column', gap:'6px', marginBottom:'20px' },
   label:      { fontSize:'12px', fontWeight:'700', color:'#374151', textTransform:'uppercase', letterSpacing:'0.4px' },
-  input:      { padding:'11px 14px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'14px', outline:'none', color:'#0f172a', background:'#fafbfc' },
-  select:     { padding:'11px 14px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'14px', outline:'none', color:'#0f172a', background:'#fafbfc', cursor:'pointer' },
+  input:      { padding:'11px 14px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'14px', outline:'none', color:'var(--mcc-ink, #0f172a)', background:'#fafbfc' },
+  select:     { padding:'11px 14px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'14px', outline:'none', color:'var(--mcc-ink, #0f172a)', background:'#fafbfc', cursor:'pointer' },
   checkLabel: { display:'flex', alignItems:'center', fontSize:'14px', color:'#374151', fontWeight:'500', cursor:'pointer', marginBottom:'20px' },
   modalActions:{ display:'flex', justifyContent:'flex-end', gap:'10px', marginTop:'8px' },
   cancelBtn:  { background:'#f1f5f9', color:'#374151', border:'none', borderRadius:'10px', padding:'11px 20px', fontSize:'14px', fontWeight:'600', cursor:'pointer' },
-  saveBtn:    { background:'linear-gradient(135deg,#003d70,#005599)', color:'#fff', border:'none', borderRadius:'10px', padding:'11px 22px', fontSize:'14px', fontWeight:'700', cursor:'pointer' },
+  saveBtn:    { background:'linear-gradient(135deg,#003d70,#005599)', color:'var(--mcc-surface, #fff)', border:'none', borderRadius:'10px', padding:'11px 22px', fontSize:'14px', fontWeight:'700', cursor:'pointer' },
   loadRow:    { display:'flex', alignItems:'center', gap:'8px' },
   miniSpinner:{ display:'inline-block', width:'14px', height:'14px', border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid #fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' },
   delIcon:    { fontSize:'36px', marginBottom:'12px', display:'inline-flex', color:'#ef4444' },

@@ -252,7 +252,7 @@ export default function CellGroupsPage() {
       <div style={{ ...S.page, padding: isMobile ? '16px 12px' : '32px' }}>
         <div style={S.pageHeader}>
           <div>
-            <h1 style={S.pageTitle}>{cgTitle}</h1>
+            <h1 className="workspace-page-title" style={S.pageTitle}>{cgTitle}</h1>
             <p style={S.pageSubtitle}>Manage your assigned cell group roster</p>
           </div>
           <div style={S.statCard}>
@@ -273,12 +273,12 @@ export default function CellGroupsPage() {
               style={{ ...S.search, paddingLeft: 14 }}
             />
           </div>
-          {assignLoading && <div style={{ marginTop: 8, fontSize: 13, color: '#64748b' }}>Searching...</div>}
+          {assignLoading && <div style={{ marginTop: 8, fontSize: 13, color: 'var(--mcc-secondary, #52647a)' }}>Searching...</div>}
           {assignSearch.trim() && !assignLoading && assignResults.length === 0 && (
             <div style={{ marginTop: 8, fontSize: 13, color: '#94a3b8' }}>No assignable members found.</div>
           )}
           {assignResults.length > 0 && (
-            <div style={{ marginTop: 12, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ marginTop: 12, border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 10, overflow: 'hidden' }}>
               {assignResults.map((m, i) => (
                 <div
                   key={m.id}
@@ -288,13 +288,13 @@ export default function CellGroupsPage() {
                     justifyContent: 'space-between',
                     gap: 12,
                     padding: '11px 14px',
-                    background: i % 2 === 0 ? '#fff' : '#f8fafc',
+                    background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc',
                     borderBottom: i < assignResults.length - 1 ? '1px solid #f1f5f9' : 'none',
                   }}
                 >
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{m.last_name}, {m.first_name}</div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>{m.group?.name || 'No group'} {m.phone ? `- ${m.phone}` : ''}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--mcc-ink, #0f172a)', fontSize: 14 }}>{m.last_name}, {m.first_name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--mcc-secondary, #52647a)' }}>{m.group?.name || 'No group'} {m.phone ? `- ${m.phone}` : ''}</div>
                   </div>
                   <button
                     onClick={() => handleAssignMember(m)}
@@ -342,7 +342,7 @@ export default function CellGroupsPage() {
                 ) : filteredMembers.map(m => (
                   <tr key={m.id} style={S.tr}>
                     <td style={S.td}>
-                      <strong style={{ color: '#0f172a' }}>{m.last_name}, {m.first_name}</strong>
+                      <strong style={{ color: 'var(--mcc-ink, #0f172a)' }}>{m.last_name}, {m.first_name}</strong>
                     </td>
                     <td style={S.td}>{m.email || '-'}</td>
                     <td style={S.td}>{m.phone || '-'}</td>
@@ -387,7 +387,7 @@ export default function CellGroupsPage() {
       {/* ── Header ── */}
       <div style={S.pageHeader}>
         <div>
-          <h1 style={S.pageTitle}>Cell Groups</h1>
+          <h1 className="workspace-page-title" style={S.pageTitle}>Cell Groups</h1>
           <p style={S.pageSubtitle}>Manage church cell groups and their areas</p>
         </div>
         {canCreate && (
@@ -452,7 +452,7 @@ export default function CellGroupsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.map((g) => (
             <div key={g.id} style={{
-              background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14,
+              background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)',
               padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
             }}>
               {/* Top row: avatar + name + member count badge */}
@@ -461,7 +461,7 @@ export default function CellGroupsPage() {
                   {g.name?.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--mcc-ink, #0f172a)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {g.name}
                   </div>
                   {g.area
@@ -542,11 +542,11 @@ export default function CellGroupsPage() {
       {/* ── Add / Edit Modal ── */}
       {isCellGroupLeader && (
         <div style={{ ...S.tableWrap, marginTop: 24 }}>
-          <div style={{ padding: isMobile ? '16px' : '20px 24px', borderBottom: '1px solid #e2e8f0' }}>
+          <div style={{ padding: isMobile ? '16px' : '20px 24px', borderBottom: '1px solid var(--mcc-border, #e2e8f0)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: 18, color: '#0f172a' }}>My Cell Group Members</h2>
-                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>
+                <h2 style={{ margin: 0, fontSize: 18, color: 'var(--mcc-ink, #0f172a)' }}>My Cell Group Members</h2>
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--mcc-secondary, #52647a)' }}>
                   {filteredMembers.length} of {members.length} members
                 </p>
               </div>
@@ -577,7 +577,7 @@ export default function CellGroupsPage() {
                 ) : filteredMembers.map(m => (
                   <tr key={m.id} style={S.tr}>
                     <td style={S.td}>
-                      <strong style={{ color: '#0f172a' }}>{m.last_name}, {m.first_name}</strong>
+                      <strong style={{ color: 'var(--mcc-ink, #0f172a)' }}>{m.last_name}, {m.first_name}</strong>
                     </td>
                     <td style={S.td}>{m.email || '-'}</td>
                     <td style={S.td}>{m.phone || '-'}</td>
@@ -709,37 +709,37 @@ const S = {
   page:        { padding: '32px', fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" },
 
   pageHeader:  { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
-  pageTitle:   { fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px' },
-  pageSubtitle:{ fontSize: '14px', color: '#64748b', margin: 0 },
+  pageTitle:   { fontSize: '26px', fontWeight: '800', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 4px', letterSpacing: '-0.3px' },
+  pageSubtitle:{ fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', margin: 0 },
 
-  addBtn:      { background: 'linear-gradient(135deg,#003d70,#005599,#13B5EA)', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 20px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '0.2px' },
+  addBtn:      { background: 'linear-gradient(135deg,#003d70,#005599,#13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '10px', padding: '11px 20px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '0.2px' },
 
   statsRow:    { display: 'flex', gap: '16px', marginBottom: '24px' },
-  statCard:    { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '120px' },
+  statCard:    { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '120px' },
   statNum:     { fontSize: '28px', fontWeight: '800', color: '#005599', lineHeight: 1 },
-  statLabel:   { fontSize: '12px', color: '#64748b', fontWeight: '600', letterSpacing: '0.4px', textTransform: 'uppercase' },
+  statLabel:   { fontSize: '12px', color: 'var(--mcc-secondary, #52647a)', fontWeight: '600', letterSpacing: '0.4px', textTransform: 'uppercase' },
 
   toolbar:     { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' },
   searchIcon:  { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', opacity: 0.5, pointerEvents: 'none' },
-  search:      { padding: '10px 36px 10px 36px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', outline: 'none', width: '100%', minWidth: 0, color: '#0f172a', background: '#fafbfc' },
+  search:      { padding: '10px 36px 10px 36px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', outline: 'none', width: '100%', minWidth: 0, color: 'var(--mcc-ink, #0f172a)', background: '#fafbfc' },
   clearSearch: { position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '12px', cursor: 'pointer', color: '#94a3b8', padding: '2px 4px' },
   resultCount: { fontSize: '13px', color: '#94a3b8', whiteSpace: 'nowrap' },
 
-  tableWrap:   { background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' },
+  tableWrap:   { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', border: '1px solid var(--mcc-border, #e2e8f0)', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' },
   tableScroll: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table:       { width: '100%', borderCollapse: 'collapse' },
-  th:          { padding: '14px 20px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', letterSpacing: '0.6px', textTransform: 'uppercase', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
+  th:          { padding: '14px 20px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--mcc-secondary, #52647a)', letterSpacing: '0.6px', textTransform: 'uppercase', background: '#f8fafc', borderBottom: '1px solid var(--mcc-border, #e2e8f0)' },
   tr:          { borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' },
   td:          { padding: '16px 20px', fontSize: '14px', color: '#374151', verticalAlign: 'middle' },
   centerCell:  { padding: '42px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
 
   rowNum:      { fontSize: '12px', color: '#94a3b8', fontWeight: '600' },
   groupNameRow:{ display: 'flex', alignItems: 'center', gap: '12px' },
-  groupAvatar: { width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', flexShrink: 0 },
-  groupName:   { fontWeight: '600', color: '#0f172a' },
+  groupAvatar: { width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: 'var(--mcc-surface, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', flexShrink: 0 },
+  groupName:   { fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' },
   areaBadge:   { background: '#e8f4fd', color: '#005599', borderRadius: '6px', padding: '3px 10px', fontSize: '12px', fontWeight: '600' },
   noArea:      { color: '#cbd5e1', fontSize: '13px' },
-  dateText:    { fontSize: '13px', color: '#64748b' },
+  dateText:    { fontSize: '13px', color: 'var(--mcc-secondary, #52647a)' },
 
   actionsRow:  { display: 'flex', gap: '8px', justifyContent: 'flex-end' },
   editBtn:     { background: '#e8f4fd', color: '#005599', border: 'none', borderRadius: '7px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
@@ -753,9 +753,9 @@ const S = {
 
   // Modal
   overlay:     { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
-  modal:       { background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '480px', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', animation: 'slideIn 0.2s ease both', overflow: 'hidden' },
+  modal:       { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', width: '100%', maxWidth: '480px', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', animation: 'slideIn 0.2s ease both', overflow: 'hidden' },
   modalHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px 0' },
-  modalTitle:  { fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 },
+  modalTitle:  { fontSize: '18px', fontWeight: '800', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
   closeBtn:    { background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#94a3b8', padding: '4px', lineHeight: 1 },
   modalForm:   { padding: '24px 28px 0' },
   modalFooter: { display: 'flex', gap: '12px', justifyContent: 'flex-end', padding: '20px 28px 24px', borderTop: '1px solid #f1f5f9', marginTop: '24px' },
@@ -763,10 +763,10 @@ const S = {
   field:       { display: 'flex', flexDirection: 'column', gap: '7px', marginBottom: '18px' },
   label:       { fontSize: '12px', fontWeight: '700', color: '#374151', letterSpacing: '0.4px', textTransform: 'uppercase' },
   optional:    { fontSize: '11px', color: '#94a3b8', fontWeight: '400', textTransform: 'none', letterSpacing: 0 },
-  input:       { padding: '12px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', outline: 'none', color: '#0f172a', background: '#fafbfc', width: '100%', boxSizing: 'border-box', transition: 'border-color 0.2s' },
+  input:       { padding: '12px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', outline: 'none', color: 'var(--mcc-ink, #0f172a)', background: '#fafbfc', width: '100%', boxSizing: 'border-box', transition: 'border-color 0.2s' },
 
   cancelBtn:   { background: '#f1f5f9', color: '#374151', border: 'none', borderRadius: '9px', padding: '11px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  saveBtn:     { background: 'linear-gradient(135deg,#003d70,#005599)', color: '#fff', border: 'none', borderRadius: '9px', padding: '11px 22px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
+  saveBtn:     { background: 'linear-gradient(135deg,#003d70,#005599)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '9px', padding: '11px 22px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
   btnSpinner:  { display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' },
 
   errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', margin: '0 28px', marginTop: '12px' },
@@ -774,8 +774,8 @@ const S = {
   // Delete modal
   delBody:     { padding: '20px 28px', textAlign: 'center' },
   delIcon:     { fontSize: '36px', marginBottom: '12px' },
-  delText:     { fontSize: '15px', color: '#0f172a', margin: '0 0 8px', lineHeight: '1.5' },
+  delText:     { fontSize: '15px', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 8px', lineHeight: '1.5' },
   delHint:     { fontSize: '13px', color: '#94a3b8', margin: '0 0 16px' },
 
-  toast:       { position: 'fixed', bottom: 'calc(68px + env(safe-area-inset-bottom, 0px) + 8px)', right: '16px', color: '#fff', borderRadius: '10px', padding: '13px 20px', fontSize: '14px', fontWeight: '600', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.2)', animation: 'slideIn 0.25s ease both', display: 'flex', alignItems: 'center', gap: '8px' },
+  toast:       { position: 'fixed', bottom: 'calc(68px + env(safe-area-inset-bottom, 0px) + 8px)', right: '16px', color: 'var(--mcc-surface, #fff)', borderRadius: '10px', padding: '13px 20px', fontSize: '14px', fontWeight: '600', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.2)', animation: 'slideIn 0.25s ease both', display: 'flex', alignItems: 'center', gap: '8px' },
 };

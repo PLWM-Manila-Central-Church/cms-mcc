@@ -560,9 +560,9 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
     finally { setBusy(false); }
   };
 
-  if (loading && !availability) return <div className="qr-workspace"><div className="qr-workspace-card" role="status">Loading QR attendance…</div></div>;
+  if (loading && !availability) return <div className="qr-workspace mcc-module mcc-module-qr"><div className="qr-workspace-card" role="status">Loading QR attendance…</div></div>;
   if (availability && !availability.enabled) return (
-    <div className="qr-workspace"><div className="qr-workspace-card">
+    <div className="qr-workspace mcc-module mcc-module-qr"><div className="qr-workspace-card">
       <h1>{title}</h1>
       <div className="qr-muted-box" role="status">
         {availability.reason === 'disabled' ? 'QR attendance is switched off in Admin Settings.' : 'QR attendance schema is not ready. Ask an administrator to verify the database migration before opening sessions.'}
@@ -576,7 +576,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
   const sessionTarget = session?.target || {};
 
   return (
-    <div className="qr-workspace">
+    <div className="qr-workspace mcc-module mcc-module-qr">
       <div className="qr-workspace-card">
         <div className="qr-workspace-header">
           <div>

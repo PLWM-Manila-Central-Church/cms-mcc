@@ -20,6 +20,7 @@ export default function ForceChangePassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     if (form.new_password !== form.confirm_password) {
       setError('Passwords do not match.');
       return;
@@ -37,22 +38,24 @@ export default function ForceChangePassword() {
   };
 
   return (
-    <div style={styles.page}>
+    <div className="mcc-auth" style={styles.page}>
       <div style={styles.card}>
-        <div style={styles.iconWrap}><MonoIcon name="lock" size={30} /></div>
+        <img src="/logo.jpg" alt="PLWM-MCC" style={{ width: 44, height: 44, borderRadius: '50%', marginBottom: 16 }} />
         <h2 style={styles.title}>Change Your Password</h2>
         <p style={styles.subtitle}>
           You must set a new password before continuing.
         </p>
 
-        {error && <div style={styles.errorBox}>{error}</div>}
+        {error && <div id="password-error" role="alert" style={styles.errorBox}>{error}</div>}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
+        <form onSubmit={handleSubmit} style={styles.form} aria-busy={loading} aria-describedby={error ? 'password-error' : undefined}>
           <div style={styles.field}>
-            <label style={styles.label}>Current Password</label>
+            <label htmlFor="current-password" style={styles.label}>Current Password</label>
             <input
               type="password"
               name="current_password"
+              id="current-password"
+              autoComplete="current-password"
               value={form.current_password}
               onChange={handleChange}
               placeholder="••••••••"
@@ -64,10 +67,13 @@ export default function ForceChangePassword() {
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>New Password</label>
+            <label htmlFor="new-password" style={styles.label}>New Password</label>
             <input
               type="password"
               name="new_password"
+              id="new-password"
+              autoComplete="new-password"
+              minLength={8}
               value={form.new_password}
               onChange={handleChange}
               placeholder="Min. 8 characters"
@@ -79,10 +85,13 @@ export default function ForceChangePassword() {
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Confirm New Password</label>
+            <label htmlFor="confirm-password" style={styles.label}>Confirm New Password</label>
             <input
               type="password"
               name="confirm_password"
+              id="confirm-password"
+              autoComplete="new-password"
+              minLength={8}
               value={form.confirm_password}
               onChange={handleChange}
               placeholder="••••••••"
@@ -110,15 +119,6 @@ export default function ForceChangePassword() {
           </button>
         </form>
       </div>
-      <style>{`
-        @media (max-width: 480px) {
-          [style*="maxWidth: '480px'"], [style*="maxWidth: '440px'"], [style*="maxWidth: '420px'"] {
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 16px !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
@@ -126,16 +126,17 @@ export default function ForceChangePassword() {
 const styles = {
   page: {
     minHeight: '100vh',
-    background: '#f8fafc',
+    background: 'var(--mcc-canvas)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "'Inter', 'Segoe UI', sans-serif",
     padding: '24px'
   },
   card: {
-    background: '#ffffff',
-    borderRadius: '16px',
+    background: 'var(--mcc-surface, #fff)',
+    border: '1px solid var(--mcc-border, #e2e8f0)',
+    borderRadius: 'var(--mcc-radius, 16px)',
     padding: 'clamp(24px, 5vw, 48px)',
     width: '100%',
     maxWidth: '420px',
@@ -149,12 +150,12 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: '700',
-    color: '#0f172a',
+    color: 'var(--mcc-ink, #0f172a)',
     margin: '0 0 8px 0'
   },
   subtitle: {
     fontSize: '14px',
-    color: '#64748b',
+    color: 'var(--mcc-secondary, #52647a)',
     margin: '0 0 32px 0',
     lineHeight: '1.6'
   },
@@ -193,12 +194,12 @@ const styles = {
     transition: 'border-color 0.2s',
     width: '100%',
     boxSizing: 'border-box',
-    color: '#0f172a',
+    color: 'var(--mcc-ink, #0f172a)',
     minHeight: '48px',
   },
   submitBtn: {
-    background: 'linear-gradient(135deg, #005599, #13B5EA)',
-    color: '#fff',
+    background: '#005599',
+    color: 'var(--mcc-surface, #fff)',
     border: 'none',
     borderRadius: '8px',
     padding: '14px',
@@ -212,7 +213,7 @@ const styles = {
   logoutBtn: {
     background: 'none',
     border: 'none',
-    color: '#94a3b8',
+    color: '#52647a',
     fontSize: '13px',
     cursor: 'pointer',
     textDecoration: 'underline',

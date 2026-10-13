@@ -35,8 +35,8 @@ function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMem
       onMouseLeave={() => setHov(false)}
       onClick={() => onView(m.id)}
       style={{
-        background: '#fff',
-        borderRadius: 16,
+        background: 'var(--mcc-surface, #fff)',
+        borderRadius: 'var(--mcc-radius, 16px)',
         border: `1.5px solid ${hov ? '#bfdbfe' : '#e8edf2'}`,
         padding: '16px 18px',
         boxShadow: hov ? '0 4px 18px rgba(0,85,153,0.10)' : '0 1px 4px rgba(0,0,0,0.05)',
@@ -50,7 +50,7 @@ function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMem
       {/* Avatar */}
       <div style={{
         width: 50, height: 50, borderRadius: '50%', flexShrink: 0,
-        background: grad, color: '#fff',
+        background: grad, color: 'var(--mcc-surface, #fff)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 16, fontWeight: 800, letterSpacing: '-0.5px',
         boxShadow: '0 2px 8px rgba(0,85,153,0.18)',
@@ -61,7 +61,7 @@ function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMem
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--mcc-ink, #0f172a)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {m.first_name} {m.last_name}
           </div>
           {!isMember && (
@@ -70,7 +70,7 @@ function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMem
             </span>
           )}
         </div>
-        <div style={{ fontSize: 13, color: '#64748b', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ fontSize: 13, color: 'var(--mcc-secondary, #52647a)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {m.email || ''}
         </div>
         {m.cellGroup?.name && (
@@ -103,12 +103,12 @@ function TableRow({ m, idx, canEdit, canUnassign, canSelect, selected, onToggleS
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       onClick={() => onView(m.id)}
-      style={{ background: selected ? '#fef2f2' : hov ? '#e8f4fd' : idx % 2 === 0 ? '#fff' : '#fafbfc', transition: 'background 0.12s', cursor: 'pointer' }}
+      style={{ background: selected ? '#fef2f2' : hov ? '#e8f4fd' : idx % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#fafbfc', transition: 'background 0.12s', cursor: 'pointer' }}
     >
       <td style={{ padding:'10px 12px', width:36, borderBottom:'1px solid #f1f5f9', verticalAlign:'middle' }} onClick={e=>e.stopPropagation()}>
         {canSelect && <input type="checkbox" checked={!!selected} onChange={onToggleSelect} style={{ cursor:'pointer', width:15, height:15 }} />}
       </td>
-      <td style={{ ...tdStyle, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>
+      <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--mcc-ink, #0f172a)', whiteSpace: 'nowrap' }}>
         {m.last_name}, {m.first_name}
       </td>
       <td style={{ ...tdStyle, fontSize: 13 }}>{m.cellGroup?.name || '—'}</td>
@@ -331,13 +331,13 @@ export default function MembersPage() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 28 }}>
       <button
         onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-        style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '8px 18px', fontSize: 14, cursor: page === 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: 'inherit', color: '#374151', opacity: page === 1 ? 0.4 : 1 }}>
+        style={{ background: 'var(--mcc-surface, #fff)', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '8px 18px', fontSize: 14, cursor: page === 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: 'inherit', color: '#374151', opacity: page === 1 ? 0.4 : 1 }}>
         ← Prev
       </button>
-      <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Page {page} of {totalPages}</span>
+      <span style={{ fontSize: 13, color: 'var(--mcc-secondary, #52647a)', fontWeight: 500 }}>Page {page} of {totalPages}</span>
       <button
         onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-        style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '8px 18px', fontSize: 14, cursor: page === totalPages ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: 'inherit', color: '#374151', opacity: page === totalPages ? 0.4 : 1 }}>
+        style={{ background: 'var(--mcc-surface, #fff)', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '8px 18px', fontSize: 14, cursor: page === totalPages ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: 'inherit', color: '#374151', opacity: page === totalPages ? 0.4 : 1 }}>
         Next →
       </button>
     </div>
@@ -358,10 +358,10 @@ export default function MembersPage() {
 
         {/* Warm, friendly header */}
         <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.4px' }}>
+          <h1 className="workspace-page-title" style={{ fontSize: 22, fontWeight: 800, color: 'var(--mcc-ink, #0f172a)', margin: '0 0 4px', letterSpacing: '-0.4px' }}>
             Church Directory
           </h1>
-          <p style={{ fontSize: 14, color: '#64748b', margin: 0 }}>
+          <p style={{ fontSize: 14, color: 'var(--mcc-secondary, #52647a)', margin: 0 }}>
             {total} {total === 1 ? 'member' : 'members'} in your church family
           </p>
         </div>
@@ -378,10 +378,10 @@ export default function MembersPage() {
             style={{
               width: '100%', boxSizing: 'border-box',
               padding: '11px 40px 11px 40px',
-              fontSize: 15, border: '1.5px solid #e2e8f0', borderRadius: 12,
-              outline: 'none', fontFamily: 'inherit', background: '#fff',
+              fontSize: 15, border: '1.5px solid #e2e8f0', borderRadius: 'var(--mcc-radius, 16px)',
+              outline: 'none', fontFamily: 'inherit', background: 'var(--mcc-surface, #fff)',
               transition: 'border-color 0.15s, box-shadow 0.15s',
-              color: '#0f172a',
+              color: 'var(--mcc-ink, #0f172a)',
             }}
           />
           {searchInput && (
@@ -401,9 +401,9 @@ export default function MembersPage() {
             <div style={{ fontSize: 14 }}>Loading members…</div>
           </div>
         ) : members.length === 0 ? (
-          <div style={{ padding: '56px 24px', textAlign: 'center', background: '#fff', borderRadius: 16, border: '1.5px solid #e8edf2' }}>
+          <div style={{ padding: '56px 24px', textAlign: 'center', background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', border: '1.5px solid #e8edf2' }}>
             <div style={{ color:'#94a3b8', marginBottom: 12 }}><MonoIcon name="search" size={36} /></div>
-            <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>No members found</div>
+            <div style={{ fontWeight: 700, color: 'var(--mcc-ink, #0f172a)', marginBottom: 4 }}>No members found</div>
             <div style={{ fontSize: 14, color: '#94a3b8' }}>Try a different search term</div>
           </div>
         ) : (
@@ -429,7 +429,7 @@ export default function MembersPage() {
   // tableCols replaced by sortable headers below
 
   return (
-    <div>
+    <div className="mcc-module mcc-module-members-page">
       {/* Page header */}
       <div className="cms-page-header">
         <div>
@@ -442,7 +442,7 @@ export default function MembersPage() {
       </div>
 
       {canAssignScope && (
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18, marginBottom: 18, boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: 18, marginBottom: 18, boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: '#005599', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 10 }}>
             Add member to {groupMembersTitle(user)}
           </div>
@@ -458,20 +458,20 @@ export default function MembersPage() {
             <div style={{ marginTop: 8, fontSize: 13, color: '#94a3b8' }}>No unassigned eligible members found.</div>
           )}
           {assignResults.length > 0 && (
-            <div style={{ marginTop: 12, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ marginTop: 12, border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 10, overflow: 'hidden' }}>
               {assignResults.map((m, idx) => (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: idx % 2 ? '#f8fafc' : '#fff', borderBottom: idx < assignResults.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: idx % 2 ? '#f8fafc' : 'var(--mcc-surface, #fff)', borderBottom: idx < assignResults.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: 'var(--mcc-surface, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
                     {m.first_name?.[0]}{m.last_name?.[0]}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{m.last_name}, {m.first_name}</div>
-                    <div style={{ color: '#64748b', fontSize: 12 }}>{m.email || m.phone || 'No contact info'}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--mcc-ink, #0f172a)', fontSize: 14 }}>{m.last_name}, {m.first_name}</div>
+                    <div style={{ color: 'var(--mcc-secondary, #52647a)', fontSize: 12 }}>{m.email || m.phone || 'No contact info'}</div>
                   </div>
                   <button
                     onClick={() => handleAssignToScope(m)}
                     disabled={assigningId === m.id}
-                    style={{ background: '#005599', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: assigningId === m.id ? 'not-allowed' : 'pointer', opacity: assigningId === m.id ? 0.7 : 1 }}
+                    style={{ background: '#005599', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: assigningId === m.id ? 'not-allowed' : 'pointer', opacity: assigningId === m.id ? 0.7 : 1 }}
                   >
                     {assigningId === m.id ? 'Adding...' : 'Add'}
                   </button>
@@ -492,7 +492,7 @@ export default function MembersPage() {
             onFocus={e => e.target.style.borderColor = '#0066b3'}
             onBlur={e => e.target.style.borderColor = '#e2e8f0'}
           />
-          <button onClick={handleSearch} style={{ background: '#005599', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+          <button onClick={handleSearch} style={{ background: '#005599', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: 9, padding: '10px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
             Search
           </button>
         </div>
@@ -503,7 +503,7 @@ export default function MembersPage() {
             <select
               value={cgFilter}
               onChange={e => { setPage(1); setCgFilter(e.target.value); }}
-              style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: cgFilter ? '#005599' : '#64748b', fontWeight: cgFilter ? 600 : 400, minHeight: 38 }}
+              style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: 'var(--mcc-surface, #fff)', fontFamily: 'inherit', color: cgFilter ? '#005599' : 'var(--mcc-secondary, #52647a)', fontWeight: cgFilter ? 600 : 400, minHeight: 38 }}
             >
               <option value="">All Cell Groups</option>
               {cellGroups.map(cg => (
@@ -515,7 +515,7 @@ export default function MembersPage() {
             <select
               value={groupFilter}
               onChange={e => { setPage(1); setGroupFilter(e.target.value); }}
-              style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: groupFilter ? '#005599' : '#64748b', fontWeight: groupFilter ? 600 : 400, minHeight: 38 }}
+              style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: 'var(--mcc-surface, #fff)', fontFamily: 'inherit', color: groupFilter ? '#005599' : 'var(--mcc-secondary, #52647a)', fontWeight: groupFilter ? 600 : 400, minHeight: 38 }}
             >
               <option value="">All Groups</option>
               {groups.map(g => (
@@ -529,7 +529,7 @@ export default function MembersPage() {
         <select
           value={statusFilter}
           onChange={e => { setPage(1); setStatus(e.target.value); }}
-          style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: '#fff', fontFamily: 'inherit', color: statusFilter ? '#005599' : '#64748b', fontWeight: statusFilter ? 600 : 400, minHeight: 38 }}
+          style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: 'var(--mcc-surface, #fff)', fontFamily: 'inherit', color: statusFilter ? '#005599' : 'var(--mcc-secondary, #52647a)', fontWeight: statusFilter ? 600 : 400, minHeight: 38 }}
         >
           <option value="">All Status</option>
           <option value="Active">Active</option>
@@ -537,7 +537,7 @@ export default function MembersPage() {
         </select>
 
         {(search || statusFilter || cgFilter || groupFilter) && (
-          <button onClick={clearFilters} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 9, padding: '7px 14px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', minHeight: 38, display:'inline-flex', alignItems:'center', gap:6 }}><MonoIcon name="close" size={13} /> Clear</button>
+          <button onClick={clearFilters} style={{ background: 'none', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 9, padding: '7px 14px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', minHeight: 38, display:'inline-flex', alignItems:'center', gap:6 }}><MonoIcon name="close" size={13} /> Clear</button>
         )}
       </div>
 
@@ -549,7 +549,7 @@ export default function MembersPage() {
           {loading ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Loading…</div>
           ) : members.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', background: '#fff', borderRadius: 14 }}>No members found.</div>
+            <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)' }}>No members found.</div>
           ) : members.map(m => (
             <MemberCard key={m.id} m={m} canEdit={canEdit} isMember={false}
               canUnassign={canUnassign}
@@ -565,16 +565,16 @@ export default function MembersPage() {
           <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10, marginBottom:10 }}>
             <span style={{ fontSize:13, color:'#dc2626', fontWeight:600 }}>{selected.size} member{selected.size>1?'s':''} selected</span>
             <button onClick={handleBulkDelete} disabled={bulkDeleting}
-              style={{ background:'#dc2626', color:'#fff', border:'none', borderRadius:8, padding:'6px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity:bulkDeleting?0.6:1 }}>
+              style={{ background:'#dc2626', color:'var(--mcc-surface, #fff)', border:'none', borderRadius:8, padding:'6px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity:bulkDeleting?0.6:1 }}>
               {bulkDeleting ? 'Deleting…' : <><MonoIcon name="delete" size={14} /> Delete Selected</>}
             </button>
             <button onClick={() => setSelected(new Set())}
-              style={{ background:'none', border:'1px solid #e2e8f0', borderRadius:8, padding:'6px 12px', fontSize:13, color:'#94a3b8', cursor:'pointer', fontFamily:'inherit' }}>
+              style={{ background:'none', border:'1px solid var(--mcc-border, #e2e8f0)', borderRadius:8, padding:'6px 12px', fontSize:13, color:'#94a3b8', cursor:'pointer', fontFamily:'inherit' }}>
               Cancel
             </button>
           </div>
         )}
-        <div className="desktop-table" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+        <div className="desktop-table" style={{ background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ background: '#f8fafc' }}>
@@ -586,7 +586,7 @@ export default function MembersPage() {
                   </th>
                   {[['Name','name',null],['Cell Group','cg',null],['Group','group',null],['Status','status',null],['Actions',null,null]].map(([label, col, w]) => (
                     <th key={label} onClick={col ? ()=>toggleSort(col) : undefined}
-                      style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #e2e8f0', whiteSpace:'nowrap', cursor:col?'pointer':'default', userSelect:'none', width:w||undefined, transition:'background 0.1s' }}
+                      style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'var(--mcc-secondary, #52647a)', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid var(--mcc-border, #e2e8f0)', whiteSpace:'nowrap', cursor:col?'pointer':'default', userSelect:'none', width:w||undefined, transition:'background 0.1s' }}
                       onMouseEnter={e=>{if(col)e.currentTarget.style.background='#f0f7ff';}}
                       onMouseLeave={e=>{e.currentTarget.style.background='';}}
                     >

@@ -1,8 +1,10 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { NAV_ITEMS, NAV_ICONS } from '../../utils/constants';
 import { isVisibleNavItem } from '../../utils/roleAccess';
 import SafeIcon from '../common/SafeIcon';
+import { currentNavPath } from '../../utils/navigationState';
+import { getRoleWorkspace, workspaceNavigation } from '../../utils/roleWorkspace';
 
 const LOGO = process.env.PUBLIC_URL + '/logo.jpg';
 
@@ -16,62 +18,73 @@ export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
   const { user, hasPermission } = useAuth();
 
   const visibleItems = NAV_ITEMS.filter(item => isVisibleNavItem(item, user, hasPermission));
+  const location = useLocation();
+  const activePath = currentNavPath(visibleItems, location.pathname);
+  const workspace = getRoleWorkspace(user);
+  const groups = workspaceNavigation(visibleItems, workspace);
 
   const showText = isMobile || !collapsed;
 
   return (
-    <div style={{ ...S.sidebar, width: isMobile ? '260px' : (collapsed ? '68px' : '244px') }}>
+    <aside className="mcc-sidebar" aria-label="Church workspace" style={{ ...S.sidebar, width: isMobile ? '260px' : (collapsed ? '68px' : '244px') }}>
       {/* Logo */}
       <div style={{ ...S.logoWrap, justifyContent: showText ? 'flex-start' : 'center', padding: showText ? '18px 16px' : '20px 0' }}>
         <img src={LOGO} alt="PLWM-MCC" style={S.logoImg} />
         {showText && (
           <div style={S.logoTextWrap}>
             <span style={S.logoText}>PLWM-MCC</span>
-            <span style={S.logoSub}>Church Management</span>
+            <span style={S.logoSub}>{workspace.title}</span>
           </div>
         )}
       </div>
 
       {/* Navigation */}
-      <nav style={S.nav}>
-        {visibleItems.map(item => (
+      <nav style={S.nav} aria-label="Main navigation">
+        {groups.map(group => <div className="workspace-nav-group" key={group.title}>
+          {showText && group.title !== 'Overview' && <div className="workspace-nav-heading">{group.title}</div>}
+          {group.items.map(item => (
           <NavLink
             key={item.path}
             to={item.path}
+            end={activePath !== item.path}
+            aria-current={activePath === item.path ? 'page' : undefined}
+            aria-label={item.label}
+            className={`mcc-nav-link${activePath === item.path ? ' mcc-nav-current' : ''}`}
             title={!showText ? item.label : undefined}
             onClick={isMobile ? onToggle : undefined}
-            style={({ isActive }) => ({
+            style={() => ({
               ...S.navItem,
-              background:     isActive ? 'rgba(19,181,234,0.18)' : 'transparent',
-              borderLeft:     isActive ? '3px solid #13B5EA'     : '3px solid transparent',
-              color:          isActive ? '#fff'                   : 'rgba(255,255,255,0.65)',
+              background:     activePath === item.path ? 'rgba(19,181,234,0.14)' : 'transparent',
+              borderLeft:     activePath === item.path ? '3px solid #13B5EA' : '3px solid transparent',
+              color:          activePath === item.path ? '#fff' : '#c5d9eb',
               justifyContent: showText ? 'flex-start'             : 'center',
               paddingLeft:    showText ? '18px'                   : '0',
-              padding:        isMobile ? '13px 18px'              : '10px 18px',
+              padding:        isMobile ? '13px 18px' : showText ? '10px 18px' : '10px 0',
             })}
           >
             <NavIcon name={item.icon} size={18} />
             {showText && <span style={S.navLabel}>{item.label}</span>}
           </NavLink>
-        ))}
+          ))}
+        </div>)}
       </nav>
 
       {!isMobile && (
-        <button onClick={onToggle} style={S.toggleBtn} title={collapsed ? 'Expand' : 'Collapse'}>
+        <button onClick={onToggle} style={S.toggleBtn} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={!collapsed} title={collapsed ? 'Expand' : 'Collapse'}>
           {collapsed ? '▶' : '◀'}
         </button>
       )}
-    </div>
+    </aside>
   );
 }
 
 const S = {
   sidebar: {
     height: '100vh',
-    background: 'linear-gradient(180deg, #00284a 0%, #003d70 40%, #005599 100%)',
+    background: '#00284a',
     display: 'flex', flexDirection: 'column',
     overflowX: 'hidden', overflowY: 'auto',
-    boxShadow: '4px 0 24px rgba(0,0,0,0.28)',
+    borderRight: '1px solid rgba(255,255,255,0.08)',
     transition: 'width 0.25s ease',
   },
   logoWrap: {
@@ -83,11 +96,11 @@ const S = {
   logoTextWrap: { display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   logoText:     { color: '#fff', fontWeight: '800', fontSize: '15px', letterSpacing: '1.5px', whiteSpace: 'nowrap' },
   logoSub:      { color: 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '500', whiteSpace: 'nowrap', letterSpacing: '0.5px', marginTop: '2px' },
-  nav:          { flex: 1, display: 'flex', flexDirection: 'column', padding: '10px 0', overflowY: 'auto', overflowX: 'hidden' },
+  nav:          { flex: 1, display: 'flex', flexDirection: 'column', gap: 3, padding: '14px 8px', overflowY: 'auto', overflowX: 'hidden' },
   navItem: {
     display: 'flex', alignItems: 'center', gap: '11px',
     padding: '10px 18px', textDecoration: 'none',
-    fontSize: '13.5px', fontWeight: '500',
+    fontSize: '13.5px', fontWeight: '500', minHeight: 44, borderRadius: 8,
     transition: 'all 0.15s', whiteSpace: 'nowrap',
   },
   navLabel:  { overflow: 'hidden', letterSpacing: '0.1px' },

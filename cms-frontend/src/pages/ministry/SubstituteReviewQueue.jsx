@@ -76,26 +76,26 @@ export default function SubstituteReviewQueue() {
   return (
     <section aria-label="Substitute request review" style={{ display: 'grid', gap: 14 }}>
       <div>
-        <h2 style={{ margin: '0 0 5px', fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Substitute request review</h2>
-        <p style={{ margin: 0, color: '#64748b', fontSize: 13 }}>
+        <h2 style={{ margin: '0 0 5px', fontSize: 18, fontWeight: 800, color: 'var(--mcc-ink, #0f172a)' }}>Substitute request review</h2>
+        <p style={{ margin: 0, color: 'var(--mcc-secondary, #52647a)', fontSize: 13 }}>
           Review requests for services in your ministry scope. Approvals notify the requester and proposed replacement.
         </p>
       </div>
       {notice && <div role="status" style={{ padding: 12, borderRadius: 9, background: '#ecfdf5', color: '#047857' }}>{notice}</div>}
       {error && <div role="alert" style={{ padding: 12, borderRadius: 9, background: '#fef2f2', color: '#b91c1c' }}>{error}</div>}
       {loading ? (
-        <div role="status" style={{ padding: 28, textAlign: 'center', color: '#64748b' }}>Loading substitute requests…</div>
+        <div role="status" style={{ padding: 28, textAlign: 'center', color: 'var(--mcc-secondary, #52647a)' }}>Loading substitute requests…</div>
       ) : requests.length === 0 ? (
-        <div style={{ padding: 28, textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: 12, background: '#fff', color: '#64748b' }}>
+        <div style={{ padding: 28, textAlign: 'center', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', background: 'var(--mcc-surface, #fff)', color: 'var(--mcc-secondary, #52647a)' }}>
           No substitute requests are waiting for review.
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 12, background: '#fff' }}>
+        <div style={{ overflowX: 'auto', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', background: 'var(--mcc-surface, #fff)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
             <thead>
               <tr style={{ background: '#f8fafc', textAlign: 'left' }}>
                 {['Requester', 'Service', 'Reason', 'Proposed replacement', 'Status', 'Actions'].map((heading) => (
-                  <th key={heading} style={{ padding: 12, fontSize: 12, color: '#64748b' }}>{heading}</th>
+                  <th key={heading} style={{ padding: 12, fontSize: 12, color: 'var(--mcc-secondary, #52647a)' }}>{heading}</th>
                 ))}
               </tr>
             </thead>
@@ -107,7 +107,7 @@ export default function SubstituteReviewQueue() {
                 const busy = resolvingId === request.id;
                 return (
                   <tr key={request.id} style={{ borderTop: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: 12, color: '#0f172a', fontWeight: 600 }}>
+                    <td style={{ padding: 12, color: 'var(--mcc-ink, #0f172a)', fontWeight: 600 }}>
                       {personName(requester?.member, `Member #${requester?.member_id || request.requested_by}`)}
                     </td>
                     <td style={{ padding: 12, color: '#334155' }}>{serviceName(request)}</td>
@@ -122,14 +122,14 @@ export default function SubstituteReviewQueue() {
                             aria-label={`Approve substitute request for ${serviceName(request)}`}
                             disabled={Boolean(resolvingId)}
                             onClick={() => resolveRequest(request, 'approved')}
-                            style={{ padding: '7px 10px', border: 0, borderRadius: 7, background: '#047857', color: '#fff', fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}
+                            style={{ padding: '7px 10px', border: 0, borderRadius: 7, background: '#047857', color: 'var(--mcc-surface, #fff)', fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}
                           >{busy ? 'Saving…' : 'Approve'}</button>
                           <button
                             type="button"
                             aria-label={`Reject substitute request for ${serviceName(request)}`}
                             disabled={Boolean(resolvingId)}
                             onClick={() => resolveRequest(request, 'rejected')}
-                            style={{ padding: '7px 10px', border: 0, borderRadius: 7, background: '#dc2626', color: '#fff', fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}
+                            style={{ padding: '7px 10px', border: 0, borderRadius: 7, background: '#dc2626', color: 'var(--mcc-surface, #fff)', fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}
                           >Reject</button>
                         </div>
                       )}

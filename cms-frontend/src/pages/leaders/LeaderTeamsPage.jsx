@@ -17,11 +17,11 @@ export default function LeaderTeamsPage() {
   };
 
   return (
-    <main style={styles.page}>
+    <section aria-label="My Teams" style={styles.page}>
       <header style={styles.header}>
         <div>
           <p style={styles.eyebrow}>LEADERSHIP</p>
-          <h1 style={styles.title}>My Teams</h1>
+          <h1 className="workspace-page-title" style={styles.title}>My Teams</h1>
           <p style={styles.subtitle}>Choose the team you are working with. Changes and attendance submissions always use one selected team.</p>
         </div>
         {assignments.length > 1 && (
@@ -85,29 +85,29 @@ export default function LeaderTeamsPage() {
           <strong>Combined view is read-only.</strong> Select an individual team before recording, editing, submitting, or correcting attendance.
         </aside>
       )}
-    </main>
+    </section>
   );
 }
 
 const styles = {
-  page: { maxWidth: 1180, margin: '0 auto', color: '#0f172a' },
+  page: { maxWidth: 1180, margin: '0 auto', color: 'var(--mcc-ink, #0f172a)' },
   header: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 24 },
   eyebrow: { margin: '0 0 6px', color: '#0b66a3', fontSize: 11, fontWeight: 800, letterSpacing: '0.12em' },
   title: { margin: 0, fontSize: 'clamp(24px, 4vw, 32px)', letterSpacing: '-0.03em' },
-  subtitle: { maxWidth: 660, margin: '8px 0 0', color: '#64748b', lineHeight: 1.55, fontSize: 14 },
+  subtitle: { maxWidth: 660, margin: '8px 0 0', color: 'var(--mcc-secondary, #52647a)', lineHeight: 1.55, fontSize: 14 },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 16 },
-  card: { border: '1px solid #dce7f1', borderRadius: 16, background: '#fff', padding: 20, boxShadow: '0 8px 24px rgba(15, 60, 90, 0.05)', minWidth: 0 },
+  card: { border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', background: 'var(--mcc-surface, #fff)', padding: 20, boxShadow: '0 8px 24px rgba(15, 60, 90, 0.05)', minWidth: 0 },
   cardTop: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   pill: { display: 'inline-flex', padding: '5px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800, letterSpacing: '0.08em' },
   cellPill: { background: '#eaf5ff', color: '#075985' },
   groupPill: { background: '#eefcf8', color: '#047857' },
   current: { fontSize: 11, fontWeight: 700, color: '#15803d' },
   cardTitle: { margin: '18px 0 6px', fontSize: 19, lineHeight: 1.3 },
-  cardCopy: { minHeight: 42, margin: 0, color: '#64748b', fontSize: 13, lineHeight: 1.55 },
+  cardCopy: { minHeight: 42, margin: 0, color: 'var(--mcc-secondary, #52647a)', fontSize: 13, lineHeight: 1.55 },
   actions: { display: 'flex', gap: 9, flexWrap: 'wrap', marginTop: 18 },
-  primaryButton: { border: 0, borderRadius: 9, padding: '10px 13px', background: '#075985', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' },
-  secondaryButton: { border: '1px solid #cbd5e1', borderRadius: 9, padding: '9px 12px', background: '#fff', color: '#334155', fontWeight: 700, fontSize: 13, cursor: 'pointer' },
-  empty: { background: '#fff', border: '1px dashed #cbd5e1', borderRadius: 16, padding: '36px 22px', textAlign: 'center' },
-  emptyIcon: { margin: '0 auto', width: 44, height: 44, display: 'grid', placeItems: 'center', borderRadius: '50%', background: '#f1f5f9', color: '#64748b', fontSize: 26 },
-  readOnlyNotice: { marginTop: 18, padding: '13px 16px', border: '1px solid #bfdbfe', borderRadius: 12, background: '#eff6ff', color: '#1e3a8a', fontSize: 13, lineHeight: 1.5 },
+  primaryButton: { border: 0, borderRadius: 9, padding: '10px 13px', background: '#075985', color: 'var(--mcc-surface, #fff)', fontWeight: 700, fontSize: 13, cursor: 'pointer' },
+  secondaryButton: { border: '1px solid #cbd5e1', borderRadius: 9, padding: '9px 12px', background: 'var(--mcc-surface, #fff)', color: '#334155', fontWeight: 700, fontSize: 13, cursor: 'pointer' },
+  empty: { background: 'var(--mcc-surface, #fff)', border: '1px dashed #cbd5e1', borderRadius: 'var(--mcc-radius, 16px)', padding: '36px 22px', textAlign: 'center' },
+  emptyIcon: { margin: '0 auto', width: 44, height: 44, display: 'grid', placeItems: 'center', borderRadius: '50%', background: '#f1f5f9', color: 'var(--mcc-secondary, #52647a)', fontSize: 26 },
+  readOnlyNotice: { marginTop: 18, padding: '13px 16px', border: '1px solid #bfdbfe', borderRadius: 'var(--mcc-radius, 16px)', background: '#eff6ff', color: '#1e3a8a', fontSize: 13, lineHeight: 1.5 },
 };

@@ -16,15 +16,15 @@ const buttonStyle = (variant = 'primary') => ({
   borderRadius: 9,
   padding: '9px 14px',
   minHeight: 38,
-  background: variant === 'primary' ? '#075985' : '#fff',
-  color: variant === 'primary' ? '#fff' : '#334155',
+  background: variant === 'primary' ? '#075985' : 'var(--mcc-surface, #fff)',
+  color: variant === 'primary' ? 'var(--mcc-surface, #fff)' : '#334155',
   fontWeight: 700,
   fontSize: 13,
   cursor: 'pointer',
   fontFamily: 'inherit',
 });
 
-const fieldStyle = { width: '100%', minHeight: 40, boxSizing: 'border-box', padding: '9px 11px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, background: '#fff', fontFamily: 'inherit' };
+const fieldStyle = { width: '100%', minHeight: 40, boxSizing: 'border-box', padding: '9px 11px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, background: 'var(--mcc-surface, #fff)', fontFamily: 'inherit' };
 const labelStyle = { display: 'block', marginBottom: 5, color: '#475569', fontSize: 12, fontWeight: 700 };
 
 export default function ExpensesPage() {
@@ -191,15 +191,15 @@ export default function ExpensesPage() {
   const formCategories = categories.filter((category) => !expenseForm.account_id || String(category.account_id) === String(expenseForm.account_id));
 
   return (
-    <main style={{ display: 'flex', flexDirection: 'column', gap: 18, color: '#0f172a' }}>
+    <section className="mcc-module mcc-module-expenses-page" aria-label="Church expenses" style={{ display: 'flex', flexDirection: 'column', gap: 24, color: 'var(--mcc-ink, #0f172a)' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
         <div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
             <Link to="/finance" style={{ ...buttonStyle('secondary'), textDecoration: 'none' }}>Income and giving</Link>
             <span style={{ ...buttonStyle(), display: 'inline-flex', alignItems: 'center' }}>Expenses</span>
           </div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>Church Expenses</h1>
-          <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: 14 }}>Record and review church spending, with totals for the selected date range.</p>
+          <h1 className="workspace-page-title" style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>Church Expenses</h1>
+          <p style={{ margin: '5px 0 0', color: 'var(--mcc-secondary, #52647a)', fontSize: 14 }}>Record and review church spending, with totals for the selected date range.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {canCreate && <button type="button" style={buttonStyle()} onClick={openCreate}>Add expense</button>}
@@ -211,9 +211,9 @@ export default function ExpensesPage() {
       {error && <div role="alert" style={{ padding: 12, borderRadius: 9, background: '#fef2f2', color: '#b91c1c' }}>{error}</div>}
 
       {showSetup && canCreate && (
-        <section style={{ padding: 18, border: '1px solid #dbe4ee', borderRadius: 14, background: '#fff' }}>
+        <section style={{ padding: 18, border: '1px solid #dbe4ee', borderRadius: 'var(--mcc-radius, 16px)', background: 'var(--mcc-surface, #fff)' }}>
           <h2 style={{ margin: '0 0 14px', fontSize: 18 }}>Expense setup</h2>
-          <p style={{ margin: '0 0 16px', color: '#64748b', fontSize: 13 }}>Create the fund, account, and category options used by expense records. Payment methods are maintained by system configuration.</p>
+          <p style={{ margin: '0 0 16px', color: 'var(--mcc-secondary, #52647a)', fontSize: 13 }}>Create the fund, account, and category options used by expense records. Payment methods are maintained by system configuration.</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: 16 }}>
             <form onSubmit={(event) => createSetupRecord('fund', event)} style={{ display: 'grid', gap: 9, alignContent: 'start' }}>
               <strong>Fund</strong>
@@ -241,14 +241,14 @@ export default function ExpensesPage() {
 
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12 }} aria-label="Finance totals">
         {[['Income', balance.total_income], ['Expenses', balance.total_expense], ['Net balance', balance.net_balance]].map(([label, value]) => (
-          <div key={label} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
-            <span style={{ display: 'block', fontSize: 12, color: '#64748b', fontWeight: 700 }}>{label}</span>
+          <div key={label} style={{ background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: 16 }}>
+            <span style={{ display: 'block', fontSize: 12, color: 'var(--mcc-secondary, #52647a)', fontWeight: 700 }}>{label}</span>
             <strong style={{ display: 'block', marginTop: 6, fontSize: 22 }}>{formatMoney(value)}</strong>
           </div>
         ))}
       </section>
 
-      <section style={{ display: 'flex', gap: 10, flexWrap: 'wrap', padding: 14, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }} aria-label="Expense filters">
+      <section style={{ display: 'flex', gap: 10, flexWrap: 'wrap', padding: 14, background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)' }} aria-label="Expense filters">
         <label style={{ ...labelStyle, minWidth: 150 }}>Account<select value={accountFilter} onChange={(event) => { setAccountFilter(event.target.value); setCategoryFilter(''); setPage(1); }} style={fieldStyle}><option value="">All accounts</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
         <label style={{ ...labelStyle, minWidth: 160 }}>Category<select value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setPage(1); }} style={fieldStyle}><option value="">All categories</option>{visibleCategories.map((category) => <option key={category.id} value={category.id}>{category.category_name}</option>)}</select></label>
         <label style={{ ...labelStyle, minWidth: 140 }}>From<input type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => { setDateFrom(event.target.value); setPage(1); setNotice(''); setError(''); }} style={fieldStyle} /></label>
@@ -256,12 +256,12 @@ export default function ExpensesPage() {
         <button type="button" style={{ ...buttonStyle('secondary'), alignSelf: 'end' }} onClick={() => { setDateFrom(''); setDateTo(''); setAccountFilter(''); setCategoryFilter(''); setPage(1); setNotice(''); setError(''); }}>Clear filters</button>
       </section>
 
-      <section style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 12, background: '#fff' }}>
+      <section style={{ overflowX: 'auto', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', background: 'var(--mcc-surface, #fff)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 920 }}>
-          <thead><tr style={{ background: '#f8fafc', textAlign: 'left' }}>{['Date', 'Description', 'Category', 'Account', 'Payment', 'Amount', 'Receipts', 'Actions'].map((heading) => <th key={heading} style={{ padding: 12, fontSize: 12, color: '#64748b' }}>{heading}</th>)}</tr></thead>
+          <thead><tr style={{ background: '#f8fafc', textAlign: 'left' }}>{['Date', 'Description', 'Category', 'Account', 'Payment', 'Amount', 'Receipts', 'Actions'].map((heading) => <th key={heading} style={{ padding: 12, fontSize: 12, color: 'var(--mcc-secondary, #52647a)' }}>{heading}</th>)}</tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan={8} style={{ padding: 28, textAlign: 'center', color: '#64748b' }}>Loading expenses…</td></tr>
-              : expenses.length === 0 ? <tr><td colSpan={8} style={{ padding: 28, textAlign: 'center', color: '#64748b' }}>{accounts.length && categories.length ? 'No expenses match these filters.' : 'Set up a fund, account, and expense category before recording expenses.'}</td></tr>
+            {loading ? <tr><td colSpan={8} style={{ padding: 28, textAlign: 'center', color: 'var(--mcc-secondary, #52647a)' }}>Loading expenses…</td></tr>
+              : expenses.length === 0 ? <tr><td colSpan={8} style={{ padding: 28, textAlign: 'center', color: 'var(--mcc-secondary, #52647a)' }}>{accounts.length && categories.length ? 'No expenses match these filters.' : 'Set up a fund, account, and expense category before recording expenses.'}</td></tr>
                 : expenses.map((expense) => (
                   <tr key={expense.id} style={{ borderTop: '1px solid #eef2f7' }}>
                     <td style={{ padding: 12 }}>{formatDate(expense.date)}</td>
@@ -297,7 +297,7 @@ export default function ExpensesPage() {
 
       {showExpenseForm && (
         <div role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setShowExpenseForm(false)} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'grid', placeItems: 'center', padding: 16, background: 'rgba(15,23,42,0.48)' }}>
-          <section role="dialog" aria-modal="true" aria-labelledby="expense-form-title" style={{ width: 'min(100%,620px)', maxHeight: '90vh', overflowY: 'auto', background: '#fff', borderRadius: 16, padding: 22 }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="expense-form-title" style={{ width: 'min(100%,620px)', maxHeight: '90vh', overflowY: 'auto', background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', padding: 22 }}>
             <h2 id="expense-form-title" style={{ marginTop: 0 }}>{editing ? 'Edit expense' : 'Add expense'}</h2>
             <form onSubmit={submitExpense} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
               <label style={labelStyle}>Account<select required value={expenseForm.account_id} onChange={(event) => setExpenseForm((current) => ({ ...current, account_id: event.target.value, category_id: '' }))} style={fieldStyle}><option value="">Choose an account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
@@ -330,7 +330,7 @@ export default function ExpensesPage() {
                 setExpenseToDelete(null);
               }
             }}
-            style={{ width: 'min(100%,460px)', background: '#fff', borderRadius: 16, padding: 22, boxShadow: '0 24px 70px rgba(15,23,42,0.28)' }}
+            style={{ width: 'min(100%,460px)', background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', padding: 22, boxShadow: '0 24px 70px rgba(15,23,42,0.28)' }}
           >
             <h2 id="expense-delete-title" style={{ margin: '0 0 10px', fontSize: 20 }}>Delete expense?</h2>
             <p id="expense-delete-description" style={{ margin: '0 0 12px', color: '#475569', lineHeight: 1.5 }}>
@@ -344,6 +344,6 @@ export default function ExpensesPage() {
           </section>
         </div>
       )}
-    </main>
+    </section>
   );
 }

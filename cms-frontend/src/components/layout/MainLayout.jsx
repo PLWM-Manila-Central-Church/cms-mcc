@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -11,6 +11,10 @@ import SafeIcon from '../common/SafeIcon';
 import useWindowWidth from '../../hooks/useWindowWidth';
 import useIdleTimer from '../../hooks/useIdleTimer';
 import IdleLockScreen from '../common/IdleLockScreen';
+import { currentNavPath } from '../../utils/navigationState';
+import useDialogFocus from '../../hooks/useDialogFocus';
+import WorkspaceContext from './WorkspaceContext';
+import { getRoleWorkspace, getWorkspaceModule } from '../../utils/roleWorkspace';
 
 function NavIcon({ name, size = 20 }) {
   const MORE_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
@@ -29,7 +33,7 @@ const visibleForRole = (item, user, hasPermission) => {
 // Each role gets 4 labelled tabs + the "More" tab is always appended 5th.
 // Tabs without a `permissions` key are always shown.
 /* ── Mobile bottom tab bar ─────────────────────────────────── */
-function BottomTabBar({ onMoreOpen }) {
+function BottomTabBar({ onMoreOpen, moreOpen }) {
   const { user, hasPermission } = useAuth();
   const location = useLocation();
 
@@ -38,10 +42,11 @@ function BottomTabBar({ onMoreOpen }) {
   // Always append More as 5th tab
   const tabs = [...roleTabs, { label: 'More', path: '__more__', icon: 'more' }];
 
-  const isActive = (path) => path !== '__more__' && location.pathname.startsWith(path);
+  const activePath = currentNavPath(tabs, location.pathname);
+  const isActive = path => path === activePath;
 
   return (
-    <nav style={{
+    <nav aria-label="Mobile navigation" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
       height: 'calc(60px + env(safe-area-inset-bottom, 0px))',
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -57,12 +62,14 @@ function BottomTabBar({ onMoreOpen }) {
           <button
             key="more"
             onClick={onMoreOpen}
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
               gap: 2, border: 'none', background: 'none',
               cursor: 'pointer', padding: '6px 4px',
-              color: '#94a3b8', fontFamily: 'inherit',
+              color: '#64748b', fontFamily: 'inherit',
             }}
           >
             <NavIcon name="more" size={20} />
@@ -72,11 +79,13 @@ function BottomTabBar({ onMoreOpen }) {
           <NavLink
             key={tab.path}
             to={tab.path}
+            end={activePath !== tab.path}
+            aria-current={active ? 'page' : undefined}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
               gap: 2, textDecoration: 'none', padding: '6px 4px',
-              color: active ? '#005599' : '#94a3b8',
+              color: active ? '#005599' : '#64748b',
               position: 'relative',
             }}
           >
@@ -104,13 +113,11 @@ function MobileMoreDrawer({ open, onClose }) {
   const { hasPermission, user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  const dialogRef = useRef(null);
+  useDialogFocus(open, dialogRef, onClose);
 
   const visibleItems = NAV_ITEMS.filter(item => visibleForRole(item, user, hasPermission));
+  const activePath = currentNavPath(visibleItems, location.pathname);
 
   if (!open) return null;
 
@@ -125,13 +132,14 @@ function MobileMoreDrawer({ open, onClose }) {
         }}
       />
       {/* Sheet from bottom */}
-      <div style={{
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="More navigation" tabIndex={-1} style={{
         position: 'fixed', left: 0, right: 0, bottom: 0,
         background: '#fff', borderRadius: '20px 20px 0 0',
         zIndex: 399, maxHeight: '80vh', overflowY: 'auto',
         boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
         paddingBottom: 24,
       }}>
+        <button type="button" onClick={onClose} aria-label="Close navigation" style={{ float: 'right', margin: '12px 16px', minHeight: 44, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#334155' }}>Close</button>
         {/* Handle */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 8px' }}>
           <div style={{ width: 40, height: 4, background: '#e2e8f0', borderRadius: 2 }} />
@@ -174,11 +182,13 @@ function MobileMoreDrawer({ open, onClose }) {
         {/* Nav items grid */}
         <div style={{ padding: '12px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {visibleItems.map(item => {
-            const active = location.pathname.startsWith(item.path);
+            const active = activePath === item.path;
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
+                end={!active}
+                aria-current={active ? 'page' : undefined}
                 onClick={onClose}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10,
@@ -219,6 +229,10 @@ function MobileMoreDrawer({ open, onClose }) {
 }
 
 export default function MainLayout({ children }) {
+  const { user } = useAuth();
+  const { pathname } = useLocation();
+  const workspace = getRoleWorkspace(user);
+  const module = getWorkspaceModule(pathname);
   const width    = useWindowWidth();
   const isMobile = width <= BP_MOBILE;
   const isTablet = width > BP_MOBILE && width <= BP_TABLET;
@@ -279,7 +293,8 @@ export default function MainLayout({ children }) {
   const mainPadLeft  = isMobile ? '0px' : sidebarWidth;
 
   return (
-    <div style={S.root}>
+    <div className={`mcc-workspace workspace-${workspace.key}`} data-workspace={workspace.key} data-module={module?.key || 'dashboard'} style={S.root}>
+      <a className="mcc-skip-link" href="#mcc-main">Skip to content</a>
       {/* Hidden Google Translate widget for CMS */}
       <div id="google_translate_element_cms" style={{ position: 'fixed', bottom: -200, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1 }} />
 
@@ -311,7 +326,7 @@ export default function MainLayout({ children }) {
       />
 
       {/* Main content */}
-      <main style={{
+      <main id="mcc-main" className="mcc-main" tabIndex={-1} style={{
         ...S.main,
         marginLeft: mainPadLeft,
         padding: isMobile
@@ -321,11 +336,12 @@ export default function MainLayout({ children }) {
             : '80px 28px 28px',
         paddingBottom: isMobile ? 'calc(68px + env(safe-area-inset-bottom, 0px))' : (isTablet ? '20px' : '28px'),
       }}>
-        {children}
+        <WorkspaceContext />
+        <div className={`workspace-page mcc-module workspace-page-${module?.key || 'dashboard'}`}>{children}</div>
       </main>
 
       {/* Mobile bottom tab bar */}
-      {isMobile && <BottomTabBar onMoreOpen={() => setMoreOpen(true)} />}
+      {isMobile && <BottomTabBar moreOpen={moreOpen} onMoreOpen={() => setMoreOpen(true)} />}
 
       {/* Mobile "More" sheet */}
       <MobileMoreDrawer open={moreOpen} onClose={() => setMoreOpen(false)} />
@@ -340,7 +356,7 @@ const S = {
   root: {
     display: 'flex',
     minHeight: '100vh',
-    background: '#f0f6ff',
+    background: 'var(--mcc-canvas)',
     fontFamily: "'Inter', 'Segoe UI', -apple-system, sans-serif",
     position: 'relative',
   },
@@ -351,6 +367,7 @@ const S = {
   },
   main: {
     flex: 1,
+    minWidth: 0,
     minHeight: '100vh',
     transition: 'margin-left 0.25s ease, padding 0.25s ease',
     overflowX: 'hidden',

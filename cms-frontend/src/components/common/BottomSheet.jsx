@@ -27,6 +27,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import useDialogFocus from '../../hooks/useDialogFocus';
 
 const MOBILE_BP = 768;
 
@@ -45,6 +46,10 @@ export default function BottomSheet({
   );
   const startYRef = useRef(null);
   const sheetRef  = useRef(null);
+  const closeTimer = useRef(null);
+  const canRender = isMobile || forceShow;
+  useDialogFocus(visible && canRender, sheetRef, onClose);
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
 
   /* ── Detect mobile ───────────────────────────────────────── */
   useEffect(() => {
@@ -55,22 +60,29 @@ export default function BottomSheet({
 
   /* ── Open / close lifecycle ──────────────────────────────── */
   useEffect(() => {
-    if (open) {
+    if (!canRender) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+      setVisible(false);
+      setClosing(false);
+    } else if (open) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
       setClosing(false);
       setVisible(true);
-      document.body.style.overflow = 'hidden';
     } else if (visible) {
       triggerClose();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, canRender]);
 
   const triggerClose = () => {
+    if (closeTimer.current) return;
     setClosing(true);
-    setTimeout(() => {
+    closeTimer.current = window.setTimeout(() => {
+      closeTimer.current = null;
       setVisible(false);
       setClosing(false);
-      document.body.style.overflow = '';
     }, 260);
   };
 
@@ -90,14 +102,6 @@ export default function BottomSheet({
     startYRef.current = null;
   };
 
-  /* ── Keyboard: ESC to close ──────────────────────────────── */
-  useEffect(() => {
-    const fn = (e) => { if (e.key === 'Escape' && visible) handleClose(); };
-    document.addEventListener('keydown', fn);
-    return () => document.removeEventListener('keydown', fn);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
-
   /* ── Don't render on desktop (unless forceShow) ──────────── */
   if (!isMobile && !forceShow) return null;
   if (!visible) return null;
@@ -116,14 +120,13 @@ export default function BottomSheet({
         ref={sheetRef}
         className={`bottom-sheet-panel${closing ? ' closing' : ''}`}
         style={height ? { maxHeight: height } : undefined}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
         role="dialog"
         aria-modal="true"
         aria-label={title || 'Panel'}
+        tabIndex={-1}
       >
         {/* Drag handle */}
-        <div className="bottom-sheet-handle" />
+        <div className="bottom-sheet-handle" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} />
 
         {/* Header */}
         {title && (
