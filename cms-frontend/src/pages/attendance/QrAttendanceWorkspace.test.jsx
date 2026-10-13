@@ -32,6 +32,8 @@ const session = {
   title: 'Main Gathering',
   session_key: 'morning',
   starts_at: '2099-10-07T02:00:00.000Z',
+  check_in_opens_at: new Date(Date.now() - 60_000).toISOString(),
+  check_in_closes_at: new Date(Date.now() + 60 * 60_000).toISOString(),
   status: 'open',
   approval_deadline: '2099-12-31T00:00:00.000Z',
   target: { title: 'Test Event', status: 'Ongoing' },
@@ -72,6 +74,14 @@ describe('QR attendance workspace role flows', () => {
     expect(fixture.get.mock.calls.some(([url]) => url === '/qr-attendance/sessions/1')).toBe(false);
     fireEvent.change(choice, { target: { value: '1' } });
     expect(await screen.findByRole('button', { name: 'Scan Member QR' })).toBeInTheDocument();
+  });
+  it('explains an expired check-in window and hides production capture controls', async () => {
+    currentSession = { ...session, check_in_opens_at: '2020-01-01T00:00:00.000Z', check_in_closes_at: '2020-01-02T00:00:00.000Z' };
+    renderWorkspace();
+    expect(await screen.findByText(/Check-in ended/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Scan Member QR' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Manual member lookup' })).not.toBeInTheDocument();
+    expect(fixture.post).not.toHaveBeenCalled();
   });
   beforeEach(() => {
     vi.clearAllMocks();
