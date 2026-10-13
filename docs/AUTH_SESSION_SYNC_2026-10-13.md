@@ -13,5 +13,6 @@ Publish an identity-free `session-changed` notification over `BroadcastChannel`;
 ## QA
 
 - Unit coverage: channel message subscription, cleanup, fallback storage-event filtering and identity-free notification.
+- The QR CI flow opens Admin Settings through its visible sidebar link, keeping the authenticated SPA session in place and exercising user navigation.
 - Production regression sequence after release: open Member in one tab; sign in Admin in another; verify the first tab reloads and restores the Admin session/route; sign out; verify both tabs return to Login; sign in Member and verify `/portal` and self-scoped reads.
 - No refresh tokens, cookies, authorization decisions, database records or role grants are changed by the notification itself.
