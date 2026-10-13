@@ -28,6 +28,7 @@ test('session change broadcasts an identity-free message to sibling tabs', () =>
   expect(channels[1].message).toEqual({type:'session-changed'});
   expect(channels[1].message).not.toHaveProperty('user');
   expect(channels[1].closed).toBe(true);
+  expect(localStorage.getItem('plwm-mcc-auth-session-changed')).toBeNull();
 });
 
 test('storage notifications provide a fallback when broadcast channels are unavailable', () => {

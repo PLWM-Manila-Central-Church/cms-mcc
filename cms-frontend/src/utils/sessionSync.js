@@ -4,16 +4,20 @@ const STORAGE_KEY = 'plwm-mcc-auth-session-changed';
 /** Tell other same-origin tabs to resolve the current HttpOnly-cookie session again. */
 export function broadcastSessionChange() {
   if (typeof window === 'undefined') return;
+  let broadcast = false;
   try {
     if (typeof window.BroadcastChannel === 'function') {
       const channel = new window.BroadcastChannel(CHANNEL_NAME);
       channel.postMessage({ type: 'session-changed' });
       channel.close();
+      broadcast = true;
     }
   } catch { /* Storage events are the fallback when channels are unavailable. */ }
-  try {
-    localStorage.setItem(STORAGE_KEY, `${Date.now()}-${Math.random()}`);
-  } catch { /* Browser storage can be disabled; local session state still updates. */ }
+  if (!broadcast) {
+    try {
+      localStorage.setItem(STORAGE_KEY, `${Date.now()}-${Math.random()}`);
+    } catch { /* Browser storage can be disabled; local session state still updates. */ }
+  }
 }
 
 /** Subscribe to account changes in sibling tabs without sending account data. */
