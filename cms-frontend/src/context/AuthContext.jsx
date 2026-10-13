@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import axiosInstance, { setLeaderScopeHeader } from '../api/axiosInstance';
+import { broadcastSessionChange, subscribeToSessionChanges } from '../utils/sessionSync';
 
 const AuthContext = createContext(null);
 
@@ -103,6 +104,17 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  useEffect(() => subscribeToSessionChanges(() => {
+    // Cookies are shared across same-origin tabs. Reload stale role UIs so
+    // the server's current session, not a sibling tab's old React state,
+    // determines which workspace and controls are visible.
+    authRevision.current += 1;
+    queryClient.clear();
+    setLeaderScopeHeader(null);
+    try { window.sessionStorage.removeItem('mcc-leader-scope'); } catch { /* optional */ }
+    window.location.reload();
+  }), [queryClient]);
+
   const login = async (email, password) => {
     const revision = ++authRevision.current;
     await queryClient.cancelQueries();
@@ -119,6 +131,7 @@ export const AuthProvider = ({ children }) => {
         setUser(scopedUser);
         setPermissions(Array.isArray(responsePermissions) ? responsePermissions : []);
         setActiveLeaderScopeKey(initialScope);
+        broadcastSessionChange();
       }
 
       return { forcePasswordChange: scopedUser.forcePasswordChange, user: scopedUser };
@@ -148,6 +161,7 @@ export const AuthProvider = ({ children }) => {
         setLeaderScopeHeader(null);
         setActiveLeaderScopeKey(null);
         setLoading(false);
+        broadcastSessionChange();
       }
     }
   };

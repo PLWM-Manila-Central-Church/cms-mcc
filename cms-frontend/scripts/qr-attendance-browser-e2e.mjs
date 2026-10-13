@@ -147,8 +147,11 @@ const assertResponsiveNoHorizontalOverflow = async (page, label) => {
 };
 
 const enableQrAttendanceInAdminSettings = async ({ page, settingsApiResponses }) => {
-  await page.goto(`${baseUrl}/settings`, { waitUntil: 'domcontentloaded' });
+  // Follow the authenticated UI navigation rather than replacing the document.
+  // This keeps the live session in place and exercises the route users follow.
+  await page.getByRole('link', { name: 'Settings', exact: true }).click();
   try {
+    await page.getByRole('heading', { name: 'Settings', exact: true, level: 1 }).waitFor({ state: 'visible', timeout: 30_000 });
     await page.getByRole('button', { name: /Services/ }).click({ timeout: 10_000 });
   } catch (error) {
     const visibleText = await page.locator('body').innerText().catch(() => 'Unable to read page text');
