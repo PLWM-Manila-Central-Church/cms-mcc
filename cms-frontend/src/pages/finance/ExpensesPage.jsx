@@ -203,7 +203,7 @@ export default function ExpensesPage() {
           <p style={{ margin: '5px 0 0', color: 'var(--mcc-secondary, #52647a)', fontSize: 14 }}>Record and review church spending, with totals for the selected date range.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {canCreate && <button type="button" style={buttonStyle()} onClick={openCreate} disabled={!canRecordExpense}
+          {canCreate && <button type="button" style={{ ...buttonStyle(), opacity: canRecordExpense ? 1 : 0.5, cursor: canRecordExpense ? 'pointer' : 'not-allowed' }} onClick={openCreate} disabled={!canRecordExpense}
             aria-describedby={!canRecordExpense ? 'expense-setup-required' : undefined}
             title={!canRecordExpense ? 'Set up an expense category before recording expenses.' : undefined}>Add expense</button>}
           {canCreate && <button type="button" style={buttonStyle('secondary')} onClick={() => setShowSetup((value) => !value)}>{showSetup ? 'Close setup' : 'Finance setup'}</button>}

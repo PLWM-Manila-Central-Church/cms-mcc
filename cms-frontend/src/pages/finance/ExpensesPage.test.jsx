@@ -141,6 +141,7 @@ describe('ExpensesPage deletion flow', () => {
     renderPage();
     const addExpense = await screen.findByRole('button', { name: 'Add expense' });
     expect(addExpense).toBeDisabled();
+    expect(addExpense).toHaveStyle({ opacity: '0.5', cursor: 'not-allowed' });
     expect(addExpense).toHaveAttribute('aria-describedby', 'expense-setup-required');
     expect(screen.getByRole('note')).toHaveTextContent('Set up a fund, account, and expense category in Finance setup');
     fireEvent.click(addExpense);
