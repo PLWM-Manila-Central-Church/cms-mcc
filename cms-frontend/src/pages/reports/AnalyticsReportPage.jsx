@@ -36,14 +36,14 @@ function TrendBars({ title, rows = [], firstKey, secondKey, firstLabel, secondLa
   return (
     <section style={S.panel}>
       <h2 style={S.panelTitle}>{title}</h2>
-      <div style={S.legend}><span><i style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 2, background: '#0f6aa3' }} />{firstLabel}</span><span><i style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 2, background: '#13b5ea' }} />{secondLabel}</span></div>
+      <div style={S.legend}><span><i style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 2, background: '#0f6aa3' }} />{firstLabel}</span>{secondKey && <span><i style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 2, background: '#13b5ea' }} />{secondLabel}</span>}</div>
       {rows.length === 0 ? <p style={S.muted}>No records for this period.</p> : (
         <div style={S.trend}>
           {rows.map((row) => (
-            <div key={row.period} title={`${formatReportBucket(row.period, bucket)} · ${firstLabel}: ${row[firstKey]} · ${secondLabel}: ${row[secondKey]}`} style={S.monthColumn}>
+            <div key={row.period} title={`${formatReportBucket(row.period, bucket)} · ${firstLabel}: ${row[firstKey]}${secondKey ? ` · ${secondLabel}: ${row[secondKey]}` : ''}`} style={S.monthColumn}>
               <div style={S.barPair}>
                 <div style={{ ...S.trendBar, height: heightFor(row[firstKey]), minHeight: Number(row[firstKey] || 0) > 0 ? 2 : 0, background: '#0f6aa3' }} />
-                <div style={{ ...S.trendBar, height: heightFor(row[secondKey]), minHeight: Number(row[secondKey] || 0) > 0 ? 2 : 0, background: '#13b5ea' }} />
+                {secondKey && <div style={{ ...S.trendBar, height: heightFor(row[secondKey]), minHeight: Number(row[secondKey] || 0) > 0 ? 2 : 0, background: '#13b5ea' }} />}
               </div>
               <span>{formatReportBucket(row.period, bucket).replace('Week of ', '')}</span>
             </div>
@@ -159,11 +159,9 @@ export default function AnalyticsReportPage() {
             <TrendBars title="Attendance trend" rows={data.attendance.buckets || data.attendance.monthly} firstKey="service" secondKey="events" firstLabel="Services" secondLabel="Events" bucket={data.period?.bucket || 'month'} />
           </>}
           {canSeeFinance && data.finance && <section style={S.metricGrid}>
-            <article style={S.metric}><span>Income</span><strong>{money(data.finance.income)}</strong></article>
-            <article style={S.metric}><span>Expenses</span><strong>{money(data.finance.expenses)}</strong></article>
-            <article style={S.metric}><span>Net</span><strong>{money(data.finance.net)}</strong></article>
+            <article style={S.metric}><span>Received income</span><strong>{money(data.finance.income)}</strong></article>
           </section>}
-          {canSeeFinance && data.finance?.buckets && <TrendBars title="Finance trend" rows={data.finance.buckets} firstKey="income" secondKey="expenses" firstLabel="Income" secondLabel="Expenses" bucket={data.period?.bucket || 'month'} />}
+          {canSeeFinance && data.finance?.buckets && <TrendBars title="Finance trend" rows={data.finance.buckets} firstKey="income" firstLabel="Received income" bucket={data.period?.bucket || 'month'} />}
           <p style={S.footnote}>This report shows aggregate totals. Member names and individual giving records are not included.</p>
         </>
       )}

@@ -41,7 +41,7 @@ describe('FinanceAttachments', () => {
 
   it('rejects unsupported file types before sending them', async () => {
     axiosInstance.post.mockResolvedValue({ data: { success: true } });
-    render(<FinanceAttachments targetType="expense" targetId={13} canUpload />);
+    render(<FinanceAttachments targetType="income" targetId={13} canUpload />);
 
     const file = new File(['script'], 'receipt.html', { type: 'text/html' });
     fireEvent.change(screen.getByLabelText('Add receipt to financial record 13'), { target: { files: [file] } });

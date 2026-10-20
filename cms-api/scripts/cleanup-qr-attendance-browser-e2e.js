@@ -96,6 +96,7 @@ const run = async () => {
     || /^qr-ci-[a-z0-9-]+@example\.invalid$/i.test(email);
   const isFixtureMemberName = (member) =>
     /^(?:QR (?:Direct|Batch|Outside|Concurrent)|CI Member (?:Direct|Cell|Group|Unified)|CI Leader Unified)-\d+-\d+$/i.test(`${member.first_name} ${member.last_name}`)
+    || /^(?:Avery QA Import|CherQA|SoloQATest|RowTwo QAImport|Second QAImport|ImportQA|MappedQA)\s*$/i.test(`${member.first_name} ${member.last_name}`)
     || /^Candidate Age(?:17|20|31)-\d+-\d+$/i.test(`${member.first_name} ${member.last_name}`);
   const isFixtureGroupName = (name) =>
     /^(?:QR CI (?:other )?group|QR Browser E2E Group|Young Adults QA) \d+-\d+$/i.test(name);

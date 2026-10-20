@@ -4,7 +4,7 @@ const notificationsService = require("../services/notifications.service");
 
 exports.getUserNotifications = async (req, res, next) => {
   try {
-    const data = await notificationsService.getUserNotifications(req.user.userId);
+    const data = await notificationsService.getUserNotifications(req.user.userId, req.user.roleName);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -13,7 +13,7 @@ exports.getUserNotifications = async (req, res, next) => {
 
 exports.getUnreadNotifications = async (req, res, next) => {
   try {
-    const data = await notificationsService.getUnreadNotifications(req.user.userId);
+    const data = await notificationsService.getUnreadNotifications(req.user.userId, req.user.roleName);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -22,7 +22,7 @@ exports.getUnreadNotifications = async (req, res, next) => {
 
 exports.getNotificationById = async (req, res, next) => {
   try {
-    const data = await notificationsService.getNotificationById(req.params.id, req.user.userId);
+    const data = await notificationsService.getNotificationById(req.params.id, req.user.userId, req.user.roleName);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -40,7 +40,7 @@ exports.createNotification = async (req, res, next) => {
 
 exports.markAsRead = async (req, res, next) => {
   try {
-    const data = await notificationsService.markAsRead(req.params.id, req.user.userId);
+    const data = await notificationsService.markAsRead(req.params.id, req.user.userId, req.user.roleName);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -49,7 +49,7 @@ exports.markAsRead = async (req, res, next) => {
 
 exports.markAllAsRead = async (req, res, next) => {
   try {
-    const data = await notificationsService.markAllAsRead(req.user.userId);
+    const data = await notificationsService.markAllAsRead(req.user.userId, req.user.roleName);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -58,7 +58,7 @@ exports.markAllAsRead = async (req, res, next) => {
 
 exports.deleteNotification = async (req, res, next) => {
   try {
-    const data = await notificationsService.deleteNotification(req.params.id, req.user.userId);
+    const data = await notificationsService.deleteNotification(req.params.id, req.user.userId, req.user.roleName);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -67,7 +67,7 @@ exports.deleteNotification = async (req, res, next) => {
 
 exports.deleteAllNotifications = async (req, res, next) => {
   try {
-    const data = await notificationsService.deleteAllNotifications(req.user.userId);
+    const data = await notificationsService.deleteAllNotifications(req.user.userId, req.user.roleName);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

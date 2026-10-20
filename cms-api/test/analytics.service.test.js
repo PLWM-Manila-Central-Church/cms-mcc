@@ -152,13 +152,12 @@ describe("consolidated analytics access and range checks", () => {
 
     expect(result.finance).toEqual({
       income: 800,
-      expenses: 50,
-      net: 750,
       buckets: [
-        { period: "2026-10-04", income: 500, expenses: 50 },
-        { period: "2026-10-11", income: 300, expenses: 0 },
+        { period: "2026-10-04", income: 500 },
+        { period: "2026-10-11", income: 300 },
       ],
     });
+    expect(Expense.findAll).not.toHaveBeenCalled();
     expect(result.members).toBeNull();
     expect(result.attendance).toBeNull();
   });

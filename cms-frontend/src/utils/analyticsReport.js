@@ -65,12 +65,10 @@ export const buildAnalyticsCsvRows = (data, { canSeeMembersAndAttendance = false
   }
   if (canSeeFinance && data?.finance) {
     rows.push(
-      ['Finance', 'Income', data.finance.income],
-      ['Finance', 'Expenses', data.finance.expenses],
-      ['Finance', 'Net', data.finance.net],
+      ['Finance', 'Received income', data.finance.income],
     );
     for (const item of data.finance.buckets || []) {
-      rows.push(['Finance trend', item.period, `Income ${item.income}; expenses ${item.expenses}`]);
+      rows.push(['Finance trend', item.period, `Received ${item.income}`]);
     }
   }
   return rows;

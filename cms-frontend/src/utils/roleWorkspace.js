@@ -53,7 +53,6 @@ export function workspaceActions(user, hasPermission) {
 
 export const MODULES = [
   ['/outreach', 'Notifications & follow-ups', 'Review activity reminders, consent and caring follow-ups after finalized eligible absences.'],
-  ['/finance/expenses', 'Expenses', 'Track expenditure with categories, dates and supporting records.'],
   ['/finance/my-giving', 'Giving', 'Review recorded contributions and receipts.'],
   ['/reports/analytics', 'Analytics', 'Filter the period, review the result and export the report you need.'],
   ['/reports/team-attendance', 'Team attendance report', 'Review weekly, monthly or annual attendance trends for your current assigned team.'],

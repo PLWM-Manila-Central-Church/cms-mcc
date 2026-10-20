@@ -4,6 +4,7 @@ const { Op, fn, col, literal } = require("sequelize");
 const sequelize = require("../config/db");
 const cache = require("../helpers/cache.helper");
 const { getAttendanceModel } = require("../helpers/attendanceSummary.helper");
+const dateOnlyInTimezone = require("../helpers/dateOnlyInTimezone");
 const {
   Member, FinancialRecord, FinancialCategory, Service, Event,
   InventoryItem, InventoryRequest, AuditLog, User,
@@ -284,9 +285,9 @@ exports.getStats = async ({
       );
     }
 
-    // Per-cell-group attendance at latest service
+    // Absences are meaningful only after a service has been completed.
     const latestService = await Service.findOne({
-      where: { status: { [Op.in]: ["completed", "published"] } },
+      where: { status: "completed", service_date: { [Op.lte]: dateOnlyInTimezone(now, "Asia/Manila") } },
       order: [["service_date", "DESC"]],
       attributes: ["id", "title", "service_date"],
     });

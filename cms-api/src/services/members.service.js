@@ -201,7 +201,45 @@ exports.getMemberStatusHistory = async (id, user = {}) => {
 };
 
 // ── Create Member ────────────────────────────────────────────
-exports.createMember = async (data, createdBy, user = {}) => {
+const constrainMemberCreateToScope = (data = {}, user = {}) => {
+  if (!isScopedLeader(user)) return data;
+
+  const scope = getScope(user);
+  if (!scope || !Number.isSafeInteger(Number(scope.id)) || Number(scope.id) < 1) {
+    throw AppError.forbidden("This account has no active member-creation scope");
+  }
+
+  if (scope.type === "cell_group") {
+    if (Number(data.cell_group_id) !== Number(scope.id)) {
+      throw AppError.forbidden("Members must be created inside your assigned cell group");
+    }
+    return { ...data, group_id: null };
+  }
+
+  if (scope.type === "group") {
+    if (Number(data.group_id) !== Number(scope.id)) {
+      throw AppError.forbidden("Members must be created inside your assigned group");
+    }
+    return { ...data, cell_group_id: null };
+  }
+
+  if (scope.type === "ministry") {
+    if (data.ministry_role_id && Number(data.ministry_role_id) !== Number(scope.id)) {
+      throw AppError.forbidden("Members can only be enrolled in your assigned ministry");
+    }
+    return { ...data, cell_group_id: null, group_id: null, ministry_role_id: scope.id };
+  }
+
+  throw AppError.forbidden("Select one assigned team before creating a member");
+};
+
+const rollbackNewMember = async (memberId) => {
+  await MemberStatusHistory.destroy({ where: { member_id: memberId } }).catch(() => {});
+  await Member.destroy({ where: { id: memberId }, force: true }).catch(() => {});
+};
+
+exports.createMember = async (data, createdBy, user = {}, importedStatus = null) => {
+  data = constrainMemberCreateToScope(data, user);
   const {
     first_name, last_name, email, phone, birthdate, spiritual_birthday,
     address, gender, status, cell_group_id, group_id, referred_by,
@@ -246,7 +284,28 @@ exports.createMember = async (data, createdBy, user = {}) => {
     is_deleted: 0,
   });
 
-  const created = await exports.getMemberById(member.id);
+  if (importedStatus && importedStatus !== member.status) {
+    try {
+      await MemberStatusHistory.create({
+        member_id: member.id,
+        old_status: importedStatus,
+        new_status: member.status,
+        changed_by: createdBy || null,
+        reason: `Source roster status normalized to ${member.status} under the current member-status policy.`,
+      });
+    } catch (error) {
+      await rollbackNewMember(member.id);
+      throw error;
+    }
+  }
+
+  let created;
+  try {
+    created = await exports.getMemberById(member.id, user);
+  } catch (error) {
+    await rollbackNewMember(member.id);
+    throw error;
+  }
 
   // Auto-enroll into ministry:
   // 1. If an explicit ministry_role_id was passed in the form, use that.
@@ -514,9 +573,33 @@ exports.assignMemberToScope = async (memberId, updatedBy, user = {}) => {
 // ── Bulk Create Members from CSV ─────────────────────────────
 const { parse } = require("csv-parse/sync");
 
-exports.bulkCreateMembers = async (csvBuffer, createdBy) => {
+const resolveCsvReferenceId = async (rawId, rawName, Model, label, csvRow) => {
+  const idValue = String(rawId || "").trim();
+  if (idValue) {
+    if (!/^[1-9]\d*$/.test(idValue) || !Number.isSafeInteger(Number(idValue))) {
+      throw AppError.badRequest("VALIDATION", `Invalid ${label} on CSV row ${csvRow}`);
+    }
+    return Number(idValue);
+  }
+
+  const name = String(rawName || "").trim();
+  if (!name) return null;
+
+  const matches = await Model.findAll({
+    where: { name },
+    attributes: ["id"],
+    limit: 2,
+  });
+  if (matches.length !== 1) {
+    throw AppError.badRequest("VALIDATION", `Unmatched or ambiguous ${label} on CSV row ${csvRow}`);
+  }
+  return Number(matches[0].id);
+};
+
+exports.bulkCreateMembers = async (csvBuffer, createdBy, user = {}) => {
   const records = parse(csvBuffer.toString("utf8"), {
     columns: true,
+    bom: true,
     skip_empty_lines: true,
     trim: true,
   });
@@ -525,28 +608,88 @@ exports.bulkCreateMembers = async (csvBuffer, createdBy) => {
   if (records.length > 500) throw AppError.badRequest("VALIDATION", "Maximum 500 members per batch");
 
   const results = { created: 0, skipped: 0, errors: [] };
+  const createdIds = [];
+  const { createMemberSchema } = require("../validators/members.validator");
+  const uploadStorage = require("../middlewares/upload-s3");
 
-  for (const row of records) {
+  for (const [index, row] of records.entries()) {
     try {
-      await exports.createMember({
-        first_name: row.first_name,
-        last_name: row.last_name,
+      const sourceStatusText = String(row.source_status || row.status || "").trim();
+      const statusKey = sourceStatusText.toLowerCase().replace(/[\s_-]+/g, "");
+      const statusMappings = {
+        active: { status: "Active" },
+        inactive: { status: "Inactive" },
+        in: { status: "Inactive" },
+        new: { status: "Active", history: "New" },
+        semiactive: { status: "Active", history: "Semi-Active" },
+        visitor: { status: "Active", history: "Visitor" },
+      };
+      const mapping = statusKey ? statusMappings[statusKey] : { status: "Active" };
+      if (!mapping) throw AppError.badRequest("VALIDATION", `Unsupported member status on CSV row ${index + 2}`);
+      let profilePhotoUrl = null;
+      if (row.profile_photo_url) {
+        const photoKey = uploadStorage.getStoredFileKey(row.profile_photo_url, "profiles");
+        if (!photoKey) throw AppError.badRequest("VALIDATION", `Profile photo path is invalid on CSV row ${index + 2}`);
+        profilePhotoUrl = uploadStorage.getFileUrl(photoKey);
+      }
+      const data = {
+        first_name: String(row.first_name || "").trim(),
+        last_name: String(row.last_name || "").trim(),
         email: row.email || null,
         phone: row.phone || null,
+        birthdate: row.birthdate || null,
+        spiritual_birthday: row.spiritual_birthday || null,
+        address: row.address || null,
         gender: row.gender || null,
-        status: row.status || "Active",
-        cell_group_id: row.cell_group_id ? parseInt(row.cell_group_id) : null,
-        group_id: row.group_id ? parseInt(row.group_id) : null,
-      }, createdBy);
+        status: mapping.status,
+        cell_group_id: await resolveCsvReferenceId(
+          row.cell_group_id,
+          row.cell_group_name,
+          CellGroup,
+          "cell group",
+          index + 2,
+        ),
+        group_id: await resolveCsvReferenceId(
+          row.group_id,
+          row.group_name,
+          MinistryGroup,
+          "group",
+          index + 2,
+        ),
+      };
+      const validated = createMemberSchema.validate(data, { abortEarly: false });
+      if (validated.error) throw AppError.badRequest("VALIDATION", `Invalid CSV row ${index + 2}: ${validated.error.details.map((item) => item.message).join("; ")}`);
+      const memberData = profilePhotoUrl ? { ...validated.value, profile_photo_url: profilePhotoUrl } : validated.value;
+      const createdMember = await exports.createMember(memberData, createdBy, user, mapping.history || null);
+      createdIds.push({ row: index + 2, id: createdMember.id });
       results.created++;
     } catch (err) {
       results.skipped++;
-      results.errors.push({ row: row.first_name + " " + row.last_name, error: err.message });
+      results.errors.push({ row: index + 2, error: err.code || "IMPORT_ROW_FAILED" });
     }
   }
 
-  return results;
+  return { ...results, created_ids: createdIds };
   };
+
+exports.updateMemberProfilePhoto = async (id, filePath, updatedBy, user = {}) => {
+  await ensureMemberInScope(id, user);
+  const member = await Member.findByPk(id);
+  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+  const storage = require("../middlewares/upload-s3");
+  const newKey = storage.getStoredFileKey(filePath, "profiles");
+  if (!newKey) throw AppError.badRequest("VALIDATION", "Profile photo storage path is invalid");
+  const oldKey = storage.getStoredFileKey(member.profile_photo_url, "profiles");
+  const storedPath = storage.getFileUrl(newKey);
+  await member.update({ profile_photo_url: storedPath });
+  auditLog.log({ userId: updatedBy, action: "UPDATE_MEMBER_PHOTO", targetTable: "members", targetId: id });
+  cache.keys("dashboard:*").forEach((key) => cache.del(key));
+  if (oldKey && oldKey !== newKey) {
+    try { await storage.deleteStoredFile(oldKey); }
+    catch (error) { logger.warn(error, "Could not delete old member profile photo"); }
+  }
+  return await exports.getMemberById(id, user);
+};
 
   // ── Link Member to User Account ───────────────────────────────
   exports.linkMemberAccount = async (memberId, { email, password }, adminId) => {

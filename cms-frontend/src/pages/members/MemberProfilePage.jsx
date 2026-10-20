@@ -1,10 +1,12 @@
-import { lazy, Suspense, useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
+import { fullName as getFullName } from '../../utils/member';
+import { uploadUrl } from '../../utils/uploadUrl';
 const OperationalMemberQrPanel = lazy(() => import('../../components/attendance/OperationalMemberQrPanel'));
 
 const STATUS_COLORS = {
@@ -26,6 +28,10 @@ export default function MemberProfilePage() {
   const [statusHistory, setStatusHistory] = useState([]);
   const [statusHistoryLoading, setStatusHistoryLoading] = useState(true);
   const [statusHistoryError, setStatusHistoryError] = useState('');
+  const photoInputRef = useRef(null);
+  const [photoSaving, setPhotoSaving] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+  const [photoNotice, setPhotoNotice] = useState('');
 
   // Emergency contact form
   const [ecForm, setEcForm]     = useState({ name: '', relationship: '', phone: '' });
@@ -57,6 +63,28 @@ export default function MemberProfilePage() {
     } finally {
       setStatusHistoryLoading(false);
     }
+  };
+
+  const handleProfilePhoto = async (event) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    setPhotoError('');
+    setPhotoNotice('');
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setPhotoError('Choose a JPG, PNG or WebP image smaller than 5 MB.');
+      return;
+    }
+    setPhotoSaving(true);
+    const formData = new FormData();
+    formData.append('photo', file);
+    try {
+      const response = await axiosInstance.post(`/members/${id}/photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setMember(response.data.data);
+      setPhotoNotice('Profile photo updated.');
+    } catch (uploadError) {
+      setPhotoError(uploadError.response?.data?.message || 'Could not update this profile photo.');
+    } finally { setPhotoSaving(false); }
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,8 +140,8 @@ export default function MemberProfilePage() {
   if (error)   return <div style={styles.errorBox}>{error}</div>;
   if (!member) return null;
 
-  const fullName = `${member.first_name} ${member.last_name}`;
-  const initials = `${member.first_name[0]}${member.last_name[0]}`;
+  const fullName = getFullName(member);
+  const initials = [member.first_name, member.last_name].filter((part) => part?.trim()).map((part) => part.trim()[0]).join('').slice(0, 2);
 
   return (
     <div className="mcc-module mcc-module-member-profile-page" style={styles.page}>
@@ -139,7 +167,9 @@ export default function MemberProfilePage() {
 
       {/* Profile Header Card */}
       <div style={styles.profileCard}>
-        <div style={styles.avatarLg}>{initials}</div>
+        <div style={{ ...styles.avatarLg, overflow: 'hidden' }}>
+          {member.profile_photo_url ? <img src={uploadUrl(member.profile_photo_url)} alt={`${fullName} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : initials}
+        </div>
         <div style={styles.profileInfo}>
           <h1 className="workspace-page-title" style={styles.profileName}>{fullName}</h1>
           <div style={styles.profileMeta}>
@@ -154,6 +184,12 @@ export default function MemberProfilePage() {
               <span style={styles.barcode}><MonoIcon name="label" size={14} /> {member.barcode}</span>
             )}
           </div>
+          {hasPermission('members', 'update') && <div style={{ marginTop: 10 }}>
+            <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleProfilePhoto} hidden />
+            <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoSaving} style={styles.editBtn}>{photoSaving ? 'Uploading…' : member.profile_photo_url ? 'Change photo' : 'Add photo'}</button>
+            {photoError && <p role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>{photoError}</p>}
+            {photoNotice && <p role="status" style={{ color: '#15803d', fontSize: 12 }}>{photoNotice}</p>}
+          </div>}
         </div>
       </div>
 

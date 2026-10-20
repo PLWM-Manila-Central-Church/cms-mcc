@@ -6,6 +6,7 @@ const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
 const validateQuery = require("../middlewares/validateQuery");
+const { profileUpload, requireDurableUploadStorage } = require("../middlewares/upload-s3");
 const { createMemberSchema, updateMemberSchema, getMembersQuerySchema, linkMemberAccountSchema } = require("../validators/members.validator");
 const multer = require("multer");
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -26,6 +27,7 @@ router.get("/:id/status-history", auth, authorize("members", "read"), ctrl.getMe
 router.get("/:id", auth, authorize("members", "read"),   ctrl.getMemberById);
 router.post("/",   auth, authorize("members", "create"), validate(createMemberSchema), ctrl.createMember);  // Fix #1
 router.put("/:id", auth, authorize("members", "update"), validate(updateMemberSchema), ctrl.updateMember);  // Fix #1
+router.post("/:id/photo", auth, authorize("members", "update"), requireDurableUploadStorage, profileUpload.single("photo"), ctrl.uploadMemberPhoto);
 router.patch("/:id/unassign-scope", auth, authorize("scope_assignments", "manage"), ctrl.unassignMemberFromScope);
 router.delete("/:id", auth, authorize("members", "delete"), ctrl.deleteMember);
 router.post("/bulk", auth, authorize("members", "create"), csvUpload.single("file"), ctrl.bulkCreateMembers);

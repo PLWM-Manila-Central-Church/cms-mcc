@@ -5,6 +5,7 @@ import useIsMobile from '../../hooks/useIsMobile';
 import { useAuth } from '../../context/AuthContext';
 import { isScopedLeaderRole } from '../../utils/roleDisplay';
 import { fetchAllPages } from '../../api/fetchAllPages';
+import { displayMemberName } from '../../utils/displayIdentity';
 
 export default function MemberFormPage() {
   const { id } = useParams();
@@ -139,7 +140,7 @@ export default function MemberFormPage() {
           <h2 style={styles.sectionTitle}>Personal Information</h2>
           <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'16px' }}>
             <Field label="First Name *" name="first_name" value={form.first_name} onChange={handleChange} required />
-            <Field label="Last Name *"  name="last_name"  value={form.last_name}  onChange={handleChange} required />
+            <Field label="Last Name (optional for single-name members)" name="last_name" value={form.last_name} onChange={handleChange} />
             <Field label="Email"        name="email"      value={form.email}       onChange={handleChange} type="email" />
             <Field label="Phone"        name="phone"      value={form.phone}       onChange={handleChange} />
             <Field label="Birthdate"    name="birthdate"  value={form.birthdate}   onChange={handleChange} type="date" />
@@ -209,7 +210,7 @@ export default function MemberFormPage() {
                   .filter(m => String(m.id) !== String(id))
                   .map(m => (
                     <option key={m.id} value={m.id}>
-                      {m.last_name}, {m.first_name}
+                      {displayMemberName(m)}
                     </option>
                   ))}
               </select>
