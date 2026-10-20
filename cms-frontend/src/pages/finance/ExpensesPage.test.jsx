@@ -130,4 +130,21 @@ describe('ExpensesPage deletion flow', () => {
     }));
     expect(mockAxios.post.mock.calls[0][1]).not.toHaveProperty('account_id');
   });
+
+  it('guides the user to Finance setup when no expense categories exist', async () => {
+    mockAxios.get.mockImplementation(async (url) => {
+      if (url === '/finance/expense-categories') return { data: { data: [] } };
+      if (url === '/finance/balance') return { data: { data: { total_income: 0, total_expense: 0, net_balance: 0 } } };
+      if (url.startsWith('/finance/expenses?')) return { data: { data: { expenses: [], total: 0 } } };
+      return { data: { data: [] } };
+    });
+    renderPage();
+    const addExpense = await screen.findByRole('button', { name: 'Add expense' });
+    expect(addExpense).toBeDisabled();
+    expect(addExpense).toHaveAttribute('aria-describedby', 'expense-setup-required');
+    expect(screen.getByRole('note')).toHaveTextContent('Set up a fund, account, and expense category in Finance setup');
+    fireEvent.click(addExpense);
+    expect(screen.queryByRole('dialog', { name: 'Add expense' })).not.toBeInTheDocument();
+    expect(mockAxios.post).not.toHaveBeenCalled();
+  });
 });

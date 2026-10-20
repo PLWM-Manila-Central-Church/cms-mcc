@@ -189,6 +189,7 @@ export default function ExpensesPage() {
   const selectedCategory = categories.find((category) => String(category.id) === String(expenseForm.category_id));
   const selectedCategoryAccount = accounts.find((account) => String(account.id) === String(selectedCategory?.account_id));
   const formCategories = categories;
+  const canRecordExpense = formCategories.length > 0;
 
   return (
     <section className="mcc-module mcc-module-expenses-page" aria-label="Church expenses" style={{ display: 'flex', flexDirection: 'column', gap: 24, color: 'var(--mcc-ink, #0f172a)' }}>
@@ -202,13 +203,16 @@ export default function ExpensesPage() {
           <p style={{ margin: '5px 0 0', color: 'var(--mcc-secondary, #52647a)', fontSize: 14 }}>Record and review church spending, with totals for the selected date range.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {canCreate && <button type="button" style={buttonStyle()} onClick={openCreate}>Add expense</button>}
+          {canCreate && <button type="button" style={buttonStyle()} onClick={openCreate} disabled={!canRecordExpense}
+            aria-describedby={!canRecordExpense ? 'expense-setup-required' : undefined}
+            title={!canRecordExpense ? 'Set up an expense category before recording expenses.' : undefined}>Add expense</button>}
           {canCreate && <button type="button" style={buttonStyle('secondary')} onClick={() => setShowSetup((value) => !value)}>{showSetup ? 'Close setup' : 'Finance setup'}</button>}
         </div>
       </header>
 
       {notice && <div role="status" style={{ padding: 12, borderRadius: 9, background: '#ecfdf5', color: '#047857' }}>{notice}</div>}
       {error && <div role="alert" style={{ padding: 12, borderRadius: 9, background: '#fef2f2', color: '#b91c1c' }}>{error}</div>}
+      {canCreate && !canRecordExpense && <p id="expense-setup-required" role="note" style={{ margin: '-12px 0 0', color: 'var(--mcc-secondary, #52647a)', fontSize: 13 }}>Set up a fund, account, and expense category in Finance setup before recording expenses.</p>}
 
       {showSetup && canCreate && (
         <section style={{ padding: 18, border: '1px solid #dbe4ee', borderRadius: 'var(--mcc-radius, 16px)', background: 'var(--mcc-surface, #fff)' }}>
