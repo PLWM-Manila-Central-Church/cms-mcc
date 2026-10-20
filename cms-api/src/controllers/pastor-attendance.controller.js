@@ -34,6 +34,8 @@ const COLUMNS = [
   ["awaiting_review", "Awaiting review"],
   ["provisional_missing", "Provisional missing"],
   ["final_absent", "Final absent"],
+  ["excused_count", "Excused"],
+  ["pending_review_count", "Pending attendance review"],
   ["finalization_status", "Reconciliation status"],
   ["event_session_count", "Event sessions"],
   ["team_dimension", "Team dimension"],
@@ -91,6 +93,8 @@ exports.exportReport = async (req, res, next) => {
         awaiting_review: report.summary.awaiting_review,
         provisional_missing: report.summary.provisional_missing,
         final_absent: report.summary.final_absent,
+        excused_count: report.summary.excused_count,
+        pending_review_count: report.summary.pending_review_count,
         finalization_status: `${report.summary.finalized_sessions} finalized sessions`,
       }, report.filters),
       ...report.event_activity_summary.map((event) => withFilters({

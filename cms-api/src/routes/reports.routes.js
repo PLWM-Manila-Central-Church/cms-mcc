@@ -10,5 +10,6 @@ const analyticsQuerySchema = require("../validators/analytics.validator");
 
 router.get("/tithing-statement", auth, authorize("finance", "read"), ctrl.tithingStatement);
 router.get("/analytics", auth, authorize("dashboard", "read"), validateQuery(analyticsQuerySchema), analyticsController.getAnalytics);
+router.get("/team-attendance", auth, authorize("attendance", "read"), validateQuery(analyticsQuerySchema), analyticsController.getTeamAttendance);
 
 module.exports = router;

@@ -57,6 +57,7 @@ const {
   QrAttendanceSession,
 } = require("../src/modules/qr-attendance/models");
 const { deriveInventoryStatus } = require("../src/helpers/inventoryStatus.helper");
+const outreach = require("../src/modules/outreach/models");
 
 const run = async () => {
   assert.equal(process.env.NODE_ENV, "test", "Refusing to clean fixtures outside test mode");
@@ -293,6 +294,34 @@ const run = async () => {
       await ArchiveRecord.unscoped().destroy({ where: { id: archiveIdFilter }, transaction });
     }
 
+    // Outreach fixtures reference only the already-validated synthetic Members.
+    // Remove their dependent history before removing the underlying QR sessions.
+    const { readiness } = require("../src/modules/outreach/readiness");
+    if (await readiness()) {
+      const deliveries = await outreach.OutreachDelivery.findAll({ where: { member_id: idFilter(memberIds) }, attributes: ["id"], transaction });
+      if (deliveries.length) await outreach.OutreachDeliveryAttempt.destroy({ where: { delivery_id: idFilter(deliveries.map((row) => row.id)) }, transaction });
+      await outreach.OutreachDelivery.destroy({ where: { member_id: idFilter(memberIds) }, transaction });
+      await outreach.AttendanceFollowUp.destroy({ where: { member_id: idFilter(memberIds) }, transaction });
+      await outreach.AttendanceException.destroy({ where: { member_id: idFilter(memberIds) }, transaction });
+      await outreach.OutreachPreference.destroy({ where: { member_id: idFilter(memberIds) }, transaction });
+      const fixtureSessionScopes = [
+        ...(created.serviceId ? [{ service_id: created.serviceId }] : []),
+        ...(fixtureEventIds.length ? [{ event_id: idFilter(fixtureEventIds) }] : []),
+      ];
+      if (fixtureSessionScopes.length) {
+        const fixtureSessions = await QrAttendanceSession.findAll({ where: { [Op.or]: fixtureSessionScopes }, attributes: ["id"], transaction });
+        await outreach.OutreachSessionPolicy.destroy({ where: { session_id: idFilter(fixtureSessions.map((row) => row.id)) }, transaction });
+      }
+      for (const snapshot of created.outreachConfigSnapshot || []) {
+        assert.ok(/^outreach_(enabled|mode|reminder_days|reminder_hour|daily_sms_cap|reminder_template|followup_template)$/.test(snapshot.key), "Unexpected outreach setting cleanup key");
+        const setting = await SystemSetting.findOne({ where: { key: snapshot.key }, transaction, lock: transaction.LOCK.UPDATE });
+        if (setting) assert.ok(userIds.includes(Number(setting.updated_by)), "An outreach setting changed outside this fixture; refusing to overwrite it");
+        if (snapshot.existed) {
+          assert.ok(setting, "Original outreach configuration disappeared");
+          await setting.update({ value: snapshot.value, updated_by: snapshot.updated_by }, { transaction });
+        } else if (setting) await setting.destroy({ transaction });
+      }
+    }
     const sessionScopes = [
       ...(created.serviceId ? [{ service_id: created.serviceId }] : []),
       ...(fixtureEventIds.length ? [{ event_id: { [Op.in]: fixtureEventIds } }] : []),

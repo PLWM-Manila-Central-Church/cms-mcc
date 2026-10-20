@@ -268,6 +268,7 @@ exports.getMyEvents = async (memberId) => {
       start_date:            e.start_date,
       end_date:              e.end_date,
       location:              e.location,
+      image_url:             e.image_url || null,
       capacity:              e.capacity,
       total_parking_slots:   e.total_parking_slots || 0,
       registration_deadline: e.registration_deadline,

@@ -103,7 +103,9 @@ exports.deleteEventImage = async (req, res, next) => {
 
 exports.getEventImage = async (req, res, next) => {
   try {
-    const imageKey = await eventsService.getEventImageKey(req.params.id);
+    const imageKey = await eventsService.getEventImageKey(req.params.id, {
+      memberVisibleOnly: req.user?.roleName === "Member",
+    });
     await require("../middlewares/upload-s3").sendStoredFile(imageKey, res);
   } catch (err) { next(err); }
 };

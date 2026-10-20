@@ -67,11 +67,14 @@ const visibilityFilter = (roleName) => {
 
 // ── Get All Records (paginated) ──────────────────────────────
 exports.getAllRecords = async ({
-  page = 1, limit = 15, category_id, status, visibility, search, roleName,
+  page = 1, limit = 15, category_id, status, visibility, search, roleName, archived = false,
 } = {}) => {
 
   const offset = (parseInt(page) - 1) * parseInt(limit);
-    const where  = { is_deleted: 0 };
+  if (archived && roleName !== "System Admin") {
+    return { records: [], total: 0, total_pages: 0 };
+  }
+  const where = { is_deleted: archived ? 1 : 0 };
 
   if (category_id) where.category_id = category_id;
   if (status)      where.status      = status;
@@ -104,7 +107,8 @@ exports.getAllRecords = async ({
     where.category_id = financialCategory.id;
   }
 
-  const { count, rows } = await ArchiveRecord.findAndCountAll({
+  const RecordModel = archived ? ArchiveRecord.unscoped() : ArchiveRecord;
+  const { count, rows } = await RecordModel.findAndCountAll({
     where,
     include: listIncludes,
     order: [["created_at", "DESC"]],
@@ -121,8 +125,9 @@ exports.getAllRecords = async ({
 };
 
 // ── Get Record By ID ─────────────────────────────────────────
-exports.getRecordById = async (id) => {
-  const record = await ArchiveRecord.findOne({
+exports.getRecordById = async (id, { includeArchived = false } = {}) => {
+  const RecordModel = includeArchived ? ArchiveRecord.unscoped() : ArchiveRecord;
+  const record = await RecordModel.findOne({
     where: { id },
     include: detailIncludes,
   });
@@ -130,8 +135,11 @@ exports.getRecordById = async (id) => {
   return remapRecord(record);
 };
 
-exports.getRecordByIdForRole = async (id, roleName) => {
-  const record = await exports.getRecordById(id);
+exports.getRecordByIdForRole = async (id, roleName, { includeArchived = false } = {}) => {
+  if (includeArchived && roleName !== "System Admin") {
+    throw AppError.notFound("RECORD_NOT_FOUND", "Archive record not found");
+  }
+  const record = await exports.getRecordById(id, { includeArchived });
   if (!canAccessArchiveRecord(record, roleName)) {
     throw AppError.forbidden("Access forbidden");
   }
@@ -319,20 +327,52 @@ exports.approveRecord = async (id, approvedBy) => {
   return await exports.getRecordById(id);
 };
 
-// ── Soft Delete Record ───────────────────────────────────────
-exports.deleteRecord = async (id, deletedBy) => {
+// ── Archive Record (retains the record, file, and version history) ──
+exports.archiveRecord = async (id, archivedBy) => {
   const record = await ArchiveRecord.findOne({ where: { id } });
   if (!record) throw AppError.notFound("RECORD_NOT_FOUND", "Archive record not found");
+  if (Number(record.is_deleted) === 1) {
+    throw AppError.conflict("ALREADY_ARCHIVED", "This archive record is already archived");
+  }
 
   await record.update({
     is_deleted: 1,
     deleted_at: new Date(),
-    deleted_by: deletedBy,
-    status:     "deleted",
+    deleted_by: archivedBy,
   });
 
-  auditLog.log({ userId: deletedBy, action: "DELETE_ARCHIVE", targetTable: "archive_records", targetId: id });
-  return { message: "Archive record deleted successfully." };
+  auditLog.log({ userId: archivedBy, action: "ARCHIVE_RECORD", targetTable: "archive_records", targetId: id });
+  return { message: "Archive record archived successfully." };
+};
+
+// Keep the old DELETE endpoint functional for older clients; it now archives.
+exports.deleteRecord = exports.archiveRecord;
+
+exports.restoreRecord = async (id, restoredBy) => {
+  const record = await ArchiveRecord.unscoped().findOne({ where: { id } });
+  if (!record) throw AppError.notFound("RECORD_NOT_FOUND", "Archive record not found");
+  if (Number(record.is_deleted) !== 1) {
+    throw AppError.conflict("NOT_ARCHIVED", "This archive record is already active");
+  }
+
+  // Older soft-deleted rows stored their previous approval state as `deleted`.
+  const restoredStatus = record.status === "deleted"
+    ? (record.approved_by ? "approved" : "pending")
+    : record.status;
+  await record.update({
+    is_deleted: 0,
+    deleted_at: null,
+    deleted_by: null,
+    status: restoredStatus,
+  });
+  auditLog.log({
+    userId: restoredBy,
+    action: "RESTORE_ARCHIVE",
+    targetTable: "archive_records",
+    targetId: id,
+    newValues: { status: restoredStatus },
+  });
+  return { message: "Archive record restored successfully." };
 };
 
 // ── Get Versions for a Record ────────────────────────────────

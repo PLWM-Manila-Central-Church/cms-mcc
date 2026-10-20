@@ -40,6 +40,7 @@ const invalidateSessionFinalization = async (
     finalized_by: null,
     finalized_revision: null,
   }, { transaction });
+  require("../outreach/hooks").afterSessionChange(session.id, transaction);
 
   if (wasFinalized) {
     await writeQrAudit({

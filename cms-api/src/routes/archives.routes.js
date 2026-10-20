@@ -23,6 +23,9 @@ router.post("/",   auth, authorize("archives", "create"), requireDurableUploadSt
 router.put("/:id", auth, authorize("archives", "update"), requireDurableUploadStorage, archiveUpload.single("file"), ctrl.updateRecord);
 
 router.patch("/:id/approve", auth, authorize("archives", "update"), ctrl.approveRecord);
+router.patch("/:id/archive", auth, authorize("archives", "delete"), ctrl.archiveRecord);
+router.patch("/:id/restore", auth, authorize("archives", "update"), ctrl.restoreRecord);
+// Kept for clients that still call DELETE; the handler now archives the row.
 router.delete("/:id",        auth, authorize("archives", "delete"), ctrl.deleteRecord);
 
 // ── Versions ─────────────────────────────────────────────────

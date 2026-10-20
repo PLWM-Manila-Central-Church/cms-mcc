@@ -9,5 +9,6 @@ exports.getArchivesQuerySchema = Joi.object({
   status:      Joi.string().valid("pending", "approved", "rejected").optional(),
   visibility:  Joi.string().valid("public", "restricted", "confidential").optional(),
   search:      Joi.string().max(200).allow("").optional(),
+  archived:    Joi.boolean().default(false),
 });
 

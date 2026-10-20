@@ -18,9 +18,10 @@ jest.mock("../src/models", () => ({
   ServiceAttendanceSummary: {},
   FinancialRecord: {},
   FinancialCategory: {},
-  Event: { findOne: jest.fn() },
+  Event: { findOne: jest.fn(), findAll: jest.fn() },
   EventRegistration: {
     findOne: jest.fn(),
+    findAll: jest.fn(),
     count: jest.fn(),
     create: jest.fn(),
   },
@@ -64,6 +65,47 @@ describe("member event-registration notifications", () => {
     Member.findByPk.mockResolvedValue({ id: 42, status: "Active" });
     User.findOne.mockResolvedValue({ id: 9 });
     notifications.createNotification.mockResolvedValue({ id: 55 });
+    Event.findAll.mockResolvedValue([]);
+    EventRegistration.findAll.mockResolvedValue([]);
+  });
+
+  test("returns the event image URL to the member portal without exposing its storage key", async () => {
+    const eventRow = {
+      id: 18,
+      title: "Community Gathering",
+      description: "A church-wide event",
+      start_date: "2026-11-01",
+      end_date: null,
+      location: "Main Hall",
+      capacity: 100,
+      total_parking_slots: 0,
+      registration_deadline: null,
+      status: "Upcoming",
+      image_url: "/events/18/image",
+      image_key: "events/private-storage-key.jpg",
+      toJSON: () => ({
+        id: 18,
+        title: "Community Gathering",
+        description: "A church-wide event",
+        start_date: "2026-11-01",
+        end_date: null,
+        location: "Main Hall",
+        capacity: 100,
+        total_parking_slots: 0,
+        registration_deadline: null,
+        status: "Upcoming",
+        image_url: "/events/18/image",
+        image_key: "events/private-storage-key.jpg",
+        category: null,
+        EventRegistrations: [],
+      }),
+    };
+    Event.findAll.mockResolvedValue([eventRow]);
+
+    const [eventResult] = await memberPortalService.getMyEvents(42);
+
+    expect(eventResult.image_url).toBe("/events/18/image");
+    expect(eventResult.image_key).toBeUndefined();
   });
 
   test("notifies the member after their event registration commits", async () => {

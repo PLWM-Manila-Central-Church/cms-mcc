@@ -33,6 +33,7 @@
     "seed:qr-browser-e2e": "node scripts/seed-qr-attendance-browser-e2e.js",
     "cleanup:qr-browser-e2e": "node scripts/cleanup-qr-attendance-browser-e2e.js",
     "cleanup:archive-qa-fixture": "node scripts/cleanup-archive-qa-fixture.js",
+    "outreach:process": "node scripts/process-outreach.js",
     "test:finance-validator": "node --test test/finance.validator.test.js",
     "test": "jest --detectOpenHandles --forceExit --testTimeout=15000",
     "test:coverage": "jest --coverage --detectOpenHandles --forceExit --testTimeout=15000",

@@ -6,9 +6,11 @@ const { Member, FinancialRecord, Expense, Attendance } = require("../models");
 const { getAttendanceModel } = require("../helpers/attendanceSummary.helper");
 const AppError = require("../helpers/AppError");
 const { appendOtherGroupSummary } = require("../helpers/analyticsDemographics.helper");
+const { getMemberScopeWhere, isScopedLeader } = require("../helpers/scopedLeader.helper");
 
 const REPORT_ROLES = new Set(["System Admin", "Pastor", "Registration Team", "Finance Team"]);
 const asNumber = (value) => Number(value || 0);
+const asMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const manilaToday = () => {
   const values = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit",
@@ -35,38 +37,81 @@ const parseDateRange = ({ date_from, date_to } = {}) => {
   return { from, to, fromDateTime: `${from} 00:00:00`, throughDateTime: `${to} 23:59:59.999`, toExclusive: `${nextDate.toISOString().slice(0, 10)} 00:00:00` };
 };
 
-const fillMonths = (from, to, rows) => {
-  const values = new Map(rows.map((row) => [row.period, asNumber(row.total)]));
-  const cursor = new Date(`${from.slice(0, 7)}-01T00:00:00Z`);
-  const last = new Date(`${to.slice(0, 7)}-01T00:00:00Z`);
-  const result = [];
-  while (cursor <= last) {
-    const period = cursor.toISOString().slice(0, 7);
-    result.push({ period, total: values.get(period) || 0 });
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-  }
-  return result;
-};
-
-const monthlyCounts = async (Model, dateColumn, range, extraWhere = {}) => {
-  const periodExpression = fn("DATE_FORMAT", col(dateColumn), "%Y-%m");
+const dailyAggregate = async (Model, dateColumn, range, extraWhere = {}, amountColumn = null, include = []) => {
+  const periodExpression = fn("DATE_FORMAT", col(dateColumn), "%Y-%m-%d");
+  const aggregateExpression = amountColumn
+    ? fn("SUM", col(amountColumn))
+    : fn("COUNT", literal("*"));
   return Model.findAll({
-    attributes: [[periodExpression, "period"], [fn("COUNT", col("id")), "total"]],
+    attributes: [[periodExpression, "period"], [aggregateExpression, "total"]],
     where: { ...extraWhere, [dateColumn]: { [Op.between]: [range.fromDateTime, range.throughDateTime] } },
+    ...(include.length && { include }),
     group: [periodExpression],
     order: [[literal("period"), "ASC"]],
     raw: true,
   });
 };
 
-exports.getAnalytics = async ({ user, date_from, date_to } = {}) => {
+const granularityFor = (period, range) => {
+  if (period === "week") return "day";
+  if (period === "month") return "week";
+  if (period === "year") return "month";
+  const spanDays = (Date.parse(`${range.to}T00:00:00Z`) - Date.parse(`${range.from}T00:00:00Z`)) / 86400000;
+  return spanDays <= 31 ? "day" : spanDays <= 183 ? "week" : "month";
+};
+
+const bucketForDate = (dateString, granularity) => {
+  const date = new Date(`${dateString}T00:00:00Z`);
+  if (granularity === "month") return dateString.slice(0, 7);
+  if (granularity === "week") {
+    date.setUTCDate(date.getUTCDate() - date.getUTCDay());
+    return date.toISOString().slice(0, 10);
+  }
+  return dateString.slice(0, 10);
+};
+
+const fillBuckets = (from, to, rows, granularity, fields = ["total"]) => {
+  const totals = new Map();
+  for (const row of rows || []) {
+    const key = bucketForDate(String(row.period).slice(0, 10), granularity);
+    const current = totals.get(key) || Object.fromEntries(fields.map((field) => [field, 0]));
+    for (const field of fields) current[field] += asNumber(row[field] ?? row.total);
+    totals.set(key, current);
+  }
+
+  const cursor = new Date(`${from}T00:00:00Z`);
+  const last = new Date(`${to}T00:00:00Z`);
+  if (granularity === "week") cursor.setUTCDate(cursor.getUTCDate() - cursor.getUTCDay());
+  else if (granularity === "month") cursor.setUTCDate(1);
+  const result = [];
+  while (cursor <= last) {
+    const period = granularity === "month"
+      ? cursor.toISOString().slice(0, 7)
+      : cursor.toISOString().slice(0, 10);
+    result.push({ period, ...Object.fromEntries(fields.map((field) => [field, totals.get(period)?.[field] || 0])) });
+    if (granularity === "month") cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    else cursor.setUTCDate(cursor.getUTCDate() + (granularity === "week" ? 7 : 1));
+  }
+  return result;
+};
+
+exports.getAnalytics = async ({ user, date_from, date_to, period = "year" } = {}) => {
   if (!REPORT_ROLES.has(user?.roleName)) throw AppError.forbidden("This role cannot view consolidated analytics");
   const range = parseDateRange({ date_from, date_to });
+  const bucket = granularityFor(period, range);
   const demographicsAsOfDate = manilaToday();
   const canSeeMembers = ["System Admin", "Pastor", "Registration Team"].includes(user.roleName);
   const canSeeAttendance = ["System Admin", "Pastor", "Registration Team"].includes(user.roleName);
   const canSeeFinance = ["System Admin", "Pastor", "Finance Team"].includes(user.roleName);
-  const result = { range: { from: range.from, to: range.to }, members: null, demographics: null, member_growth: null, attendance: null, finance: null };
+  const result = {
+    range: { from: range.from, to: range.to },
+    period: { preset: period, bucket },
+    members: null,
+    demographics: null,
+    member_growth: null,
+    attendance: null,
+    finance: null,
+  };
 
   const memberTask = canSeeMembers ? (async () => {
     const [active, inactive, total, ageBands, gender, cellGroups, groups, cellGroupCategoryCounts, groupCategoryCounts, growthRows] = await Promise.all([
@@ -122,7 +167,7 @@ exports.getAnalytics = async ({ user, date_from, date_to } = {}) => {
         { type: QueryTypes.SELECT },
       ),
       sequelize.query(`
-        SELECT DATE_FORMAT(created_at, '%Y-%m') AS period, COUNT(*) AS total
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS period, COUNT(*) AS total
         FROM members WHERE is_deleted = 0 AND created_at >= :fromDateTime AND created_at < :toExclusive
         GROUP BY period ORDER BY period`,
         { type: QueryTypes.SELECT, replacements: { fromDateTime: range.fromDateTime, toExclusive: range.toExclusive } },
@@ -144,13 +189,13 @@ exports.getAnalytics = async ({ user, date_from, date_to } = {}) => {
           categoryLabel: "groups",
         }),
       },
-      growth: fillMonths(range.from, range.to, growthRows),
+      growth: fillBuckets(range.from, range.to, growthRows, bucket),
     };
   })() : Promise.resolve(null);
 
   const attendanceTask = canSeeAttendance ? (async () => {
     const AttendanceModel = await getAttendanceModel();
-    const serviceRows = await monthlyCounts(AttendanceModel, "checked_in_at", range, {
+    const serviceRows = await dailyAggregate(AttendanceModel, "checked_in_at", range, {
       check_in_method: { [Op.ne]: "pre-reg" },
       ...(AttendanceModel !== Attendance && { voided_at: null }),
     });
@@ -159,29 +204,52 @@ exports.getAnalytics = async ({ user, date_from, date_to } = {}) => {
       const { getQrSchemaReadiness } = require("../modules/qr-attendance/featureSettings");
       if ((await getQrSchemaReadiness()).ready) {
         const { EventAttendance } = require("../modules/qr-attendance/models");
-        eventRows = await monthlyCounts(EventAttendance, "checked_in_at", range, { voided_at: null });
+        eventRows = await dailyAggregate(EventAttendance, "checked_in_at", range, { voided_at: null });
       }
     } catch {
       // Event QR attendance is optional on older/local schemas.
     }
-    const serviceMonthly = fillMonths(range.from, range.to, serviceRows);
-    const eventMonthly = fillMonths(range.from, range.to, eventRows);
-    const eventsByMonth = new Map(eventMonthly.map((row) => [row.period, row.total]));
+    const serviceByDay = new Map(serviceRows.map((row) => [String(row.period).slice(0, 10), asNumber(row.total)]));
+    const eventsByDay = new Map(eventRows.map((row) => [String(row.period).slice(0, 10), asNumber(row.total)]));
+    const dailyRows = [];
+    const cursor = new Date(`${range.from}T00:00:00Z`);
+    const last = new Date(`${range.to}T00:00:00Z`);
+    while (cursor <= last) {
+      const day = cursor.toISOString().slice(0, 10);
+      dailyRows.push({ period: day, service: serviceByDay.get(day) || 0, events: eventsByDay.get(day) || 0 });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    const attendanceBuckets = fillBuckets(range.from, range.to, dailyRows, bucket, ["service", "events"]);
+    const serviceCheckins = serviceRows.reduce((sum, row) => sum + asNumber(row.total), 0);
+    const eventCheckins = eventRows.reduce((sum, row) => sum + asNumber(row.total), 0);
     return {
-      service_checkins: serviceMonthly.reduce((sum, row) => sum + row.total, 0),
-      event_checkins: eventMonthly.reduce((sum, row) => sum + row.total, 0),
-      monthly: serviceMonthly.map((row) => ({ period: row.period, service: row.total, events: eventsByMonth.get(row.period) || 0 })),
+      service_checkins: serviceCheckins,
+      event_checkins: eventCheckins,
+      buckets: attendanceBuckets,
+      monthly: attendanceBuckets,
     };
   })() : Promise.resolve(null);
 
   const financeTask = canSeeFinance ? (async () => {
-    const [income, expenses] = await Promise.all([
-      FinancialRecord.sum("amount", { where: { transaction_date: { [Op.between]: [range.from, range.to] }, is_deleted: 0 } }),
-      Expense.sum("amount", { where: { date: { [Op.between]: [range.from, range.to] } } }),
+    const [incomeRows, expenseRows] = await Promise.all([
+      dailyAggregate(FinancialRecord, "transaction_date", range, { is_deleted: 0 }, "amount"),
+      dailyAggregate(Expense, "date", range, {}, "amount"),
     ]);
-    const incomeTotal = asNumber(income);
-    const expenseTotal = asNumber(expenses);
-    return { income: incomeTotal, expenses: expenseTotal, net: incomeTotal - expenseTotal };
+    const incomeByDay = new Map(incomeRows.map((row) => [String(row.period).slice(0, 10), asMoney(row.total)]));
+    const expenseByDay = new Map(expenseRows.map((row) => [String(row.period).slice(0, 10), asMoney(row.total)]));
+    const dailyRows = [];
+    const cursor = new Date(`${range.from}T00:00:00Z`);
+    const last = new Date(`${range.to}T00:00:00Z`);
+    while (cursor <= last) {
+      const day = cursor.toISOString().slice(0, 10);
+      dailyRows.push({ period: day, income: incomeByDay.get(day) || 0, expenses: expenseByDay.get(day) || 0 });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    const buckets = fillBuckets(range.from, range.to, dailyRows, bucket, ["income", "expenses"])
+      .map((row) => ({ ...row, income: asMoney(row.income), expenses: asMoney(row.expenses) }));
+    const incomeTotal = asMoney(incomeRows.reduce((sum, row) => sum + asMoney(row.total), 0));
+    const expenseTotal = asMoney(expenseRows.reduce((sum, row) => sum + asMoney(row.total), 0));
+    return { income: incomeTotal, expenses: expenseTotal, net: asMoney(incomeTotal - expenseTotal), buckets };
   })() : Promise.resolve(null);
 
   const [memberData, attendance, finance] = await Promise.all([memberTask, attendanceTask, financeTask]);
@@ -193,4 +261,65 @@ exports.getAnalytics = async ({ user, date_from, date_to } = {}) => {
   result.attendance = attendance;
   result.finance = finance;
   return result;
+};
+
+exports.getTeamAttendanceAnalytics = async ({ user, date_from, date_to, period = "year" } = {}) => {
+  if (!isScopedLeader(user)) {
+    throw AppError.forbidden("Team attendance reports are available only to assigned leaders");
+  }
+  const range = parseDateRange({ date_from, date_to });
+  const bucket = granularityFor(period, range);
+  const memberScope = await getMemberScopeWhere(user);
+  const AttendanceModel = await getAttendanceModel();
+  const serviceRows = await dailyAggregate(
+    AttendanceModel,
+    "checked_in_at",
+    range,
+    {
+      check_in_method: { [Op.ne]: "pre-reg" },
+      ...(AttendanceModel !== Attendance && { voided_at: null }),
+    },
+    null,
+    [{ model: Member, attributes: [], where: memberScope, required: true }],
+  );
+
+  let eventRows = [];
+  try {
+    const { getQrSchemaReadiness } = require("../modules/qr-attendance/featureSettings");
+    if ((await getQrSchemaReadiness()).ready) {
+      const { EventAttendance } = require("../modules/qr-attendance/models");
+      eventRows = await dailyAggregate(
+        EventAttendance,
+        "checked_in_at",
+        range,
+        { voided_at: null },
+        null,
+        [{ model: Member, as: "member", attributes: [], where: memberScope, required: true }],
+      );
+    }
+  } catch {
+    // Event QR attendance is optional on databases where its additive schema is not ready.
+  }
+
+  const serviceByDay = new Map(serviceRows.map((row) => [String(row.period).slice(0, 10), asNumber(row.total)]));
+  const eventsByDay = new Map(eventRows.map((row) => [String(row.period).slice(0, 10), asNumber(row.total)]));
+  const dailyRows = [];
+  const cursor = new Date(`${range.from}T00:00:00Z`);
+  const last = new Date(`${range.to}T00:00:00Z`);
+  while (cursor <= last) {
+    const day = cursor.toISOString().slice(0, 10);
+    dailyRows.push({ period: day, service: serviceByDay.get(day) || 0, events: eventsByDay.get(day) || 0 });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  const buckets = fillBuckets(range.from, range.to, dailyRows, bucket, ["service", "events"]);
+  return {
+    range: { from: range.from, to: range.to },
+    period: { preset: period, bucket },
+    scope: "Assigned team members only; team membership is evaluated from current assignments.",
+    attendance: {
+      service_checkins: serviceRows.reduce((sum, row) => sum + asNumber(row.total), 0),
+      event_checkins: eventRows.reduce((sum, row) => sum + asNumber(row.total), 0),
+      buckets,
+    },
+  };
 };

@@ -12,6 +12,12 @@ const {
   registerMemberSchema, updateRegistrationReservationSchema, bulkRegisterSchema, getEventsQuerySchema,
 } = require("../validators/events.validator");
 
+const authorizeEventImageRead = authorize("events", "read");
+const allowVisibleMemberEventImage = (req, res, next) => {
+  if (req.user?.roleName === "Member") return next();
+  return authorizeEventImageRead(req, res, next);
+};
+
 // ── Event Categories (MUST be before /:id) ───────────────────
 router.get("/categories",        auth, authorize("events", "read"),   ctrl.getAllCategories);
 router.get("/categories/:id",    auth, authorize("events", "read"),   ctrl.getCategoryById);
@@ -20,7 +26,7 @@ router.put("/categories/:id",    auth, authorize("events", "update"), ctrl.updat
 router.delete("/categories/:id", auth, authorize("events", "delete"), ctrl.deleteCategory);
 
 // ── Events ───────────────────────────────────────────────────
-router.get("/:id/image", auth, authorize("events", "read"), ctrl.getEventImage);
+router.get("/:id/image", auth, allowVisibleMemberEventImage, ctrl.getEventImage);
 router.post("/:id/image", auth, ctrl.authorizeEventImageUpload, requireDurableUploadStorage, eventImageUpload.single("image"), ctrl.uploadEventImage);
 router.delete("/:id/image", auth, authorize("events", "update"), ctrl.deleteEventImage);
 router.get("/",    auth, authorize("events", "read"), validateQuery(getEventsQuerySchema), ctrl.getAllEvents);

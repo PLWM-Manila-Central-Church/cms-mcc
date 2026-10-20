@@ -8,3 +8,10 @@ exports.getAnalytics = async (req, res, next) => {
     res.json({ success: true, data });
   } catch (error) { next(error); }
 };
+
+exports.getTeamAttendance = async (req, res, next) => {
+  try {
+    const data = await analyticsService.getTeamAttendanceAnalytics({ user: req.user, ...req.query });
+    res.json({ success: true, data });
+  } catch (error) { next(error); }
+};

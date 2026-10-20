@@ -38,4 +38,10 @@ describe("archive route permission contracts", () => {
     expect(permissionFor("/:id/versions/:versionId/file", "get")).toEqual(["archives:read"]);
     expect(permissionFor("/:id/versions", "get")).toEqual(["archives:read"]);
   });
+
+  test("routes archive and restore through the corresponding archive permissions", () => {
+    expect(permissionFor("/:id/archive", "patch")).toEqual(["archives:delete"]);
+    expect(permissionFor("/:id/restore", "patch")).toEqual(["archives:update"]);
+    expect(permissionFor("/:id", "delete")).toEqual(["archives:delete"]);
+  });
 });

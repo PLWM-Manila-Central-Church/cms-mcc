@@ -307,8 +307,15 @@ exports.removeEventImage = async (id, updatedBy) => {
   return exports.getEventById(event.id);
 };
 
-exports.getEventImageKey = async (id) => {
-  const event = await Event.findOne({ where: { id, is_deleted: 0 }, attributes: ["id", "image_key"] });
+exports.getEventImageKey = async (id, { memberVisibleOnly = false } = {}) => {
+  const event = await Event.findOne({
+    where: {
+      id,
+      is_deleted: 0,
+      ...(memberVisibleOnly && { status: { [Op.in]: ["Upcoming", "Ongoing"] } }),
+    },
+    attributes: ["id", "image_key"],
+  });
   if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
   if (!event.image_key) throw AppError.notFound("IMAGE_NOT_FOUND", "This event does not have an image");
   return event.image_key;

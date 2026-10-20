@@ -79,7 +79,8 @@ exports.updateExpenseCategorySchema = Joi.object({
 
 // ── Expense schemas ──────────────────────────────────────────
 exports.createExpenseSchema = Joi.object({
-  account_id: Joi.number().integer().positive().required(),
+  // Optional for older clients; the service derives the account from category_id.
+  account_id: Joi.number().integer().positive().optional(),
   category_id: Joi.number().integer().positive().required(),
   date: Joi.date().iso().required(),
   amount: Joi.number().positive().required(),

@@ -370,7 +370,8 @@ const finalizeSession = async (sessionId, { expected_activity_revision: expected
       transaction,
     });
     const confirmedExpectedCount = Number(countRows[0]?.confirmed_expected_count || 0);
-    const finalAbsentCount = Math.max(0, Number(expectedCount) - confirmedExpectedCount);
+    const annotations = await require("../outreach/attendanceAnnotations").exceptionCounts(session);
+    const finalAbsentCount = Math.max(0, Number(expectedCount) - confirmedExpectedCount - annotations.excused - annotations.pending);
     const finalizedAt = new Date();
 
     await session.update({
@@ -378,6 +379,7 @@ const finalizeSession = async (sessionId, { expected_activity_revision: expected
       finalized_by: user.userId,
       finalized_revision: activityRevision,
     }, { transaction });
+    require("../outreach/hooks").afterSessionChange(session.id, transaction);
     await writeQrAudit({
       actorId: user.userId,
       action: "QR_SESSION_FINALIZED",
@@ -403,6 +405,8 @@ const finalizeSession = async (sessionId, { expected_activity_revision: expected
       expected_count: Number(expectedCount),
       confirmed_expected_count: confirmedExpectedCount,
       final_absent_count: finalAbsentCount,
+      excused_count: annotations.excused,
+      pending_review_count: annotations.pending,
     };
   });
 

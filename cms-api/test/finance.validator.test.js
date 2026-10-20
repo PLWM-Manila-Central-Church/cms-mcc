@@ -3,7 +3,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
-const { createRecordSchema } = require("../src/validators/finance.validator");
+const { createRecordSchema, createExpenseSchema } = require("../src/validators/finance.validator");
 
 test("accepts a valid giving record without an obsolete type field", () => {
   const payload = {
@@ -66,4 +66,31 @@ test("rejects a member-linked record marked anonymous", () => {
   });
 
   assert.ok(error);
+});
+
+test("accepts expense creation without an account because the selected category supplies it", () => {
+  const { error, value } = createExpenseSchema.validate({
+    category_id: 7,
+    date: "2026-10-20",
+    amount: 125.5,
+    payment_method_id: 2,
+    description: "Office supplies",
+  });
+
+  assert.equal(error, undefined);
+  assert.equal(value.category_id, 7);
+  assert.equal(value.account_id, undefined);
+});
+
+test("keeps optional legacy account_id in expense payloads for server-side validation", () => {
+  const { error, value } = createExpenseSchema.validate({
+    account_id: 4,
+    category_id: 7,
+    date: "2026-10-20",
+    amount: 125.5,
+    payment_method_id: 2,
+  });
+
+  assert.equal(error, undefined);
+  assert.equal(value.account_id, 4);
 });

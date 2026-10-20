@@ -134,6 +134,7 @@ app.use("/api/archives",      require("./routes/archives.routes"));
 app.use("/api/ministry",      require("./routes/ministry.routes"));
 app.use("/api/ministry-applications", require("./routes/ministry-applications.routes"));
 app.use("/api/notifications", require("./routes/notifications.routes"));
+app.use("/api/outreach",      require("./modules/outreach/routes"));
 app.use("/api/settings",      require("./routes/settings.routes"));
 app.use("/api/audit",         require("./routes/audit.routes"));
 app.use("/api/audit-logs",    require("./routes/audit.routes"));

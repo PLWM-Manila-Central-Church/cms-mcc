@@ -22,6 +22,7 @@ exports.getAllRecords = async (req, res, next) => {
   try {
     const data = await archivesService.getAllRecords({
       ...req.query,
+      archived: req.query.archived === true || req.query.archived === "true",
       roleName: req.user?.roleName,
     });
     res.json({ success: true, data });
@@ -30,7 +31,9 @@ exports.getAllRecords = async (req, res, next) => {
 
 exports.getRecordById = async (req, res, next) => {
   try {
-    const data = await archivesService.getRecordByIdForRole(req.params.id, req.user?.roleName);
+    const data = await archivesService.getRecordByIdForRole(req.params.id, req.user?.roleName, {
+      includeArchived: req.query.include_archived === "true",
+    });
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
@@ -79,13 +82,26 @@ exports.approveRecord = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteRecord = async (req, res, next) => {
+exports.archiveRecord = async (req, res, next) => {
   try {
-    // Only System Admin can delete archives
+    // Only System Admin can move records into the retained archive.
     if (req.user?.roleName !== "System Admin") {
-      return res.status(403).json({ success: false, message: "Only System Admin can delete archive records." });
+      return res.status(403).json({ success: false, message: "Only System Admin can archive records." });
     }
-    const data = await archivesService.deleteRecord(req.params.id, req.user.userId);
+    const data = await archivesService.archiveRecord(req.params.id, req.user.userId);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+// Backward-compatible handler name for old clients using DELETE /:id.
+exports.deleteRecord = exports.archiveRecord;
+
+exports.restoreRecord = async (req, res, next) => {
+  try {
+    if (req.user?.roleName !== "System Admin") {
+      return res.status(403).json({ success: false, message: "Only System Admin can restore archive records." });
+    }
+    const data = await archivesService.restoreRecord(req.params.id, req.user.userId);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };

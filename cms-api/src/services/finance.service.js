@@ -696,22 +696,21 @@ exports.getExpenseById = async (id) => {
 
 exports.createExpense = async (data, userId) => {
   const { account_id, category_id, date, amount, description, payment_method_id } = data;
-
-  const account = await Account.findByPk(account_id);
-  if (!account) throw AppError.notFound("RECORD_NOT_FOUND", "Account not found");
-
   const category = await ExpenseCategory.findByPk(category_id);
   if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Expense category not found");
-  if (Number(category.account_id) !== Number(account_id)) {
-    throw AppError.badRequest("CATEGORY_ACCOUNT_MISMATCH", "The expense category does not belong to the selected account");
+  const categoryAccountId = Number(category.account_id);
+  if (account_id != null && Number(account_id) !== categoryAccountId) {
+    throw AppError.badRequest("CATEGORY_ACCOUNT_MISMATCH", "The account is determined by the selected expense category");
   }
+  const account = await Account.findByPk(categoryAccountId);
+  if (!account) throw AppError.notFound("RECORD_NOT_FOUND", "The account assigned to this expense category was not found");
 
   const payMethod = await PaymentMethod.findByPk(payment_method_id);
   if (!payMethod) throw AppError.notFound("RECORD_NOT_FOUND", "Payment method not found");
 
   const expense = await sequelize.transaction(async (t) => {
     const e = await Expense.create({
-      account_id,
+      account_id: categoryAccountId,
       category_id,
       date,
       amount,
@@ -733,17 +732,15 @@ exports.updateExpense = async (id, data, userId) => {
 
   const { account_id, category_id, date, amount, description, payment_method_id } = data;
 
-  const nextAccountId = account_id ?? expense.account_id;
   const nextCategoryId = category_id ?? expense.category_id;
-  const [account, category] = await Promise.all([
-    Account.findByPk(nextAccountId),
-    ExpenseCategory.findByPk(nextCategoryId),
-  ]);
-  if (!account) throw AppError.notFound("RECORD_NOT_FOUND", "Account not found");
+  const category = await ExpenseCategory.findByPk(nextCategoryId);
   if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Expense category not found");
-  if (Number(category.account_id) !== Number(nextAccountId)) {
-    throw AppError.badRequest("CATEGORY_ACCOUNT_MISMATCH", "The expense category does not belong to the selected account");
+  const nextAccountId = Number(category.account_id);
+  if (account_id != null && Number(account_id) !== nextAccountId) {
+    throw AppError.badRequest("CATEGORY_ACCOUNT_MISMATCH", "The account is determined by the selected expense category");
   }
+  const account = await Account.findByPk(nextAccountId);
+  if (!account) throw AppError.notFound("RECORD_NOT_FOUND", "The account assigned to this expense category was not found");
 
   if (payment_method_id) {
     const payMethod = await PaymentMethod.findByPk(payment_method_id);
@@ -752,8 +749,8 @@ exports.updateExpense = async (id, data, userId) => {
 
   await sequelize.transaction(async (t) => {
     await expense.update({
-      ...(account_id && { account_id }),
-      ...(category_id && { category_id }),
+      account_id: nextAccountId,
+      category_id: nextCategoryId,
       ...(date && { date }),
       ...(amount !== undefined && { amount }),
       ...(description !== undefined && { description }),

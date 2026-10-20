@@ -47,6 +47,7 @@ const {
   ArchiveAccessLog,
 } = require("../src/models");
 const uploadStorage = require("../src/middlewares/upload-s3");
+const auditLog = require("../src/helpers/auditLog.helper");
 const archivesService = require("../src/services/archives.service");
 
 const makeRecord = (values) => {
@@ -76,6 +77,7 @@ describe("archive access and version integrity", () => {
     ArchiveRecord.findOne.mockImplementation(async (options = {}) => (
       options.attributes ? mockState.metadataRecord || mockState.archiveRecord : mockState.archiveRecord
     ));
+    ArchiveRecord.unscoped = jest.fn(() => ArchiveRecord);
     ArchiveRecord.findAll.mockResolvedValue([]);
     ArchiveVersion.findOne.mockResolvedValue(mockState.archiveVersion);
     ArchiveVersion.findAll.mockResolvedValue([]);
@@ -172,6 +174,69 @@ describe("archive access and version integrity", () => {
       .rejects.toMatchObject({ status: 404 });
   });
 
+  test("archives an approved record without overwriting its approval state or file metadata", async () => {
+    mockState.archiveRecord.is_deleted = 0;
+    mockState.archiveRecord.status = "approved";
+    mockState.archiveRecord.file_url = "/uploads/archives/current.pdf";
+    mockState.archiveRecord.current_version_id = 101;
+
+    await expect(archivesService.archiveRecord(9, 77)).resolves.toEqual({
+      message: "Archive record archived successfully.",
+    });
+
+    expect(mockState.archiveRecord.update).toHaveBeenCalledWith(expect.objectContaining({
+      is_deleted: 1,
+      deleted_by: 77,
+      deleted_at: expect.any(Date),
+    }));
+    expect(mockState.archiveRecord.status).toBe("approved");
+    expect(mockState.archiveRecord.file_url).toBe("/uploads/archives/current.pdf");
+    expect(mockState.archiveRecord.current_version_id).toBe(101);
+    expect(auditLog.log).toHaveBeenCalledWith(expect.objectContaining({
+      action: "ARCHIVE_RECORD",
+      targetId: 9,
+    }));
+  });
+
+  test("restores a legacy archived row and recovers its approved status", async () => {
+    mockState.archiveRecord.is_deleted = 1;
+    mockState.archiveRecord.status = "deleted";
+    mockState.archiveRecord.approved_by = 23;
+
+    await expect(archivesService.restoreRecord(9, 77)).resolves.toEqual({
+      message: "Archive record restored successfully.",
+    });
+
+    expect(ArchiveRecord.unscoped).toHaveBeenCalled();
+    expect(mockState.archiveRecord.update).toHaveBeenCalledWith({
+      is_deleted: 0,
+      deleted_at: null,
+      deleted_by: null,
+      status: "approved",
+    });
+    expect(auditLog.log).toHaveBeenCalledWith(expect.objectContaining({
+      action: "RESTORE_ARCHIVE",
+      targetId: 9,
+      newValues: { status: "approved" },
+    }));
+  });
+
+  test("lists archived records only for System Admin and applies the archived predicate", async () => {
+    ArchiveRecord.findAndCountAll.mockResolvedValueOnce({ count: 1, rows: [] });
+    const result = await archivesService.getAllRecords({ roleName: "System Admin", archived: true });
+    expect(result.total).toBe(1);
+    expect(ArchiveRecord.unscoped).toHaveBeenCalled();
+    expect(ArchiveRecord.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ is_deleted: 1 }),
+    }));
+
+    ArchiveRecord.findAndCountAll.mockClear();
+    await expect(archivesService.getAllRecords({ roleName: "Pastor", archived: true })).resolves.toEqual({
+      records: [], total: 0, total_pages: 0,
+    });
+    expect(ArchiveRecord.findAndCountAll).not.toHaveBeenCalled();
+  });
+
   test("denies Finance Team a nonfinancial file path even when that document is public", async () => {
     ArchiveRecord.findAll
       .mockResolvedValueOnce([])
@@ -261,13 +326,14 @@ describe("archive access and version integrity", () => {
     );
   });
 
-  test("soft-deletes an archive without deleting its versioned storage objects", async () => {
+  test("archives an archive record without changing its approval state or deleting versioned storage objects", async () => {
     await archivesService.deleteRecord(9, 4);
 
     expect(mockState.archiveRecord.update).toHaveBeenCalledWith(expect.objectContaining({
       is_deleted: 1,
-      status: "deleted",
+      deleted_by: 4,
     }));
+    expect(mockState.archiveRecord.status).toBe("approved");
     expect(uploadStorage.deleteStoredFile).not.toHaveBeenCalled();
   });
 

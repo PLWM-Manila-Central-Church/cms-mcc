@@ -156,6 +156,7 @@ const getSessionSummary = async (sessionId, user) => {
       raw: true,
     });
   const expectedIds = new Set(expectedMemberRows.map((row) => Number(row.member_id)));
+  const annotations = await require("../outreach/attendanceAnnotations").exceptionCounts(session, [...expectedIds]);
   const checkedExpected = [...memberIds].filter((memberId) => expectedIds.has(memberId)).length;
   const closedForAbsences = session.status === "closed" || Date.now() > new Date(session.check_in_closes_at).getTime();
   const pendingExpected = pendingMembers.filter((memberId) => expectedIds.has(memberId)).length;
@@ -165,10 +166,10 @@ const getSessionSummary = async (sessionId, user) => {
   );
   const provisionalMissing = expected === null || !closedForAbsences || isFinalized
     ? null
-    : Math.max(0, Number(expected) - checkedExpected - pendingExpected);
+    : Math.max(0, Number(expected) - checkedExpected - pendingExpected - annotations.excused - annotations.pending + annotations.overlap);
   const finalAbsent = expected === null || !isFinalized
     ? null
-    : Math.max(0, Number(expected) - checkedExpected);
+    : Math.max(0, Number(expected) - checkedExpected - annotations.excused - annotations.pending);
   const registrationMemberWhere = scope ? { member_id: { [Op.in]: scopeMemberIds || [] } } : {};
 
   const registrationCount = session.event_id
@@ -189,6 +190,8 @@ const getSessionSummary = async (sessionId, user) => {
     absent_count: finalAbsent ?? provisionalMissing,
     provisional_missing_count: provisionalMissing,
     final_absent_count: finalAbsent,
+    excused_count: annotations.excused,
+    pending_review_count: annotations.pending,
     finalization_status: expected === null ? "unavailable" : isFinalized ? "finalized" : closedForAbsences ? "provisional" : "open",
     finalized_at: isFinalized ? session.finalized_at : null,
     finalized_by: isFinalized ? session.finalized_by : null,

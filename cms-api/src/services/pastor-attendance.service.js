@@ -696,6 +696,7 @@ const getPastorAttendanceReport = async (filters = {}, user = {}, { exportAll = 
     oldest: row.oldest_submitted_at || null,
   }));
   const pendingExpectedBySession = byNumber(pendingExpectedRows, "session_id", (row) => countValue(row, "pending_expected_count"));
+  const exceptionsBySession = await require("../modules/outreach/attendanceAnnotations").exceptionCountsForSessions(selectedSessions);
   const now = Date.now();
 
   const items = selectedSessions.map((session) => {
@@ -705,6 +706,7 @@ const getPastorAttendanceReport = async (filters = {}, user = {}, { exportAll = 
     const activity = isService ? services.get(targetId) : events.get(targetId);
     const expectedCount = session.expected_basis === "none" ? null : expectedBySession.get(id) || 0;
     const expectedPresent = confirmedExpectedBySession.get(id) || 0;
+    const annotations = exceptionsBySession.get(id) || { excused: 0, pending: 0, overlap: 0 };
     const pending = pendingBySession.get(id) || { members: 0 };
     const reviewQueue = reviewQueueBySession.get(id) || { batches: 0, oldest: null };
     const finalized = Boolean(session.finalized_at && Number(session.finalized_revision) === Number(session.activity_revision || 1));
@@ -712,8 +714,8 @@ const getPastorAttendanceReport = async (filters = {}, user = {}, { exportAll = 
       || (session.status === "open" && now >= new Date(session.check_in_closes_at).getTime());
     const provisionalMissing = expectedCount === null || !closedForReconciliation || finalized
       ? null
-      : Math.max(0, expectedCount - expectedPresent - (pendingExpectedBySession.get(id) || 0));
-    const finalAbsent = expectedCount === null || !finalized ? null : Math.max(0, expectedCount - expectedPresent);
+      : Math.max(0, expectedCount - expectedPresent - (pendingExpectedBySession.get(id) || 0) - annotations.excused - annotations.pending + annotations.overlap);
+    const finalAbsent = expectedCount === null || !finalized ? null : Math.max(0, expectedCount - expectedPresent - annotations.excused - annotations.pending);
     const counts = isService
       ? confirmedByService.get(targetId) || { visits: 0, unique_members: 0 }
       : confirmedByEventSession.get(id) || { visits: 0, unique_members: 0 };
@@ -734,6 +736,8 @@ const getPastorAttendanceReport = async (filters = {}, user = {}, { exportAll = 
       expected_basis: session.expected_basis,
       expected_count: expectedCount,
       expected_present_count: expectedCount === null ? null : expectedPresent,
+      excused_count: annotations.excused,
+      pending_review_count: annotations.pending,
       confirmed_visits: counts.visits,
       unique_attendees: counts.unique_members,
       registered_count: isService
@@ -876,6 +880,8 @@ const getPastorAttendanceReport = async (filters = {}, user = {}, { exportAll = 
       expected_visits: expectedSessions.reduce((sum, item) => sum + item.expected_count, 0),
       expected_sessions: expectedSessions.length,
       expected_present: expectedSessions.reduce((sum, item) => sum + item.expected_present_count, 0),
+      excused_count: expectedSessions.reduce((sum, item) => sum + (item.excused_count || 0), 0),
+      pending_review_count: expectedSessions.reduce((sum, item) => sum + (item.pending_review_count || 0), 0),
       awaiting_review: items.reduce((sum, item) => sum + item.awaiting_review, 0),
       provisional_missing: provisionalSessions.length ? provisionalSessions.reduce((sum, item) => sum + item.provisional_missing, 0) : null,
       provisional_sessions: provisionalSessions.length,
