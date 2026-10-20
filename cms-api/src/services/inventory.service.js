@@ -33,24 +33,6 @@ const notifyInventoryManagers = async (payload) => {
   }
 };
 
-const notifyInventoryMembers = async (payload, excludedUserIds = []) => {
-  try {
-    const roles = await Role.findAll({ where: { role_name: { [Op.in]: ["Member"] } }, attributes: ["id"] });
-    const roleIds = roles.map((role) => role.id);
-    if (!roleIds.length) return;
-
-    const excluded = new Set(excludedUserIds.map(Number));
-    const users = await User.findAll({
-      where: { role_id: { [Op.in]: roleIds }, is_active: 1, is_deleted: 0 },
-      attributes: ["id"],
-    });
-    const memberIds = [...new Set(users.map((user) => Number(user.id)).filter((id) => id > 0 && !excluded.has(id)))];
-    if (memberIds.length) await notifService.bulkCreateNotifications(memberIds, payload);
-  } catch (error) {
-    logger.error(error, "Inventory Member notification failed");
-  }
-};
-
 const notifyInventoryStatusChange = async (item, status) => {
   const messages = {
     "Low Stock": `Inventory item "${item.name}" is low (${item.quantity} ${item.unit || "units"} remaining).`,
@@ -83,13 +65,6 @@ const notifyInventoryStatusChange = async (item, status) => {
   } catch (error) {
     logger.error(error, "Inventory requester notification lookup failed");
   }
-
-  await notifyInventoryMembers({
-    type: types[status],
-    message: messages[status],
-    reference_id: item.id,
-    reference_type: "inventory_item",
-  }, pendingRequesterIds);
 
   if (pendingRequesterIds.length) {
     try {

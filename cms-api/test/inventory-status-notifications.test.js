@@ -54,12 +54,13 @@ describe("inventory status-change notifications", () => {
       where.role_id[Op.in].includes(3) ? mockState.members : mockState.managers);
   });
 
-  test("notifies active Members, inventory managers, and deduplicated pending requesters on status change", async () => {
+  test("notifies managers and affected requesters, excluding unrelated Members", async () => {
     await inventoryService.updateItem(17, { status: "Under Repair" }, 99);
 
+    expect(notifications.bulkCreateNotifications).toHaveBeenCalledTimes(2);
     expect(InventoryItem.findByPk).toHaveBeenCalledTimes(2);
-    expect(Role.findAll).toHaveBeenCalledTimes(2);
-    expect(User.findAll).toHaveBeenCalledTimes(2);
+    expect(Role.findAll).toHaveBeenCalledTimes(1);
+    expect(User.findAll).toHaveBeenCalledTimes(1);
     expect(InventoryRequest.findAll).toHaveBeenCalledWith({
       where: { item_id: 17, status: "pending" },
       attributes: ["requested_by"],
@@ -75,16 +76,6 @@ describe("inventory status-change notifications", () => {
     );
     expect(notifications.bulkCreateNotifications).toHaveBeenNthCalledWith(
       2,
-      [6, 7, 8],
-      expect.objectContaining({
-        type: "inventory_item_under_repair",
-        message: 'Inventory item "Status Change QA Item" was placed Under Repair.',
-        reference_type: "inventory_item",
-        reference_id: 17,
-      }),
-    );
-    expect(notifications.bulkCreateNotifications).toHaveBeenNthCalledWith(
-      3,
       [4, 5],
       expect.objectContaining({
         type: "inventory_request_item_under_repair",

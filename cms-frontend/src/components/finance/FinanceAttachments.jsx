@@ -80,7 +80,11 @@ export default function FinanceAttachments({
     setNotice('');
     if (!files.length) return;
 
-    if (!['income', 'expense'].includes(targetType) || !Number(targetId)) {
+    if (targetType !== 'income') {
+      setError('Receipts can be added to received-income records only.');
+      return;
+    }
+    if (!Number(targetId)) {
       setError('Save the financial record before adding receipts.');
       return;
     }
@@ -106,7 +110,7 @@ export default function FinanceAttachments({
     for (const file of validFiles) {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append(targetType === 'income' ? 'income_id' : 'expense_id', String(targetId));
+      formData.append('income_id', String(targetId));
       try {
         await axiosInstance.post('/finance/attachments/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },

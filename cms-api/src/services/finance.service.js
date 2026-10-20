@@ -826,6 +826,9 @@ exports.getBalance = async ({ date_from, date_to } = {}) => {
 
 // ── 6. ATTACHMENTS SERVICES ───────────────────────────────────
 exports.createAttachment = async ({ file_name, file_path, income_id, expense_id }, userId) => {
+  if (expense_id !== null && expense_id !== undefined && String(expense_id).trim() !== "") {
+    throw AppError.badRequest("FEATURE_RETIRED", "Receipt uploads are available for received-income records only");
+  }
   const hasIncomeId = income_id !== null && income_id !== undefined && String(income_id).trim() !== "";
   const hasExpenseId = expense_id !== null && expense_id !== undefined && String(expense_id).trim() !== "";
   if (hasIncomeId === hasExpenseId) {

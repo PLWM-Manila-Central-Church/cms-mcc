@@ -2,7 +2,7 @@
 
 const { Op, QueryTypes, fn, col, literal } = require("sequelize");
 const sequelize = require("../config/db");
-const { Member, FinancialRecord, Expense, Attendance } = require("../models");
+const { Member, FinancialRecord, Attendance } = require("../models");
 const { getAttendanceModel } = require("../helpers/attendanceSummary.helper");
 const AppError = require("../helpers/AppError");
 const { appendOtherGroupSummary } = require("../helpers/analyticsDemographics.helper");
@@ -231,25 +231,12 @@ exports.getAnalytics = async ({ user, date_from, date_to, period = "year" } = {}
   })() : Promise.resolve(null);
 
   const financeTask = canSeeFinance ? (async () => {
-    const [incomeRows, expenseRows] = await Promise.all([
-      dailyAggregate(FinancialRecord, "transaction_date", range, { is_deleted: 0 }, "amount"),
-      dailyAggregate(Expense, "date", range, {}, "amount"),
-    ]);
-    const incomeByDay = new Map(incomeRows.map((row) => [String(row.period).slice(0, 10), asMoney(row.total)]));
-    const expenseByDay = new Map(expenseRows.map((row) => [String(row.period).slice(0, 10), asMoney(row.total)]));
-    const dailyRows = [];
-    const cursor = new Date(`${range.from}T00:00:00Z`);
-    const last = new Date(`${range.to}T00:00:00Z`);
-    while (cursor <= last) {
-      const day = cursor.toISOString().slice(0, 10);
-      dailyRows.push({ period: day, income: incomeByDay.get(day) || 0, expenses: expenseByDay.get(day) || 0 });
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-    }
-    const buckets = fillBuckets(range.from, range.to, dailyRows, bucket, ["income", "expenses"])
-      .map((row) => ({ ...row, income: asMoney(row.income), expenses: asMoney(row.expenses) }));
+    const incomeRows = await dailyAggregate(FinancialRecord, "transaction_date", range, { is_deleted: 0 }, "amount");
+    const dailyRows = incomeRows.map((row) => ({ period: String(row.period).slice(0, 10), income: asMoney(row.total) }));
+    const buckets = fillBuckets(range.from, range.to, dailyRows, bucket, ["income"])
+      .map((row) => ({ ...row, income: asMoney(row.income) }));
     const incomeTotal = asMoney(incomeRows.reduce((sum, row) => sum + asMoney(row.total), 0));
-    const expenseTotal = asMoney(expenseRows.reduce((sum, row) => sum + asMoney(row.total), 0));
-    return { income: incomeTotal, expenses: expenseTotal, net: asMoney(incomeTotal - expenseTotal), buckets };
+    return { income: incomeTotal, buckets };
   })() : Promise.resolve(null);
 
   const [memberData, attendance, finance] = await Promise.all([memberTask, attendanceTask, financeTask]);

@@ -70,8 +70,6 @@ function responseData(path,config) {
   if(path==='/events/categories') return [{id:1,name:'Fellowship'}];
   if(path==='/finance') return paged('records',[{id:1,amount:1200,transaction_date:'2026-10-01',category:{id:1,name:'Tithe'},Member:members[0],receipt_number:'SAMPLE-001',recorder:{email:'sample@example.com'}},{id:2,amount:500,transaction_date:'2026-10-01',category:{id:2,name:'Offering'},Member:{},recorder:{email:'deleted-user-2@accounts.invalid'}}]);
   if(path==='/finance/summary') return [{category_name:'Tithe',category_id:1,total:1200}];
-  if(path==='/finance/balance') return {total_income:1200,total_expense:0,net_balance:1200};
-  if(path==='/finance/expenses') return paged('expenses',[]);
   if(path==='/finance/categories') return [{id:1,name:'Tithe'},{id:2,name:'Offering'}];
   if(path==='/ministry/roles') return [{id:1,name:'Sample Ministry'}];
   if(path==='/ministry-applications/opportunities') return [{id:1,name:'Welcome Team',is_member:false},{id:2,name:'Music Ministry',is_member:false},{id:3,name:'Media Team',is_member:false,application:{id:1,status:'pending'}}];

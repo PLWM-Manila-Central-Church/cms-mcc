@@ -3,6 +3,7 @@
 const { Op } = require("sequelize");
 const membersService = require("../services/members.service");
 const AppError       = require("../helpers/AppError");
+const logger         = require("../helpers/logger");
 const { getScope, getUnifiedAssignments } = require("../helpers/scopedLeader.helper");
 
 exports.getAllMembers = async (req, res, next) => {
@@ -106,9 +107,29 @@ exports.assignMemberToScope = async (req, res, next) => {
 exports.bulkCreateMembers = async (req, res, next) => {
   try {
     if (!req.file) throw AppError.badRequest("VALIDATION", "No CSV file uploaded");
-    const result = await membersService.bulkCreateMembers(req.file.buffer, req.user.userId);
+    const result = await membersService.bulkCreateMembers(req.file.buffer, req.user.userId, req.user);
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
+};
+
+exports.uploadMemberPhoto = async (req, res, next) => {
+  let storageKey = null;
+  let saved = false;
+  const storage = require("../middlewares/upload-s3");
+  try {
+    if (!req.file) throw AppError.badRequest("VALIDATION", "No profile photo uploaded");
+    storageKey = req.file.key || `profiles/${req.file.filename}`;
+    const filePath = storage.getFileUrl(storageKey);
+    const data = await membersService.updateMemberProfilePhoto(req.params.id, filePath, req.user.userId, req.user);
+    saved = true;
+    res.json({ success: true, data });
+  } catch (error) {
+    if (storageKey && !saved) {
+      try { await storage.deleteStoredFile(storageKey); }
+      catch (cleanupError) { logger.error(cleanupError, "Could not remove an unlinked profile photo upload"); }
+    }
+    next(error);
+  }
 };
 
 exports.linkMemberAccount = async (req, res, next) => {

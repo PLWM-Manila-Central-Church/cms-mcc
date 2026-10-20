@@ -23,7 +23,7 @@ describe("financial attachment ownership and downloads", () => {
 
   test.each([
     [{ income_id: null, expense_id: null }, "exactly one"],
-    [{ income_id: 3, expense_id: 4 }, "exactly one"],
+    [{ income_id: 3, expense_id: 4 }, "received-income"],
     [{ income_id: "3junk", expense_id: null }, "invalid"],
   ])("service rejects invalid attachment ownership %#", async (owner, message) => {
     await expect(financeService.createAttachment({ ...attachmentValues, ...owner }, 5))

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
@@ -6,6 +6,9 @@ import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import { groupMembersTitle, isScopedLeaderRole } from '../../utils/roleDisplay';
 import MonoIcon from '../../components/common/MonoIcon';
+import { displayMemberName } from '../../utils/displayIdentity';
+import { fullName } from '../../utils/member';
+import { uploadUrl } from '../../utils/uploadUrl';
 
 /* ── Status colours (admin view only) ─────────────────────────── */
 const STATUS_COLORS = {
@@ -27,7 +30,8 @@ const avatarGradient = (name) =>
 /* ── Member Directory Card ──────────────────────────────────────── */
 function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMember }) {
   const [hov, setHov] = useState(false);
-  const grad = avatarGradient(m.first_name + m.last_name);
+  const grad = avatarGradient(`${m.first_name || ''}${m.last_name || ''}`);
+  const initials = [m.first_name, m.last_name].filter((part) => part?.trim()).map((part) => part.trim()[0]).join('').slice(0, 2);
 
   return (
     <div
@@ -55,14 +59,16 @@ function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMem
         fontSize: 16, fontWeight: 800, letterSpacing: '-0.5px',
         boxShadow: '0 2px 8px rgba(0,85,153,0.18)',
       }}>
-        {m.first_name[0]}{m.last_name[0]}
+        {m.profile_photo_url
+          ? <img src={uploadUrl(m.profile_photo_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+          : initials}
       </div>
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--mcc-ink, #0f172a)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {m.first_name} {m.last_name}
+            {fullName(m)}
           </div>
           {!isMember && (
             <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, flexShrink: 0, background: STATUS_COLORS[m.status]?.bg, color: STATUS_COLORS[m.status]?.color }}>
@@ -109,7 +115,7 @@ function TableRow({ m, idx, canEdit, canUnassign, canSelect, selected, onToggleS
         {canSelect && <input type="checkbox" checked={!!selected} onChange={onToggleSelect} style={{ cursor:'pointer', width:15, height:15 }} />}
       </td>
       <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--mcc-ink, #0f172a)', whiteSpace: 'nowrap' }}>
-        {m.last_name}, {m.first_name}
+        {displayMemberName(m)}
       </td>
       <td style={{ ...tdStyle, fontSize: 13 }}>{m.cellGroup?.name || '—'}</td>
       <td style={{ ...tdStyle, fontSize: 13 }}>{m.group?.name || '—'}</td>
@@ -164,6 +170,9 @@ export default function MembersPage() {
   const [sorts, setSorts]             = useState([]);
   const [selected, setSelected]       = useState(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const importInputRef = useRef(null);
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
   const [assignSearch, setAssignSearch] = useState('');
   const [assignResults, setAssignResults] = useState([]);
   const [assignLoading, setAssignLoading] = useState(false);
@@ -265,6 +274,33 @@ export default function MembersPage() {
     } catch (err) {
       setError(err.response?.data?.message || 'Some deletes failed.');
     } finally { setBulkDeleting(false); }
+  };
+
+  const handleRosterImport = async (event) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    setImportResult(null);
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.csv') || file.size > 5 * 1024 * 1024) {
+      setImportResult({ error: 'Choose a CSV file smaller than 5 MB.' });
+      return;
+    }
+    setBulkImporting(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const response = await axiosInstance.post('/members/bulk', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const result = response.data.data || {};
+      setImportResult({
+        created: Number(result.created || 0),
+        skipped: Number(result.skipped || 0),
+        errors: Array.isArray(result.errors) ? result.errors : [],
+      });
+      setSelected(new Set());
+      await fetchMembers();
+    } catch (importError) {
+      setImportResult({ error: importError.response?.data?.message || 'The roster CSV could not be imported.' });
+    } finally { setBulkImporting(false); }
   };
 
   const handleUnassign = async (member) => {
@@ -436,10 +472,17 @@ export default function MembersPage() {
           <h1 className="cms-page-title">{isGroupLeader ? groupMembersTitle(user) : 'Members'}</h1>
           <p className="cms-page-sub">{total} total members</p>
         </div>
-        {canCreate && (
-          <button onClick={() => navigate('/members/new')} className="cms-add-btn">+ Add Member</button>
-        )}
+        {canCreate && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input ref={importInputRef} type="file" accept=".csv,text/csv" onChange={handleRosterImport} hidden />
+          <button type="button" onClick={() => importInputRef.current?.click()} className="cms-add-btn" disabled={bulkImporting} title="Import up to 500 members from one CSV file">{bulkImporting ? 'Importing…' : 'Import CSV'}</button>
+          <button type="button" onClick={() => navigate('/members/new')} className="cms-add-btn">+ Add Member</button>
+        </div>}
       </div>
+
+      {importResult?.error && <div role="alert" className="cms-error-box">{importResult.error}</div>}
+      {importResult && !importResult.error && <div role="status" style={{ padding: 12, marginBottom: 16, borderRadius: 10, background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe', fontSize: 13 }}>
+        Roster import complete: {importResult.created} created, {importResult.skipped} skipped. {importResult.skipped > 0 ? `Row errors: ${(importResult.errors || []).map((item) => `${item.row} (${item.error})`).join(', ')}.` : ''} Review skipped rows in the source before importing them again.
+      </div>}
 
       {canAssignScope && (
         <div style={{ background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: 18, marginBottom: 18, boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>

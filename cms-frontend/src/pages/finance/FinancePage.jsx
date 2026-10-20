@@ -337,7 +337,6 @@ export default function FinancePage() {
           <p style={{ fontSize: 14, color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0' }}>Record and monitor offerings, tithes, donations, and other church income in one place.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button type="button" onClick={() => navigate('/finance/expenses')} style={{ background: 'var(--mcc-surface, #fff)', color: '#334155', border: '1px solid #dbe4ee', borderRadius: 10, padding: '11px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Expenses</button>
           {canCreate && (
             <button onClick={() => { resetIncForm(); setShowIncForm(true); }} style={{ background: '#059669', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 8px rgba(5,150,105,0.3)' }}>
               <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Add Financial Record

@@ -27,9 +27,7 @@ describe('analytics report role scope', () => {
     expect(scope.description).toBe('Finance summaries for the selected period.');
     expect(rows.filter(([section]) => section === 'Members' || section === 'Attendance')).toEqual([]);
     expect(rows.filter(([section]) => section === 'Finance')).toEqual([
-      ['Finance', 'Income', 900],
-      ['Finance', 'Expenses', 250],
-      ['Finance', 'Net', 650],
+      ['Finance', 'Received income', 900],
     ]);
   });
 

@@ -33,7 +33,7 @@ describe('role-specific workspaces', () => {
   });
   test('nested page context uses the most specific module', () => {
     expect(getWorkspaceModule('/attendance/qr').key).toBe('attendance-qr');
-    expect(getWorkspaceModule('/finance/expenses').label).toBe('Expenses');
+    expect(getWorkspaceModule('/finance/expenses').label).not.toBe('Expenses');
     expect(getWorkspaceModule('/members/1/edit').label).toBe('Member records');
     expect(getWorkspaceModule('/dashboard')).toBeNull();
   });

@@ -6,7 +6,7 @@ const MEMBER_STATUSES = require("../constants/memberStatus");
 
 const memberBody = {
   first_name:         Joi.string().max(100).required(),
-  last_name:          Joi.string().max(100).required(),
+  last_name:          Joi.string().max(100).allow(null, "").optional(),
   email:              Joi.string().email().max(150).allow(null, "").optional(),
   phone:              Joi.string().max(30).allow(null, "").optional(),
   gender:             Joi.string().valid(...MEMBER_GENDERS).allow(null, "").optional(),

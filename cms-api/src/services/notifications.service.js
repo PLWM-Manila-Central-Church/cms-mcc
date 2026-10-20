@@ -39,26 +39,36 @@ const deliverNotificationEmails = async (userIds, message) => {
   }
 };
 
+// Historic operational inventory broadcasts remain stored, but unrelated Members
+// no longer receive or see them. Request-specific notices use different types.
+const notificationScope = (userId, roleName) => ({
+  user_id: userId,
+  ...(roleName === "Member" ? { type: { [Op.notIn]: [
+    "inventory_item_low_stock", "inventory_item_out_of_stock",
+    "inventory_item_under_repair", "inventory_item_available",
+  ] } } : {}),
+});
+
 // ── Get All Notifications for User ──────────────────────────
-exports.getUserNotifications = async (userId) => {
+exports.getUserNotifications = async (userId, roleName) => {
   return await Notification.findAll({
-    where: { user_id: userId },
+    where: notificationScope(userId, roleName),
     order: [["created_at", "DESC"]],
   });
 };
 
 // ── Get Unread Notifications for User ───────────────────────
-exports.getUnreadNotifications = async (userId) => {
+exports.getUnreadNotifications = async (userId, roleName) => {
   return await Notification.findAll({
-    where: { user_id: userId, is_read: 0 },
+    where: { ...notificationScope(userId, roleName), is_read: 0 },
     order: [["created_at", "DESC"]],
   });
 };
 
 // ── Get Notification By ID ───────────────────────────────────
-exports.getNotificationById = async (id, userId) => {
+exports.getNotificationById = async (id, userId, roleName) => {
   const notification = await Notification.findOne({
-    where: { id, user_id: userId },
+    where: { ...notificationScope(userId, roleName), id },
   });
   if (!notification) throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
   return notification;
@@ -120,9 +130,9 @@ exports.notifyAttendanceRecorded = async ({ memberId, activityType, activityId, 
 };
 
 // ── Mark Notification as Read ────────────────────────────────
-exports.markAsRead = async (id, userId) => {
+exports.markAsRead = async (id, userId, roleName) => {
   const notification = await Notification.findOne({
-    where: { id, user_id: userId },
+    where: { ...notificationScope(userId, roleName), id },
   });
   if (!notification) throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
 
@@ -136,18 +146,18 @@ exports.markAsRead = async (id, userId) => {
 };
 
 // ── Mark All as Read ─────────────────────────────────────────
-exports.markAllAsRead = async (userId) => {
+exports.markAllAsRead = async (userId, roleName) => {
   await Notification.update(
     { is_read: 1, read_at: new Date() },
-    { where: { user_id: userId, is_read: 0 } },
+    { where: { ...notificationScope(userId, roleName), is_read: 0 } },
   );
   return { message: "All notifications marked as read." };
 };
 
 // ── Delete Notification ──────────────────────────────────────
-exports.deleteNotification = async (id, userId) => {
+exports.deleteNotification = async (id, userId, roleName) => {
   const notification = await Notification.findOne({
-    where: { id, user_id: userId },
+    where: { ...notificationScope(userId, roleName), id },
   });
   if (!notification) throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
   await notification.destroy();
@@ -155,7 +165,7 @@ exports.deleteNotification = async (id, userId) => {
 };
 
 // ── Delete All Notifications for User ───────────────────────
-exports.deleteAllNotifications = async (userId) => {
-  await Notification.destroy({ where: { user_id: userId } });
+exports.deleteAllNotifications = async (userId, roleName) => {
+  await Notification.destroy({ where: notificationScope(userId, roleName) });
   return { message: "All notifications deleted successfully." };
 };
