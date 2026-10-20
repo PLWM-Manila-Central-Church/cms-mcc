@@ -4,6 +4,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { LANGS, saveLangCode } from '../../utils/langUtils';
 import MonoIcon from '../../components/common/MonoIcon';
 import { uploadUrl } from '../../utils/uploadUrl';
+import NotificationPreferencesCard from '../../components/notifications/NotificationPreferencesCard';
 
 // ── Constants ─────────────────────────────────────────────────
 const FONTS = [
@@ -230,6 +231,8 @@ export default function MySettingsPage() {
             </div>
           </div>
         )}
+
+        {profile?.id && <NotificationPreferencesCard />}
 
         {/* ── Appearance ── */}
         <div style={card}>

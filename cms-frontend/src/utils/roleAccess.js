@@ -2,10 +2,10 @@ export const ROLE_ALLOWED_PATHS = {
   // Members use self-scoped APIs through the standalone portal only.
   Member: ['/portal'],
   'Finance Team': ['/dashboard', '/finance', '/archives', '/my-settings', '/reports/analytics'],
-  'Ministry Leader': ['/dashboard', '/ministry', '/events', '/attendance', '/inventory', '/archives', '/my-settings'],
-  'Cell Group Leader': ['/dashboard', '/cell-groups', '/attendance', '/events', '/inventory', '/archives', '/my-settings'],
-  'Group Leader': ['/dashboard', '/members', '/attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
-  Leader: ['/dashboard', '/leader/teams', '/cell-groups', '/members', '/attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
+  'Ministry Leader': ['/dashboard', '/ministry', '/events', '/attendance', '/reports/team-attendance', '/inventory', '/archives', '/my-settings'],
+  'Cell Group Leader': ['/dashboard', '/cell-groups', '/attendance', '/reports/team-attendance', '/events', '/inventory', '/archives', '/my-settings'],
+  'Group Leader': ['/dashboard', '/members', '/attendance', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
+  Leader: ['/dashboard', '/leader/teams', '/cell-groups', '/members', '/attendance', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
 };
 
 export const ROLE_TAB_SETS = {
@@ -66,6 +66,11 @@ export const DEFAULT_TABS = [
 ];
 
 export const isAllowedForRolePath = (roleName, pathname, leaderAssignments = [], leaderScopeKey = null) => {
+  if (pathname === '/outreach' || pathname.startsWith('/outreach/')) {
+    if (!['System Admin', 'Pastor', 'Registration Team', 'Leader', 'Cell Group Leader', 'Group Leader', 'Ministry Leader'].includes(roleName)) return false;
+    if (roleName === 'Leader') return leaderAssignments.some((assignment) => ['cell_group', 'member_group', 'group'].includes(assignment.scopeType || assignment.scope_type));
+    return true;
+  }
   const allowed = ROLE_ALLOWED_PATHS[roleName];
   if (!allowed) return true;
   if (pathname === '/force-change-password' || pathname === '/unauthorized') return true;
@@ -87,6 +92,8 @@ export const isAllowedForRolePath = (roleName, pathname, leaderAssignments = [],
 };
 
 export const isVisibleNavItem = (item, user, hasPermission) => {
+  if (item.path === '/outreach') return isAllowedForRolePath(user?.roleName, item.path, user?.leaderAssignments, user?.activeLeaderScopeKey) && hasPermission('outreach', 'read');
+  if (item.path === '/reports/team-attendance' && !['Leader', 'Cell Group Leader', 'Group Leader', 'Ministry Leader'].includes(user?.roleName)) return false;
   if (item.path === '/leader/teams') return user?.roleName === 'Leader';
   if (user?.roleName === 'Leader' && item.path === '/cell-groups') {
     const selectedType = user.activeLeaderScopeKey === 'all' ? 'all' : String(user.activeLeaderScopeKey || '').split(':')[0];

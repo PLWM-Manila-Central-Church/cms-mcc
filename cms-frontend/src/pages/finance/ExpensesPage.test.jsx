@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ExpensesPage from './ExpensesPage';
 
@@ -22,7 +22,7 @@ const fixtureExpense = {
   description: 'QA expense delete flow',
   payment_method_id: 1,
   account: { id: 1, name: 'QA Account' },
-  category: { id: 1, category_name: 'QA Category' },
+  category: { id: 1, category_name: 'QA Category', account_id: 1 },
   paymentMethod: { id: 1, method_name: 'Cash' },
 };
 
@@ -103,5 +103,31 @@ describe('ExpensesPage deletion flow', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Start date must be on or before end date.');
     expect(screen.queryByText('QA expense delete flow')).not.toBeInTheDocument();
     expect(mockAxios.get).toHaveBeenCalledTimes(requestCount);
+  });
+
+  it('removes account choice from expense entry and sends only the category selection', async () => {
+    mockAxios.post.mockResolvedValue({ data: { success: true } });
+    renderPage();
+    await screen.findByText('QA expense delete flow');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add expense' });
+    expect(within(dialog).queryByLabelText('Account')).not.toBeInTheDocument();
+    expect(within(dialog).getByText('Select a category to see its account')).toBeInTheDocument();
+
+    fireEvent.change(within(dialog).getByLabelText('Expense category'), { target: { value: '1' } });
+    expect(within(dialog).getByText('QA Account')).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText('Amount (PHP)'), { target: { value: '22.5' } });
+    fireEvent.change(within(dialog).getByLabelText('Payment method'), { target: { value: '1' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save expense' }));
+
+    await waitFor(() => expect(mockAxios.post).toHaveBeenCalledWith('/finance/expenses', {
+      category_id: 1,
+      date: expect.any(String),
+      amount: 22.5,
+      description: null,
+      payment_method_id: 1,
+    }));
+    expect(mockAxios.post.mock.calls[0][1]).not.toHaveProperty('account_id');
   });
 });

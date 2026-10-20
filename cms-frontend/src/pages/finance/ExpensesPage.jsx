@@ -9,7 +9,7 @@ import FinanceAttachments from '../../components/finance/FinanceAttachments';
 const today = localDateInputValue;
 const formatMoney = (value) => `PHP ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const formatDate = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
-const blankExpense = () => ({ account_id: '', category_id: '', date: today(), amount: '', description: '', payment_method_id: '' });
+const blankExpense = () => ({ category_id: '', date: today(), amount: '', description: '', payment_method_id: '' });
 
 const buttonStyle = (variant = 'primary') => ({
   border: variant === 'primary' ? 'none' : '1px solid #dbe4ee',
@@ -123,7 +123,6 @@ export default function ExpensesPage() {
   const openEdit = (row) => {
     setEditing(row);
     setExpenseForm({
-      account_id: String(row.account_id || ''),
       category_id: String(row.category_id || ''),
       date: String(row.date || '').slice(0, 10),
       amount: String(row.amount || ''),
@@ -138,7 +137,6 @@ export default function ExpensesPage() {
     setBusy(true); setError(''); setNotice('');
     try {
       const payload = {
-        account_id: Number(expenseForm.account_id),
         category_id: Number(expenseForm.category_id),
         date: expenseForm.date,
         amount: Number(expenseForm.amount),
@@ -188,7 +186,9 @@ export default function ExpensesPage() {
 
   const totalPages = Math.ceil(total / 15);
   const visibleCategories = categories.filter((category) => !accountFilter || String(category.account_id) === accountFilter);
-  const formCategories = categories.filter((category) => !expenseForm.account_id || String(category.account_id) === String(expenseForm.account_id));
+  const selectedCategory = categories.find((category) => String(category.id) === String(expenseForm.category_id));
+  const selectedCategoryAccount = accounts.find((account) => String(account.id) === String(selectedCategory?.account_id));
+  const formCategories = categories;
 
   return (
     <section className="mcc-module mcc-module-expenses-page" aria-label="Church expenses" style={{ display: 'flex', flexDirection: 'column', gap: 24, color: 'var(--mcc-ink, #0f172a)' }}>
@@ -300,8 +300,8 @@ export default function ExpensesPage() {
           <section role="dialog" aria-modal="true" aria-labelledby="expense-form-title" style={{ width: 'min(100%,620px)', maxHeight: '90vh', overflowY: 'auto', background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 16px)', padding: 22 }}>
             <h2 id="expense-form-title" style={{ marginTop: 0 }}>{editing ? 'Edit expense' : 'Add expense'}</h2>
             <form onSubmit={submitExpense} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-              <label style={labelStyle}>Account<select required value={expenseForm.account_id} onChange={(event) => setExpenseForm((current) => ({ ...current, account_id: event.target.value, category_id: '' }))} style={fieldStyle}><option value="">Choose an account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
-              <label style={labelStyle}>Expense category<select required value={expenseForm.category_id} onChange={(event) => setExpenseForm({ ...expenseForm, category_id: event.target.value })} style={fieldStyle}><option value="">Choose a category</option>{formCategories.map((category) => <option key={category.id} value={category.id}>{category.category_name}</option>)}</select></label>
+              <label style={labelStyle}>Expense category<select required value={expenseForm.category_id} onChange={(event) => setExpenseForm((current) => ({ ...current, category_id: event.target.value }))} style={fieldStyle}><option value="">Choose a category</option>{formCategories.map((category) => { const account = accounts.find((row) => String(row.id) === String(category.account_id)); return <option key={category.id} value={category.id}>{category.category_name}{account?.name ? ` · ${account.name}` : ''}</option>; })}</select></label>
+              <div style={{ ...labelStyle, padding: '0 0 4px' }} aria-live="polite"><span>Charged to</span><div style={{ ...fieldStyle, minHeight: 38, display: 'flex', alignItems: 'center', background: 'var(--mcc-surface-alt, #f8fafc)', color: selectedCategoryAccount ? 'var(--mcc-ink, #0f172a)' : 'var(--mcc-secondary, #64748b)' }}>{selectedCategoryAccount?.name || 'Select a category to see its account'}</div></div>
               <label style={labelStyle}>Date<input type="date" required value={expenseForm.date} onChange={(event) => setExpenseForm({ ...expenseForm, date: event.target.value })} style={fieldStyle} /></label>
               <label style={labelStyle}>Amount (PHP)<input type="number" step="0.01" min="0.01" required value={expenseForm.amount} onChange={(event) => setExpenseForm({ ...expenseForm, amount: event.target.value })} style={fieldStyle} /></label>
               <label style={labelStyle}>Payment method<select required value={expenseForm.payment_method_id} onChange={(event) => setExpenseForm({ ...expenseForm, payment_method_id: event.target.value })} style={fieldStyle}><option value="">Choose a method</option>{paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.method_name}</option>)}</select></label>

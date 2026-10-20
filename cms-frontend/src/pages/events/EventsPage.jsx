@@ -294,7 +294,7 @@ export default function EventsPage() {
               <small style={{ color: 'var(--mcc-secondary, #52647a)' }}>JPG, PNG, or WebP. Maximum 5 MB.</small>
               {(imageFile || (editEvent?.image_url && !removeImage)) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <img src={imageFile ? imagePreview : eventImageSrc(editEvent)} alt="Event preview" style={{ width: 120, height: 72, objectFit: 'cover', borderRadius: 8 }} />
+                  {(imageFile ? imagePreview : eventImageSrc(editEvent)) && <img src={imageFile ? imagePreview : eventImageSrc(editEvent)} alt="Event preview" style={{ width: 120, height: 72, objectFit: 'cover', borderRadius: 8 }} />}
                   {editEvent?.image_url && <button type="button" onClick={() => { setImageFile(null); setRemoveImage(true); }} style={s.cancelBtn}>Remove current photo</button>}
                 </div>
               )}

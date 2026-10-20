@@ -25,6 +25,27 @@ describe('MemberNotificationCenter', () => {
     api.delete.mockResolvedValue({ data: { success: true } });
   });
 
+  it('keeps the mobile panel inside the viewport and restores bell focus on Escape', async () => {
+    render(<MemoryRouter><MemberNotificationCenter colors={colors} isMobile /></MemoryRouter>);
+    const bell = screen.getByRole('button', { name: 'Notifications' });
+    fireEvent.click(bell);
+    const panel = screen.getByRole('region', { name: 'Notifications' });
+    expect(panel).toHaveStyle({ position: 'fixed', right: '12px' });
+    expect(panel.style.width).toBe('calc(100vw - 24px)');
+    expect(bell).toHaveAttribute('aria-controls', panel.id);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('region', { name: 'Notifications' })).not.toBeInTheDocument();
+    expect(bell).toHaveFocus();
+  });
+
+  it('uses readable portal action colors in dark mode', async () => {
+    api.get.mockResolvedValue({ data: { data: [{ id: 41, message: 'Activity reminder', is_read: 0, reference_type: 'event', reference_id: 1 }] } });
+    render(<MemoryRouter><MemberNotificationCenter colors={{ ...colors, dk: true, accentT: '#60a5fa' }} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Notifications' }));
+    expect(await screen.findByRole('button', { name: 'Open' })).toHaveStyle({ color: '#60a5fa' });
+    expect(screen.getByRole('button', { name: 'Clear all' })).toHaveStyle({ color: '#fca5a5' });
+  });
+
   it('shows and marks a self-registration notice read before opening Events', async () => {
     const message = 'You have been successfully registered for "QA Community Gathering".';
     api.get.mockResolvedValue({ data: { data: [{

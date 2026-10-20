@@ -11,6 +11,7 @@ import FinanceAttachments from '../../components/finance/FinanceAttachments';
 import { MemberMinistryApplications } from '../ministry/MinistryApplications';
 import MemberSubstituteRequests from '../../components/ministry/MemberSubstituteRequests';
 import { uploadUrl } from '../../utils/uploadUrl';
+import { eventImageSrc } from '../../utils/eventImage';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
 import useWindowWidth from '../../hooks/useWindowWidth';
 import useDialogFocus from '../../hooks/useDialogFocus';
@@ -216,6 +217,8 @@ function EventModal({evt,onClose,onRegister,onUpdateReservation,onCancel,evtLoad
           <div style={{fontSize:f?.lg||18,fontWeight:800,color:'#0f172a'}}>{t?.eventDetails||'Event Details'}</div>
           <button type="button" aria-label="Close event details" onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:44,height:44,cursor:'pointer',color:'#475569',display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1}}><MonoIcon name="close" size={16} /></button>
         </div>
+
+        {evt.image_url&&<img src={eventImageSrc(evt)} alt={`${evt.title} event`} loading="lazy" style={{display:'block',width:'100%',maxHeight:240,objectFit:'cover',borderRadius:12,marginBottom:14}} />}
 
         <div style={{background:evt.is_registered?'linear-gradient(135deg,#14532d,#16a34a)':'linear-gradient(135deg,#003d70,#005599)',borderRadius:12,padding:'16px',color:'#fff',marginBottom:16}}>
           <div style={{fontSize:f?.md||15,fontWeight:800,marginBottom:6,textTransform:'uppercase',letterSpacing:'0.3px'}}>{evt.title}</div>
@@ -499,6 +502,7 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
             ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{eventPeriod === 'past' ? 'No past events.' : eventPeriod === 'all' ? 'No events.' : t.noEvents}</div>
             : visibleEvents.map((e,i)=>(
               <div key={e.id} style={{padding:'14px 16px',borderBottom:i<visibleEvents.length-1?`1px solid ${c.borderL}`:'none',borderLeft:`3px solid ${e.is_registered?c.success:c.border}`}}>
+                {e.image_url&&<img src={eventImageSrc(e)} alt={`${e.title} event`} loading="lazy" style={{display:'block',width:'100%',height:148,objectFit:'cover',borderRadius:9,marginBottom:12}} />}
                 <div style={{fontSize:f.sm,fontWeight:800,color:c.t1,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.2px'}}>{e.title}</div>
                 <div style={{fontSize:f.xs,color:c.t2,marginBottom:2,display:'flex',alignItems:'center',gap:5}}><MonoIcon name="calendar" size={13} /> {fmtDate(e.start_date)}</div>
                 {e.location&&<div style={{fontSize:f.xs,color:c.t2,marginBottom:2,display:'flex',alignItems:'center',gap:5}}><MonoIcon name="location" size={13} /> {e.location}</div>}
@@ -601,7 +605,7 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
         {eventFilter}
           {visibleEvents.length===0
           ? <div style={{...card,padding:'40px 24px',textAlign:'center',color:c.t3,fontSize:f.base}}>{eventPeriod === 'past' ? 'No past events.' : eventPeriod === 'all' ? 'No events.' : t.noEvents}</div>
-          : events.map(e=>(
+          : visibleEvents.map(e=>(
             <div key={e.id} style={{...card,padding:'18px 20px',border:`1.5px solid ${e.is_registered?c.successB:c.border}`,transition:'border-color 0.2s'}}>
               <div style={{display:'flex',gap:14,alignItems:'flex-start'}}>
                 <div style={{flex:1,minWidth:0}}>
@@ -639,7 +643,9 @@ function EventsTab({events,assigns,services,invites,evtL,confL,inviteResponding,
                     )}
                   </div>
                 </div>
-                <div style={{width:78,height:78,borderRadius:10,background:c.surfaceAlt,border:`1px solid ${c.border}`,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',color:c.t3,fontSize:f.xs,textAlign:'center'}}>Poster</div>
+                {e.image_url
+                  ? <img src={eventImageSrc(e)} alt={`${e.title} event`} loading="lazy" style={{width:96,height:96,borderRadius:10,objectFit:'cover',border:`1px solid ${c.border}`,flexShrink:0}} />
+                  : <div style={{width:96,height:96,borderRadius:10,background:c.surfaceAlt,border:`1px solid ${c.border}`,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',color:c.t3,fontSize:f.xs,textAlign:'center'}}>No image</div>}
               </div>
             </div>
           ))}

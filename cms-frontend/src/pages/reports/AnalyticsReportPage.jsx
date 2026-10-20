@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
-import { buildAnalyticsCsvRows, getAnalyticsReportScope } from '../../utils/analyticsReport';
+import { buildAnalyticsCsvRows, formatReportBucket, getAnalyticsReportScope, getReportPeriodRange } from '../../utils/analyticsReport';
 import { toCsv } from '../../utils/csv';
 
 const manilaDate = () => {
@@ -30,8 +30,9 @@ function BarList({ title, rows = [], color = '#0f6aa3' }) {
   );
 }
 
-function TrendBars({ title, rows = [], firstKey, secondKey, firstLabel, secondLabel }) {
+function TrendBars({ title, rows = [], firstKey, secondKey, firstLabel, secondLabel, bucket = 'month' }) {
   const max = Math.max(1, ...rows.flatMap((row) => [Number(row[firstKey] || 0), Number(row[secondKey] || 0)]));
+  const heightFor = (value) => Number(value || 0) > 0 ? `${Math.max(2, Number(value) / max * 100)}%` : 0;
   return (
     <section style={S.panel}>
       <h2 style={S.panelTitle}>{title}</h2>
@@ -39,12 +40,12 @@ function TrendBars({ title, rows = [], firstKey, secondKey, firstLabel, secondLa
       {rows.length === 0 ? <p style={S.muted}>No records for this period.</p> : (
         <div style={S.trend}>
           {rows.map((row) => (
-            <div key={row.period} title={`${row.period} · ${firstLabel}: ${row[firstKey]} · ${secondLabel}: ${row[secondKey]}`} style={S.monthColumn}>
+            <div key={row.period} title={`${formatReportBucket(row.period, bucket)} · ${firstLabel}: ${row[firstKey]} · ${secondLabel}: ${row[secondKey]}`} style={S.monthColumn}>
               <div style={S.barPair}>
-                <div style={{ ...S.trendBar, height: `${Math.max(2, Number(row[firstKey] || 0) / max * 100)}%`, background: '#0f6aa3' }} />
-                <div style={{ ...S.trendBar, height: `${Math.max(2, Number(row[secondKey] || 0) / max * 100)}%`, background: '#13b5ea' }} />
+                <div style={{ ...S.trendBar, height: heightFor(row[firstKey]), minHeight: Number(row[firstKey] || 0) > 0 ? 2 : 0, background: '#0f6aa3' }} />
+                <div style={{ ...S.trendBar, height: heightFor(row[secondKey]), minHeight: Number(row[secondKey] || 0) > 0 ? 2 : 0, background: '#13b5ea' }} />
               </div>
-              <span>{row.period.slice(2)}</span>
+              <span>{formatReportBucket(row.period, bucket).replace('Week of ', '')}</span>
             </div>
           ))}
         </div>
@@ -64,20 +65,21 @@ export default function AnalyticsReportPage() {
   const isMobile = useIsMobile();
   const [dateFrom, setDateFrom] = useState(yearStart());
   const [dateTo, setDateTo] = useState(today());
+  const [reportPeriod, setReportPeriod] = useState('year');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const loadReport = useCallback(async () => {
-    if (dateFrom > dateTo) { setError('Start date must be on or before end date.'); return; }
+    if (!dateFrom || !dateTo || dateFrom > dateTo) { setError('Choose a valid date range with the start date on or before the end date.'); return; }
     setLoading(true); setError('');
     try {
-      const response = await axiosInstance.get('/reports/analytics', { params: { date_from: dateFrom, date_to: dateTo } });
+      const response = await axiosInstance.get('/reports/analytics', { params: { date_from: dateFrom, date_to: dateTo, period: reportPeriod } });
       setData(response.data.data);
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'Could not load the consolidated report.');
     } finally { setLoading(false); }
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, reportPeriod]);
 
   useEffect(() => { loadReport(); }, [loadReport]);
 
@@ -94,6 +96,15 @@ export default function AnalyticsReportPage() {
     window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
   };
 
+  const selectPeriod = (period) => {
+    setReportPeriod(period);
+    const nextRange = getReportPeriodRange(period);
+    if (nextRange) {
+      setDateFrom(nextRange.from);
+      setDateTo(nextRange.to);
+    }
+  };
+
   const maxGrowth = Math.max(1, ...(data?.member_growth || []).map((row) => Number(row.total || 0)));
   return (
     <section className="mcc-module mcc-module-analytics-report" aria-label="Analytics report" style={{ ...S.page, padding: 0 }}>
@@ -102,11 +113,20 @@ export default function AnalyticsReportPage() {
         <button type="button" onClick={downloadCsv} disabled={!data || loading} style={{ ...S.download, opacity: !data || loading ? 0.6 : 1 }}>Download CSV</button>
       </header>
       <section style={{ ...S.filters, flexDirection: isMobile ? 'column' : 'row' }}>
-        <label style={S.filterLabel}>From <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} style={S.dateInput} /></label>
-        <label style={S.filterLabel}>To <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} style={S.dateInput} /></label>
-        <button type="button" onClick={loadReport} disabled={loading || dateFrom > dateTo} style={{ ...S.refresh, opacity: loading ? 0.7 : 1 }}>{loading ? 'Updating…' : 'Refresh report'}</button>
+        <label style={S.filterLabel}>Report period
+          <select aria-label="Report period" value={reportPeriod} onChange={(event) => selectPeriod(event.target.value)} style={S.dateInput}>
+            <option value="week">Weekly to date</option>
+            <option value="month">Monthly to date</option>
+            <option value="year">Annual to date</option>
+            <option value="custom">Custom range</option>
+          </select>
+        </label>
+        <label style={S.filterLabel}>From <input type="date" value={dateFrom} onChange={(event) => { setReportPeriod('custom'); setDateFrom(event.target.value); }} style={S.dateInput} /></label>
+        <label style={S.filterLabel}>To <input type="date" value={dateTo} onChange={(event) => { setReportPeriod('custom'); setDateTo(event.target.value); }} style={S.dateInput} /></label>
+        <button type="button" onClick={loadReport} disabled={loading || !dateFrom || !dateTo || dateFrom > dateTo} style={{ ...S.refresh, opacity: loading ? 0.7 : 1 }}>{loading ? 'Updating…' : 'Refresh report'}</button>
         {data?.range && <span style={S.muted}>{data.range.from} to {data.range.to}</span>}
       </section>
+      <p style={S.footnote}>Preset dates use Asia/Manila and end today; weeks start on Sunday. Choose Custom range to enter another period.</p>
       {canSeeMembersAndAttendance && <p style={S.footnote}>{demographicDateNote}</p>}
       {error && <div role="alert" style={S.error}>{error}</div>}
       {loading && !data ? <div style={S.state}>Loading report…</div> : data && (
@@ -127,8 +147,8 @@ export default function AnalyticsReportPage() {
             </section>
             <p style={S.footnote}>Group charts show the 20 largest categories and combine the remaining categories in an Other total.</p>
             <section style={S.panel}>
-              <h2 style={S.panelTitle}>Member growth by month</h2>
-              <div style={S.growth}>{(data.member_growth || []).map((row) => <div key={row.period} style={S.growthCol} title={`${row.period}: ${row.total}`}><span style={{ ...S.growthBar, height: `${Math.max(2, Number(row.total || 0) / maxGrowth * 100)}%` }} /><small>{row.period.slice(2)}</small></div>)}</div>
+              <h2 style={S.panelTitle}>Member growth</h2>
+              <div style={S.growth}>{(data.member_growth || []).map((row) => <div key={row.period} style={S.growthCol} title={`${formatReportBucket(row.period, data.period?.bucket || 'month')}: ${row.total}`}><span style={{ ...S.growthBar, height: Number(row.total || 0) > 0 ? `${Math.max(2, Number(row.total) / maxGrowth * 100)}%` : 0, minHeight: Number(row.total || 0) > 0 ? 2 : 0 }} /><small>{formatReportBucket(row.period, data.period?.bucket || 'month').replace('Week of ', '')}</small></div>)}</div>
             </section>
           </>}
           {canSeeMembersAndAttendance && data.attendance && <>
@@ -136,13 +156,14 @@ export default function AnalyticsReportPage() {
               <article style={S.metric}><span>Service check-ins</span><strong>{number(data.attendance.service_checkins)}</strong></article>
               <article style={S.metric}><span>Event check-ins</span><strong>{number(data.attendance.event_checkins)}</strong></article>
             </section>
-            <TrendBars title="Attendance by month" rows={data.attendance.monthly} firstKey="service" secondKey="events" firstLabel="Services" secondLabel="Events" />
+            <TrendBars title="Attendance trend" rows={data.attendance.buckets || data.attendance.monthly} firstKey="service" secondKey="events" firstLabel="Services" secondLabel="Events" bucket={data.period?.bucket || 'month'} />
           </>}
           {canSeeFinance && data.finance && <section style={S.metricGrid}>
             <article style={S.metric}><span>Income</span><strong>{money(data.finance.income)}</strong></article>
             <article style={S.metric}><span>Expenses</span><strong>{money(data.finance.expenses)}</strong></article>
             <article style={S.metric}><span>Net</span><strong>{money(data.finance.net)}</strong></article>
           </section>}
+          {canSeeFinance && data.finance?.buckets && <TrendBars title="Finance trend" rows={data.finance.buckets} firstKey="income" secondKey="expenses" firstLabel="Income" secondLabel="Expenses" bucket={data.period?.bucket || 'month'} />}
           <p style={S.footnote}>This report shows aggregate totals. Member names and individual giving records are not included.</p>
         </>
       )}

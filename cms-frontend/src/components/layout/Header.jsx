@@ -134,6 +134,9 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
     if (!n.reference_id || !n.reference_type) return;
     setPanelOpen(false);
     switch (n.reference_type) {
+      case 'follow_up':
+        if (user?.roleName !== 'Member') navigate('/outreach?case=' + n.reference_id);
+        break;
       case 'service':
         if (user?.roleName === 'Member') {
           navigate('/portal?tab=events');

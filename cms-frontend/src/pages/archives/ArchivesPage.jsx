@@ -13,6 +13,7 @@ const STATUS_META = {
   approved: { bg: '#f0fdf4', color: '#16a34a', label: 'Approved' },
   deleted:  { bg: '#f1f5f9', color: 'var(--mcc-secondary, #52647a)', label: 'Deleted' },
 };
+const ARCHIVED_META = { bg: '#f1f5f9', color: 'var(--mcc-secondary, #52647a)', label: 'Archived' };
 
 const VISIBILITY_META = {
   public:       { bg: '#e8f4fd', color: '#0066b3',  label: 'Public' },
@@ -49,6 +50,7 @@ export default function ArchivesPage() {
   const [filterStatus, setFilterStatus]     = useState('');
   const [filterVisible, setFilterVisible]   = useState('');
   const [search, setSearch]                 = useState('');
+  const [showArchived, setShowArchived]     = useState(false);
 
   const [showForm, setShowForm]     = useState(false);
   const [editRecord, setEditRecord] = useState(null);
@@ -76,6 +78,7 @@ export default function ArchivesPage() {
     setLoading(true); setError('');
     try {
       const params = new URLSearchParams({ page, limit });
+      if (showArchived) params.append('archived', 'true');
       if (filterCat)     params.append('category_id', filterCat);
       if (filterStatus)  params.append('status',      filterStatus);
       if (filterVisible) params.append('visibility',  filterVisible);
@@ -85,7 +88,7 @@ export default function ArchivesPage() {
       setRecords(d.records); setTotal(d.total); setTotalPages(d.total_pages);
     } catch { setError('Failed to load archive records.'); }
     finally { setLoading(false); }
-  }, [page, filterCat, filterStatus, filterVisible, search]);
+  }, [page, filterCat, filterStatus, filterVisible, search, showArchived]);
 
   useEffect(() => { fetchCategories(); }, [fetchCategories]);
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
@@ -152,18 +155,27 @@ export default function ArchivesPage() {
     } catch (err) { setError(err.response?.data?.message || 'Failed to approve.'); }
   };
 
-  const handleDelete = async (id) => {
+  const handleArchive = async (id) => {
     if (!(await confirm({
-      title: 'Delete archive record?',
-      message: 'This archive record will be deleted. This action cannot be undone.',
-      confirmLabel: 'Delete record',
-      tone: 'danger',
+      title: 'Archive this record?',
+      message: 'This moves the record out of the active archive. Its file and version history will be retained, and an administrator can restore it later.',
+      confirmLabel: 'Archive record',
     }))) return;
     try {
-      await axiosInstance.delete(`/archives/${id}`);
+      await axiosInstance.patch(`/archives/${id}/archive`);
       fetchRecords();
       if (detailRecord?.id === id) setDetailRecord(null);
-    } catch (err) { setError(err.response?.data?.message || 'Failed to delete.'); }
+    } catch (err) { setError(err.response?.data?.message || 'Failed to archive record.'); }
+  };
+
+  const handleRestore = async (id) => {
+    try {
+      await axiosInstance.patch(`/archives/${id}/restore`);
+      setShowArchived(false);
+      setPage(1);
+      fetchRecords();
+      if (detailRecord?.id === id) setDetailRecord(null);
+    } catch (err) { setError(err.response?.data?.message || 'Failed to restore record.'); }
   };
 
   const saveDownloadedFile = (data, fileName) => {
@@ -207,10 +219,14 @@ export default function ArchivesPage() {
 
   const openDetail = async (record) => {
     try {
-      const res = await axiosInstance.get(`/archives/${record.id}`);
+      const res = await axiosInstance.get(`/archives/${record.id}`, {
+        params: record.is_deleted ? { include_archived: 'true' } : undefined,
+      });
       setDetailRecord(res.data.data);
-      try { await axiosInstance.post(`/archives/${record.id}/view`); } catch { /* Keep details available if audit logging fails. */ }
-      if (isApprover) {
+      if (!record.is_deleted) {
+        try { await axiosInstance.post(`/archives/${record.id}/view`); } catch { /* Keep details available if audit logging fails. */ }
+      }
+      if (isApprover && !record.is_deleted) {
         setLogsLoading(true);
         try {
           const logRes = await axiosInstance.get(`/archives/${record.id}/access-logs`);
@@ -223,7 +239,9 @@ export default function ArchivesPage() {
   const formatDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
 
   // ── Detail Panel content (shared between desktop sidebar and mobile modal) ──
-  const DetailContent = () => (
+  const DetailContent = () => {
+    const detailStatusMeta = detailRecord.is_deleted ? ARCHIVED_META : STATUS_META[detailRecord.status] || STATUS_META.pending;
+    return (
     <>
       <div style={s.detailHeader}>
         <h2 style={s.detailTitle}><MonoIcon name={FILE_ICONS[detailRecord.file_type] || 'file'} size={18} /> {detailRecord.title}</h2>
@@ -251,8 +269,8 @@ export default function ArchivesPage() {
         </div>
         <div style={s.detailRow}>
           <span style={s.detailLabel}>Status</span>
-          <span style={{ ...s.badge, ...(() => { const sm = STATUS_META[detailRecord.status]; return { background: sm?.bg, color: sm?.color }; })() }}>
-            {STATUS_META[detailRecord.status]?.label}
+          <span style={{ ...s.badge, background: detailStatusMeta.bg, color: detailStatusMeta.color }}>
+            {detailStatusMeta.label}
           </span>
         </div>
         <div style={s.detailRow}>
@@ -269,9 +287,9 @@ export default function ArchivesPage() {
           <div style={s.detailDesc}>{detailRecord.description}</div>
         )}
 
-        <button onClick={() => handleDownload(detailRecord)} style={s.downloadBtn}>
+        {!detailRecord.is_deleted && <button onClick={() => handleDownload(detailRecord)} style={s.downloadBtn}>
           <MonoIcon name="download" size={15} /> Download File
-        </button>
+        </button>}
 
         {detailRecord.ArchiveVersions?.length > 0 && (
           <div style={s.versionsSection}>
@@ -280,7 +298,7 @@ export default function ArchivesPage() {
               <div key={v.id} style={s.versionRow}>
                 <span style={s.versionNum}>v{v.version_number}</span>
                 <span style={s.versionMeta}>{v.file_type?.toUpperCase()} · {displayAccount(v.uploadedByUser?.email)}</span>
-                <button onClick={() => handleDownloadFile(detailRecord, v)} style={s.versionLink}>Download</button>
+                {!detailRecord.is_deleted && <button onClick={() => handleDownloadFile(detailRecord, v)} style={s.versionLink}>Download</button>}
               </div>
             ))}
           </div>
@@ -288,15 +306,16 @@ export default function ArchivesPage() {
 
         {/* Actions */}
         <div style={s.detailActions}>
-          {canUpdate && (detailRecord.uploaded_by === user?.id || isApprover) && (
+          {!detailRecord.is_deleted && canUpdate && (detailRecord.uploaded_by === user?.id || isApprover) && (
             <button onClick={() => openEdit(detailRecord)} style={s.editBtn}>Edit</button>
           )}
-          {detailRecord.status === 'pending' && canApprove && (
+          {!detailRecord.is_deleted && detailRecord.status === 'pending' && canApprove && (
             <button onClick={() => handleApprove(detailRecord.id)} style={s.approveBtn}><MonoIcon name="check" size={14} /> Approve</button>
           )}
-          {isAdmin && (
-            <button onClick={() => handleDelete(detailRecord.id)} style={s.deleteBtn}>Delete</button>
+          {isAdmin && !detailRecord.is_deleted && (
+            <button onClick={() => handleArchive(detailRecord.id)} style={s.deleteBtn}>Archive record</button>
           )}
+          {isAdmin && detailRecord.is_deleted && <button onClick={() => handleRestore(detailRecord.id)} style={s.approveBtn}>Restore record</button>}
         </div>
 
         {/* Access logs */}
@@ -318,6 +337,7 @@ export default function ArchivesPage() {
       </div>
     </>
   );
+  };
 
   return (
     <div className="mcc-module mcc-module-archives-page" style={s.page}>
@@ -327,9 +347,13 @@ export default function ArchivesPage() {
           <div style={s.pageHeader}>
             <div>
               <h1 className="workspace-page-title" style={s.title}>Archives</h1>
-              <p style={s.subtitle}>{total} records</p>
+              <p style={s.subtitle}>{total} {showArchived ? 'archived records' : 'active records'}</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+              {isAdmin && <div role="group" aria-label="Archive view" style={{ display: 'inline-flex', gap: 4, padding: 3, border: '1px solid #dbe4ee', borderRadius: 9 }}>
+                <button type="button" aria-pressed={!showArchived} onClick={() => { setShowArchived(false); setPage(1); }} style={{ ...s.pageBtn, background: !showArchived ? '#e8f4fd' : 'transparent' }}>Active</button>
+                <button type="button" aria-pressed={showArchived} onClick={() => { setShowArchived(true); setPage(1); }} style={{ ...s.pageBtn, background: showArchived ? '#e8f4fd' : 'transparent' }}>Archived</button>
+              </div>}
               {canUpdate && (
                 <ArchiveCategoriesManager
                   categories={categories}
@@ -354,13 +378,13 @@ export default function ArchivesPage() {
               <form onSubmit={handleSubmit} style={s.form}>
                 <div style={s.formRow}>
                   <div style={{ ...s.field, flex: 2 }}>
-                    <label style={s.label}>Title *</label>
-                    <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                    <label htmlFor="archive-title" style={s.label}>Title *</label>
+                    <input id="archive-title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                       placeholder="Record title" required style={s.input} />
                   </div>
                   <div style={s.field}>
-                    <label style={s.label}>Category *</label>
-                    <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} required style={s.select}>
+                    <label htmlFor="archive-category" style={s.label}>Category *</label>
+                    <select id="archive-category" value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))} required style={s.select}>
                       <option value="">— Select —</option>
                       {filteredCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
@@ -368,12 +392,12 @@ export default function ArchivesPage() {
                 </div>
                 <div style={s.formRow}>
                   <div style={s.field}>
-                    <label style={s.label}>Document Date</label>
-                    <input type="date" value={form.document_date} onChange={e => setForm(f => ({ ...f, document_date: e.target.value }))} style={s.input} />
+                    <label htmlFor="archive-date" style={s.label}>Document Date</label>
+                    <input id="archive-date" type="date" value={form.document_date} onChange={e => setForm(f => ({ ...f, document_date: e.target.value }))} style={s.input} />
                   </div>
                   <div style={s.field}>
-                    <label style={s.label}>Visibility</label>
-                    <select value={form.visibility} onChange={e => setForm(f => ({ ...f, visibility: e.target.value }))} style={s.select}>
+                    <label htmlFor="archive-visibility" style={s.label}>Visibility</label>
+                    <select id="archive-visibility" value={form.visibility} onChange={e => setForm(f => ({ ...f, visibility: e.target.value }))} style={s.select}>
                       <option value="public">Public</option>
                       <option value="restricted">Restricted</option>
                       {isApprover && <option value="confidential">Confidential</option>}
@@ -381,13 +405,13 @@ export default function ArchivesPage() {
                   </div>
                 </div>
                 <div style={s.field}>
-                  <label style={s.label}>Description</label>
-                  <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  <label htmlFor="archive-description" style={s.label}>Description</label>
+                  <textarea id="archive-description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                     rows={2} placeholder="Optional description..." style={{ ...s.input, resize: 'vertical' }} />
                 </div>
                 <div style={s.field}>
-                  <label style={s.label}>File {editRecord ? '(leave blank to keep current)' : '*'}</label>
-                  <input type="file" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png,.mp4,.mp3"
+                  <label htmlFor="archive-file" style={s.label}>File {editRecord ? '(leave blank to keep current)' : '*'}</label>
+                  <input id="archive-file" type="file" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png,.mp4,.mp3"
                     onChange={e => setSelectedFile(e.target.files[0])} style={s.fileInput} />
                   {selectedFile && <span style={s.fileName}><MonoIcon name="paperclip" size={14} /> {selectedFile.name}</span>}
                 </div>
@@ -434,7 +458,7 @@ export default function ArchivesPage() {
           ) : (
             <div style={s.recordList}>
               {records.map(record => {
-                const stMeta  = STATUS_META[record.status]     || STATUS_META.pending;
+                const stMeta  = record.is_deleted ? ARCHIVED_META : STATUS_META[record.status] || STATUS_META.pending;
                 const visMeta = VISIBILITY_META[record.visibility] || VISIBILITY_META.public;
                 const icon    = FILE_ICONS[record.file_type] || 'file';
                 const isSelected = !isMobile && detailRecord?.id === record.id;
@@ -454,10 +478,14 @@ export default function ArchivesPage() {
                     <div style={s.recordSub}>{record.category?.name} · {formatDate(record.document_date)}</div>
                     <div style={s.recordSub}>Uploaded by {displayAccount(record.uploadedByUser?.email)}</div>
 
-                    {record.status === 'pending' && isApprover && (
+                    {showArchived && isAdmin ? (
+                      <div style={s.pendingActions} onClick={e => e.stopPropagation()}>
+                        <button onClick={() => handleRestore(record.id)} style={s.approveBtn}>Restore</button>
+                      </div>
+                    ) : record.status === 'pending' && isApprover && (
                       <div style={s.pendingActions} onClick={e => e.stopPropagation()}>
                         <button onClick={() => handleApprove(record.id)} style={s.approveBtn}><MonoIcon name="check" size={14} /> Approve</button>
-                        {isAdmin && <button onClick={() => handleDelete(record.id)} style={s.rejectBtn}><MonoIcon name="close" size={14} /> Delete</button>}
+                        {isAdmin && <button onClick={() => handleArchive(record.id)} style={s.rejectBtn}>Archive</button>}
                       </div>
                     )}
                   </div>

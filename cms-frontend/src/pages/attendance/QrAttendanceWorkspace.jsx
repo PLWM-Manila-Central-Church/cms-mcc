@@ -736,6 +736,8 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
             <div className="qr-success-box" role="status">
               Reconciled {summary.finalized_at ? `on ${new Date(summary.finalized_at).toLocaleString()}` : 'and finalized'}.
               {summary.final_absent_count != null ? ` Final absent: ${summary.final_absent_count}.` : ''}
+              {summary.excused_count > 0 ? ' Excused: ' + summary.excused_count + '.' : ''}
+              {summary.pending_review_count > 0 ? ' Pending review: ' + summary.pending_review_count + '.' : ''}
             </div>
           )}
 

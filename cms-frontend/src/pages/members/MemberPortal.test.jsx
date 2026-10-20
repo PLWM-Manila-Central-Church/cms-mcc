@@ -21,7 +21,7 @@ beforeEach(() => {
     if (path === '/member-portal/profile') data = { first_name: 'Sample', last_name: 'Member', gender: 'Male' };
     if (path === '/member-portal/attendance') data = { records: [], rate: 0 };
     if (path.startsWith('/member-portal/finance')) data = { records: [], summary: {} };
-    if (path === '/member-portal/events') data = [{ id: 1, title: 'Sample Event', event_date: '2099-10-18', registration_deadline: '2099-10-17', capacity: 100, registration_count: 1 }];
+    if (path === '/member-portal/events') data = [{ id: 1, title: 'Sample Event', event_date: '2099-10-18', registration_deadline: '2099-10-17', capacity: 100, registration_count: 1, image_url: '/events/1/image' }];
     return { data: { data } };
   });
 });
@@ -37,4 +37,13 @@ test('Member event details is named, keyboard dismissible and returns focus', as
   expect(trigger).toHaveFocus();
   expect(document.body.style.overflow).toBe('');
   expect(screen.getByRole('button', { name: 'Events', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('shows uploaded event artwork in the member event list and details', async () => {
+  render(<MemoryRouter initialEntries={['/portal?tab=events']}><MemberPortal /></MemoryRouter>);
+  const eventImages = await screen.findAllByAltText('Sample Event event');
+  expect(eventImages[0]).toHaveAttribute('src', '/api/events/1/image');
+
+  fireEvent.click(screen.getByRole('button', { name: 'View Details' }));
+  expect((await screen.findAllByAltText('Sample Event event')).length).toBeGreaterThan(1);
 });

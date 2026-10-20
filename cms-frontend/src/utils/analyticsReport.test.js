@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAnalyticsCsvRows, getAnalyticsReportScope } from './analyticsReport';
+import { buildAnalyticsCsvRows, getAnalyticsReportScope, getReportPeriodRange } from './analyticsReport';
 
 describe('analytics report role scope', () => {
   it('describes and exports only member and attendance data for Registration Team', () => {
@@ -54,5 +54,13 @@ describe('analytics report role scope', () => {
 
     expect(rows).toContainEqual(['Demographics', 'Cell group: Other (49 cell groups)', 66]);
     expect(rows).toContainEqual(['Demographics', 'Group: Other (49 groups)', 64]);
+  });
+
+  it('uses Sunday-start week and Asia/Manila calendar dates for report presets', () => {
+    const reference = new Date('2026-10-19T18:00:00.000Z'); // Oct 20 in Manila
+    expect(getReportPeriodRange('week', reference)).toEqual({ from: '2026-10-18', to: '2026-10-20' });
+    expect(getReportPeriodRange('month', reference)).toEqual({ from: '2026-10-01', to: '2026-10-20' });
+    expect(getReportPeriodRange('year', reference)).toEqual({ from: '2026-01-01', to: '2026-10-20' });
+    expect(getReportPeriodRange('custom', reference)).toBeNull();
   });
 });

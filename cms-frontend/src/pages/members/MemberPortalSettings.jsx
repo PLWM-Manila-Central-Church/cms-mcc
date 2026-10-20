@@ -4,6 +4,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { LANGS, saveLangCode } from '../../utils/langUtils';
 import MonoIcon from '../../components/common/MonoIcon';
 import { uploadUrl } from '../../utils/uploadUrl';
+import NotificationPreferencesCard from '../../components/notifications/NotificationPreferencesCard';
 
 const BRAND   = 'linear-gradient(135deg,#003d70,#005599,#13B5EA)';
 
@@ -224,6 +225,8 @@ export default function MemberPortalSettings() {
             <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp" capture="environment" onChange={handlePhotoChange} style={{display:'none'}}/>
           </div>
         </div>
+
+        <NotificationPreferencesCard theme={prefs.theme} />
 
         {/* ── Appearance ── */}
         <div style={card}>

@@ -7,10 +7,10 @@ export const WORKSPACES = {
   pastor: profile('pastor', 'Pastoral oversight', 'See the people behind the numbers.', 'Church insights', ['/attendance', '/members', '/reports/analytics', '/archives'], ['Services & attendance', 'Church records', 'Resources', 'Administration'], 'Review church-wide trends, member records and documents awaiting a decision.'),
   registration: profile('registration', 'Registration desk', 'Welcome members. Record attendance clearly.', 'Check-in desk', ['/attendance/qr', '/services', '/events', '/members'], ['Services & attendance', 'Church records', 'Resources', 'Administration'], 'Choose a Service or Event session before scanning. Registration and physical check-in are separate.'),
   finance: profile('finance', 'Finance office', 'A clear record of church stewardship.', 'Giving & reconciliation', ['/finance', '/reports/analytics', '/archives'], ['Resources', 'Administration', 'Church records', 'Services & attendance'], 'Review transaction dates, giving categories and receipts before reconciling records.'),
-  ministry: profile('ministry', 'Ministry coordination', 'Bring your people and plans together.', 'Ministry planner', ['/ministry', '/events', '/attendance', '/inventory'], ['Church records', 'Services & attendance', 'Resources', 'Administration'], 'Work with your assigned ministry roster, invitations, schedules and requests.'),
-  cell: profile('cell', 'Cell leadership', 'Care for your cell, one gathering at a time.', 'Cell workspace', ['/cell-groups', '/attendance/qr', '/events'], ['Church records', 'Services & attendance', 'Resources', 'Administration'], 'Attendance drafts and submissions apply to the selected cell group only.'),
-  group: profile('group', 'Group leadership', 'Keep your group connected and involved.', 'Group workspace', ['/members', '/services', '/attendance/qr', '/events'], ['Church records', 'Services & attendance', 'Resources', 'Administration'], 'Review your assigned group roster and upcoming gatherings before preparing attendance.'),
-  leader: profile('leader', 'Team leadership', 'Choose your team. Keep each record in scope.', 'Team hub', ['/leader/teams', '/attendance/qr', '/events'], ['Church records', 'Services & attendance', 'Resources', 'Administration'], 'Select one team to make changes. The combined attendance view is read-only.'),
+  ministry: profile('ministry', 'Ministry coordination', 'Bring your people and plans together.', 'Ministry planner', ['/ministry', '/reports/team-attendance', '/events', '/attendance', '/inventory'], ['Church records', 'Services & attendance', 'Resources', 'Administration'], 'Work with your assigned ministry roster, invitations, schedules and requests.'),
+  cell: profile('cell', 'Cell leadership', 'Care for your cell, one gathering at a time.', 'Cell workspace', ['/cell-groups', '/reports/team-attendance', '/attendance/qr', '/events'], ['Church records', 'Services & attendance', 'Resources', 'Administration'], 'Attendance drafts, submissions and reports apply to your assigned cell group.'),
+  group: profile('group', 'Group leadership', 'Keep your group connected and involved.', 'Group workspace', ['/members', '/services', '/reports/team-attendance', '/attendance/qr', '/events'], ['Church records', 'Services & attendance', 'Resources', 'Administration'], 'Review your assigned group roster and attendance trends before preparing attendance.'),
+  leader: profile('leader', 'Team leadership', 'Choose your team. Keep each record in scope.', 'Team hub', ['/leader/teams', '/reports/team-attendance', '/attendance/qr', '/events'], ['Church records', 'Services & attendance', 'Resources', 'Administration'], 'Select one team to make changes. Team attendance reports follow the active assigned scope.'),
   member: profile('member', 'My church', 'Your personal space in the church community.', 'My church activity', ['/portal'], [], 'Show your QR when you arrive. Follow your events, attendance and giving here.'),
 };
 
@@ -25,8 +25,9 @@ export function getRoleWorkspace(user) {
 }
 
 const NAV_GROUPS = {
+  '/outreach': 'Services & attendance',
   '/dashboard': 'Overview', '/leader/teams': 'Church records', '/members': 'Church records', '/cell-groups': 'Church records', '/ministry': 'Church records',
-  '/services': 'Services & attendance', '/attendance': 'Services & attendance', '/attendance/qr': 'Services & attendance', '/events': 'Services & attendance',
+  '/services': 'Services & attendance', '/attendance': 'Services & attendance', '/attendance/qr': 'Services & attendance', '/reports/team-attendance': 'Services & attendance', '/events': 'Services & attendance',
   '/finance': 'Resources', '/inventory': 'Resources', '/archives': 'Resources',
   '/users': 'Administration', '/audit-logs': 'Administration', '/settings': 'Administration', '/my-settings': 'Administration',
 };
@@ -51,9 +52,11 @@ export function workspaceActions(user, hasPermission) {
 }
 
 export const MODULES = [
+  ['/outreach', 'Notifications & follow-ups', 'Review activity reminders, consent and caring follow-ups after finalized eligible absences.'],
   ['/finance/expenses', 'Expenses', 'Track expenditure with categories, dates and supporting records.'],
   ['/finance/my-giving', 'Giving', 'Review recorded contributions and receipts.'],
   ['/reports/analytics', 'Analytics', 'Filter the period, review the result and export the report you need.'],
+  ['/reports/team-attendance', 'Team attendance report', 'Review weekly, monthly or annual attendance trends for your current assigned team.'],
   ['/attendance/qr', 'QR attendance', 'Choose a session, then scan members or review submitted batches.'],
   ['/leader/teams', 'My teams', 'Open an assigned team before changing its roster or attendance.'],
   ['/members', 'Member records', 'Search and filter the roster before opening an individual record.'],

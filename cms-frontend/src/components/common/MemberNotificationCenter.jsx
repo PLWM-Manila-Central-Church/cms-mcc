@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import useNotificationPolling from '../../hooks/useNotificationPolling';
@@ -23,6 +23,9 @@ const isRead = (notification) => Boolean(Number(notification?.is_read));
 export default function MemberNotificationCenter({ colors, isMobile = false, language = 'en' }) {
   const navigate = useNavigate();
   const panelRef = useRef(null);
+  const bellRef = useRef(null);
+  const panelId = useId();
+  const [mobilePanelTop, setMobilePanelTop] = useState(112);
   const [notifications, setNotifications] = useState([]);
   const [panelOpen, setPanelOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,6 +47,20 @@ export default function MemberNotificationCenter({ colors, isMobile = false, lan
     document.addEventListener('mousedown', closeOnOutsideClick);
     return () => document.removeEventListener('mousedown', closeOnOutsideClick);
   }, []);
+
+  useEffect(() => {
+    if (!panelOpen) return;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') { setPanelOpen(false); bellRef.current?.focus(); }
+    };
+    const placePanel = () => {
+      if (isMobile) setMobilePanelTop(Math.max(8, Math.min(window.innerHeight - 180, (bellRef.current?.getBoundingClientRect().bottom || 104) + 8)));
+    };
+    placePanel();
+    document.addEventListener('keydown', closeOnEscape);
+    window.addEventListener('resize', placePanel);
+    return () => { document.removeEventListener('keydown', closeOnEscape); window.removeEventListener('resize', placePanel); };
+  }, [panelOpen, isMobile]);
 
   const markOne = async (notification) => {
     if (isRead(notification)) return;
@@ -113,17 +130,19 @@ export default function MemberNotificationCenter({ colors, isMobile = false, lan
     border: theme.border || '#e2e8f0',
     text: theme.t1 || '#0f172a',
     muted: theme.t3 || '#64748b',
-    accent: theme.accent || '#005599',
+    accent: theme.accentT || theme.accent || '#005599',
     unread: theme.accentL || '#eff6ff',
-    danger: theme.danger || '#dc2626',
+    danger: theme.dk ? '#fca5a5' : theme.danger || '#dc2626',
   };
 
   return (
     <div ref={panelRef} style={{ position: 'relative', flexShrink: 0 }}>
       <button
+        ref={bellRef}
         type="button"
         aria-label={text.title}
         aria-expanded={panelOpen}
+        aria-controls={panelId}
         onClick={() => setPanelOpen((open) => !open)}
         style={{
           position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -140,9 +159,9 @@ export default function MemberNotificationCenter({ colors, isMobile = false, lan
         }}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
       </button>
 
-      {panelOpen && <section role="region" aria-label={text.title} style={{
-        position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-        width: isMobile ? 'min(92vw, 360px)' : 380, maxHeight: 'min(70vh, 500px)',
+      {panelOpen && <section id={panelId} role="region" aria-label={text.title} style={{
+        position: isMobile ? 'fixed' : 'absolute', top: isMobile ? mobilePanelTop : 'calc(100% + 8px)', right: isMobile ? 12 : 0,
+        width: isMobile ? 'calc(100vw - 24px)' : 380, maxHeight: isMobile ? `min(70dvh, ${Math.max(120, window.innerHeight - mobilePanelTop - 20)}px)` : 'min(70vh, 500px)',
         display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 500,
         color: palette.text, background: palette.surface, border: `1px solid ${palette.border}`,
         borderRadius: 14, boxShadow: '0 8px 32px rgba(15,23,42,0.2)',
@@ -164,7 +183,7 @@ export default function MemberNotificationCenter({ colors, isMobile = false, lan
             <span style={{ display: 'block', marginTop: 4, color: palette.muted, fontSize: 12 }}>{text.emptyHint}</span>
           </div> : notifications.map((notification) => (
             <article key={notification.id} style={{ padding: '11px 13px', borderBottom: `1px solid ${palette.border}`, background: isRead(notification) ? palette.surface : palette.unread }}>
-              <p style={{ margin: '0 0 5px', fontSize: 13, lineHeight: 1.4 }}>{notification.message}</p>
+              <p style={{ margin: '0 0 5px', fontSize: 13, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{notification.message}</p>
               <time style={{ display: 'block', color: palette.muted, fontSize: 10, marginBottom: 8 }} dateTime={notification.created_at || notification.createdAt}>
                 {timeAgo(notification.created_at || notification.createdAt)}
               </time>

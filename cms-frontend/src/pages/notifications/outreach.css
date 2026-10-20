@@ -1,0 +1,62 @@
+.outreach-page { max-width:1280px; margin:0 auto; min-width:0; color:var(--mcc-ink,#0f172a); }
+.outreach-page *, .outreach-preferences * { box-sizing:border-box; }
+.outreach-page h1 { margin:0; font-size:clamp(24px,3vw,32px); line-height:1.2; letter-spacing:-.025em; }
+.outreach-page h2, .outreach-card h2 { font-size:18px; margin:0 0 10px; }
+.outreach-page h3 { font-size:15px; margin:0 0 8px; }
+.outreach-page p, .outreach-card p { color:var(--mcc-secondary,#52647a); font-size:14px; line-height:1.6; }
+.outreach-header, .outreach-toolbar, .outreach-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.outreach-header { justify-content:space-between; align-items:flex-start; margin-bottom:18px; }
+.outreach-header p { margin:7px 0 0; max-width:760px; }
+.outreach-card { background:var(--mcc-surface,#fff); color:var(--mcc-ink,#0f172a); border:1px solid var(--mcc-border,#dfe6ef); border-radius:var(--mcc-radius,14px); padding:20px; margin-bottom:16px; min-width:0; }
+.outreach-preferences[data-theme=dark] { color-scheme:dark; --mcc-surface:#1a2332; --mcc-border:#2d3a4e; --mcc-ink:#f1f5f9; --mcc-secondary:#b8c6d9; }
+.outreach-preferences[data-theme=dark] .outreach-error { background:#451b23; color:#fecaca; border-color:#9f3341; }
+.outreach-preferences[data-theme=dark] .outreach-warning { background:#3d3015; color:#fde68a; border-color:#806423; }
+.outreach-preferences[data-theme=dark] .outreach-success { background:#153c2c; color:#bbf7d0; border-color:#287850; }
+.outreach-page button, .outreach-preferences button, .outreach-dialog button { min-height:44px; border:1px solid #ccd8e5; border-radius:8px; padding:9px 14px; background:var(--mcc-surface,#fff); color:var(--mcc-ink,#18334d); cursor:pointer; font:inherit; font-size:13px; font-weight:700; }
+.outreach-page button:disabled, .outreach-preferences button:disabled, .outreach-dialog button:disabled { opacity:.55; cursor:not-allowed; }
+.outreach-page .outreach-primary, .outreach-preferences .outreach-primary, .outreach-dialog .outreach-primary { background:#005599; color:#fff; border-color:#005599; }
+.outreach-page button:focus-visible, .outreach-preferences button:focus-visible, .outreach-dialog button:focus-visible { outline:3px solid #13b5ea; outline-offset:2px; }
+.outreach-page input, .outreach-page select, .outreach-page textarea, .outreach-preferences input:not([type=checkbox]), .outreach-preferences textarea, .outreach-dialog input:not([type=checkbox]), .outreach-dialog select, .outreach-dialog textarea { display:block; width:100%; max-width:100%; min-width:0; min-height:44px; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; background:var(--mcc-surface,#fff); color:var(--mcc-ink,#0f172a); font:inherit; font-size:14px; }
+.outreach-page textarea, .outreach-dialog textarea, .outreach-preferences textarea { min-height:86px; resize:vertical; }
+.outreach-page label, .outreach-dialog label, .outreach-preferences label { display:block; color:var(--mcc-ink,#193750); font-size:13px; font-weight:650; margin:0 0 14px; line-height:1.6; }
+.outreach-page label input, .outreach-page label select, .outreach-page label textarea, .outreach-dialog label input, .outreach-dialog label textarea, .outreach-dialog label select, .outreach-preferences label input { margin-top:5px; }
+.outreach-page .outreach-check, .outreach-dialog .outreach-check, .outreach-preferences .outreach-check { display:flex; align-items:flex-start; gap:10px; font-weight:500; }
+.outreach-check input[type=checkbox] { width:19px; height:19px; min-height:19px; margin:2px 0 0; flex:0 0 auto; accent-color:#005599; }
+.outreach-banner { border-left:4px solid #13b5ea; background:#eff8ff; padding:13px 16px; border-radius:8px; margin-bottom:16px; color:#164a6c; font-size:14px; line-height:1.6; }
+.outreach-error, .outreach-warning, .outreach-success { padding:12px 14px; border-radius:8px; margin:12px 0; font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+.outreach-error { color:#991b1b; background:#fef2f2; border:1px solid #fecaca; }
+.outreach-warning { color:#854d0e; background:#fffbeb; border:1px solid #fde68a; }
+.outreach-success { color:#166534; background:#f0fdf4; border:1px solid #bbf7d0; }
+.outreach-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:18px; }
+.outreach-metric { background:var(--mcc-surface,#fff); border:1px solid var(--mcc-border,#dfe6ef); border-radius:12px; padding:15px; }
+.outreach-metric span { display:block; color:var(--mcc-secondary,#52647a); font-size:12px; }
+.outreach-metric strong { display:block; font-size:27px; margin-top:6px; }
+.outreach-tabs { display:flex; gap:7px; overflow-x:auto; border-bottom:1px solid var(--mcc-border,#dfe6ef); margin-bottom:18px; padding-bottom:9px; }
+.outreach-tabs button { flex:0 0 auto; border-color:transparent; background:transparent; }
+.outreach-tabs button[aria-selected=true] { background:#e5f3ff; border-color:#b8def7; color:#005599; }
+.outreach-toolbar { margin-bottom:16px; align-items:flex-end; }
+.outreach-toolbar label { margin:0; flex:1 1 160px; }
+.outreach-toolbar .outreach-search { flex:2 1 230px; }
+.outreach-table-wrap { max-width:100%; overflow-x:auto; border:1px solid var(--mcc-border,#dfe6ef); border-radius:10px; }
+.outreach-table { width:100%; border-collapse:collapse; font-size:13px; text-align:left; background:var(--mcc-surface,#fff); }
+.outreach-table th { background:#f3f7fb; color:#52647a; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+.outreach-table th, .outreach-table td { border-bottom:1px solid var(--mcc-border,#e2e8f0); padding:12px; vertical-align:top; }
+.outreach-table td { min-width:110px; }
+.outreach-table td p { margin:4px 0; font-size:12px; }
+.outreach-table .outreach-message { min-width:240px; max-width:420px; white-space:normal; overflow-wrap:anywhere; line-height:1.5; }
+.outreach-badge { display:inline-block; padding:4px 8px; border-radius:6px; background:#edf3f8; color:#324d65; font-size:11px; font-weight:750; text-transform:capitalize; white-space:nowrap; }
+.outreach-badge.simulated { color:#6d28d9; background:#f3e8ff; }
+.outreach-badge.failed, .outreach-badge.unknown { color:#991b1b; background:#fef2f2; }
+.outreach-badge.resolved, .outreach-badge.delivered, .outreach-badge.present { color:#166534; background:#dcfce7; }
+.outreach-pagination { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px; margin-top:14px; font-size:13px; color:#52647a; }
+.outreach-muted { font-size:12px !important; color:var(--mcc-secondary,#52647a); overflow-wrap:anywhere; }
+.outreach-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:16px; }
+.outreach-overlay { position:fixed; inset:0; background:rgba(8,26,44,.55); display:flex; align-items:center; justify-content:center; padding:16px; z-index:2000; }
+.outreach-dialog { width:min(100%,900px); max-height:90dvh; overflow:auto; overscroll-behavior:contain; border-radius:16px; background:var(--mcc-surface,#fff); color:var(--mcc-ink,#0f172a); padding:22px; box-shadow:0 20px 80px rgba(0,0,0,.2); }
+.outreach-dialog h2 { margin:0; font-size:21px; }
+.outreach-dialog header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
+.outreach-dialog p { font-size:14px; line-height:1.6; }
+.outreach-dialog .outreach-card { padding:15px; }
+.outreach-link { color:#005599; font-weight:700; }
+.outreach-empty { padding:30px 14px; text-align:center; color:#52647a; }
+@media(max-width:600px) { .outreach-card { padding:15px; } .outreach-dialog { padding:16px; max-height:94dvh; } .outreach-overlay { padding:8px; } .outreach-header .outreach-actions { width:100%; } .outreach-header .outreach-actions button { flex:1; } .outreach-toolbar button { width:100%; } .outreach-tabs { max-width:100%; } }

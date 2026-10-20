@@ -555,7 +555,10 @@ export default function PastorAttendanceReport() {
                       <td style={styles.td}><span style={styles.status}>{session.session_status}</span></td>
                       <td style={styles.td}>{formatNumber(session.confirmed_visits)} visits<br /><span style={styles.muted}>{formatNumber(session.unique_attendees)} unique</span></td>
                       <td style={styles.td}>{session.expected_count == null ? '—' : `${formatNumber(session.expected_present_count)} / ${formatNumber(session.expected_count)}`}</td>
-                      <td style={styles.td}>{formatNumber(session.awaiting_review)}</td>
+                      <td style={styles.td}>{formatNumber(session.awaiting_review)} batch review
+                        {session.excused_count > 0 && <p style={styles.muted}>{formatNumber(session.excused_count)} excused</p>}
+                        {session.pending_review_count > 0 && <p style={styles.muted}>{formatNumber(session.pending_review_count)} pending attendance review</p>}
+                      </td>
                       <td style={styles.td}>
                         {session.finalization_status === 'finalized'
                           ? `${formatNumber(session.final_absent)} final absent`

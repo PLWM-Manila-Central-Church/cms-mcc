@@ -45,6 +45,18 @@ export const NAV_ITEMS = [
     permissions: { module: 'attendance', action: 'read' }
   },
   {
+    label: 'Team Attendance Report',
+    path: '/reports/team-attendance',
+    icon: 'attendance',
+    permissions: { module: 'attendance', action: 'read' }
+  },
+  {
+    label: 'Notifications & Follow-ups',
+    path: '/outreach',
+    icon: 'attendance',
+    permissions: { module: 'outreach', action: 'read' }
+  },
+  {
     label: 'QR Attendance',
     path: '/attendance/qr',
     icon: 'attendance',
