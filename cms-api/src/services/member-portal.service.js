@@ -327,7 +327,7 @@ exports.updateEventRegistrationReservation = async (memberId, eventId, reservati
 };
 
 // ── Cancel Event Registration (self) ─────────────────────────
-exports.cancelEventRegistration = async (memberId, eventId) => {
+exports.cancelEventRegistration = async (memberId, eventId, cancelledBy = null) => {
   const event = await Event.findOne({ where: { id: eventId } });
   if (event?.registration_deadline && new Date() > new Date(event.registration_deadline))
     throw AppError.badRequest("VALIDATION", "Cancellation deadline has passed");
@@ -337,11 +337,25 @@ exports.cancelEventRegistration = async (memberId, eventId) => {
   });
   if (!reg) throw AppError.notFound("RECORD_NOT_FOUND", "Registration not found");
 
-  await reg.destroy();
+  await reg.update({
+    is_deleted: 1,
+    deleted_at: new Date(),
+    deleted_by: cancelledBy,
+    seat_number: null,
+    parking_slot: null,
+  });
+  auditLog.log({
+    userId: cancelledBy,
+    action: "CANCEL_EVENT_REGISTRATION",
+    targetTable: "event_registrations",
+    targetId: reg.id,
+    oldValues: { event_id: eventId, member_id: memberId, seat_number: reg.seat_number, parking_slot: reg.parking_slot },
+    newValues: { is_deleted: 1 },
+  });
   if (event) {
     await notifyEventRegistrationChange({ memberId, eventId, eventTitle: event.title, cancelled: true });
   }
-  return { message: "Registration cancelled successfully." };
+  return { message: "Registration cancelled. Its history was retained." };
 };
 
 // ── Change My Password ────────────────────────────────────────
@@ -404,6 +418,7 @@ exports.getUpcomingServices = async () => {
     where: {
       service_date: { [Op.gte]: now },
       status: "published",
+      is_deleted: 0,
     },
     attributes: ["id", "title", "service_date", "service_time", "status", "capacity"],
     order: [["service_date", "ASC"]],
@@ -429,7 +444,7 @@ exports.uploadProfilePhoto = async (memberId, filePath) => {
 
 // ── Get Service Details with Member's RSVP ───────────────────
 exports.getServiceDetails = async (serviceId, memberId) => {
-  const service = await Service.findByPk(serviceId, {
+  const service = await Service.findOne({ where: { id: serviceId, is_deleted: 0 },
     attributes: ["id", "title", "service_date", "service_time", "capacity", "total_parking_slots", "status", "response_deadline"],
   });
   if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");

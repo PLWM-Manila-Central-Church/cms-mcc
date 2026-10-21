@@ -16,6 +16,7 @@ router.get("/:id", auth, authorize("services", "read"), ctrl.getServiceById);
 router.post("/", auth, authorize("services", "create"), validate(createServiceSchema), ctrl.createService);
 router.put("/:id", auth, authorize("services", "update"), validate(updateServiceSchema), ctrl.updateService);
 router.patch("/:id/status", auth, authorize("services", "update"), validate(updateServiceStatusSchema), ctrl.updateStatus);
+router.patch("/:id/archive", auth, authorize("services", "delete"), ctrl.archiveService);
 router.delete(
   "/:id",
   auth,

@@ -31,6 +31,9 @@ const InventoryItem = sequelize.define(
     },
     low_stock_threshold: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     notes: { type: DataTypes.TEXT, allowNull: true },
+    is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+    deleted_at: { type: DataTypes.DATE, allowNull: true },
+    deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   },
   { tableName: "inventory_items", timestamps: true, underscored: true },
 );

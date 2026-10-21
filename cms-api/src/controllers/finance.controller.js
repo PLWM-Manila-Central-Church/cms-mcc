@@ -60,9 +60,9 @@ exports.updateRecord = async (req, res, next) => {
   }
 };
 
-exports.deleteRecord = async (req, res, next) => {
+exports.archiveRecord = async (req, res, next) => {
   try {
-    const result = await financeService.deleteRecord(
+    const result = await financeService.archiveRecord(
       req.params.id,
       req.user.userId,
     );
@@ -71,6 +71,7 @@ exports.deleteRecord = async (req, res, next) => {
     next(err);
   }
 };
+exports.deleteRecord = exports.archiveRecord;
 
 // ── Financial Categories ─────────────────────────────────────
 exports.getAllCategories = async (req, res, next) => {
@@ -339,9 +340,10 @@ exports.downloadAttachment = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteAttachment = async (req, res, next) => {
+exports.archiveAttachment = async (req, res, next) => {
   try {
-    const result = await financeService.deleteAttachment(req.params.id, req.user.userId);
+    const result = await financeService.archiveAttachment(req.params.id, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
+exports.deleteAttachment = exports.archiveAttachment;

@@ -56,7 +56,7 @@ exports.getOpportunities = async (memberId) => {
   if (member.status !== "Active") throw AppError.forbidden("Only active members can apply to a ministry");
 
   const [roles, memberships, applications] = await Promise.all([
-    MinistryRole.findAll({ order: [["name", "ASC"]] }),
+    MinistryRole.findAll({ where: { is_deleted: 0 }, order: [["name", "ASC"]] }),
     MinistryMembership.findAll({ where: { member_id: memberId }, attributes: ["ministry_role_id"] }),
     MinistryApplication.findAll({ where: { member_id: memberId }, attributes: ["id", "ministry_role_id", "status", "message", "review_note", "reviewed_at"] }),
   ]);
@@ -82,7 +82,7 @@ exports.createApplication = async ({ memberId, ministryRoleId, message, userId }
   if (!memberId) throw AppError.badRequest("MEMBER_PROFILE_REQUIRED", "A member profile is required to apply to a ministry");
   const [member, ministryRole] = await Promise.all([
     Member.findByPk(memberId, { attributes: ["id", "status"] }),
-    MinistryRole.findByPk(ministryRoleId),
+    MinistryRole.findOne({ where: { id: ministryRoleId, is_deleted: 0 } }),
   ]);
   if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member profile not found");
   if (member.status !== "Active") throw AppError.forbidden("Only active members can apply to a ministry");

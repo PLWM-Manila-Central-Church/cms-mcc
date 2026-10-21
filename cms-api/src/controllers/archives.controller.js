@@ -4,6 +4,25 @@ const archivesService = require("../services/archives.service");
 const uploadStorage   = require("../middlewares/upload-s3");
 const { normalizeArchiveFileType } = require("../helpers/archiveFileMetadata.helper");
 const { getFileUrl } = uploadStorage;
+const systemArchivesService = require("../services/system-archives.service");
+
+exports.getSystemRecords = async (req, res, next) => {
+  try {
+    const data = await systemArchivesService.getArchivedSystemRecords(req.query);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.restoreSystemRecord = async (req, res, next) => {
+  try {
+    const data = await systemArchivesService.restoreSystemRecord(
+      req.params.type,
+      req.params.id,
+      req.user.userId,
+    );
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
 
 // ── Helper: extract file info from multer req.file ───────────
 const extractFileFields = (file) => {
@@ -47,7 +66,7 @@ exports.createRecord = async (req, res, next) => {
     // Finance Team can only upload to "Financial Records" category
     if (req.user?.roleName === "Finance Team") {
       const { ArchiveCategory } = require("../models");
-      const cat = await ArchiveCategory.findByPk(req.body.category_id);
+      const cat = await ArchiveCategory.findOne({ where: { id: req.body.category_id, is_deleted: 0 } });
       if (!cat || cat.name !== "Financial Records") {
         return res.status(403).json({ success: false, message: "Finance Team can only upload to the Financial Records category." });
       }
@@ -63,7 +82,7 @@ exports.updateRecord = async (req, res, next) => {
     // Finance Team can only upload to "Financial Records" category
     if (req.user?.roleName === "Finance Team" && req.body.category_id) {
       const { ArchiveCategory } = require("../models");
-      const cat = await ArchiveCategory.findByPk(req.body.category_id);
+      const cat = await ArchiveCategory.findOne({ where: { id: req.body.category_id, is_deleted: 0 } });
       if (!cat || cat.name !== "Financial Records") {
         return res.status(403).json({ success: false, message: "Finance Team can only upload to the Financial Records category." });
       }
@@ -195,9 +214,10 @@ exports.updateCategory = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteCategory = async (req, res, next) => {
+exports.archiveCategory = async (req, res, next) => {
   try {
-    const data = await archivesService.deleteCategory(req.params.id);
+    const data = await archivesService.archiveCategory(req.params.id, req.user.userId);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
+exports.deleteCategory = exports.archiveCategory;

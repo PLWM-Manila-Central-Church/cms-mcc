@@ -166,10 +166,10 @@ describe("archive access and version integrity", () => {
     ArchiveCategory.findAll.mockResolvedValueOnce([{ id: 44, name: "Financial Records" }]);
     await archivesService.getAllCategories("Finance Team");
     expect(ArchiveCategory.findAll).toHaveBeenCalledWith(expect.objectContaining({
-      where: { name: "Financial Records" },
+      where: { name: "Financial Records", is_deleted: 0 },
     }));
 
-    ArchiveCategory.findByPk.mockResolvedValueOnce({ id: 3, name: "Member Documents" });
+    ArchiveCategory.findOne.mockResolvedValueOnce({ id: 3, name: "Member Documents" });
     await expect(archivesService.getCategoryById(3, "Finance Team"))
       .rejects.toMatchObject({ status: 404 });
   });
@@ -347,28 +347,27 @@ describe("archive access and version integrity", () => {
     expect(category.id).toBe(31);
   });
 
-  test("protects the Finance Team's required Financial Records category from rename and delete", async () => {
-    const category = { id: 31, name: "Financial Records", update: jest.fn(), destroy: jest.fn() };
-    ArchiveCategory.findByPk.mockResolvedValue(category);
+  test("protects the Finance Team's required Financial Records category from rename and archive", async () => {
+    const category = { id: 31, name: "Financial Records", update: jest.fn() };
+    ArchiveCategory.findOne.mockResolvedValue(category);
 
     await expect(archivesService.updateCategory(31, { name: "Receipts" }))
       .rejects.toThrow(/required for Finance Team uploads/);
-    await expect(archivesService.deleteCategory(31))
+    await expect(archivesService.archiveCategory(31, 4))
       .rejects.toThrow(/required for Finance Team uploads/);
 
     expect(category.update).not.toHaveBeenCalled();
-    expect(category.destroy).not.toHaveBeenCalled();
     expect(ArchiveRecord.count).not.toHaveBeenCalled();
   });
 
-  test("keeps in-use categories from being deleted", async () => {
-    const category = { id: 31, name: "Meeting Minutes", destroy: jest.fn() };
-    ArchiveCategory.findByPk.mockResolvedValue(category);
+  test("keeps in-use categories from being archived", async () => {
+    const category = { id: 31, name: "Meeting Minutes", update: jest.fn() };
+    ArchiveCategory.findOne.mockResolvedValue(category);
     ArchiveRecord.count.mockResolvedValueOnce(2);
 
-    await expect(archivesService.deleteCategory(31)).rejects.toMatchObject({ status: 400 });
+    await expect(archivesService.archiveCategory(31, 4)).rejects.toMatchObject({ status: 400 });
 
     expect(ArchiveRecord.count).toHaveBeenCalledWith({ where: { category_id: 31 } });
-    expect(category.destroy).not.toHaveBeenCalled();
+    expect(category.update).not.toHaveBeenCalled();
   });
 });

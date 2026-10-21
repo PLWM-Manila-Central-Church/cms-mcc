@@ -30,7 +30,7 @@ const saveServiceResponse = async ({
   return sequelize.transaction(async (transaction) => {
     // Serializing reservations on the service row makes capacity/slot checks
     // safe across both member and staff RSVP paths.
-    const service = await Service.findByPk(serviceId, {
+    const service = await Service.findOne({ where: { id: serviceId, is_deleted: 0 },
       transaction,
       lock: transaction.LOCK.UPDATE,
     });

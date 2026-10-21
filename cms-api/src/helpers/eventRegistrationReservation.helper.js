@@ -92,12 +92,14 @@ const registerEventMember = async ({ eventId, memberId, registeredBy = null, sea
     const member = await Member.findByPk(memberId, { transaction });
     if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
-    const existing = await EventRegistration.findOne({
+    const existing = await EventRegistration.unscoped().findOne({
       where: { event_id: eventId, member_id: memberId },
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
-    if (existing) throw AppError.conflict("DUPLICATE", "Member already registered for this event");
+    if (existing && Number(existing.is_deleted) === 0) {
+      throw AppError.conflict("DUPLICATE", "Member already registered for this event");
+    }
 
     if (event.capacity != null) {
       const count = await EventRegistration.count({ where: { event_id: eventId }, transaction });
@@ -109,13 +111,19 @@ const registerEventMember = async ({ eventId, memberId, registeredBy = null, sea
     const reservation = await resolveReservation({
       event, memberId, seatNumber, parkingSlot, transaction,
     });
-    const registration = await EventRegistration.create({
+    const registrationData = {
       event_id: eventId,
       member_id: memberId,
       registered_at: new Date(),
       registered_by: registeredBy,
       ...reservation,
-    }, { transaction });
+      is_deleted: 0,
+      deleted_at: null,
+      deleted_by: null,
+    };
+    const registration = existing
+      ? await existing.update(registrationData, { transaction })
+      : await EventRegistration.create(registrationData, { transaction });
     return { registration, eventTitle: event.title, created: true };
   });
 

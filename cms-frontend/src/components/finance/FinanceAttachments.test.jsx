@@ -8,6 +8,7 @@ vi.mock('../../api/axiosInstance', () => ({
     get: vi.fn(),
     getUri: vi.fn(({ url }) => `/api${url}`),
     post: vi.fn(),
+    patch: vi.fn(),
     delete: vi.fn(),
   },
 }));
@@ -77,8 +78,8 @@ describe('FinanceAttachments', () => {
     expect(window.URL.createObjectURL).toHaveBeenCalled();
   });
 
-  it('confirms deletion in an accessible dialog and refreshes the row', async () => {
-    axiosInstance.delete.mockResolvedValue({ data: { success: true } });
+  it('archives a receipt in an accessible dialog and refreshes the row', async () => {
+    axiosInstance.patch.mockResolvedValue({ data: { success: true } });
     const onChanged = vi.fn();
     render(<FinanceAttachments
       attachments={[{ id: 8, file_name: 'giving receipt.pdf' }]}
@@ -86,11 +87,11 @@ describe('FinanceAttachments', () => {
       onChanged={onChanged}
     />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remove giving receipt.pdf' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Archive giving receipt.pdf' }));
     expect(await screen.findByRole('alertdialog')).toHaveTextContent('giving receipt.pdf');
-    fireEvent.click(screen.getByRole('button', { name: 'Remove receipt' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Archive receipt' }));
 
-    await waitFor(() => expect(axiosInstance.delete).toHaveBeenCalledWith('/finance/attachments/8'));
+    await waitFor(() => expect(axiosInstance.patch).toHaveBeenCalledWith('/finance/attachments/8/archive'));
     await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
@@ -99,7 +100,7 @@ describe('FinanceAttachments', () => {
     render(<FinanceAttachments attachments={[{ id: 8, file_name: 'giving receipt.pdf' }]} />);
 
     expect(screen.queryByRole('button', { name: 'Add receipt' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Remove giving receipt.pdf' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Archive giving receipt.pdf' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Download giving receipt.pdf' })).toBeInTheDocument();
   });
 });

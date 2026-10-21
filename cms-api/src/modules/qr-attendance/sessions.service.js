@@ -16,7 +16,7 @@ const MAX_ROSTER_ADD = 200;
 
 const lookupParent = async (targetType, targetId, transaction) => {
   if (targetType === "service") {
-    const service = await Service.findByPk(targetId, { transaction });
+    const service = await Service.findOne({ where: { id: targetId, is_deleted: 0 }, transaction });
     if (!service) throw AppError.notFound("SERVICE_NOT_FOUND", "Service was not found");
     return service;
   }

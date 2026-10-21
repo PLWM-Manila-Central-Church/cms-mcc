@@ -78,7 +78,7 @@ exports.cancelEventRegistration = async (req, res, next) => {
   try {
     if (!req.user.memberId)
       return res.status(400).json({ message: "No member profile linked to this account" });
-    const data = await portalService.cancelEventRegistration(req.user.memberId, req.params.eventId);
+    const data = await portalService.cancelEventRegistration(req.user.memberId, req.params.eventId, req.user.userId);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };

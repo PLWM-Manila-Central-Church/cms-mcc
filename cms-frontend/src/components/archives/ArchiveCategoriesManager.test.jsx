@@ -6,7 +6,7 @@ import ArchiveCategoriesManager from './ArchiveCategoriesManager';
 const { mobileState } = vi.hoisted(() => ({ mobileState: { value: false } }));
 
 vi.mock('../../api/axiosInstance', () => ({
-  default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+  default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }));
 vi.mock('../../hooks/useIsMobile', () => ({ default: () => mobileState.value }));
 
@@ -64,7 +64,7 @@ describe('ArchiveCategoriesManager', () => {
     />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Manage categories' }));
-    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     const nameInput = screen.getByLabelText('Category name');
     expect(nameInput).toHaveAttribute('readonly');
@@ -78,15 +78,15 @@ describe('ArchiveCategoriesManager', () => {
   });
 
   it('shows server errors when a category is in use', async () => {
-    axiosInstance.delete.mockRejectedValue({ response: { data: { message: 'Cannot delete. 2 records are using this category' } } });
+    axiosInstance.patch.mockRejectedValue({ response: { data: { message: 'Cannot archive. 2 records are using this category' } } });
     render(<ArchiveCategoriesManager categories={[{ id: 7, name: 'Meeting Minutes' }]} canManage canDelete />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Manage categories' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }));
     expect(await screen.findByRole('alertdialog')).toHaveTextContent('Meeting Minutes');
-    fireEvent.click(screen.getByRole('button', { name: 'Delete category' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Archive category' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Cannot delete. 2 records are using this category');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Cannot archive. 2 records are using this category');
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
   });
 

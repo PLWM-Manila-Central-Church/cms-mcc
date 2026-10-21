@@ -31,6 +31,9 @@ const User = sequelize.define(
     locked_until:          { type: DataTypes.DATE,    allowNull: true,  defaultValue: null },
     is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
     deleted_at: { type: DataTypes.DATE, allowNull: true },
+    deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    archived_email: { type: DataTypes.STRING(150), allowNull: true },
+    archived_is_active: { type: DataTypes.TINYINT, allowNull: true },
   },
   {
     tableName: "users",

@@ -855,7 +855,7 @@ function AssignmentsTab() {
   const handleDelete = async () => {
     setDeleting(true); setDelErr('');
     try { await axiosInstance.delete(`/ministry/assignments/${delTarget.id}`); setDelTarget(null); load(); }
-    catch (e) { setDelErr(e.response?.data?.message || 'Delete failed.'); }
+    catch (e) { setDelErr(e.response?.data?.message || 'Remove failed.'); }
     finally { setDeleting(false); }
   };
 
@@ -994,8 +994,8 @@ function RolesTab() {
 
   const handleDelete = async () => {
     setDeleting(true); setDelErr('');
-    try { await axiosInstance.delete(`/ministry/roles/${delTarget.id}`); setDelTarget(null); load(); }
-    catch (e) { setDelErr(e.response?.data?.message || 'Delete failed.'); }
+    try { await axiosInstance.patch(`/ministry/roles/${delTarget.id}/archive`); setDelTarget(null); load(); }
+    catch (e) { setDelErr(e.response?.data?.message || 'Archive failed.'); }
     finally { setDeleting(false); }
   };
 
@@ -1051,7 +1051,7 @@ function RolesTab() {
                       </td>
                       <td style={{ ...S.td, textAlign:'right' }}>
                         {canEdit   && <button style={S.editBtn}   onClick={() => openEdit(r)}>Edit</button>}
-                        {canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(r); setDelErr(''); }}>Delete</button>}
+                        {canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(r); setDelErr(''); }}><MonoIcon name="archive" size={14} /> Archive</button>}
                       </td>
                     </tr>
                   ))}
@@ -1060,7 +1060,7 @@ function RolesTab() {
         }
       </div>
       {modal && (<div style={S.backdrop} onClick={closeModal}><div style={{ ...S.modalBox, maxWidth:'440px' }} onClick={e => e.stopPropagation()}><div style={S.modalAccent} /><div style={S.modalBody}><h3 style={S.modalTitle}>{modal === 'add' ? '+ New Ministry Role' : 'Edit Role'}</h3><p style={S.modalSub}>{modal === 'add' ? 'Add a new ministry team (e.g. Choir, Media Team, Ushers…)' : `Editing: ${editing?.name}`}</p>{formErr && <div style={S.formErr}><MonoIcon name="warning" size={14} /> {formErr}</div>}<div style={S.fieldGroup}><label style={S.label}>Role Name <span style={{ color:'#ef4444' }}>*</span></label><input value={name} onChange={e => { setName(e.target.value); setFormErr(''); }} placeholder="e.g. Worship Leader" autoFocus style={S.input} /></div><div style={S.modalActions}><button style={S.cancelBtn} onClick={closeModal} disabled={saving}>Cancel</button><button style={{ ...S.saveBtn, opacity: saving ? 0.8 : 1 }} onClick={handleSave} disabled={saving}>{saving ? <span style={S.loadRow}><span style={S.miniSpinner} />{modal === 'add' ? 'Creating…' : 'Saving…'}</span> : modal === 'add' ? 'Create Role' : 'Save Changes'}</button></div></div></div></div>)}
-      {delTarget && (<div style={S.backdrop} onClick={() => setDelTarget(null)}><div style={{ ...S.modalBox, maxWidth:'420px' }} onClick={e => e.stopPropagation()}><div style={{ ...S.modalAccent, background:'#ef4444' }} /><div style={S.modalBody}><div style={S.delIcon}><MonoIcon name="delete" size={28} /></div><h3 style={S.modalTitle}>Delete Role?</h3><p style={S.modalSub}>Delete <strong>"{delTarget.name}"</strong>? This cannot be undone. Roles with active assignments or roster members cannot be deleted.</p>{delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}><MonoIcon name="warning" size={14} /> {delErr}</div>}<div style={S.modalActions}><button style={S.cancelBtn} onClick={() => setDelTarget(null)} disabled={deleting}>Cancel</button><button style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }} onClick={handleDelete} disabled={deleting}>{deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Deleting…</span> : 'Yes, Delete'}</button></div></div></div></div>)}
+      {delTarget && (<div style={S.backdrop} onClick={() => setDelTarget(null)}><div style={{ ...S.modalBox, maxWidth:'420px' }} onClick={e => e.stopPropagation()}><div style={{ ...S.modalAccent, background:'#ef4444' }} /><div style={S.modalBody}><div style={S.delIcon}><MonoIcon name="archive" size={28} /></div><h3 style={S.modalTitle}>Archive Role?</h3><p style={S.modalSub}>Archive <strong>"{delTarget.name}"</strong>? The role will leave active choices. A System Admin can restore it from Archives. Roles with assignments or roster members must be cleared first.</p>{delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}><MonoIcon name="warning" size={14} /> {delErr}</div>}<div style={S.modalActions}><button style={S.cancelBtn} onClick={() => setDelTarget(null)} disabled={deleting}>Cancel</button><button style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }} onClick={handleDelete} disabled={deleting}>{deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Archiving…</span> : 'Archive role'}</button></div></div></div></div>)}
     </>
   );
 }

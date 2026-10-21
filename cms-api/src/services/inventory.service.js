@@ -94,7 +94,7 @@ const itemIncludes = [
 // ── Get All Items (paginated) ────────────────────────────────
 exports.getAllItems = async ({ page = 1, limit = 15, search, category_id, status } = {}) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
-  const where = {};
+  const where = { is_deleted: 0 };
 
   if (category_id) where.category_id = category_id;
   if (search)      where.name = { [Op.like]: `%${search}%` };
@@ -118,15 +118,16 @@ exports.getAllItems = async ({ page = 1, limit = 15, search, category_id, status
 
 exports.getInventoryReport = async () => {
   const [totalItems, totalQuantity, statusRows, usageCount, usedQuantity, requestRows] = await Promise.all([
-    InventoryItem.count(),
-    InventoryItem.sum("quantity"),
+    InventoryItem.count({ where: { is_deleted: 0 } }),
+    InventoryItem.sum("quantity", { where: { is_deleted: 0 } }),
     InventoryItem.findAll({
+      where: { is_deleted: 0 },
       attributes: ["status", [fn("COUNT", col("id")), "count"]],
       group: ["status"],
       raw: true,
     }),
-    InventoryUsage.count(),
-    InventoryUsage.sum("quantity_used"),
+    InventoryUsage.count({ where: { is_reversed: 0 } }),
+    InventoryUsage.sum("quantity_used", { where: { is_reversed: 0 } }),
     InventoryRequest.findAll({
       attributes: ["status", [fn("COUNT", col("id")), "count"]],
       group: ["status"],
@@ -148,6 +149,7 @@ exports.getInventoryReport = async () => {
 
 exports.getInventoryReportPage = async ({ offset = 0, limit = 250 } = {}) =>
   InventoryItem.findAll({
+    where: { is_deleted: 0 },
     include: itemIncludes,
     order: [["name", "ASC"], ["id", "ASC"]],
     offset: Number(offset),
@@ -156,7 +158,7 @@ exports.getInventoryReportPage = async ({ offset = 0, limit = 250 } = {}) =>
 
 // ── Get Item By ID ───────────────────────────────────────────
 exports.getItemById = async (id) => {
-  const item = await InventoryItem.findByPk(id, { include: itemIncludes });
+  const item = await InventoryItem.findOne({ where: { id, is_deleted: 0 }, include: itemIncludes });
   if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
   return item;
 };
@@ -193,7 +195,7 @@ exports.createItem = async (data, createdBy) => {
 
 // ── Update Item ──────────────────────────────────────────────
 exports.updateItem = async (id, data, updatedBy) => {
-  const item = await InventoryItem.findByPk(id);
+  const item = await InventoryItem.findOne({ where: { id, is_deleted: 0 } });
   if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
   const { name, category_id, quantity, unit, condition, status, low_stock_threshold, notes } = data;
@@ -230,15 +232,17 @@ exports.updateItem = async (id, data, updatedBy) => {
   return updated;
 };
 
-// ── Delete Item ──────────────────────────────────────────────
-exports.deleteItem = async (id, deletedBy) => {
-  const item = await InventoryItem.findByPk(id);
+// ── Archive Item ─────────────────────────────────────────────
+exports.archiveItem = async (id, deletedBy) => {
+  const item = await InventoryItem.findOne({ where: { id, is_deleted: 0 } });
   if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
 
-  await item.destroy();
-  auditLog.log({ userId: deletedBy, action: "DELETE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: id });
-  return { message: "Inventory item deleted successfully." };
+  await item.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy });
+  auditLog.log({ userId: deletedBy, action: "ARCHIVE_INVENTORY_ITEM", targetTable: "inventory_items", targetId: id });
+  cache.keys("dashboard:*").forEach((key) => cache.del(key));
+  return { message: "Inventory item archived successfully. Usage and request history were retained." };
 };
+exports.deleteItem = exports.archiveItem;
 
 // ── Get All Categories ───────────────────────────────────────
 exports.getAllCategories = async () => {
@@ -248,8 +252,8 @@ exports.getAllCategories = async () => {
 exports.getRequestContexts = async () => {
   const [events, services, ministries] = await Promise.all([
     Event.findAll({ where: { is_deleted: 0, status: { [Op.in]: ["Upcoming", "Ongoing"] } }, attributes: ["id", "title", "start_date"], order: [["start_date", "ASC"]], limit: 100 }),
-    Service.findAll({ where: { status: "published" }, attributes: ["id", "title", "service_date"], order: [["service_date", "DESC"]], limit: 100 }),
-    MinistryRole.findAll({ attributes: ["id", "name"], order: [["name", "ASC"]] }),
+    Service.findAll({ where: { status: "published", is_deleted: 0 }, attributes: ["id", "title", "service_date"], order: [["service_date", "DESC"]], limit: 100 }),
+    MinistryRole.findAll({ where: { is_deleted: 0 }, attributes: ["id", "name"], order: [["name", "ASC"]] }),
   ]);
   return { events, services, ministries };
 };
@@ -399,7 +403,7 @@ exports.createRequest = async (data, requestedBy) => {
   let result;
   try {
     result = await sequelize.transaction(async (transaction) => {
-      const item = await InventoryItem.findByPk(itemId, { transaction, lock: transaction.LOCK.UPDATE });
+      const item = await InventoryItem.findOne({ where: { id: itemId, is_deleted: 0 }, transaction, lock: transaction.LOCK.UPDATE });
       if (requestKey) {
         const existing = await InventoryRequest.findOne({
           where: { requested_by: payload.requested_by, request_key: requestKey },
@@ -414,8 +418,8 @@ exports.createRequest = async (data, requestedBy) => {
 
       const [event, service, ministryRole] = await Promise.all([
         eventId ? Event.findByPk(eventId, { transaction }) : null,
-        serviceId ? Service.findByPk(serviceId, { transaction }) : null,
-        ministryRoleId ? MinistryRole.findByPk(ministryRoleId, { transaction }) : null,
+        serviceId ? Service.findOne({ where: { id: serviceId, is_deleted: 0 }, transaction }) : null,
+        ministryRoleId ? MinistryRole.findOne({ where: { id: ministryRoleId, is_deleted: 0 }, transaction }) : null,
       ]);
       if (eventId && !event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
       if (serviceId && !service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
@@ -617,18 +621,19 @@ exports.deleteUsage = async (id, deletedBy) => {
   await sequelize.transaction(async (transaction) => {
     const usage = await InventoryUsage.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
     if (!usage) throw AppError.notFound("RECORD_NOT_FOUND", "Usage record not found");
+    if (Number(usage.is_reversed)) throw AppError.conflict("USAGE_ALREADY_REVERSED", "This usage has already been reversed");
     const item = await InventoryItem.findByPk(usage.item_id, { transaction, lock: transaction.LOCK.UPDATE });
     if (!item) throw AppError.notFound("RECORD_NOT_FOUND", "Inventory item not found");
     const previousStatus = item.status || "Available";
     const nextQuantity = Number(item.quantity) + Number(usage.quantity_used);
     const nextStatus = deriveInventoryStatus({ quantity: nextQuantity, low_stock_threshold: item.low_stock_threshold, status: previousStatus });
     await item.update({ quantity: nextQuantity, status: nextStatus }, { transaction });
-    await usage.destroy({ transaction });
-    await auditLog.log({ userId: deletedBy, action: "DELETE_INVENTORY_USAGE", targetTable: "inventory_usage", targetId: id }, { transaction });
+    await usage.update({ is_reversed: 1, reversed_at: new Date(), reversed_by: deletedBy }, { transaction });
+    await auditLog.log({ userId: deletedBy, action: "REVERSE_INVENTORY_USAGE", targetTable: "inventory_usage", targetId: id }, { transaction });
     if (nextStatus !== previousStatus) {
       statusChange = { id: item.id, name: item.name, unit: item.unit, quantity: nextQuantity, status: nextStatus };
     }
   });
   if (statusChange) await notifyInventoryStatusChange(statusChange, statusChange.status);
-  return { message: "Usage record deleted successfully." };
+  return { message: "Usage reversed. The usage history was retained and stock was restored." };
 };

@@ -8,16 +8,16 @@ const DEFAULT_LABELS = {
   title: 'Receipts',
   add: 'Add receipt',
   download: 'Download',
-  remove: 'Remove',
+  remove: 'Archive',
   empty: 'No receipts',
   uploading: 'Uploading…',
   downloadError: 'Receipt could not be downloaded.',
   uploadError: 'Receipt could not be uploaded.',
   uploadSuccess: (count) => `${count} receipt${count === 1 ? '' : 's'} uploaded.`,
-  removeSuccess: 'Receipt removed.',
-  removeTitle: 'Remove receipt?',
+  removeSuccess: 'Receipt archived. A System Admin can restore it from Archives.',
+  removeTitle: 'Archive receipt?',
   keep: 'Keep receipt',
-  confirmRemove: 'Remove receipt',
+  confirmRemove: 'Archive receipt',
   invalidType: 'Choose a PDF, JPG, PNG, or WebP file.',
   tooLarge: 'Each receipt must be 10 MB or smaller.',
 };
@@ -164,7 +164,7 @@ export default function FinanceAttachments({
     setError('');
     setNotice('');
     try {
-      await axiosInstance.delete(`/finance/attachments/${encodeURIComponent(attachmentToDelete.id)}`);
+      await axiosInstance.patch(`/finance/attachments/${encodeURIComponent(attachmentToDelete.id)}/archive`);
       setAttachmentToDelete(null);
       setNotice(text.removeSuccess);
       try {
@@ -269,12 +269,12 @@ export default function FinanceAttachments({
           >
             <h2 id={`finance-attachment-delete-${attachmentToDelete.id}-title`} style={{ margin: '0 0 10px', fontSize: 19 }}>{text.removeTitle}</h2>
             <p id={`finance-attachment-delete-${attachmentToDelete.id}-description`} style={{ margin: 0, color: '#475569', lineHeight: 1.5 }}>
-              {attachmentToDelete.file_name}
+              {attachmentToDelete.file_name}. The uploaded file will be retained and can be restored from Archives.
             </p>
             {error && <div role="alert" style={{ marginTop: 12, color: '#b91c1c', fontSize: 13 }}>{error}</div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
               <button ref={cancelDeleteRef} type="button" disabled={removing} onClick={() => setAttachmentToDelete(null)} style={{ border: '1px solid #dbe4ee', borderRadius: 8, background: '#fff', color: '#334155', padding: '9px 12px', fontWeight: 700, cursor: 'pointer' }}>{text.keep}</button>
-              <button type="button" disabled={removing} onClick={deleteAttachment} style={{ border: 0, borderRadius: 8, background: '#b91c1c', color: '#fff', padding: '9px 12px', fontWeight: 700, cursor: 'pointer' }}>{removing ? 'Removing…' : text.confirmRemove}</button>
+              <button type="button" disabled={removing} onClick={deleteAttachment} style={{ border: 0, borderRadius: 8, background: '#b91c1c', color: '#fff', padding: '9px 12px', fontWeight: 700, cursor: 'pointer' }}>{removing ? 'Archiving…' : text.confirmRemove}</button>
             </div>
           </section>
         </div>

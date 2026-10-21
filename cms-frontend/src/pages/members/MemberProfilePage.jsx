@@ -92,17 +92,16 @@ export default function MemberProfilePage() {
 
   const handleDelete = async () => {
     if (!(await confirm({
-      title: 'Delete member?',
-      message: 'This member record will be deleted. This action cannot be undone.',
-      confirmLabel: 'Delete member',
-      tone: 'danger',
+      title: 'Archive member?',
+      message: 'This profile will leave active member lists. Its church history is retained, and a System Admin can restore it from Archives.',
+      confirmLabel: 'Archive member',
     }))) return;
     setDeleting(true);
     try {
-      await axiosInstance.delete(`/members/${id}`);
+      await axiosInstance.patch(`/members/${id}/archive`);
       navigate('/members');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete member.');
+      setError(err.response?.data?.message || 'Failed to archive member.');
       setDeleting(false);
     }
   };
@@ -159,7 +158,7 @@ export default function MemberProfilePage() {
           )}
           {hasPermission('members', 'delete') && (
             <button onClick={handleDelete} disabled={deleting} style={styles.deleteBtn}>
-              {deleting ? 'Deleting...' : 'Delete'}
+              {deleting ? 'Archiving...' : 'Archive'}
             </button>
           )}
         </div>

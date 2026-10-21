@@ -200,15 +200,14 @@ export default function EventsPage() {
 
   const handleDelete = async (eventId) => {
     if (!(await confirm({
-      title: 'Delete event?',
-      message: 'This event will be deleted. This action cannot be undone.',
-      confirmLabel: 'Delete event',
-      tone: 'danger',
+      title: 'Archive event?',
+      message: 'The completed or cancelled event will leave active event lists. Registrations, attendance, images, and event history are retained and can be restored from Archives.',
+      confirmLabel: 'Archive event',
     }))) return;
     try {
-      await axiosInstance.delete(`/events/${eventId}`);
+      await axiosInstance.patch(`/events/${eventId}/archive`);
       fetchEvents();
-    } catch (err) { setError(apiErrorMessage(err, 'Failed to delete event.')); }
+    } catch (err) { setError(apiErrorMessage(err, 'Failed to archive event.')); }
   };
 
   const formatDate = (d) =>
@@ -502,7 +501,7 @@ export default function EventsPage() {
                       ))}
                       {canDelete && ['Completed', 'Cancelled'].includes(status) && (
                         <button onClick={() => handleDelete(ev.id)} style={s.deleteBtn}>
-                          Delete
+                          Archive
                         </button>
                       )}
                     </>

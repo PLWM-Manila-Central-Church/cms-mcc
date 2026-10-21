@@ -21,6 +21,7 @@ router.get("/reports/export.csv", auth, authorize("inventory", "read"), ctrl.exp
 router.get("/items/:id",    auth, authorize("inventory", "read"),   ctrl.getItemById);
 router.post("/items",       auth, authorize("inventory", "create"), validate(createItemSchema), ctrl.createItem);
 router.put("/items/:id",    auth, authorize("inventory", "update"), validate(updateItemSchema), ctrl.updateItem);
+router.patch("/items/:id/archive", auth, authorize("inventory", "delete"), ctrl.archiveItem);
 router.delete("/items/:id", auth, authorize("inventory", "delete"), ctrl.deleteItem);
 
 // ── Categories ───────────────────────────────────────────────

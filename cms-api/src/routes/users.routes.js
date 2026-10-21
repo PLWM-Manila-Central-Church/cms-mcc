@@ -16,6 +16,7 @@ router.post("/",   authorize("users", "create"), validate(createUserSchema), ctr
 router.put("/:id", authorize("users", "update"), validate(updateUserSchema), ctrl.updateUser);  // Fix #1
 router.put("/:id/activate",   authorize("users", "update"), ctrl.activateUser);
 router.put("/:id/deactivate", authorize("users", "update"), ctrl.deactivateUser);
-router.delete("/:id", authorize("users", "delete"), ctrl.hardDeleteUser);
+router.patch("/:id/archive", authorize("users", "delete"), ctrl.archiveUser);
+router.delete("/:id", authorize("users", "delete"), ctrl.archiveUser);
 
 module.exports = router;

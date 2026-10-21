@@ -29,7 +29,7 @@ test("removing an account preserves its Member and business history while revoki
   expect(models.MinistryMembership.destroy).not.toHaveBeenCalled();
   expect(models.RefreshToken.update).toHaveBeenCalledWith(expect.objectContaining({ revoked: 1 }), expect.objectContaining({ transaction: mockState.transaction }));
   expect(models.UserSession.update).toHaveBeenCalledWith(expect.objectContaining({ logout_at: expect.any(Date) }), expect.anything());
-  expect(mockState.user.update).toHaveBeenCalledWith(expect.objectContaining({ email: "deleted-user-42@accounts.invalid", is_deleted: 1, is_active: 0 }), { transaction: mockState.transaction });
+  expect(mockState.user.update).toHaveBeenCalledWith(expect.objectContaining({ archived_email: "pastor@plwmmcc.com", is_deleted: 1, is_active: 0 }), { transaction: mockState.transaction });
   expect(mockState.user.member_id).toBe(9);
   expect(models.AuditLog.create).toHaveBeenCalledWith(expect.objectContaining({ old_values: { email: "pastor@plwmmcc.com", member_id: 9 } }), expect.anything());
 });

@@ -185,13 +185,12 @@ export default function ServicesPage() {
 
   const handleDeleteService = async (service) => {
     if (!(await confirm({
-      title: 'Delete service?',
-      message: `Delete "${service.title}"? This permanently removes its attendance records, QR sessions, and roster responses. This action cannot be undone.`,
-      confirmLabel: 'Delete service',
-      tone: 'danger',
+      title: 'Archive service?',
+      message: `Archive "${service.title}"? It will leave active service lists. Attendance, QR sessions, roster responses, summaries, and follow-up history will be retained and can be restored from Archives.`,
+      confirmLabel: 'Archive service',
     }))) return;
     try {
-      await axiosInstance.delete(`/services/${service.id}`);
+      await axiosInstance.patch(`/services/${service.id}/archive`);
       fetchServices();
     } catch (err) {
       setError(apiErrorMessage(err, 'Failed to delete service.'));
@@ -422,12 +421,12 @@ export default function ServicesPage() {
                           {STATUS_ACTION_LABEL[ns]}
                         </button>
                       ))}
-                      {/* Delete button for completed/cancelled — admin/regteam only */}
+      {/* Archive button for completed/cancelled — admin/regteam only */}
                       {canDelete && !isMember && ['completed', 'cancelled'].includes(s.status) && (
                         <button
                           onClick={() => handleDeleteService(s)}
                           style={{ ...styles.statusBtn, background: '#fef2f2', color: '#dc2626' }}>
-                          Delete
+                          Archive
                         </button>
                       )}
                       {/* Member: Pre-register button */}

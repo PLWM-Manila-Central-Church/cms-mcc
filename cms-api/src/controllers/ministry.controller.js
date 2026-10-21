@@ -34,12 +34,13 @@ exports.updateRole = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteRole = async (req, res, next) => {
+exports.archiveRole = async (req, res, next) => {
   try {
-    const data = await ministryService.deleteRole(req.params.id, req.user.userId);
+    const data = await ministryService.archiveRole(req.params.id, req.user.userId);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
+exports.deleteRole = exports.archiveRole;
 
 // ── Ministry Assignments ─────────────────────────────────────
 exports.getAllAssignments = async (req, res, next) => {

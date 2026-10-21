@@ -49,7 +49,7 @@ describe('ArchivesPage archive lifecycle controls', () => {
 
   it('shows retained records in Archived and restores them back to Active', async () => {
     render(<ArchivesPage />);
-    expect(await screen.findByText('0 active records')).toBeInTheDocument();
+    expect(await screen.findByText('0 active document records')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Archived' }));
     expect(await screen.findByText('Retained archive record')).toBeInTheDocument();
@@ -58,6 +58,6 @@ describe('ArchivesPage archive lifecycle controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
     await waitFor(() => expect(state.patch).toHaveBeenCalledWith('/archives/90/restore'));
     expect(await screen.findByText('Retained archive record')).toBeInTheDocument();
-    expect(screen.getByText('1 active records')).toBeInTheDocument();
+    expect(screen.getByText('1 active document records')).toBeInTheDocument();
   });
 });

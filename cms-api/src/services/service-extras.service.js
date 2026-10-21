@@ -63,7 +63,7 @@ exports.getSummaryByService = async (serviceId, user = {}) => {
 };
 
 exports.upsertSummary = async (serviceId, data) => {
-  const service = await Service.findByPk(serviceId);
+  const service = await Service.findOne({ where: { id: serviceId, is_deleted: 0 } });
   if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const { total_expected, total_attended, total_absent } = data;

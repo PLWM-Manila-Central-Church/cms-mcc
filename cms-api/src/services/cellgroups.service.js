@@ -3,6 +3,7 @@
 const { Op } = require("sequelize");
 const sequelize = require("../config/db");
 const { CellGroup, CellGroupHistory, Member, User, UserLeaderAssignment } = require("../models");
+const cache = require("../helpers/cache.helper");
 const auditLog = require("../helpers/auditLog.helper");
 const { ensureMemberInScope, getScope, getUnifiedAssignments, isScopedLeader } = require("../helpers/scopedLeader.helper");
 const AppError = require("../helpers/AppError");
@@ -46,7 +47,7 @@ const forbidScopedCellGroupManage = (user = {}) => {
 
 // ── Get All Cell Groups (with member counts in a single query) ──
 exports.getAllCellGroups = async (user = {}) => {
-  const where = getCellGroupWhereForUser(user);
+  const where = { ...getCellGroupWhereForUser(user), is_deleted: 0 };
   const groups = await CellGroup.findAll({
     where,
     attributes: {
@@ -105,11 +106,11 @@ exports.updateCellGroup = async (id, data, updatedBy, user = {}) => {
   return cellGroup;
 };
 
-// ── Delete Cell Group ────────────────────────────────────────
-exports.deleteCellGroup = async (id, deletedBy, user = {}) => {
+// ── Archive Cell Group ───────────────────────────────────────
+exports.archiveCellGroup = async (id, deletedBy, user = {}) => {
   forbidScopedCellGroupManage(user);
   await sequelize.transaction(async (transaction) => {
-    const cellGroup = await CellGroup.findByPk(id, {
+    const cellGroup = await CellGroup.findOne({ where: { id, is_deleted: 0 },
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
@@ -121,20 +122,22 @@ exports.deleteCellGroup = async (id, deletedBy, user = {}) => {
       User.count({ where: { leads_cell_group_id: id, is_deleted: 0 }, transaction }),
     ]);
     if (memberCount > 0) {
-      throw AppError.conflict("CELL_GROUP_IN_USE", `Cannot delete. ${memberCount} member(s) are in this cell group`);
+      throw AppError.conflict("CELL_GROUP_IN_USE", `Reassign ${memberCount} member(s) before archiving this cell group`);
     }
     if (normalizedLeaderCount > 0 || legacyLeaderCount > 0) {
       throw AppError.conflict(
         "LEADER_ASSIGNMENTS_EXIST",
-        "Cannot delete a cell group with current or historical leader assignments. Reassign leaders first.",
+        "Reassign current or historical leaders before archiving this cell group.",
       );
     }
 
-    await cellGroup.destroy({ transaction });
+    await cellGroup.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy }, { transaction });
   });
-  auditLog.log({ userId: deletedBy, action: "DELETE_CELL_GROUP", targetTable: "cell_groups", targetId: id });
-  return { message: "Cell group deleted successfully." };
+  auditLog.log({ userId: deletedBy, action: "ARCHIVE_CELL_GROUP", targetTable: "cell_groups", targetId: id });
+  cache.keys("dashboard:*").forEach((key) => cache.del(key));
+  return { message: "Cell group archived successfully." };
 };
+exports.deleteCellGroup = exports.archiveCellGroup;
 
 // ── Get Cell Group History ───────────────────────────────────
 exports.getCellGroupHistory = async (memberId, user = {}) => {

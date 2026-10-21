@@ -103,13 +103,13 @@ export default function ArchiveCategoriesManager({ categories = [], canManage, c
     setError('');
     setNotice('');
     try {
-      await axiosInstance.delete(`/archives/categories/${categoryToDelete.id}`);
+      await axiosInstance.patch(`/archives/categories/${categoryToDelete.id}/archive`);
       setCategoryToDelete(null);
-      setNotice('Category deleted.');
+      setNotice('Category archived. It can be restored from Archives.');
       await onChanged?.();
       if (editing?.id === categoryToDelete.id) resetForm();
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Category could not be deleted.');
+      setError(requestError.response?.data?.message || 'Category could not be archived.');
     } finally {
       setBusy(false);
     }
@@ -187,7 +187,7 @@ export default function ArchiveCategoriesManager({ categories = [], canManage, c
                     </div>
                     <div style={{ display: 'flex', gap: 7, flexShrink: 0 }}>
                       <button type="button" disabled={busy} onClick={() => startEdit(category)} style={secondaryButton}>Edit</button>
-                      {canDelete && !reserved && <button type="button" disabled={busy} onClick={() => { setError(''); setCategoryToDelete(category); }} style={{ ...secondaryButton, color: '#b91c1c' }}>Delete</button>}
+                      {canDelete && !reserved && <button type="button" disabled={busy} onClick={() => { setError(''); setCategoryToDelete(category); }} style={{ ...secondaryButton, color: '#b91c1c' }}>Archive</button>}
                     </div>
                   </div>
                 );
@@ -204,14 +204,14 @@ export default function ArchiveCategoriesManager({ categories = [], canManage, c
           style={{ position: 'fixed', inset: 0, zIndex: 1200, display: 'grid', placeItems: 'center', padding: 16, background: 'rgba(15,23,42,0.52)' }}
         >
           <section role="alertdialog" aria-modal="true" aria-labelledby="archive-category-delete-title" aria-describedby="archive-category-delete-description" style={{ width: 'min(100%,430px)', background: '#fff', borderRadius: 14, padding: 22 }}>
-            <h2 id="archive-category-delete-title" style={{ margin: '0 0 10px', fontSize: 19 }}>Delete archive category?</h2>
+            <h2 id="archive-category-delete-title" style={{ margin: '0 0 10px', fontSize: 19 }}>Archive category?</h2>
             <p id="archive-category-delete-description" style={{ margin: 0, color: '#475569', lineHeight: 1.5 }}>
-              {categoryToDelete.name}. Categories that have records cannot be deleted.
+              {categoryToDelete.name}. This category will be removed from active choices. Categories with records cannot be archived. A System Admin can restore an archived category from Archives.
             </p>
             {error && <div role="alert" style={{ marginTop: 12, color: '#b91c1c', fontSize: 13 }}>{error}</div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
               <button ref={cancelDeleteRef} type="button" disabled={busy} onClick={() => setCategoryToDelete(null)} style={secondaryButton}>Keep category</button>
-              <button type="button" disabled={busy} onClick={deleteCategory} style={{ ...secondaryButton, border: 0, background: '#b91c1c', color: '#fff' }}>{busy ? 'Deleting…' : 'Delete category'}</button>
+              <button type="button" disabled={busy} onClick={deleteCategory} style={{ ...secondaryButton, border: 0, background: '#b91c1c', color: '#fff' }}>{busy ? 'Archiving…' : 'Archive category'}</button>
             </div>
           </section>
         </div>

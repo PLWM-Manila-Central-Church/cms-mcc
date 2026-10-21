@@ -6,7 +6,10 @@ jest.mock("../src/config/db", () => ({
   transaction: jest.fn(async (callback) => callback(mockState.transaction)),
 }));
 jest.mock("../src/models", () => ({
-  Service: { findByPk: jest.fn(async () => mockState.service) },
+  Service: {
+    findByPk: jest.fn(async () => mockState.service),
+    findOne: jest.fn(async () => mockState.service),
+  },
   ServiceResponse: {
     findOne: jest.fn(async ({ where }) => {
       if (where.member_id === mockState.memberId) return mockState.existingResponse;

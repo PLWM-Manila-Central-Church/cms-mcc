@@ -15,6 +15,7 @@ jest.mock("../src/models", () => ({
   EventCategory: {},
   EventRegistration: {
     findOne: jest.fn(),
+    unscoped: jest.fn(function unscoped() { return this; }),
     findAll: jest.fn(),
     count: jest.fn(),
     create: jest.fn(),
@@ -79,11 +80,11 @@ describe("staff event-registration notifications", () => {
     expect(auditLog.log).toHaveBeenCalledWith(expect.objectContaining({ targetId: registration.id }));
   });
 
-  test("notifies after staff removal with an event reference", async () => {
-    EventRegistration.findOne.mockResolvedValue({ ...registration, destroy: jest.fn().mockResolvedValue(1) });
+  test("notifies after staff cancellation with an event reference and retains the registration row", async () => {
+    EventRegistration.findOne.mockResolvedValue({ ...registration, update: jest.fn().mockResolvedValue(1) });
 
     await expect(eventsService.unregisterMember(12, 42, 7)).resolves.toEqual({
-      message: "Member unregistered from event successfully.",
+      message: "Registration cancelled. Its history was retained.",
     });
 
     expect(notifications.createNotification).toHaveBeenCalledWith({

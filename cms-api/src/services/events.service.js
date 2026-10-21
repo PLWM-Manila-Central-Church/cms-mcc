@@ -375,22 +375,22 @@ exports.updateEventStatus = async (id, newStatus, updatedBy) => {
   return await exports.getEventById(id);
 };
 
-// ── Soft Delete Event ────────────────────────────────────────
-exports.deleteEvent = async (id, deletedBy) => {
+// ── Archive Event ────────────────────────────────────────────
+exports.archiveEvent = async (id, deletedBy) => {
   const event = await Event.findOne({ where: { id, is_deleted: 0 } });
   if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
-  // Block deleting active events because they may have registrations.
-  // Admins must cancel or complete them first, then delete.
+  // Require the event to be closed before archiving so active registrations
+  // are not hidden from participants or event staff.
   if ([EVENT_STATUS.UPCOMING, EVENT_STATUS.ONGOING].includes(event.status))
-    throw AppError.badRequest("VALIDATION", "Cannot delete an active event. Cancel or complete it first.");
+    throw AppError.badRequest("VALIDATION", "Cannot archive an active event. Cancel or complete it first.");
 
-  // Completed and cancelled events can be deleted.
   await event.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy });
-    auditLog.log({ userId: deletedBy, action: "DELETE_EVENT", targetTable: "events", targetId: id });
-    cache.keys("dashboard:*").forEach(k => cache.del(k));
-    return { message: "Event deleted successfully." };
+  auditLog.log({ userId: deletedBy, action: "ARCHIVE_EVENT", targetTable: "events", targetId: id });
+  cache.keys("dashboard:*").forEach(k => cache.del(k));
+  return { message: "Event archived. Registrations, attendance, and event history were retained." };
 };
+exports.deleteEvent = exports.archiveEvent;
 
 // ── Get All Event Categories ─────────────────────────────────
 exports.getAllCategories = async () => {
@@ -517,7 +517,13 @@ exports.unregisterMember = async (eventId, memberId, unregisteredBy) => {
   if (!registration) throw AppError.notFound("RECORD_NOT_FOUND", "Registration not found");
 
   const event = await Event.findOne({ where: { id: eventId } });
-  await registration.destroy();
+  await registration.update({
+    is_deleted: 1,
+    deleted_at: new Date(),
+    deleted_by: unregisteredBy,
+    seat_number: null,
+    parking_slot: null,
+  });
 
   try {
     if (event) {
@@ -538,11 +544,12 @@ exports.unregisterMember = async (eventId, memberId, unregisteredBy) => {
   }
 
   auditLog.log({
-    userId: unregisteredBy, action: "UNREGISTER_EVENT",
-    targetTable: "event_registrations", targetId: null,
-    newValues: { event_id: eventId, member_id: memberId },
+    userId: unregisteredBy, action: "CANCEL_EVENT_REGISTRATION",
+    targetTable: "event_registrations", targetId: registration.id,
+    oldValues: { event_id: eventId, member_id: memberId, seat_number: registration.seat_number, parking_slot: registration.parking_slot },
+    newValues: { is_deleted: 1 },
   });
-  return { message: "Member unregistered from event successfully." };
+  return { message: "Registration cancelled. Its history was retained." };
 };
 
 // ── Bulk Register Members ────────────────────────────────────
@@ -571,11 +578,11 @@ exports.bulkRegisterMembers = async (eventId, memberIds, registeredBy) => {
         const member = await Member.findByPk(memberId, { transaction: t });
         if (!member) { results.errors.push({ memberId, reason: "Member not found" }); continue; }
 
-        const existing = await EventRegistration.findOne({
+        const existing = await EventRegistration.unscoped().findOne({
           where: { event_id: eventId, member_id: memberId },
           transaction: t,
         });
-        if (existing) { results.skipped.push(memberId); continue; }
+        if (existing && Number(existing.is_deleted) === 0) { results.skipped.push(memberId); continue; }
 
         if (lockedEvent.capacity) {
           const count = await EventRegistration.count({ where: { event_id: eventId }, transaction: t });
@@ -585,10 +592,14 @@ exports.bulkRegisterMembers = async (eventId, memberIds, registeredBy) => {
           }
         }
 
-        await EventRegistration.create({
+        const registrationData = {
           event_id: eventId, member_id: memberId,
           registered_at: new Date(), registered_by: registeredBy,
-        }, { transaction: t });
+          seat_number: null, parking_slot: null,
+          is_deleted: 0, deleted_at: null, deleted_by: null,
+        };
+        if (existing) await existing.update(registrationData, { transaction: t });
+        else await EventRegistration.create(registrationData, { transaction: t });
 
         results.registered.push(memberId);
       } catch (err) {

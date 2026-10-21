@@ -22,6 +22,7 @@ router.get("/records",      auth, authorize("finance", "read"), validateQuery(ge
 router.get("/records/:id",  auth, authorize("finance", "read"),   ctrl.getRecordById);
 router.post("/records",     auth, authorize("finance", "create"), validate(createRecordSchema), ctrl.createRecord);
 router.put("/records/:id",  auth, authorize("finance", "update"), validate(updateRecordSchema), ctrl.updateRecord);
+router.patch("/records/:id/archive", auth, authorize("finance", "delete"), ctrl.archiveRecord);
 router.delete("/records/:id", auth, authorize("finance", "delete"), ctrl.deleteRecord);
 
 // ── Financial Categories ─────────────────────────────────────
@@ -49,6 +50,7 @@ const authorizeAttachmentDownload = (req, res, next) => {
 
 router.post("/attachments/upload", auth, authorize("finance", "create"), requireDurableUploadStorage, receiptUpload.single("file"), ctrl.uploadAttachment);
 router.get("/attachments/:id/download", auth, authorizeAttachmentDownload, ctrl.downloadAttachment);
+router.patch("/attachments/:id/archive", auth, authorize("finance", "delete"), ctrl.archiveAttachment);
 router.delete("/attachments/:id",  auth, authorize("finance", "delete"), ctrl.deleteAttachment);
 
 // ── Root aliases (frontend compatibility) ────────────────────

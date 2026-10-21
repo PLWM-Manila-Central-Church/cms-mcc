@@ -19,6 +19,7 @@ jest.mock("../src/models", () => ({
   Event: { findOne: jest.fn() },
   EventRegistration: {
     findOne: jest.fn(),
+    unscoped: jest.fn(function unscoped() { return this; }),
     count: jest.fn(),
     max: jest.fn(),
     create: jest.fn(),

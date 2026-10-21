@@ -120,13 +120,14 @@ exports.updateItem = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteItem = async (req, res, next) => {
+exports.archiveItem = async (req, res, next) => {
   try {
     if (forbidScopedInventoryManage(req, res)) return;
-    const data = await inventoryService.deleteItem(req.params.id, req.user.userId);
+    const data = await inventoryService.archiveItem(req.params.id, req.user.userId);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
+exports.deleteItem = exports.archiveItem;
 
 // ── Categories ───────────────────────────────────────────────
 exports.getAllCategories = async (req, res, next) => {

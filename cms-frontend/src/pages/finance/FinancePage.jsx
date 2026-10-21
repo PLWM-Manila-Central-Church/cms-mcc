@@ -243,20 +243,19 @@ export default function FinancePage() {
 
   const handleIncDelete = async (id) => {
     if (!(await confirm({
-      title: 'Delete financial record?',
-      message: 'This financial record will be deleted. This action cannot be undone.',
-      confirmLabel: 'Delete record',
-      tone: 'danger',
+      title: 'Archive giving record?',
+      message: 'This record will leave active giving reports. The original entry and receipt attachments are retained and can be restored from Archives.',
+      confirmLabel: 'Archive record',
     }))) return;
     try {
-      await axiosInstance.delete(`/finance/records/${id}`);
+      await axiosInstance.patch(`/finance/records/${id}/archive`);
       await Promise.all([
         fetchIncomeRecords(),
         fetchAllTimeSummary(),
         queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'], refetchType: 'all' }),
       ]);
     } catch (err) {
-      setIncomeError(err.response?.data?.message || 'Failed to delete record.');
+      setIncomeError(err.response?.data?.message || 'Failed to archive record.');
     }
   };
 
@@ -264,10 +263,9 @@ export default function FinancePage() {
     const ids = [...selectedIds];
     if (!ids.length) return;
     if (!(await confirm({
-      title: `Delete ${ids.length} financial record${ids.length === 1 ? '' : 's'}?`,
-      message: 'Selected giving records will be deleted. This action cannot be undone.',
-      confirmLabel: `Delete ${ids.length} record${ids.length === 1 ? '' : 's'}`,
-      tone: 'danger',
+      title: `Archive ${ids.length} giving record${ids.length === 1 ? '' : 's'}?`,
+      message: 'Selected records will leave active giving reports. Their details and receipt attachments are retained and can be restored from Archives.',
+      confirmLabel: `Archive ${ids.length} record${ids.length === 1 ? '' : 's'}`,
     }))) return;
 
     setIncomeError('');
@@ -275,7 +273,7 @@ export default function FinancePage() {
     try {
       const result = await deleteRecordsWithResults(
         ids,
-        (id) => axiosInstance.delete(`/finance/records/${id}`),
+        (id) => axiosInstance.patch(`/finance/records/${id}/archive`),
       );
       const failedIds = result.failures.map(({ id }) => id);
       setSelectedIds(failedIds);
@@ -290,11 +288,11 @@ export default function FinancePage() {
           || result.failures[0].error?.message;
         const failureDetails = firstError ? ` ${firstError}` : '';
         setIncomeError(
-          `${result.deletedCount} record(s) deleted. ${result.failures.length} could not be deleted and remain selected for retry.${failureDetails}`,
+          `${result.deletedCount} record(s) archived. ${result.failures.length} could not be archived and remain selected for retry.${failureDetails}`,
         );
       }
     } catch (error) {
-      setIncomeError(error.response?.data?.message || 'Bulk delete could not finish. Refresh the records before retrying.');
+      setIncomeError(error.response?.data?.message || 'Bulk archive could not finish. Refresh the records before retrying.');
     } finally {
       setBulkDeleting(false);
     }
@@ -433,14 +431,14 @@ export default function FinancePage() {
         )}
       </div>
 
-      {/* Bulk Delete Bar */}
+      {/* Bulk Archive Bar */}
       {selectedIds.length > 0 && (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: '#991b1b' }}>{selectedIds.length} record(s) selected</span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setSelectedIds([])} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid var(--mcc-border, #e2e8f0)', background: 'var(--mcc-surface, #fff)', color: '#475569', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Clear</button>
             {canDelete && (
-              <button onClick={handleBulkDelete} disabled={bulkDeleting} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: bulkDeleting ? '#94a3b8' : '#dc2626', color: 'var(--mcc-surface, #fff)', fontWeight: 600, fontSize: 13, cursor: bulkDeleting ? 'wait' : 'pointer', fontFamily: 'inherit' }}>{bulkDeleting ? 'Deleting…' : 'Delete Selected'}</button>
+              <button onClick={handleBulkDelete} disabled={bulkDeleting} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: bulkDeleting ? '#94a3b8' : '#dc2626', color: 'var(--mcc-surface, #fff)', fontWeight: 600, fontSize: 13, cursor: bulkDeleting ? 'wait' : 'pointer', fontFamily: 'inherit' }}>{bulkDeleting ? 'Archiving…' : 'Archive Selected'}</button>
             )}
           </div>
         </div>
@@ -538,7 +536,7 @@ export default function FinancePage() {
                       )}
                       {canDelete && (
                         <button onClick={() => handleIncDelete(r.id)} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          Delete
+                          Archive
                         </button>
                       )}
                     </div>

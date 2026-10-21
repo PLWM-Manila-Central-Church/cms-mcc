@@ -10,7 +10,10 @@ jest.mock("../src/helpers/auditLog.helper", () => ({ log: jest.fn() }));
 jest.mock("../src/helpers/logger", () => ({ error: jest.fn(), warn: jest.fn() }));
 jest.mock("../src/services/notifications.service", () => ({ bulkCreateNotifications: jest.fn(async () => []) }));
 jest.mock("../src/models", () => ({
-  InventoryItem: { findByPk: jest.fn(async () => mockState.item) },
+  InventoryItem: {
+    findByPk: jest.fn(async () => mockState.item),
+    findOne: jest.fn(async () => mockState.item),
+  },
   InventoryCategory: {},
   InventoryRequest: {
     findOne: jest.fn(async ({ where }) => {
@@ -39,8 +42,14 @@ jest.mock("../src/models", () => ({
   User: { findAll: jest.fn(async () => [{ id: 900 }]) },
   Role: { findAll: jest.fn(async () => [{ id: 1 }]) },
   Event: { findByPk: jest.fn(async (id) => Number(id) === Number(mockState.event?.id) ? mockState.event : null) },
-  Service: { findByPk: jest.fn(async (id) => Number(id) === Number(mockState.service?.id) ? mockState.service : null) },
-  MinistryRole: { findByPk: jest.fn(async (id) => Number(id) === Number(mockState.ministryRole?.id) ? mockState.ministryRole : null) },
+  Service: {
+    findByPk: jest.fn(async (id) => Number(id) === Number(mockState.service?.id) ? mockState.service : null),
+    findOne: jest.fn(async ({ where }) => Number(where.id) === Number(mockState.service?.id) ? mockState.service : null),
+  },
+  MinistryRole: {
+    findByPk: jest.fn(async (id) => Number(id) === Number(mockState.ministryRole?.id) ? mockState.ministryRole : null),
+    findOne: jest.fn(async ({ where }) => Number(where.id) === Number(mockState.ministryRole?.id) ? mockState.ministryRole : null),
+  },
 }));
 
 const { InventoryItem, InventoryRequest } = require("../src/models");
@@ -76,7 +85,10 @@ describe("Inventory request idempotency", () => {
     const result = await inventoryService.createRequest(makePayload("inv-test-key-0001"), 7);
 
     expect(result).toMatchObject({ id: 301, status: "pending", request_key: "inv-test-key-0001" });
-    expect(InventoryItem.findByPk).toHaveBeenCalledWith(12, expect.objectContaining({ lock: "UPDATE" }));
+    expect(InventoryItem.findOne).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 12, is_deleted: 0 },
+      lock: "UPDATE",
+    }));
     expect(InventoryRequest.create).toHaveBeenCalledTimes(1);
     expect(auditLog.log).toHaveBeenCalledTimes(1);
     expect(notifications.bulkCreateNotifications).toHaveBeenCalledTimes(1);

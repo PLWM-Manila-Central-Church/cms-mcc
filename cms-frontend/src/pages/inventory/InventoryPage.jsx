@@ -229,7 +229,7 @@ export default function InventoryPage() {
   const handleDeleteUsage = async (usage) => {
     if (!(await confirm({
       title: 'Reverse inventory usage?',
-      message: `Delete this usage record and restore ${usage.quantity_used} ${usage.item?.unit || 'unit(s)'} to stock?`,
+      message: `Reverse this usage and restore ${usage.quantity_used} ${usage.item?.unit || 'unit(s)'} to stock? The original usage record will be retained for audit history.`,
       confirmLabel: 'Restore stock',
       tone: 'warning',
     }))) return;
@@ -302,15 +302,14 @@ export default function InventoryPage() {
 
   const handleDeleteItem = async (item) => {
     if (!(await confirm({
-      title: 'Delete inventory item?',
-      message: `Delete "${item.name}"? This action cannot be undone.`,
-      confirmLabel: 'Delete item',
-      tone: 'danger',
+      title: 'Archive inventory item?',
+      message: `Archive "${item.name}"? It will no longer appear in active inventory or new request choices. Its stock, usage, and request history are retained and can be restored from Archives.`,
+      confirmLabel: 'Archive item',
     }))) return;
     try {
-      await axiosInstance.delete(`/inventory/items/${item.id}`);
+      await axiosInstance.patch(`/inventory/items/${item.id}/archive`);
       fetchItems();
-    } catch (err) { setItemError(apiErrorMessage(err, 'Failed to delete item.')); }
+    } catch (err) { setItemError(apiErrorMessage(err, 'Failed to archive item.')); }
   };
 
   const openRejectDialog = (request) => {
@@ -546,7 +545,7 @@ export default function InventoryPage() {
                         <td style={s.td}>
                           <div style={{ display: 'flex', gap: 6 }}>
                             {canUpdate && <button onClick={() => openEditItem(item)} style={s.editBtn}>Edit</button>}
-                            {canDelete && <button onClick={() => handleDeleteItem(item)} style={{ ...s.editBtn, background: '#fef2f2', color: '#dc2626' }}>Delete</button>}
+                            {canDelete && <button onClick={() => handleDeleteItem(item)} style={{ ...s.editBtn, background: '#fef2f2', color: '#dc2626' }}><MonoIcon name="archive" size={13} /> Archive</button>}
                           </div>
                         </td>
                       )}
@@ -794,7 +793,7 @@ export default function InventoryPage() {
                         <td style={s.td}>{usage.quantity_used} {usage.item?.unit || ''}</td>
                         <td style={s.td}>{usage.used_for || '—'}</td>
                         <td style={s.td}>{usage.usedByUser?.email || '—'}</td>
-                        {canDelete && <td style={s.td}><button onClick={() => handleDeleteUsage(usage)} style={{ ...s.editBtn, background: '#fef2f2', color: '#dc2626' }}>Reverse</button></td>}
+                        {canDelete && <td style={s.td}>{Number(usage.is_reversed) ? <span style={{ ...s.badge, background: '#f1f5f9', color: '#64748b' }}>Reversed</span> : <button onClick={() => handleDeleteUsage(usage)} style={{ ...s.editBtn, background: '#fef2f2', color: '#dc2626' }}>Reverse</button>}</td>}
                       </tr>
                     ))}
               </tbody>

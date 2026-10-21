@@ -38,14 +38,15 @@ exports.updateCellGroup = async (req, res, next) => {
   }
 };
 
-exports.deleteCellGroup = async (req, res, next) => {
+exports.archiveCellGroup = async (req, res, next) => {
   try {
-    const data = await cellGroupsService.deleteCellGroup(req.params.id, req.user.userId, req.user);
+    const data = await cellGroupsService.archiveCellGroup(req.params.id, req.user.userId, req.user);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
   }
 };
+exports.deleteCellGroup = exports.archiveCellGroup;
 
 exports.getCellGroupHistory = async (req, res, next) => {
   try {

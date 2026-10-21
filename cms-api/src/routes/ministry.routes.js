@@ -15,6 +15,7 @@ router.get("/roles",        auth, authorize("ministry", "read"),   ctrl.getAllRo
 router.get("/roles/:id",    auth, authorize("ministry", "read"),   ctrl.getRoleById);
 router.post("/roles",       auth, authorize("ministry", "create"), validate(createRoleSchema), ctrl.createRole);
 router.put("/roles/:id",    auth, authorize("ministry", "update"), validate(updateRoleSchema), ctrl.updateRole);
+router.patch("/roles/:id/archive", auth, authorize("ministry", "delete"), ctrl.archiveRole);
 router.delete("/roles/:id", auth, authorize("ministry", "delete"), ctrl.deleteRole);
 
 // ── Ministry Assignments ─────────────────────────────────────

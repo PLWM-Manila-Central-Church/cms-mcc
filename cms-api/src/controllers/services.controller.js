@@ -38,14 +38,15 @@ exports.updateService = async (req, res, next) => {
   }
 };
 
-exports.deleteService = async (req, res, next) => {
+exports.archiveService = async (req, res, next) => {
   try {
-    const result = await servicesService.deleteService(req.params.id, req.user.userId);
+    const result = await servicesService.archiveService(req.params.id, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
   }
 };
+exports.deleteService = exports.archiveService;
 
 exports.updateStatus = async (req, res, next) => {
   try {

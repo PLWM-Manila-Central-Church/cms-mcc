@@ -253,7 +253,7 @@ export default function MembersPage() {
     );
   };
 
-  // ── Bulk delete ─────────────────────────────────────────────
+  // ── Bulk archive ────────────────────────────────────────────
   const toggleSelect = (id) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll    = () => setSelected(prev => prev.size === sortedMembers.length ? new Set() : new Set(sortedMembers.map(m => m.id)));
 
@@ -261,18 +261,17 @@ export default function MembersPage() {
     if (!canBulkDelete) return;
     if (selected.size === 0) return;
     if (!(await confirm({
-      title: `Delete ${selected.size} selected member${selected.size > 1 ? 's' : ''}?`,
-      message: 'The selected member records will be deleted. This action cannot be undone.',
-      confirmLabel: `Delete ${selected.size} member${selected.size > 1 ? 's' : ''}`,
-      tone: 'danger',
+      title: `Archive ${selected.size} selected member${selected.size > 1 ? 's' : ''}?`,
+      message: 'Archived profiles leave active member lists. Their church history is retained, and a System Admin can restore them from Archives.',
+      confirmLabel: `Archive ${selected.size} member${selected.size > 1 ? 's' : ''}`,
     }))) return;
     setBulkDeleting(true);
     try {
-      await Promise.all([...selected].map(id => axiosInstance.delete(`/members/${id}`)));
+      await Promise.all([...selected].map(id => axiosInstance.patch(`/members/${id}/archive`)));
       setSelected(new Set());
       fetchMembers();
     } catch (err) {
-      setError(err.response?.data?.message || 'Some deletes failed.');
+      setError(err.response?.data?.message || 'Some member profiles could not be archived.');
     } finally { setBulkDeleting(false); }
   };
 
@@ -609,7 +608,7 @@ export default function MembersPage() {
             <span style={{ fontSize:13, color:'#dc2626', fontWeight:600 }}>{selected.size} member{selected.size>1?'s':''} selected</span>
             <button onClick={handleBulkDelete} disabled={bulkDeleting}
               style={{ background:'#dc2626', color:'var(--mcc-surface, #fff)', border:'none', borderRadius:8, padding:'6px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity:bulkDeleting?0.6:1 }}>
-              {bulkDeleting ? 'Deleting…' : <><MonoIcon name="delete" size={14} /> Delete Selected</>}
+              {bulkDeleting ? 'Archiving…' : <><MonoIcon name="archive" size={14} /> Archive Selected</>}
             </button>
             <button onClick={() => setSelected(new Set())}
               style={{ background:'none', border:'1px solid var(--mcc-border, #e2e8f0)', borderRadius:8, padding:'6px 12px', fontSize:13, color:'#94a3b8', cursor:'pointer', fontFamily:'inherit' }}>

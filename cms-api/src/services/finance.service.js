@@ -241,31 +241,24 @@ exports.updateRecord = async (id, data, updatedBy) => {
 };
 
 // ── Soft Delete Financial Record ─────────────────────────────
-exports.deleteRecord = async (id, deletedBy) => {
+exports.archiveRecord = async (id, deletedBy) => {
   const record = await FinancialRecord.findOne({ where: { id } });
   if (!record) throw AppError.notFound("RECORD_NOT_FOUND", "Financial record not found");
 
-  let attachmentPaths = [];
   await sequelize.transaction(async (t) => {
-    // Cascade: delete attachment files + DB records (mirrors deleteExpense)
-    const attachments = await Attachment.findAll({ where: { income_id: id }, transaction: t });
-    attachmentPaths = attachments.map((attachment) => attachment.file_path).filter(Boolean);
-    for (const attachment of attachments) await attachment.destroy({ transaction: t });
-
     await record.update({
       is_deleted: 1,
       deleted_at: new Date(),
       deleted_by: deletedBy,
     }, { transaction: t });
 
-    await auditLog.log({ userId: deletedBy, action: "DELETE_FINANCE_RECORD", targetTable: "financial_records", targetId: id }, { transaction: t });
-      });
+    await auditLog.log({ userId: deletedBy, action: "ARCHIVE_FINANCE_RECORD", targetTable: "financial_records", targetId: id }, { transaction: t });
+  });
 
-  await deleteReceiptFiles(attachmentPaths, "Could not delete receipt file");
-
-      cache.keys("dashboard:*").forEach(k => cache.del(k));
-      return { message: "Financial record deleted successfully." };
+  cache.keys("dashboard:*").forEach(k => cache.del(k));
+  return { message: "Financial record archived. Receipt attachments and giving history were retained." };
 };
+exports.deleteRecord = exports.archiveRecord;
 
 // ── Get All Categories ───────────────────────────────────────
 exports.getAllCategories = async () => {
@@ -912,18 +905,18 @@ exports.getMemberAttachmentDownloadKey = async (id, memberId) => {
   return key;
 };
 
-exports.deleteAttachment = async (id, userId) => {
+exports.archiveAttachment = async (id, userId) => {
   const attachmentId = Number(id);
   if (!Number.isSafeInteger(attachmentId) || attachmentId <= 0) {
     throw AppError.notFound("RECORD_NOT_FOUND", "Attachment not found");
   }
-  const attachment = await Attachment.findByPk(attachmentId);
+  const attachment = await Attachment.findOne({ where: { id: attachmentId, is_deleted: 0 } });
   if (!attachment) throw AppError.notFound("RECORD_NOT_FOUND", "Attachment not found");
 
   await sequelize.transaction(async (t) => {
-    await attachment.destroy({ transaction: t });
-    await auditLog.log({ userId, action: "DELETE_ATTACHMENT", targetTable: "attachments", targetId: attachmentId }, { transaction: t });
+    await attachment.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: userId }, { transaction: t });
+    await auditLog.log({ userId, action: "ARCHIVE_ATTACHMENT", targetTable: "attachments", targetId: attachmentId }, { transaction: t });
   });
-  await deleteReceiptFiles([attachment.file_path], "Could not delete receipt attachment file");
-  return { message: "Attachment deleted successfully." };
+  return { message: "Receipt archived. The uploaded file remains available for restoration." };
 };
+exports.deleteAttachment = exports.archiveAttachment;

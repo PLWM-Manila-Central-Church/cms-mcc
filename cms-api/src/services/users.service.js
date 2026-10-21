@@ -103,7 +103,10 @@ const createAccountWithProfile = async (data, role, actor) => {
     if (duplicate) {
       const previousEmail = duplicate.email;
       const archivedEmail = `deleted-user-${duplicate.id}@accounts.invalid`;
-      await duplicate.update({ email: archivedEmail }, { transaction });
+      await duplicate.update({
+        email: archivedEmail,
+        archived_email: duplicate.archived_email || previousEmail,
+      }, { transaction });
       await AuditLog.create({
         user_id: actor.userId, action: "RELEASE_ARCHIVED_LOGIN_EMAIL", target_table: "users", target_id: duplicate.id,
         old_values: { email: previousEmail }, new_values: { email: archivedEmail },
@@ -546,5 +549,6 @@ exports.activateUser = async (id, requestingUserId) => {
   return { message: "User activated successfully." };
 };
 
-// Remove login access while retaining linked Member and church history.
-exports.hardDeleteUser = require("./delete-user-account.service");
+// Archive login access while retaining the identity, linked Member, and history.
+exports.archiveUser = require("./delete-user-account.service");
+exports.hardDeleteUser = exports.archiveUser;

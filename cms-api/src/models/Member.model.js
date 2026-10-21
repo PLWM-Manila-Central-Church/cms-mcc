@@ -32,6 +32,7 @@ const Member = sequelize.define(
     is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
     deleted_at: { type: DataTypes.DATE, allowNull: true },
     deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    archived_linked_user_active: { type: DataTypes.TINYINT, allowNull: true },
     cell_group_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     group_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     referred_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },

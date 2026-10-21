@@ -36,7 +36,7 @@ const assignmentIncludes = [
 
 // ── Get All Ministry Roles (with member_count) ───────────────
 exports.getAllRoles = async (leadsMinistryId = null) => {
-  const where = leadsMinistryId ? { id: leadsMinistryId } : {};
+  const where = leadsMinistryId ? { id: leadsMinistryId, is_deleted: 0 } : { is_deleted: 0 };
   const roles = await MinistryRole.findAll({ where, order: [["name", "ASC"]] });
 
   // Count from ministry_memberships (roster-added members)
@@ -63,7 +63,7 @@ exports.getRoleById = async (id, leadsMinistryId = null) => {
   if (leadsMinistryId && parseInt(id, 10) !== parseInt(leadsMinistryId, 10)) {
     throw AppError.forbidden("This ministry is outside your assignment");
   }
-  const role = await MinistryRole.findByPk(id);
+  const role = await MinistryRole.findOne({ where: { id, is_deleted: 0 } });
   if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
   return role;
 };
@@ -81,7 +81,7 @@ exports.createRole = async (data, createdBy) => {
 
 // ── Update Ministry Role ─────────────────────────────────────
 exports.updateRole = async (id, data, updatedBy) => {
-  const role = await MinistryRole.findByPk(id);
+  const role = await MinistryRole.findOne({ where: { id, is_deleted: 0 } });
   if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
 
   const { name } = data;
@@ -96,9 +96,9 @@ exports.updateRole = async (id, data, updatedBy) => {
   return role;
 };
 
-// ── Delete Ministry Role ─────────────────────────────────────
-exports.deleteRole = async (id, deletedBy) => {
-  const role = await MinistryRole.findByPk(id);
+// ── Archive Ministry Role ────────────────────────────────────
+exports.archiveRole = async (id, deletedBy) => {
+  const role = await MinistryRole.findOne({ where: { id, is_deleted: 0 } });
   if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
 
   const inUse = await MinistryAssignment.count({
@@ -107,7 +107,7 @@ exports.deleteRole = async (id, deletedBy) => {
   if (inUse > 0)
     throw {
       status: 400,
-      message: `Cannot delete. ${inUse} assignment(s) are using this role`,
+      message: `Reassign or close ${inUse} assignment(s) before archiving this role`,
     };
 
   // Block if a roster exists under this role
@@ -115,13 +115,22 @@ exports.deleteRole = async (id, deletedBy) => {
   if (rosterCount > 0)
     throw {
       status: 400,
-      message: `Cannot delete. ${rosterCount} member(s) are in this ministry's roster.`,
+      message: `Remove ${rosterCount} member(s) from this ministry roster before archiving this role.`,
     };
 
-  await role.destroy();
-  auditLog.log({ userId: deletedBy, action: "DELETE_MINISTRY_ROLE", targetTable: "ministry_roles", targetId: id });
-  return { message: "Ministry role deleted successfully." };
+  const activeLeaders = await User.count({ where: { leads_ministry_id: id, is_deleted: 0 } });
+  if (activeLeaders > 0) {
+    throw {
+      status: 400,
+      message: `Reassign ${activeLeaders} ministry leader account(s) before archiving this role.`,
+    };
+  }
+
+  await role.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy });
+  auditLog.log({ userId: deletedBy, action: "ARCHIVE_MINISTRY_ROLE", targetTable: "ministry_roles", targetId: id });
+  return { message: "Ministry role archived successfully." };
 };
+exports.deleteRole = exports.archiveRole;
 
 // ── Get All Assignments ──────────────────────────────────────
 exports.getAllAssignments = async (leadsMinistryId = null) => {
@@ -172,13 +181,13 @@ exports.createAssignment = async (data, createdBy, user = {}) => {
     ministry_role_id = user.leadsMinistryId;
   }
 
-  const service = await Service.findByPk(service_id);
+  const service = await Service.findOne({ where: { id: service_id, is_deleted: 0 } });
   if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
   const member = await Member.findByPk(member_id);
   if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
-  const role = await MinistryRole.findByPk(ministry_role_id);
+  const role = await MinistryRole.findOne({ where: { id: ministry_role_id, is_deleted: 0 } });
   if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
 
   if (user.roleName === "Ministry Leader") {
@@ -363,7 +372,7 @@ exports.getMyMinistryMembers = async (ministryRoleId) => {
 
 // ── Ministry Roster — Add Member ─────────────────────────────
 exports.addMemberToMinistry = async (ministryRoleId, memberId, addedBy) => {
-  const role   = await MinistryRole.findByPk(ministryRoleId);
+  const role   = await MinistryRole.findOne({ where: { id: ministryRoleId, is_deleted: 0 } });
   if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
 
   const member = await Member.findByPk(memberId);

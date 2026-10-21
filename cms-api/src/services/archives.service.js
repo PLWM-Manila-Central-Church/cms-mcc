@@ -98,7 +98,7 @@ exports.getAllRecords = async ({
 
   if (roleName === "Finance Team") {
     const financialCategory = await ArchiveCategory.findOne({
-      where: { name: "Financial Records" },
+      where: { name: "Financial Records", is_deleted: 0 },
       attributes: ["id"],
     });
     if (!financialCategory || (category_id && Number(category_id) !== Number(financialCategory.id))) {
@@ -209,7 +209,7 @@ exports.createRecord = async (data, uploadedBy) => {
     document_date, visibility,
   } = data;
 
-  const category = await ArchiveCategory.findByPk(category_id);
+  const category = await ArchiveCategory.findOne({ where: { id: category_id, is_deleted: 0 } });
   if (!category) throw AppError.notFound("CATEGORY_NOT_FOUND", "Archive category not found");
 
   const recordId = await sequelize.transaction(async (transaction) => {
@@ -261,7 +261,7 @@ exports.updateRecord = async (id, data, uploadedBy) => {
   } = data;
 
   if (category_id) {
-    const category = await ArchiveCategory.findByPk(category_id);
+    const category = await ArchiveCategory.findOne({ where: { id: category_id, is_deleted: 0 } });
     if (!category) throw AppError.notFound("CATEGORY_NOT_FOUND", "Archive category not found");
   }
 
@@ -429,12 +429,14 @@ exports.getAccessLogs = async (recordId, roleName) => {
 
 // ── Categories ───────────────────────────────────────────────
 exports.getAllCategories = async (roleName) => {
-  const where = roleName === "Finance Team" ? { name: FINANCE_ARCHIVE_CATEGORY } : undefined;
+  const where = roleName === "Finance Team"
+    ? { name: FINANCE_ARCHIVE_CATEGORY, is_deleted: 0 }
+    : { is_deleted: 0 };
   return await ArchiveCategory.findAll({ where, order: [["name", "ASC"]] });
 };
 
 exports.getCategoryById = async (id, roleName) => {
-  const category = await ArchiveCategory.findByPk(id);
+  const category = await ArchiveCategory.findOne({ where: { id, is_deleted: 0 } });
   if (!category) throw AppError.notFound("CATEGORY_NOT_FOUND", "Archive category not found");
   if (roleName === "Finance Team" && category.name !== FINANCE_ARCHIVE_CATEGORY) {
     throw AppError.notFound("CATEGORY_NOT_FOUND", "Archive category not found");
@@ -450,7 +452,7 @@ exports.createCategory = async (data) => {
 };
 
 exports.updateCategory = async (id, data) => {
-  const category = await ArchiveCategory.findByPk(id);
+  const category = await ArchiveCategory.findOne({ where: { id, is_deleted: 0 } });
   if (!category) throw AppError.notFound("CATEGORY_NOT_FOUND", "Archive category not found");
   const { name, description } = data;
   if (category.name === FINANCE_ARCHIVE_CATEGORY && name && name !== category.name) {
@@ -464,15 +466,17 @@ exports.updateCategory = async (id, data) => {
   return category;
 };
 
-exports.deleteCategory = async (id) => {
-  const category = await ArchiveCategory.findByPk(id);
+exports.archiveCategory = async (id, deletedBy) => {
+  const category = await ArchiveCategory.findOne({ where: { id, is_deleted: 0 } });
   if (!category) throw AppError.notFound("CATEGORY_NOT_FOUND", "Archive category not found");
   if (category.name === FINANCE_ARCHIVE_CATEGORY) {
     throw AppError.badRequest("CATEGORY_RESERVED", "The Financial Records category is required for Finance Team uploads.");
   }
   const inUse = await ArchiveRecord.count({ where: { category_id: id } });
   if (inUse > 0)
-    throw AppError.badRequest("CATEGORY_IN_USE", `Cannot delete. ${inUse} record(s) are using this category`);
-  await category.destroy();
-  return { message: "Archive category deleted successfully." };
+    throw AppError.badRequest("CATEGORY_IN_USE", `Cannot archive. ${inUse} record${inUse === 1 ? " is" : "s are"} using this category`);
+  await category.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy });
+  auditLog.log({ userId: deletedBy, action: "ARCHIVE_CATEGORY", targetTable: "archive_categories", targetId: id });
+  return { message: "Archive category archived successfully." };
 };
+exports.deleteCategory = exports.archiveCategory;

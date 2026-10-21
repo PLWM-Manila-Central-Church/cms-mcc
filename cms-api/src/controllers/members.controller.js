@@ -51,9 +51,9 @@ exports.updateMember = async (req, res, next) => {
   }
 };
 
-exports.deleteMember = async (req, res, next) => {
+exports.archiveMember = async (req, res, next) => {
   try {
-    const result = await membersService.deleteMember(
+    const result = await membersService.archiveMember(
       req.params.id,
       req.user.userId,
       req.body.reason,
@@ -64,6 +64,7 @@ exports.deleteMember = async (req, res, next) => {
     next(err);
   }
 };
+exports.deleteMember = exports.archiveMember;
 
 exports.unassignMemberFromScope = async (req, res, next) => {
   try {

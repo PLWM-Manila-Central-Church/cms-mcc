@@ -3,7 +3,7 @@
 const { Op } = require("sequelize");
 const sequelize = require("../config/db");
 const { Member, MemberStatusHistory, CellGroup, MinistryGroup, EmergencyContact, User, Role,
-  MinistryMembership } = require("../models");
+  MinistryMembership, RefreshToken, PasswordResetToken, UserSession } = require("../models");
 const cache    = require("../helpers/cache.helper");
 const auditLog = require("../helpers/auditLog.helper");
 const logger   = require("../helpers/logger");
@@ -404,8 +404,8 @@ exports.updateMember = async (id, data, updatedBy, user = {}) => {
   return await exports.getMemberById(id, user);
 };
 
-// ── Soft Delete Member ───────────────────────────────────────
-exports.deleteMember = async (id, deletedBy, reason, user = {}) => {
+// ── Archive Member ───────────────────────────────────────────
+exports.archiveMember = async (id, deletedBy, reason, user = {}) => {
   if (isScopedLeader(user)) {
     throw AppError.forbidden("Leaders can only remove members from their assigned scope");
   }
@@ -413,30 +413,44 @@ exports.deleteMember = async (id, deletedBy, reason, user = {}) => {
   const member = await Member.findOne({ where: { id } });
   if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
-  // Cascade: find any linked user and deactivate + unlink them
-  const linkedUser = await User.findOne({ where: { member_id: id } });
+  // Keep the account link so restoring this profile can restore its prior state.
+  const linkedUser = await User.findOne({ where: { member_id: id, is_deleted: 0 } });
 
   const sequelize = require("../config/db");
 
   await sequelize.transaction(async (t) => {
     // Soft-delete the member
     await member.update(
-      { is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy },
+      {
+        is_deleted: 1,
+        deleted_at: new Date(),
+        deleted_by: deletedBy,
+        archived_linked_user_active: linkedUser ? Number(linkedUser.is_active) : null,
+      },
       { transaction: t }
     );
 
-    // Deactivate and unlink the associated user account (if one exists)
+    // Deactivate the linked login and revoke sessions while retaining its link.
     if (linkedUser) {
-      await linkedUser.update(
-        { is_active: 0, member_id: null },
-        { transaction: t }
-      );
+      await linkedUser.update({ is_active: 0 }, { transaction: t });
+      const now = new Date();
+      await RefreshToken.update({ revoked: 1, revoked_at: now }, {
+        where: { user_id: linkedUser.id, revoked: 0 }, transaction: t,
+      });
+      await PasswordResetToken.update({ used: 1 }, {
+        where: { user_id: linkedUser.id, used: 0 }, transaction: t,
+      });
+      await UserSession.update({ logout_at: now }, {
+        where: { user_id: linkedUser.id, logout_at: null }, transaction: t,
+      });
     }
   });
 
-  auditLog.log({ userId: deletedBy, action: "DELETE_MEMBER", targetTable: "members", targetId: id, details: reason ? { reason } : undefined });
-    return { message: "Member deleted and linked user account deactivated." };
+  auditLog.log({ userId: deletedBy, action: "ARCHIVE_MEMBER", targetTable: "members", targetId: id, details: reason ? { reason } : undefined });
+  cache.keys("dashboard:*").forEach((key) => cache.del(key));
+  return { message: "Member archived. The linked login was deactivated and can be restored with the profile." };
 };
+exports.deleteMember = exports.archiveMember;
 
 exports.unassignMemberFromScope = async (id, updatedBy, user = {}) => {
   const scope = getScope(user);

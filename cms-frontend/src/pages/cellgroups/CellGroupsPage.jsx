@@ -218,17 +218,17 @@ export default function CellGroupsPage() {
     }
   };
 
-  // ── Delete ───────────────────────────────────────────────────
+  // ── Archive ──────────────────────────────────────────────────
   const handleDelete = async () => {
     setDeleting(true);
     setDelError('');
     try {
-      await axiosInstance.delete(`/cellgroups/${delTarget.id}`);
-      showToast('Cell group deleted.');
+      await axiosInstance.patch(`/cellgroups/${delTarget.id}/archive`);
+      showToast('Cell group archived. It can be restored from Archives.');
       setDelTarget(null);
       load();
     } catch (err) {
-      setDelError(err.response?.data?.message || 'Delete failed.');
+      setDelError(err.response?.data?.message || 'Could not archive this cell group.');
     } finally {
       setDeleting(false);
     }
@@ -485,7 +485,7 @@ export default function CellGroupsPage() {
                   )}
                   {canDelete && (
                     <button onClick={() => { setDelTarget(g); setDelError(''); }} style={{ ...S.deleteBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                      <MonoIcon name="delete" size={14} /> Delete
+                      <MonoIcon name="archive" size={14} /> Archive
                     </button>
                   )}
                 </div>
@@ -528,7 +528,7 @@ export default function CellGroupsPage() {
                     <td style={{ ...S.td, textAlign: 'right' }}>
                       <div style={S.actionsRow}>
                         {canUpdate && <button onClick={() => openEdit(g)} style={S.editBtn}><MonoIcon name="edit" size={14} /> Edit</button>}
-                        {canDelete && <button onClick={() => { setDelTarget(g); setDelError(''); }} style={S.deleteBtn}><MonoIcon name="delete" size={14} /> Delete</button>}
+                        {canDelete && <button onClick={() => { setDelTarget(g); setDelError(''); }} style={S.deleteBtn}><MonoIcon name="archive" size={14} /> Archive</button>}
                       </div>
                     </td>
                   )}
@@ -650,22 +650,22 @@ export default function CellGroupsPage() {
         </div>
       )}
 
-      {/* ── Delete Confirm Modal ── */}
+      {/* ── Archive Confirm Modal ── */}
       {delTarget && (
         <div style={S.overlay} onClick={() => !deleting && setDelTarget(null)}>
           <div style={{ ...S.modal, maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
             <div style={S.modalHeader}>
-              <h2 style={{ ...S.modalTitle, color: '#dc2626' }}>Delete Cell Group</h2>
+              <h2 style={{ ...S.modalTitle, color: '#dc2626' }}>Archive Cell Group</h2>
               <button onClick={() => setDelTarget(null)} style={S.closeBtn} disabled={deleting}><MonoIcon name="close" size={14} /></button>
             </div>
 
             <div style={S.delBody}>
-              <div style={S.delIcon}><MonoIcon name="delete" size={30} /></div>
+              <div style={S.delIcon}><MonoIcon name="archive" size={30} /></div>
               <p style={S.delText}>
-                Are you sure you want to delete <strong>"{delTarget.name}"</strong>?
+                Archive <strong>"{delTarget.name}"</strong>?
               </p>
               <p style={S.delHint}>
-                This cannot be undone. Groups with assigned members cannot be deleted.
+                This hides the group from active lists. Its history is retained and it can be restored from Archives. Reassign current members and leaders first.
               </p>
               {delError && <div style={S.errorBox}><MonoIcon name="warning" size={14} /> {delError}</div>}
             </div>
@@ -675,7 +675,7 @@ export default function CellGroupsPage() {
                 Cancel
               </button>
               <button onClick={handleDelete} disabled={deleting} style={{ ...S.saveBtn, background: '#dc2626' }}>
-                {deleting ? <><span style={S.btnSpinner} /> Deleting…</> : 'Yes, Delete'}
+                {deleting ? <><span style={S.btnSpinner} /> Archiving…</> : 'Archive cell group'}
               </button>
             </div>
           </div>

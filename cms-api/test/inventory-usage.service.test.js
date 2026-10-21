@@ -49,7 +49,8 @@ describe("inventory usage stock movement", () => {
       id: 77,
       item_id: 10,
       quantity_used: 2,
-      destroy: jest.fn(async () => true),
+      is_reversed: 0,
+      update: jest.fn(async (values) => Object.assign(mockState.usage, values)),
     };
   });
 
@@ -69,14 +70,17 @@ describe("inventory usage stock movement", () => {
     expect(mockState.item.quantity).toBe(5);
   });
 
-  test("reverses a deleted usage record by restoring stock and writing an audit entry", async () => {
+  test("reverses usage by restoring stock and retaining an auditable usage row", async () => {
     mockState.item.quantity = 3;
     mockState.item.status = "Low Stock";
 
     await inventoryService.deleteUsage(77, 4);
 
     expect(mockState.item.update).toHaveBeenCalledWith({ quantity: 5, status: "Available" }, expect.objectContaining({ transaction: mockState.transaction }));
-    expect(mockState.usage.destroy).toHaveBeenCalledWith({ transaction: mockState.transaction });
-    expect(auditLog.log).toHaveBeenCalledWith(expect.objectContaining({ action: "DELETE_INVENTORY_USAGE", targetId: 77 }), expect.objectContaining({ transaction: mockState.transaction }));
+    expect(mockState.usage.update).toHaveBeenCalledWith(
+      expect.objectContaining({ is_reversed: 1, reversed_by: 4 }),
+      { transaction: mockState.transaction },
+    );
+    expect(auditLog.log).toHaveBeenCalledWith(expect.objectContaining({ action: "REVERSE_INVENTORY_USAGE", targetId: 77 }), expect.objectContaining({ transaction: mockState.transaction }));
   });
 });

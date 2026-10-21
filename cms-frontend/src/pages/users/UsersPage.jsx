@@ -102,23 +102,22 @@ export default function UsersPage() {
   const handleBulkDelete = async () => {
     if (selected.size === 0) return;
     if (!(await confirm({
-      title: `Delete ${selected.size} selected user${selected.size > 1 ? 's' : ''}?`,
-      message: 'The selected login accounts will be removed. Member profiles and church history will be preserved. This action cannot be undone.',
-      confirmLabel: `Delete ${selected.size} user${selected.size > 1 ? 's' : ''}`,
-      tone: 'danger',
+      title: `Archive ${selected.size} selected user${selected.size > 1 ? 's' : ''}?`,
+      message: 'Archived accounts cannot sign in. Their login identity, member links, leadership assignments, and church history are retained and can be restored from Archives.',
+      confirmLabel: `Archive ${selected.size} user${selected.size > 1 ? 's' : ''}`,
     }))) return;
     setBulkDeleting(true);
     try {
       const { deletedCount, failures } = await deleteRecordsWithResults(
-        [...selected], (id) => axiosInstance.delete(`/users/${id}`),
+        [...selected], (id) => axiosInstance.patch(`/users/${id}/archive`),
       );
       setSelected(new Set(failures.map(({ id }) => id)));
       await fetchUsers();
       if (failures.length) {
-        setError(`${deletedCount} account(s) removed; ${failures.length} failed. ${apiErrorMessage(failures[0].error, 'Review the remaining selected accounts.')}`);
+        setError(`${deletedCount} account(s) archived; ${failures.length} failed. ${apiErrorMessage(failures[0].error, 'Review the remaining selected accounts.')}`);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Some deletes failed.');
+      setError(err.response?.data?.message || 'Some accounts could not be archived.');
     } finally { setBulkDeleting(false); }
   };
 
@@ -142,11 +141,11 @@ export default function UsersPage() {
     setDeleteLoading(true);
     setDeleteError('');
     try {
-      await axiosInstance.delete(`/users/${deleteTarget.id}`);
+      await axiosInstance.patch(`/users/${deleteTarget.id}/archive`);
       setDeleteTarget(null);
       fetchUsers();
     } catch (err) {
-      setDeleteError(err.response?.data?.message || 'Failed to delete user.');
+      setDeleteError(err.response?.data?.message || 'Failed to archive user.');
     } finally {
       setDeleteLoading(false);
     }
@@ -191,7 +190,7 @@ export default function UsersPage() {
           <span style={{ fontSize:13, color:'#dc2626', fontWeight:600 }}>{selected.size} user{selected.size > 1 ? 's' : ''} selected</span>
           <button onClick={handleBulkDelete} disabled={bulkDeleting}
             style={{ background:'#dc2626', color:'var(--mcc-surface, #fff)', border:'none', borderRadius:8, padding:'6px 16px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity:bulkDeleting ? 0.6 : 1 }}>
-            {bulkDeleting ? 'Deleting…' : <><MonoIcon name="delete" size={14} /> Delete Selected</>}
+            {bulkDeleting ? 'Archiving…' : <><MonoIcon name="archive" size={14} /> Archive Selected</>}
           </button>
           <button onClick={() => setSelected(new Set())}
             style={{ background:'none', border:'1px solid var(--mcc-border, #e2e8f0)', borderRadius:8, padding:'6px 12px', fontSize:13, color:'#94a3b8', cursor:'pointer', fontFamily:'inherit' }}>
@@ -236,7 +235,7 @@ export default function UsersPage() {
                       </button>
                     )}
                     {hasPermission('users', 'delete') && u.id !== currentUser?.id && (
-                      <button onClick={() => { setDeleteTarget(u); setDeleteError(''); }} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Delete</button>
+                      <button onClick={() => { setDeleteTarget(u); setDeleteError(''); }} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}><MonoIcon name="archive" size={13} /> Archive</button>
                     )}
                   </div>
                 </div>
@@ -359,7 +358,7 @@ export default function UsersPage() {
                         onClick={() => { setDeleteTarget(u); setDeleteError(''); }}
                         style={styles.deleteBtn}
                       >
-                        Delete
+                        <MonoIcon name="archive" size={13} /> Archive
                       </button>
                     )}
                   </div>
@@ -371,16 +370,14 @@ export default function UsersPage() {
       </div>
       )}
 
-      {/* Delete Confirm Modal */}
+      {/* Archive Confirm Modal */}
       {deleteTarget && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
-            <div style={styles.modalIcon}><MonoIcon name="delete" size={34} /></div>
-            <h3 style={styles.modalTitle}>Permanently Delete User?</h3>
+            <div style={styles.modalIcon}><MonoIcon name="archive" size={34} /></div>
+            <h3 style={styles.modalTitle}>Archive User Account?</h3>
             <p style={styles.modalBody}>
-              You are about to permanently delete{' '}
-              <strong>{deleteTarget.email}</strong>. This action cannot be undone.
-              Their Member profile, ministry records, and audit history will be preserved. Only login access will be removed.
+              Archive <strong>{deleteTarget.email}</strong>? The account will no longer be able to sign in. Its email, Member profile link, leadership assignments, and audit history will be retained. A System Admin can restore it from Archives.
             </p>
             {deleteError && <div style={styles.errorBox}>{deleteError}</div>}
             <div style={styles.modalActions}>
@@ -396,7 +393,7 @@ export default function UsersPage() {
                 disabled={deleteLoading}
                 style={{ ...styles.confirmDeleteBtn, opacity: deleteLoading ? 0.7 : 1 }}
               >
-                {deleteLoading ? 'Deleting...' : 'Yes, Delete Permanently'}
+                {deleteLoading ? 'Archiving...' : 'Archive account'}
               </button>
             </div>
           </div>

@@ -34,6 +34,7 @@ router.get("/:id", auth, authorize("events", "read"),   ctrl.getEventById);
 router.post("/",   auth, authorize("events", "create"), validate(createEventSchema),       ctrl.createEvent);
 router.put("/:id", auth, authorize("events", "update"), validate(updateEventSchema),       ctrl.updateEvent);
 router.patch("/:id/status", auth, authorize("events", "update"), validate(updateEventStatusSchema), ctrl.updateEventStatus);
+router.patch("/:id/archive", auth, authorize("events", "delete"), ctrl.archiveEvent);
 router.delete("/:id",       auth, authorize("events", "delete"), ctrl.deleteEvent);
 
 // ── Event Registrations ──────────────────────────────────────

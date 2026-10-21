@@ -4,23 +4,12 @@ const { Op }       = require("sequelize");
 const sequelize    = require("../config/db");
 const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
+const cache        = require("../helpers/cache.helper");
 const notifService = require("./notifications.service");
-const { Service, ServiceAttendanceSummary, ServiceResponse, Attendance, User } = require("../models");
+const { Service, ServiceAttendanceSummary, ServiceResponse, User } = require("../models");
 const { syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
 const { isScopedLeader } = require("../helpers/scopedLeader.helper");
 const AppError = require("../helpers/AppError");
-const {
-  AttendanceBatch,
-  AttendanceBatchItem,
-  AttendanceExpectedMember,
-  EventAttendance,
-  QrAttendanceSession,
-} = require("../modules/qr-attendance/models");
-const {
-  AttendanceException,
-  AttendanceFollowUp,
-  OutreachSessionPolicy,
-} = require("../modules/outreach/models");
 
 const SERVICE_STATUS_FLOW = Object.freeze({
   draft: ["published", "cancelled"],
@@ -38,7 +27,7 @@ const ensureStatusTransition = (current, next) => {
 // ── Get All Services (paginated) ─────────────────────────────
 exports.getAllServices = async ({ page = 1, limit = 15, status } = {}, user = {}) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
-  const where  = {};
+  const where  = { is_deleted: 0 };
   const hideChurchwideAttendance = isScopedLeader(user);
   if (status) where.status = status;
 
@@ -96,7 +85,7 @@ exports.getAllServices = async ({ page = 1, limit = 15, status } = {}, user = {}
 
 // ── Get Service By ID ────────────────────────────────────────
 exports.getServiceById = async (id) => {
-  const service = await Service.findByPk(id);
+  const service = await Service.findOne({ where: { id, is_deleted: 0 } });
   if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
   return service;
 };
@@ -139,7 +128,7 @@ exports.updateService = async (id, data, updatedBy) => {
     status,
   } = data;
   const service = await sequelize.transaction(async (transaction) => {
-    const lockedService = await Service.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+    const lockedService = await Service.findOne({ where: { id, is_deleted: 0 }, transaction, lock: transaction.LOCK.UPDATE });
     if (!lockedService) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
     if (lockedService.status === "completed" || lockedService.status === "cancelled") {
       throw AppError.badRequest("VALIDATION", "Cannot update a completed or cancelled service");
@@ -202,115 +191,28 @@ exports.updateService = async (id, data, updatedBy) => {
   return service;
 };
 
-// ── Delete Service ───────────────────────────────────────────
-exports.deleteService = async (id, deletedBy) => {
+// ── Archive Service (retain attendance, QR, RSVP, and follow-up history) ──
+exports.archiveService = async (id, deletedBy) => {
   await sequelize.transaction(async (transaction) => {
-    const service = await Service.findByPk(id, {
+    const service = await Service.findOne({
+      where: { id, is_deleted: 0 },
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
     if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
 
-    const sessions = await QrAttendanceSession.findAll({
-      where: { service_id: service.id },
-      attributes: ["id"],
-      transaction,
-      lock: transaction.LOCK.UPDATE,
-    });
-    const sessionIds = sessions.map((session) => session.id);
-    let batchIds = [];
-
-    if (sessionIds.length) {
-      const followUps = await AttendanceFollowUp.findAll({
-        where: {
-          [Op.or]: [
-            { episode_start_session_id: { [Op.in]: sessionIds } },
-            { trigger_session_id: { [Op.in]: sessionIds } },
-          ],
-        },
-        attributes: ["id"],
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
-      if (followUps.length) {
-        throw AppError.conflict(
-          "SERVICE_HAS_FOLLOW_UP_HISTORY",
-          "Resolve or archive linked attendance follow-ups before deleting this service.",
-        );
-      }
-
-      const batches = await AttendanceBatch.findAll({
-        where: { session_id: { [Op.in]: sessionIds } },
-        attributes: ["id"],
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
-      batchIds = batches.map((batch) => batch.id);
-
-      // These tables use RESTRICT foreign keys. Remove the session-owned QR
-      // rows in dependency order so a failed cleanup rolls back as one unit.
-      if (batchIds.length) {
-        await AttendanceBatchItem.destroy({
-          where: { batch_id: { [Op.in]: batchIds } },
-          transaction,
-        });
-      }
-      await EventAttendance.destroy({
-        where: { session_id: { [Op.in]: sessionIds } },
-        transaction,
-      });
-      await AttendanceExpectedMember.destroy({
-        where: { session_id: { [Op.in]: sessionIds } },
-        transaction,
-      });
-      await OutreachSessionPolicy.destroy({
-        where: { session_id: { [Op.in]: sessionIds } },
-        transaction,
-      });
-      await AttendanceException.destroy({
-        where: { session_id: { [Op.in]: sessionIds } },
-        transaction,
-      });
-    }
-
-    // QR service check-ins live in the existing attendances table and can
-    // restrict deletion of the batch that recorded them.
-    await Attendance.destroy({
-      where: { service_id: service.id },
-      transaction,
-    });
-
-    if (batchIds.length) {
-      await AttendanceBatch.destroy({
-        where: { id: { [Op.in]: batchIds } },
-        transaction,
-      });
-    }
-    if (sessionIds.length) {
-      await QrAttendanceSession.destroy({
-        where: { id: { [Op.in]: sessionIds } },
-        transaction,
-      });
-    }
-
-    await ServiceResponse.destroy({
-      where: { service_id: service.id },
-      transaction,
-    });
-    await ServiceAttendanceSummary.destroy({
-      where: { service_id: service.id },
-      transaction,
-    });
-    await service.destroy({ transaction });
+    await service.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy }, { transaction });
     await auditLog.log({
       userId: deletedBy,
-      action: "DELETE_SERVICE",
+      action: "ARCHIVE_SERVICE",
       targetTable: "services",
       targetId: id,
     }, { transaction });
   });
-  return { message: "Service deleted successfully." };
+  cache.keys("dashboard:*").forEach((key) => cache.del(key));
+  return { message: "Service archived. Attendance, QR sessions, RSVPs, and follow-up history were retained." };
 };
+exports.deleteService = exports.archiveService;
 
 // ── Update Service Status ────────────────────────────────────
 exports.updateStatus = async (id, status, updatedBy) => {
@@ -318,7 +220,7 @@ exports.updateStatus = async (id, status, updatedBy) => {
   if (!allowed.includes(status))
     throw AppError.badRequest("VALIDATION", "Invalid status value");
 
-  const service = await Service.findByPk(id);
+  const service = await Service.findOne({ where: { id, is_deleted: 0 } });
   if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
   ensureStatusTransition(service.status, status);
 

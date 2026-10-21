@@ -65,7 +65,7 @@ exports.createInvites = async (
   const event = await Event.findByPk(eventId);
   if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
 
-  const role = await MinistryRole.findByPk(ministry_role_id);
+  const role = await MinistryRole.findOne({ where: { id: ministry_role_id, is_deleted: 0 } });
   if (!role) throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
 
   if (!Array.isArray(member_ids) || member_ids.length === 0)

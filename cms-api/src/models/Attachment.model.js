@@ -31,6 +31,9 @@ const Attachment = sequelize.define(
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
     },
+    is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+    deleted_at: { type: DataTypes.DATE, allowNull: true },
+    deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     uploaded_at: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -41,6 +44,8 @@ const Attachment = sequelize.define(
     tableName: "attachments",
     timestamps: false,
     underscored: true,
+    defaultScope: { where: { is_deleted: 0 } },
+    scopes: { withDeleted: {} },
     validate: {
       hasExactlyOneFinancialOwner() {
         const hasIncome = this.income_id !== null && this.income_id !== undefined;

@@ -90,7 +90,7 @@ exports.createAttendance = async (data, recordedBy, user = {}, options = {}) => 
   });
   await ensureMemberInScope(member_id, user);
 
-  const service = await Service.findByPk(service_id, transaction && { transaction });
+  const service = await Service.findOne({ where: { id: service_id, is_deleted: 0 }, ...(transaction && { transaction }) });
   if (!service) throw AppError.notFound("SERVICE_NOT_FOUND", "Service not found");
 
   if (service.status === "cancelled")

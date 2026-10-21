@@ -70,13 +70,14 @@ exports.updateEventStatus = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteEvent = async (req, res, next) => {
+exports.archiveEvent = async (req, res, next) => {
   try {
     if (forbidMinistryLeaderEventManage(req, res)) return;
-    const result = await eventsService.deleteEvent(req.params.id, req.user.userId);
+    const result = await eventsService.archiveEvent(req.params.id, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
+exports.deleteEvent = exports.archiveEvent;
 
 exports.uploadEventImage = async (req, res, next) => {
   try {

@@ -20,7 +20,7 @@ test("registration absence alerts exclude upcoming and unfinished services at th
     getAttendanceModel.mockResolvedValue(Attendance);
     const result = await service.getStats({ roleName: "Registration Team", userId: 1 });
     expect(Service.findOne).toHaveBeenCalledWith(expect.objectContaining({
-      where: { status: "completed", service_date: { [Op.lte]: "2026-10-21" } },
+      where: { status: "completed", is_deleted: 0, service_date: { [Op.lte]: "2026-10-21" } },
     }));
     expect(result.latestService).toBeNull();
     expect(result.cellGroupAbsences).toEqual([]);

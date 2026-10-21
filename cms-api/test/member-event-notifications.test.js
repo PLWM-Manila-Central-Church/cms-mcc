@@ -2,6 +2,7 @@
 
 jest.mock("../src/config/db", () => ({ transaction: jest.fn() }));
 jest.mock("../src/helpers/logger", () => ({ error: jest.fn(), warn: jest.fn() }));
+jest.mock("../src/helpers/auditLog.helper", () => ({ log: jest.fn() }));
 jest.mock("../src/helpers/attendanceSummary.helper", () => ({
   getAttendanceModel: jest.fn(),
   syncServiceAttendanceSummary: jest.fn(),
@@ -21,6 +22,7 @@ jest.mock("../src/models", () => ({
   Event: { findOne: jest.fn(), findAll: jest.fn() },
   EventRegistration: {
     findOne: jest.fn(),
+    unscoped: jest.fn(function unscoped() { return this; }),
     findAll: jest.fn(),
     count: jest.fn(),
     create: jest.fn(),
@@ -135,15 +137,15 @@ describe("member event-registration notifications", () => {
     });
   });
 
-  test("notifies the member after cancelling an event registration", async () => {
-    const destroy = jest.fn().mockResolvedValue(1);
-    EventRegistration.findOne.mockResolvedValue({ ...registration, destroy });
+  test("notifies the member after cancelling an event registration and retains its history", async () => {
+    const update = jest.fn().mockResolvedValue(1);
+    EventRegistration.findOne.mockResolvedValue({ ...registration, update });
 
     await expect(memberPortalService.cancelEventRegistration(42, 12)).resolves.toEqual({
-      message: "Registration cancelled successfully.",
+      message: "Registration cancelled. Its history was retained.",
     });
 
-    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ is_deleted: 1, seat_number: null, parking_slot: null }));
     expect(notifications.createNotification).toHaveBeenCalledWith({
       user_id: 9,
       type: "event_unregistered",

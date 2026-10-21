@@ -5,6 +5,7 @@ const ctrl      = require("../controllers/archives.controller");
 const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const { archiveUpload, requireDurableUploadStorage } = require("../middlewares/upload-s3");
+const requireSystemAdministrator = require("../middlewares/requireSystemAdministrator");
 const validateQuery = require("../middlewares/validateQuery");
 const { getArchivesQuerySchema } = require("../validators/archives.validator");
 
@@ -13,9 +14,13 @@ router.get("/categories",        auth, authorize("archives", "read"),   ctrl.get
 router.get("/categories/:id",    auth, authorize("archives", "read"),   ctrl.getCategoryById);
 router.post("/categories",       auth, authorize("archives", "update"), ctrl.createCategory);
 router.put("/categories/:id",    auth, authorize("archives", "update"), ctrl.updateCategory);
+router.patch("/categories/:id/archive", auth, authorize("archives", "delete"), ctrl.archiveCategory);
 router.delete("/categories/:id", auth, authorize("archives", "delete"), ctrl.deleteCategory);
 
 // ── Records ──────────────────────────────────────────────────
+router.get("/system-records", auth, requireSystemAdministrator, ctrl.getSystemRecords);
+router.post("/system-records/:type/:id/restore", auth, requireSystemAdministrator, ctrl.restoreSystemRecord);
+
 router.get("/",    auth, authorize("archives", "read"), validateQuery(getArchivesQuerySchema), ctrl.getAllRecords);
 router.get("/:id", auth, authorize("archives", "read"),   ctrl.getRecordById);
 

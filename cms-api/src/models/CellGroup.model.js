@@ -13,6 +13,9 @@ const CellGroup = sequelize.define(
     },
     name: { type: DataTypes.STRING(100), allowNull: false, unique: true },
     area: { type: DataTypes.STRING(100), allowNull: true },
+    is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+    deleted_at: { type: DataTypes.DATE, allowNull: true },
+    deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   },
   { tableName: "cell_groups", timestamps: true, underscored: true },
 );

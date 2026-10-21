@@ -8,7 +8,10 @@ jest.mock("../src/helpers/auditLog.helper", () => ({ log: jest.fn() }));
 jest.mock("../src/helpers/logger", () => ({ error: jest.fn(), warn: jest.fn() }));
 jest.mock("../src/services/notifications.service", () => ({ bulkCreateNotifications: jest.fn(async () => []) }));
 jest.mock("../src/models", () => ({
-  InventoryItem: { findByPk: jest.fn(async () => mockState.item) },
+  InventoryItem: {
+    findByPk: jest.fn(async () => mockState.item),
+    findOne: jest.fn(async () => mockState.item),
+  },
   InventoryCategory: { findByPk: jest.fn() },
   InventoryRequest: { findAll: jest.fn(async () => mockState.pendingRequests) },
   InventoryUsage: {},
@@ -58,7 +61,7 @@ describe("inventory status-change notifications", () => {
     await inventoryService.updateItem(17, { status: "Under Repair" }, 99);
 
     expect(notifications.bulkCreateNotifications).toHaveBeenCalledTimes(2);
-    expect(InventoryItem.findByPk).toHaveBeenCalledTimes(2);
+    expect(InventoryItem.findOne).toHaveBeenCalledTimes(2);
     expect(Role.findAll).toHaveBeenCalledTimes(1);
     expect(User.findAll).toHaveBeenCalledTimes(1);
     expect(InventoryRequest.findAll).toHaveBeenCalledWith({

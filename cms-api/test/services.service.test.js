@@ -6,7 +6,10 @@ jest.mock("../src/config/db", () => ({
   transaction: jest.fn(async (callback) => callback(mockState.transaction)),
 }));
 jest.mock("../src/models", () => ({
-  Service: { findByPk: jest.fn(async () => mockState.service) },
+  Service: {
+    findByPk: jest.fn(async () => mockState.service),
+    findOne: jest.fn(async () => mockState.service),
+  },
   ServiceAttendanceSummary: { destroy: jest.fn() },
   ServiceResponse: { findAll: jest.fn(async () => mockState.reservations), destroy: jest.fn() },
   Attendance: { destroy: jest.fn() },
@@ -99,58 +102,40 @@ describe("service details, lifecycle, and capacity updates", () => {
       .rejects.toMatchObject({ code: "INVALID_STATUS_TRANSITION", status: 400 });
   });
 
-  test("deletes an existing service and returns not found for a missing one", async () => {
-    await expect(service.deleteService(12, 8)).resolves.toMatchObject({ message: "Service deleted successfully." });
-    expect(mockState.service.destroy).toHaveBeenCalled();
+  test("archives an existing service and returns not found for a missing one", async () => {
+    await expect(service.archiveService(12, 8)).resolves.toMatchObject({
+      message: "Service archived. Attendance, QR sessions, RSVPs, and follow-up history were retained.",
+    });
+    expect(mockState.service.update).toHaveBeenCalledWith(
+      expect.objectContaining({ is_deleted: 1, deleted_by: 8 }),
+      { transaction: mockState.transaction },
+    );
+    expect(mockState.service.destroy).not.toHaveBeenCalled();
     mockState.service = null;
-    await expect(service.deleteService(12, 8)).rejects.toMatchObject({ code: "RECORD_NOT_FOUND", status: 404 });
+    await expect(service.archiveService(12, 8)).rejects.toMatchObject({ code: "RECORD_NOT_FOUND", status: 404 });
   });
 
-  test("removes QR dependencies in foreign-key order inside the service transaction", async () => {
+  test("retains QR dependencies and attendance history while archiving a service", async () => {
     mockState.sessions = [{ id: 31 }, { id: 32 }];
     mockState.batches = [{ id: 41 }];
 
-    await expect(service.deleteService(12, 8))
-      .resolves.toMatchObject({ message: "Service deleted successfully." });
+    await service.archiveService(12, 8);
 
-    const batchItemOrder = AttendanceBatchItem.destroy.mock.invocationCallOrder[0];
-    const attendanceOrder = Attendance.destroy.mock.invocationCallOrder[0];
-    const batchOrder = AttendanceBatch.destroy.mock.invocationCallOrder[0];
-    const sessionOrder = QrAttendanceSession.destroy.mock.invocationCallOrder[0];
-    const serviceOrder = mockState.service.destroy.mock.invocationCallOrder[0];
-
-    expect(batchItemOrder).toBeLessThan(attendanceOrder);
-    expect(attendanceOrder).toBeLessThan(batchOrder);
-    expect(batchOrder).toBeLessThan(sessionOrder);
-    expect(sessionOrder).toBeLessThan(serviceOrder);
-    expect(EventAttendance.destroy).toHaveBeenCalled();
-    expect(AttendanceExpectedMember.destroy).toHaveBeenCalled();
-    expect(OutreachSessionPolicy.destroy).toHaveBeenCalled();
-    expect(AttendanceException.destroy).toHaveBeenCalled();
-    expect(ServiceResponse.destroy).toHaveBeenCalledWith({
-      where: { service_id: 12 },
-      transaction: mockState.transaction,
-    });
-    expect(ServiceAttendanceSummary.destroy).toHaveBeenCalledWith({
-      where: { service_id: 12 },
-      transaction: mockState.transaction,
-    });
+    expect(AttendanceBatchItem.destroy).not.toHaveBeenCalled();
+    expect(Attendance.destroy).not.toHaveBeenCalled();
+    expect(AttendanceBatch.destroy).not.toHaveBeenCalled();
+    expect(QrAttendanceSession.destroy).not.toHaveBeenCalled();
+    expect(EventAttendance.destroy).not.toHaveBeenCalled();
+    expect(AttendanceExpectedMember.destroy).not.toHaveBeenCalled();
+    expect(OutreachSessionPolicy.destroy).not.toHaveBeenCalled();
+    expect(AttendanceException.destroy).not.toHaveBeenCalled();
+    expect(ServiceResponse.destroy).not.toHaveBeenCalled();
+    expect(ServiceAttendanceSummary.destroy).not.toHaveBeenCalled();
+    expect(mockState.service.destroy).not.toHaveBeenCalled();
     expect(auditLog.log).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "DELETE_SERVICE", targetId: 12 }),
+      expect.objectContaining({ action: "ARCHIVE_SERVICE", targetId: 12 }),
       { transaction: mockState.transaction },
     );
   });
 
-  test("blocks service deletion while linked attendance follow-ups still need the sessions", async () => {
-    mockState.sessions = [{ id: 31 }];
-    mockState.followUps = [{ id: 72 }];
-
-    await expect(service.deleteService(12, 8))
-      .rejects.toMatchObject({ code: "SERVICE_HAS_FOLLOW_UP_HISTORY", status: 409 });
-
-    expect(mockState.service.destroy).not.toHaveBeenCalled();
-    expect(Attendance.destroy).not.toHaveBeenCalled();
-    expect(AttendanceBatchItem.destroy).not.toHaveBeenCalled();
-    expect(QrAttendanceSession.destroy).not.toHaveBeenCalled();
-  });
 });

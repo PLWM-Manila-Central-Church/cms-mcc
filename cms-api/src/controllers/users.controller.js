@@ -59,9 +59,9 @@ exports.activateUser = async (req, res, next) => {
   }
 };
 
-exports.hardDeleteUser = async (req, res, next) => {
+exports.archiveUser = async (req, res, next) => {
   try {
-    const result = await usersService.hardDeleteUser(
+    const result = await usersService.archiveUser(
       req.params.id,
       req.user,
     );
@@ -70,3 +70,4 @@ exports.hardDeleteUser = async (req, res, next) => {
     next(err);
   }
 };
+exports.hardDeleteUser = exports.archiveUser;

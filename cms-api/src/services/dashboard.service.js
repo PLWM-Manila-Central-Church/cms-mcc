@@ -247,7 +247,7 @@ exports.getStats = async ({
   if (roleName === "Registration Team") {
     // Last 10 completed services with attendance broken down by member status
     const recentServices = await Service.findAll({
-      where: { status: "completed" },
+      where: { status: "completed", is_deleted: 0 },
       order: [["service_date", "DESC"]],
       limit: 10,
       attributes: ["id", "title", "service_date"],
@@ -287,7 +287,7 @@ exports.getStats = async ({
 
     // Absences are meaningful only after a service has been completed.
     const latestService = await Service.findOne({
-      where: { status: "completed", service_date: { [Op.lte]: dateOnlyInTimezone(now, "Asia/Manila") } },
+      where: { status: "completed", is_deleted: 0, service_date: { [Op.lte]: dateOnlyInTimezone(now, "Asia/Manila") } },
       order: [["service_date", "DESC"]],
       attributes: ["id", "title", "service_date"],
     });

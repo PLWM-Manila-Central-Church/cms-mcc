@@ -18,6 +18,7 @@ router.get("/",    auth, authorize("cell_groups", "read"),   ctrl.getAllCellGrou
 router.get("/:id", auth, authorize("cell_groups", "read"),   ctrl.getCellGroupById);
 router.post("/",   auth, authorize("cell_groups", "create"), validate(createCellGroupSchema), ctrl.createCellGroup);
 router.put("/:id", auth, authorize("cell_groups", "update"), validate(updateCellGroupSchema), ctrl.updateCellGroup);
+router.patch("/:id/archive", auth, authorize("cell_groups", "delete"), ctrl.archiveCellGroup);
 router.delete("/:id", auth, authorize("cell_groups", "delete"), ctrl.deleteCellGroup);
 
 module.exports = router;

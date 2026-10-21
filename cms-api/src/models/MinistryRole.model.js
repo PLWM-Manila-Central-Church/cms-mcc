@@ -12,6 +12,9 @@ const MinistryRole = sequelize.define(
       primaryKey: true,
     },
     name: { type: DataTypes.STRING(100), allowNull: false, unique: true },
+    is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+    deleted_at: { type: DataTypes.DATE, allowNull: true },
+    deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   },
   { tableName: "ministry_roles", timestamps: true, underscored: true },
 );

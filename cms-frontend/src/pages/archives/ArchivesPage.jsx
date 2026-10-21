@@ -6,12 +6,13 @@ import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
 import ArchiveCategoriesManager from '../../components/archives/ArchiveCategoriesManager';
+import SystemArchivesPanel from '../../components/archives/SystemArchivesPanel';
 import { archiveDownloadName, archiveDownloadPath } from '../../utils/archiveDownload';
 
 const STATUS_META = {
   pending:  { bg: '#fffbeb', color: '#d97706', label: 'Pending' },
   approved: { bg: '#f0fdf4', color: '#16a34a', label: 'Approved' },
-  deleted:  { bg: '#f1f5f9', color: 'var(--mcc-secondary, #52647a)', label: 'Deleted' },
+  deleted:  { bg: '#f1f5f9', color: 'var(--mcc-secondary, #52647a)', label: 'Archived' },
 };
 const ARCHIVED_META = { bg: '#f1f5f9', color: 'var(--mcc-secondary, #52647a)', label: 'Archived' };
 
@@ -51,6 +52,7 @@ export default function ArchivesPage() {
   const [filterVisible, setFilterVisible]   = useState('');
   const [search, setSearch]                 = useState('');
   const [showArchived, setShowArchived]     = useState(false);
+  const [archiveView, setArchiveView]       = useState('documents');
 
   const [showForm, setShowForm]     = useState(false);
   const [editRecord, setEditRecord] = useState(null);
@@ -347,14 +349,18 @@ export default function ArchivesPage() {
           <div style={s.pageHeader}>
             <div>
               <h1 className="workspace-page-title" style={s.title}>Archives</h1>
-              <p style={s.subtitle}>{total} {showArchived ? 'archived records' : 'active records'}</p>
+              <p style={s.subtitle}>{archiveView === 'documents' ? `${total} ${showArchived ? 'archived' : 'active'} document records` : 'Archived application records'}</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
-              {isAdmin && <div role="group" aria-label="Archive view" style={{ display: 'inline-flex', gap: 4, padding: 3, border: '1px solid #dbe4ee', borderRadius: 9 }}>
+              {isAdmin && <div role="group" aria-label="Archive section" style={{ display: 'inline-flex', gap: 4, padding: 3, border: '1px solid #dbe4ee', borderRadius: 9 }}>
+                <button type="button" aria-pressed={archiveView === 'documents'} onClick={() => { setArchiveView('documents'); setDetailRecord(null); }} style={{ ...s.pageBtn, background: archiveView === 'documents' ? '#e8f4fd' : 'transparent' }}>Documents</button>
+                <button type="button" aria-pressed={archiveView === 'system'} onClick={() => { setArchiveView('system'); setDetailRecord(null); setShowForm(false); }} style={{ ...s.pageBtn, background: archiveView === 'system' ? '#e8f4fd' : 'transparent' }}>System records</button>
+              </div>}
+              {archiveView === 'documents' && isAdmin && <div role="group" aria-label="Document archive view" style={{ display: 'inline-flex', gap: 4, padding: 3, border: '1px solid #dbe4ee', borderRadius: 9 }}>
                 <button type="button" aria-pressed={!showArchived} onClick={() => { setShowArchived(false); setPage(1); }} style={{ ...s.pageBtn, background: !showArchived ? '#e8f4fd' : 'transparent' }}>Active</button>
                 <button type="button" aria-pressed={showArchived} onClick={() => { setShowArchived(true); setPage(1); }} style={{ ...s.pageBtn, background: showArchived ? '#e8f4fd' : 'transparent' }}>Archived</button>
               </div>}
-              {canUpdate && (
+              {archiveView === 'documents' && canUpdate && (
                 <ArchiveCategoriesManager
                   categories={categories}
                   canManage={canUpdate}
@@ -362,7 +368,7 @@ export default function ArchivesPage() {
                   onChanged={fetchCategories}
                 />
               )}
-              {canUploadFinance && (
+              {archiveView === 'documents' && canUploadFinance && (
                 <button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} style={s.addBtn}>
                   {showForm ? <><MonoIcon name="close" size={14} /> Cancel</> : '+ Upload'}
                 </button>
@@ -370,6 +376,7 @@ export default function ArchivesPage() {
             </div>
           </div>
 
+          {archiveView === 'system' ? <SystemArchivesPanel /> : <>
           {/* Upload / Edit form */}
           {showForm && (
             <div style={s.formCard}>
@@ -501,10 +508,11 @@ export default function ArchivesPage() {
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={s.pageBtn}>Next →</button>
             </div>
           )}
+          </>}
         </div>
 
         {/* ── DESKTOP: right side detail panel ─────────── */}
-        {!isMobile && detailRecord && (
+        {archiveView === 'documents' && !isMobile && detailRecord && (
           <div style={s.detailPanel}>
             <DetailContent />
           </div>
@@ -512,7 +520,7 @@ export default function ArchivesPage() {
       </div>
 
       {/* ── MOBILE: bottom-sheet modal overlay ─────────── */}
-      {isMobile && detailRecord && (
+      {archiveView === 'documents' && isMobile && detailRecord && (
         <>
           {/* Backdrop */}
           <div
