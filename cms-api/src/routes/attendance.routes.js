@@ -22,6 +22,7 @@ router.get("/",    auth, authorize("attendance", "read"),   ctrl.getAllAttendanc
 router.get("/:id", auth, authorize("attendance", "read"),   ctrl.getAttendanceById);
 router.post("/",   auth, authorize("attendance", "create"), validate(createAttendanceSchema), ctrl.createAttendance);
 router.put("/:id", auth, authorize("attendance", "update"), validate(updateAttendanceSchema), ctrl.updateAttendance);
+router.patch("/:id/archive", auth, authorize("attendance", "delete"), ctrl.archiveAttendance);
 router.delete("/:id", auth, authorize("attendance", "delete"), ctrl.deleteAttendance);
 
 module.exports = router;

@@ -54,3 +54,12 @@ exports.deleteAttendance = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.archiveAttendance = async (req, res, next) => {
+  try {
+    const result = await attendanceService.archiveAttendance(req.params.id, req.user, req.body?.reason);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};

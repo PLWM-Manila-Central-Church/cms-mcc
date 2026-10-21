@@ -1,15 +1,16 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfirmationProvider } from '../../context/ConfirmationContext';
 
 const fixture = vi.hoisted(() => ({
   get: vi.fn(),
+  patch: vi.fn(),
   user: { roleName: 'Registration Team' },
   permissions: new Set(),
 }));
 
-vi.mock('../../api/axiosInstance', () => ({ default: { get: fixture.get, post: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../api/axiosInstance', () => ({ default: { get: fixture.get, post: vi.fn(), patch: fixture.patch, delete: vi.fn() } }));
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({
     user: fixture.user,
@@ -78,5 +79,31 @@ describe('service attendance check-in counts', () => {
 
     expect(await screen.findByText('1 checked in')).toBeInTheDocument();
     expect(screen.queryByText('3 checked in')).not.toBeInTheDocument();
+  });
+
+  it('archives a legacy check-in through the reversible correction route', async () => {
+    fixture.permissions = new Set(['attendance:delete']);
+    fixture.patch.mockResolvedValue({ data: { success: true } });
+    const memberId = 155;
+    renderPage([{
+      id: 55,
+      service_id: service.id,
+      member_id: memberId,
+      check_in_method: 'manual',
+      checked_in_at: '2026-10-11T02:05:00.000Z',
+      is_pre_reg: false,
+      is_voided: false,
+      entry_source: 'legacy',
+      Member: { first_name: 'QA', last_name: `Member ${memberId}`, barcode: null },
+    }]);
+
+    fireEvent.click(await screen.findByRole('button', { name: `Archive check-in for QA Member ${memberId}` }));
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Archive check-in?');
+    fireEvent.click(screen.getByRole('button', { name: 'Archive check-in', exact: true }));
+
+    await waitFor(() => expect(fixture.patch).toHaveBeenCalledWith(
+      `/services/${service.id}/attendance/${memberId}/archive`,
+      { reason: 'Legacy check-in corrected by staff' },
+    ));
   });
 });

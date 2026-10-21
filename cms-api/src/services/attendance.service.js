@@ -1,5 +1,7 @@
 "use strict";
 
+const { Op } = require("sequelize");
+const sequelize = require("../config/db");
 const { Attendance, Member, Service, User } = require("../models");
 const cache    = require("../helpers/cache.helper");
 const auditLog = require("../helpers/auditLog.helper");
@@ -39,6 +41,7 @@ exports.getAllAttendance = async (user = {}) => {
   const AttendanceModel = await getAttendanceModel();
   const memberScopeWhere = await getMemberScopeWhere(user);
   return await AttendanceModel.findAll({
+    where: AttendanceModel === Attendance ? undefined : { voided_at: null },
     include: attendanceIncludesFor(user).map((include) => (
       include.model === Member && memberScopeWhere
         ? { ...include, where: memberScopeWhere, required: true }
@@ -99,13 +102,54 @@ exports.createAttendance = async (data, recordedBy, user = {}, options = {}) => 
   const member = await Member.findByPk(member_id, transaction && { transaction });
   if (!member) throw AppError.notFound("MEMBER_NOT_FOUND", "Member not found");
 
-  const existing = await Attendance.findOne({
+  const AttendanceModel = await getAttendanceModel();
+  const existing = await AttendanceModel.findOne({
     where: { service_id, member_id },
     ...(transaction && { transaction, lock: transaction.LOCK.UPDATE }),
   });
   if (existing) {
     if (existing.voided_at) {
-      throw AppError.conflict("ATTENDANCE_VOIDED", "This service check-in needs an authorized correction before it can be confirmed again");
+      if (AttendanceModel === Attendance || existing.entry_source !== "legacy" || check_in_method === "pre-reg") {
+        throw AppError.conflict("QR_ATTENDANCE_CORRECTION_REQUIRED", "This archived check-in must be restored through its authorized attendance workflow");
+      }
+      const before = {
+        voided_at: existing.voided_at,
+        voided_by: existing.voided_by,
+        void_reason: existing.void_reason,
+        checked_in_at: existing.checked_in_at,
+      };
+      const restoredAt = trustedCheckInAt || checked_in_at || new Date();
+      await existing.update({
+        check_in_method: check_in_method || "manual",
+        checked_in_at: restoredAt,
+        recorded_by: recordedBy || null,
+        voided_at: null,
+        voided_by: null,
+        void_reason: null,
+      }, transaction && { transaction });
+      await invalidateServiceFinalization(service_id, {
+        transaction,
+        actorId: recordedBy,
+        reason: "legacy_service_check_in_restored",
+      });
+      await auditLog.log({
+        userId: recordedBy,
+        action: "RESTORE_ATTENDANCE",
+        targetTable: "attendances",
+        targetId: existing.id,
+        oldValues: before,
+        newValues: { service_id, member_id, checked_in_at: restoredAt },
+      }, transaction ? { transaction } : undefined);
+      if (transaction && !internal.skipSummary) {
+        await syncServiceAttendanceSummary(service_id, transaction);
+      } else if (!transaction) {
+        try { await syncServiceAttendanceSummary(service_id); } catch (err) {
+          logger.error(err, "Failed to sync summary after restoring attendance:");
+        }
+      }
+      const restored = await exports.getAttendanceById(existing.id, user, transaction && { transaction });
+      if (idempotent) return { record: restored, created: true };
+      return restored;
     }
     if (existing.check_in_method === "pre-reg") {
       await existing.update({
@@ -201,35 +245,106 @@ exports.updateAttendance = async (id, data, user = {}) => {
   return exports.getAttendanceById(id, user);
 };
 
-// ── Delete Attendance ────────────────────────────────────────
-exports.deleteAttendance = async (id, user = {}) => {
-  const serviceId = await sequelize.transaction(async (transaction) => {
+// ── Archive a legacy service check-in ────────────────────────
+exports.archiveAttendance = async (id, user = {}, reason) => {
+  const normalizedId = Number(id);
+  if (!Number.isSafeInteger(normalizedId) || normalizedId <= 0) {
+    throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
+  }
+  const archiveReason = String(reason || "Legacy check-in archived by staff correction").trim().slice(0, 500);
+  const result = await sequelize.transaction(async (transaction) => {
     const AttendanceModel = await getAttendanceModel();
+    if (AttendanceModel === Attendance) {
+      throw new AppError(
+        "ATTENDANCE_ARCHIVE_SCHEMA_REQUIRED",
+        503,
+        "Attendance archiving is unavailable until the attendance audit fields are installed.",
+      );
+    }
     const record = await AttendanceModel.findByPk(id, {
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
     if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
-    if ((AttendanceModel !== Attendance && (record.entry_source !== "legacy" || record.voided_at))
-        || record.check_in_method === "pre-reg") {
-      throw AppError.conflict("QR_ATTENDANCE_CORRECTION_REQUIRED", "This attendance record cannot be deleted through the legacy Undo action");
+    if (record.entry_source !== "legacy" || record.check_in_method === "pre-reg") {
+      throw AppError.conflict("QR_ATTENDANCE_CORRECTION_REQUIRED", "QR and pre-registered attendance must be corrected through their attendance workflow");
     }
+    if (record.voided_at) throw AppError.conflict("ATTENDANCE_ALREADY_ARCHIVED", "This check-in is already archived");
     await assertLeaderMayUseLegacyServiceWrite(record.service_id, user, { action: "delete" });
     await ensureMemberInScope(record.member_id, user, { transaction });
 
     const currentServiceId = record.service_id;
-    await record.destroy({ transaction });
+    const before = {
+      voided_at: record.voided_at,
+      voided_by: record.voided_by,
+      void_reason: record.void_reason,
+    };
+    await record.update({
+      voided_at: new Date(),
+      voided_by: user.userId || null,
+      void_reason: archiveReason,
+    }, { transaction });
     await invalidateServiceFinalization(currentServiceId, {
       transaction,
       actorId: user.userId,
-      reason: "legacy_service_attendance_removed",
+      reason: "legacy_service_attendance_archived",
     });
-    return currentServiceId;
+    await syncServiceAttendanceSummary(currentServiceId, transaction);
+    await auditLog.log({
+      userId: user.userId,
+      action: "ARCHIVE_ATTENDANCE",
+      targetTable: "attendances",
+      targetId: record.id,
+      oldValues: before,
+      newValues: {
+        voided_at: record.voided_at,
+        voided_by: record.voided_by,
+        void_reason: archiveReason,
+        service_id: currentServiceId,
+        member_id: record.member_id,
+      },
+    }, { transaction });
+    return { id: record.id, service_id: currentServiceId, member_id: record.member_id };
   });
 
-  try { await syncServiceAttendanceSummary(serviceId); } catch (err) {
-    logger.error(err, "Failed to sync summary on delete:");
-  }
   cache.keys("dashboard:*").forEach(k => cache.del(k));
-  return { message: "Attendance record deleted successfully." };
+  return { message: "Attendance check-in archived successfully.", record: result };
 };
+
+exports.archiveAttendanceForService = async (serviceId, memberId, reason, user = {}) => {
+  const AttendanceModel = await getAttendanceModel();
+  if (AttendanceModel === Attendance) {
+    throw new AppError(
+      "ATTENDANCE_ARCHIVE_SCHEMA_REQUIRED",
+      503,
+      "Attendance archiving is unavailable until the attendance audit fields are installed.",
+    );
+  }
+  const record = await AttendanceModel.findOne({
+    where: {
+      service_id: Number(serviceId),
+      member_id: Number(memberId),
+      entry_source: "legacy",
+      voided_at: null,
+      check_in_method: { [Op.ne]: "pre-reg" },
+    },
+    order: [["checked_in_at", "DESC"], ["id", "DESC"]],
+  });
+  if (!record) {
+    const existing = await AttendanceModel.findOne({
+      where: { service_id: Number(serviceId), member_id: Number(memberId) },
+      order: [["checked_in_at", "DESC"], ["id", "DESC"]],
+    });
+    if (existing) {
+      throw AppError.conflict("QR_ATTENDANCE_CORRECTION_REQUIRED", "QR, pre-registered, or already archived attendance must be corrected through its attendance workflow");
+    }
+    throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
+  }
+  return exports.archiveAttendance(record.id, user, reason);
+};
+
+// Compatibility alias for older clients. This now archives the legacy check-in.
+exports.deleteAttendance = async (id, user = {}) => exports.archiveAttendance(id, user);
+
+exports.deleteAttendanceForService = async (serviceId, memberId, user = {}, reason) =>
+  exports.archiveAttendanceForService(serviceId, memberId, reason, user);

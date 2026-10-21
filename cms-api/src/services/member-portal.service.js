@@ -125,7 +125,10 @@ exports.updateMyProfile = async (memberId, data) => {
 exports.getMyAttendance = async (memberId) => {
   const AttendanceModel = await getAttendanceModel();
   const records = await AttendanceModel.findAll({
-    where: { member_id: memberId },
+    where: {
+      member_id: memberId,
+      ...(AttendanceModel !== Attendance && { voided_at: null }),
+    },
     include: [
       {
         model: Service,

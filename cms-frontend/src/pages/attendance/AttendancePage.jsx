@@ -163,16 +163,17 @@ export default function AttendancePage() {
 
   const handleUndoCheckIn = async (memberId, memberName) => {
     if (!(await confirm({
-      title: 'Remove check-in?',
-      message: `Remove the attendance check-in for ${memberName}?`,
-      confirmLabel: 'Remove check-in',
-      tone: 'danger',
+      title: 'Archive check-in?',
+      message: `Archive the attendance check-in for ${memberName}? It will stop counting as present, remain in the attendance history, and can be restored by a System Admin from Archives.`,
+      confirmLabel: 'Archive check-in',
     }))) return;
     try {
-      await axiosInstance.delete(`/services/${serviceId}/attendance/${memberId}`);
+      await axiosInstance.patch(`/services/${serviceId}/attendance/${memberId}/archive`, {
+        reason: 'Legacy check-in corrected by staff',
+      });
       fetchAttendance();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to undo check-in.');
+      setError(err.response?.data?.message || 'Failed to archive check-in.');
     }
   };
 
@@ -182,7 +183,9 @@ export default function AttendancePage() {
     setCheckInSuccess('');
     try {
       if (checked) {
-        await axiosInstance.delete(`/services/${serviceId}/attendance/${member.id}`);
+        await axiosInstance.patch(`/services/${serviceId}/attendance/${member.id}/archive`, {
+          reason: 'Marked absent by cell-group leader attendance correction',
+        });
         setCheckInSuccess(`${member.first_name} ${member.last_name} marked absent.`);
       } else {
         await axiosInstance.post(`/services/${serviceId}/attendance`, { member_id: member.id });
@@ -448,9 +451,10 @@ export default function AttendancePage() {
                     {!r.is_pre_reg && r.entry_source === 'legacy' && !r.is_voided && (
                       <button
                         onClick={() => handleUndoCheckIn(r.member_id, `${r.Member?.first_name} ${r.Member?.last_name}`)}
+                        aria-label={`Archive check-in for ${r.Member?.first_name} ${r.Member?.last_name}`}
                         style={styles.undoBtn}
                       >
-                        Undo
+                        Archive
                       </button>
                     )}
                     {!r.is_pre_reg && r.entry_source !== 'legacy' && (

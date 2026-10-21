@@ -26,6 +26,7 @@ router.post("/:id/responses", auth, authorize("services", "create"), validate(cr
 // ── Attendance by Service (frontend uses /:id/attendance) ───
 router.get("/:id/attendance",              auth, authorize("attendance", "read"),   ctrl.getAttendanceByService);
 router.post("/:id/attendance", auth, authorize("attendance", "create"), validate(createAttendanceSchema), ctrl.createAttendanceForService);
+router.patch("/:id/attendance/:memberId/archive", auth, authorize("attendance", "delete"), ctrl.archiveAttendanceForService);
 router.delete("/:id/attendance/:memberId", auth, authorize("attendance", "delete"), ctrl.deleteAttendanceForService);
 
 // ── Substitute Requests ──────────────────────────────────────

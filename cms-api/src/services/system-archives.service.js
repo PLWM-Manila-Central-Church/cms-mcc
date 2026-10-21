@@ -1,15 +1,18 @@
 "use strict";
 
-const { QueryTypes } = require("sequelize");
+const { Op, QueryTypes } = require("sequelize");
 const sequelize = require("../config/db");
 const auditLog = require("../helpers/auditLog.helper");
 const AppError = require("../helpers/AppError");
 const cache = require("../helpers/cache.helper");
+const { getAttendanceModel, syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
+const { invalidateServiceFinalization } = require("../modules/qr-attendance/reconciliation.service");
 const {
   User,
   Member,
   Event,
   Service,
+  Attendance,
   FinancialRecord,
   CellGroup,
   InventoryItem,
@@ -41,10 +44,15 @@ const SOURCES = Object.freeze({
   ministry_roles: { label: "Ministry role", table: "ministry_roles", model: MinistryRole, title: "name" },
   archive_categories: { label: "Archive category", table: "archive_categories", model: ArchiveCategory, title: "name" },
   finance_attachments: { label: "Receipt attachment", table: "attachments", model: Attachment, title: "file_name" },
+  attendance_records: {
+    label: "Service check-in",
+    selectSql: "SELECT 'attendance_records' AS entity_type, 'Service check-in' AS entity_label, a.id AS entity_id, CONCAT('Service check-in #', a.id, ' — ', COALESCE(NULLIF(TRIM(CONCAT(m.first_name, ' ', m.last_name)), ''), CONCAT('Member #', a.member_id)), ' — ', COALESCE(s.title, CONCAT('Service #', a.service_id))) AS title, a.voided_at AS archived_at, a.voided_by AS archived_by FROM attendances a LEFT JOIN members m ON m.id = a.member_id LEFT JOIN services s ON s.id = a.service_id WHERE a.entry_source = 'legacy' AND a.voided_at IS NOT NULL",
+  },
 });
 
 const getUnionSql = (sourceTypes = Object.keys(SOURCES)) => sourceTypes.map((type) => {
   const source = SOURCES[type];
+  if (source.selectSql) return source.selectSql;
   return `SELECT '${type}' AS entity_type, '${source.label}' AS entity_label, id AS entity_id, ${source.title} AS title, deleted_at AS archived_at, deleted_by AS archived_by FROM ${source.table} WHERE is_deleted = 1`;
 }).join(" UNION ALL ");
 
@@ -87,6 +95,44 @@ exports.restoreSystemRecord = async (type, id, restoredBy) => {
   const recordId = Number(id);
   if (!Number.isSafeInteger(recordId) || recordId <= 0) {
     throw AppError.notFound("ARCHIVED_RECORD_NOT_FOUND", "Archived record not found");
+  }
+
+  if (type === "attendance_records") {
+    const AttendanceModel = await getAttendanceModel();
+    if (AttendanceModel === Attendance) {
+      throw new AppError("ATTENDANCE_ARCHIVE_SCHEMA_REQUIRED", 503, "Attendance restoration is unavailable until the attendance audit fields are installed.");
+    }
+    const result = await sequelize.transaction(async (transaction) => {
+      const record = await AttendanceModel.findOne({
+        where: { id: recordId, entry_source: "legacy", voided_at: { [Op.ne]: null }, check_in_method: { [Op.ne]: "pre-reg" } },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!record) throw AppError.notFound("ARCHIVED_RECORD_NOT_FOUND", "Archived service check-in was not found");
+      const before = {
+        voided_at: record.voided_at,
+        voided_by: record.voided_by,
+        void_reason: record.void_reason,
+      };
+      await record.update({ voided_at: null, voided_by: null, void_reason: null }, { transaction });
+      await invalidateServiceFinalization(record.service_id, {
+        transaction,
+        actorId: restoredBy,
+        reason: "legacy_service_check_in_restored",
+      });
+      await syncServiceAttendanceSummary(record.service_id, transaction);
+      await auditLog.log({
+        userId: restoredBy,
+        action: "RESTORE_SYSTEM_ARCHIVE",
+        targetTable: "attendances",
+        targetId: recordId,
+        oldValues: before,
+        newValues: { voided_at: null, voided_by: null, void_reason: null },
+      }, { transaction });
+      return { id: recordId, type, title: `Service check-in #${recordId}` };
+    });
+    cache.keys("dashboard:*").forEach((key) => cache.del(key));
+    return { message: `${source.label} restored successfully.`, record: result };
   }
 
   const result = await sequelize.transaction(async (transaction) => {

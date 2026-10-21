@@ -231,21 +231,20 @@ exports.createAttendanceForService = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteAttendanceForService = async (req, res, next) => {
+exports.archiveAttendanceForService = async (req, res, next) => {
   try {
-    const { Attendance } = require("../models");
-    // Find the record first to get its id
-    const record = await Attendance.findOne({
-      where: { service_id: req.params.id, member_id: req.params.memberId },
-    });
-    if (!record) throw AppError.notFound("ATTENDANCE_NOT_FOUND", "Attendance record not found");
-    await ensureMemberInScope(record.member_id, req.user);
-    // FIX: route through the service layer so syncSummary fires and the
-    // attendance bar decrements correctly when Undo is clicked.
-    await attendanceService.deleteAttendance(record.id, req.user);
-    res.json({ success: true, message: "Attendance removed." });
+    const result = await attendanceService.archiveAttendanceForService(
+      req.params.id,
+      req.params.memberId,
+      req.body?.reason,
+      req.user,
+    );
+    res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
+
+// Compatibility alias for older clients; it uses the same reversible archive.
+exports.deleteAttendanceForService = exports.archiveAttendanceForService;
 
 // ── Service Responses alias (:id/responses) ─────────────────
 exports.getResponsesByServiceAlias = async (req, res, next) => {
