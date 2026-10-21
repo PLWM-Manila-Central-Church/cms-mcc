@@ -224,6 +224,14 @@ const createAndOpenSession = async (page, targetType, targetId, title, sessionKe
   assert.ok(Number.isSafeInteger(sessionId) && sessionId > 0, `No ${targetType} session was selected after creation`);
   await page.getByRole('button', { name: 'Open Check-in', exact: true }).click();
   await page.getByText('Attendance session opened.', { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+  await page.waitForFunction((id) => {
+    const select = document.querySelector('#qr-session-select');
+    const option = [...(select?.options || [])].find((item) => item.value === String(id));
+    return option?.textContent?.includes('open · Check-in open · Activity starts');
+  }, sessionId, { timeout: 30_000 });
+  const selectedOptionText = await sessionSelect.locator('option:checked').textContent();
+  assert.match(selectedOptionText || '', /open · Check-in open · Activity starts/,
+    `An open session should show its effective check-in window and activity start in the session picker. Got: ${selectedOptionText}`);
   return sessionId;
 };
 

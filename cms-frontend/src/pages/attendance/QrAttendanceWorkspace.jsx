@@ -8,6 +8,16 @@ import QrScannerDialog from '../../components/attendance/QrScannerDialog';
 import '../../components/attendance/qrAttendance.css';
 
 const apiError = (error, fallback) => error.response?.data?.message || error.response?.data?.error?.message || fallback;
+const getCheckInWindowState = (session, now) => {
+  if (session?.status !== 'open') return '';
+  if (!session.check_in_opens_at || !session.check_in_closes_at) return 'unavailable';
+  const opensAt = new Date(session.check_in_opens_at).getTime();
+  const closesAt = new Date(session.check_in_closes_at).getTime();
+  if (!Number.isFinite(opensAt) || !Number.isFinite(closesAt) || opensAt > closesAt) return 'unavailable';
+  if (now < opensAt) return 'upcoming';
+  if (now > closesAt) return 'closed';
+  return 'open';
+};
 const toLocalInput = (date) => {
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
@@ -586,12 +596,13 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
   const sessionTarget = session?.target || {};
   const windowOpensAt = session?.check_in_opens_at ? new Date(session.check_in_opens_at).getTime() : Number.NaN;
   const windowClosesAt = session?.check_in_closes_at ? new Date(session.check_in_closes_at).getTime() : Number.NaN;
-  const canCaptureAttendance = Boolean(session?.status === 'open' && Number.isFinite(windowOpensAt) && Number.isFinite(windowClosesAt) && currentTime >= windowOpensAt && currentTime <= windowClosesAt);
-  const checkInWindowMessage = !session || session.status !== 'open' ? ''
-    : !Number.isFinite(windowOpensAt) || !Number.isFinite(windowClosesAt) ? 'Check-in window times are unavailable. Contact an administrator.'
-      : currentTime < windowOpensAt ? `Check-in opens ${new Date(windowOpensAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: session.time_zone || 'Asia/Manila' })}.`
-        : currentTime > windowClosesAt ? `Check-in ended ${new Date(windowClosesAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: session.time_zone || 'Asia/Manila' })}. Scanning and manual check-in are closed.`
-          : '';
+  const checkInWindowState = getCheckInWindowState(session, currentTime);
+  const canCaptureAttendance = Boolean(session?.status === 'open' && checkInWindowState === 'open');
+  const checkInWindowMessage = checkInWindowState === 'upcoming'
+    ? `Check-in opens ${new Date(windowOpensAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: session.time_zone || 'Asia/Manila' })}.`
+    : checkInWindowState === 'closed'
+      ? `Check-in ended ${new Date(windowClosesAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: session.time_zone || 'Asia/Manila' })}. Scanning and manual check-in are closed.`
+      : checkInWindowState === 'unavailable' ? 'Check-in window times are unavailable. Contact an administrator.' : '';
 
   return (
     <div className="qr-workspace mcc-module mcc-module-qr">
@@ -623,7 +634,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
               if (!nextId) loadSessionData('');
             }}>
               <option value="">Select a session</option>
-              {sessions.map((row) => <option key={row.id} value={row.id}>{row.event_id ? 'Event' : 'Service'}: {row.event?.title || row.service?.title || row.target?.title || `Activity #${row.event_id || row.service_id}`} · {(row.event?.start_date || row.service?.service_date) && `${new Date((row.event?.start_date || row.service?.service_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-PH', { dateStyle: 'medium' })} · `}{row.title} · {row.status} · Check-in {new Date(row.starts_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: row.time_zone || 'Asia/Manila' })}</option>)}
+              {sessions.map((row) => <option key={row.id} value={row.id}>{row.event_id ? 'Event' : 'Service'}: {row.event?.title || row.service?.title || row.target?.title || `Activity #${row.event_id || row.service_id}`} · {(row.event?.start_date || row.service?.service_date) && `${new Date((row.event?.start_date || row.service?.service_date).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-PH', { dateStyle: 'medium' })} · `}{row.title} · {row.status}{row.status === 'open' ? ` · Check-in ${getCheckInWindowState(row, currentTime)}` : ''} · Activity starts {new Date(row.starts_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: row.time_zone || 'Asia/Manila' })}</option>)}
             </select>
           </label>
           {canConfigure && targetType && targetId && <span className="qr-state-pill">Session setup</span>}
