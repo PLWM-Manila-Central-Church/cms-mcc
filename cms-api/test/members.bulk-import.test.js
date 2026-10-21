@@ -5,7 +5,7 @@ jest.mock("../src/helpers/auditLog.helper", () => ({ log: jest.fn() }));
 jest.mock("../src/helpers/logger", () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
 
 const membersService = require("../src/services/members.service");
-const { CellGroup, MinistryGroup } = require("../src/models");
+const { CellGroup, MinistryGroup, Member } = require("../src/models");
 
 describe("bulk member roster import mapping", () => {
   afterEach(() => jest.restoreAllMocks());
@@ -76,5 +76,20 @@ describe("bulk member roster import mapping", () => {
 
     expect(result).toMatchObject({ created: 0, skipped: 1, errors: [{ row: 2, error: "VALIDATION" }] });
     expect(create).not.toHaveBeenCalled();
+  });
+
+  test("adds an ID tiebreaker so same-name members paginate consistently", async () => {
+    const find = jest.spyOn(Member, "findAndCountAll").mockResolvedValue({ count: 2, rows: [] });
+
+    await membersService.getAllMembers(
+      { page: 2, limit: 20 },
+      { userId: 9, roleName: "System Admin" },
+    );
+
+    expect(find).toHaveBeenCalledWith(expect.objectContaining({
+      order: [["last_name", "ASC"], ["first_name", "ASC"], ["id", "ASC"]],
+      limit: 20,
+      offset: 20,
+    }));
   });
 });

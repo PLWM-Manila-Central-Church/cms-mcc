@@ -148,7 +148,9 @@ exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_grou
   const { count, rows } = await Member.findAndCountAll({
     where,
     include: memberIncludes,
-    order: [["last_name", "ASC"], ["first_name", "ASC"]],
+    // Stable primary-key tiebreaking prevents overlapping/skipped rows when
+    // duplicate names land on adjacent pagination boundaries.
+    order: [["last_name", "ASC"], ["first_name", "ASC"], ["id", "ASC"]],
     limit: parseInt(limit),
     offset,
     distinct: true,
