@@ -9,6 +9,18 @@ const { Service, ServiceAttendanceSummary, ServiceResponse, Attendance, User } =
 const { syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
 const { isScopedLeader } = require("../helpers/scopedLeader.helper");
 const AppError = require("../helpers/AppError");
+const {
+  AttendanceBatch,
+  AttendanceBatchItem,
+  AttendanceExpectedMember,
+  EventAttendance,
+  QrAttendanceSession,
+} = require("../modules/qr-attendance/models");
+const {
+  AttendanceException,
+  AttendanceFollowUp,
+  OutreachSessionPolicy,
+} = require("../modules/outreach/models");
 
 const SERVICE_STATUS_FLOW = Object.freeze({
   draft: ["published", "cancelled"],
@@ -192,11 +204,111 @@ exports.updateService = async (id, data, updatedBy) => {
 
 // ── Delete Service ───────────────────────────────────────────
 exports.deleteService = async (id, deletedBy) => {
-  const service = await Service.findByPk(id);
-  if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
-  // Completed services can be deleted (admin request)
-  await service.destroy();
-  auditLog.log({ userId: deletedBy, action: "DELETE_SERVICE", targetTable: "services", targetId: id });
+  await sequelize.transaction(async (transaction) => {
+    const service = await Service.findByPk(id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!service) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
+
+    const sessions = await QrAttendanceSession.findAll({
+      where: { service_id: service.id },
+      attributes: ["id"],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    const sessionIds = sessions.map((session) => session.id);
+    let batchIds = [];
+
+    if (sessionIds.length) {
+      const followUps = await AttendanceFollowUp.findAll({
+        where: {
+          [Op.or]: [
+            { episode_start_session_id: { [Op.in]: sessionIds } },
+            { trigger_session_id: { [Op.in]: sessionIds } },
+          ],
+        },
+        attributes: ["id"],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (followUps.length) {
+        throw AppError.conflict(
+          "SERVICE_HAS_FOLLOW_UP_HISTORY",
+          "Resolve or archive linked attendance follow-ups before deleting this service.",
+        );
+      }
+
+      const batches = await AttendanceBatch.findAll({
+        where: { session_id: { [Op.in]: sessionIds } },
+        attributes: ["id"],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      batchIds = batches.map((batch) => batch.id);
+
+      // These tables use RESTRICT foreign keys. Remove the session-owned QR
+      // rows in dependency order so a failed cleanup rolls back as one unit.
+      if (batchIds.length) {
+        await AttendanceBatchItem.destroy({
+          where: { batch_id: { [Op.in]: batchIds } },
+          transaction,
+        });
+      }
+      await EventAttendance.destroy({
+        where: { session_id: { [Op.in]: sessionIds } },
+        transaction,
+      });
+      await AttendanceExpectedMember.destroy({
+        where: { session_id: { [Op.in]: sessionIds } },
+        transaction,
+      });
+      await OutreachSessionPolicy.destroy({
+        where: { session_id: { [Op.in]: sessionIds } },
+        transaction,
+      });
+      await AttendanceException.destroy({
+        where: { session_id: { [Op.in]: sessionIds } },
+        transaction,
+      });
+    }
+
+    // QR service check-ins live in the existing attendances table and can
+    // restrict deletion of the batch that recorded them.
+    await Attendance.destroy({
+      where: { service_id: service.id },
+      transaction,
+    });
+
+    if (batchIds.length) {
+      await AttendanceBatch.destroy({
+        where: { id: { [Op.in]: batchIds } },
+        transaction,
+      });
+    }
+    if (sessionIds.length) {
+      await QrAttendanceSession.destroy({
+        where: { id: { [Op.in]: sessionIds } },
+        transaction,
+      });
+    }
+
+    await ServiceResponse.destroy({
+      where: { service_id: service.id },
+      transaction,
+    });
+    await ServiceAttendanceSummary.destroy({
+      where: { service_id: service.id },
+      transaction,
+    });
+    await service.destroy({ transaction });
+    await auditLog.log({
+      userId: deletedBy,
+      action: "DELETE_SERVICE",
+      targetTable: "services",
+      targetId: id,
+    }, { transaction });
+  });
   return { message: "Service deleted successfully." };
 };
 

@@ -186,7 +186,7 @@ export default function ServicesPage() {
   const handleDeleteService = async (service) => {
     if (!(await confirm({
       title: 'Delete service?',
-      message: `Delete "${service.title}"? This action cannot be undone.`,
+      message: `Delete "${service.title}"? This permanently removes its attendance records, QR sessions, and roster responses. This action cannot be undone.`,
       confirmLabel: 'Delete service',
       tone: 'danger',
     }))) return;
