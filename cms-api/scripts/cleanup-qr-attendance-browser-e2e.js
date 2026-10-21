@@ -135,7 +135,19 @@ const run = async () => {
     });
     const userIds = users.map((user) => user.id);
     fixtureUserIds = userIds;
-    assert.equal(users.length, userEmails.length, "Fixture user scope changed before cleanup");
+    const existingFixtureEmails = new Set(users.map((user) => user.email));
+    const missingFixtureEmails = userEmails.filter((email) => !existingFixtureEmails.has(email));
+    const deferredLeaderEmail = process.env.QR_E2E_REUSE_LEADER === "true" ? null : fixture.unifiedLeader?.email;
+    const allowedMissingFixtureEmails = deferredLeaderEmail
+      && userEmails.includes(deferredLeaderEmail)
+      && !existingFixtureEmails.has(deferredLeaderEmail)
+      ? [deferredLeaderEmail]
+      : [];
+    assert.deepEqual(
+      missingFixtureEmails,
+      allowedMissingFixtureEmails,
+      "Fixture user scope changed before cleanup",
+    );
 
     const fixtureMembers = await Member.unscoped().findAll({
       where: { id: { [Op.in]: memberIds } },

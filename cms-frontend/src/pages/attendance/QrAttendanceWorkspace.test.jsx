@@ -78,6 +78,7 @@ describe('QR attendance workspace role flows', () => {
   it('explains an expired check-in window and hides production capture controls', async () => {
     currentSession = { ...session, check_in_opens_at: '2020-01-01T00:00:00.000Z', check_in_closes_at: '2020-01-02T00:00:00.000Z' };
     renderWorkspace();
+    expect(await screen.findByRole('option', { name: /Main Gathering · open · Check-in closed.*Activity starts/ })).toBeInTheDocument();
     expect(await screen.findByText(/Check-in ended/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Scan Member QR' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Manual member lookup' })).not.toBeInTheDocument();
@@ -156,7 +157,7 @@ describe('QR attendance workspace role flows', () => {
     expect(await screen.findByText('Attendance session opened.')).toBeInTheDocument();
     await waitFor(() => expect(fixture.post).toHaveBeenCalledWith('/qr-attendance/sessions/2/open', {}));
     expect(await screen.findByText('open', { selector: '.qr-session-status' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Sunday Morning · open/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Sunday Morning · open · Check-in open/ })).toBeInTheDocument();
   });
 
   it('preserves rapid schedule field changes when creating a session', async () => {
