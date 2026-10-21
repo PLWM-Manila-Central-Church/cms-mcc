@@ -7,10 +7,25 @@ jest.mock("../src/config/db", () => ({
 }));
 jest.mock("../src/models", () => ({
   Service: { findByPk: jest.fn(async () => mockState.service) },
-  ServiceAttendanceSummary: {},
-  ServiceResponse: { findAll: jest.fn(async () => mockState.reservations) },
-  Attendance: {},
+  ServiceAttendanceSummary: { destroy: jest.fn() },
+  ServiceResponse: { findAll: jest.fn(async () => mockState.reservations), destroy: jest.fn() },
+  Attendance: { destroy: jest.fn() },
   User: { findAll: jest.fn(async () => []) },
+}));
+jest.mock("../src/modules/qr-attendance/models", () => ({
+  AttendanceBatch: {
+    findAll: jest.fn(async () => mockState.batches),
+    destroy: jest.fn(),
+  },
+  AttendanceBatchItem: { destroy: jest.fn() },
+  AttendanceExpectedMember: { destroy: jest.fn() },
+  EventAttendance: { destroy: jest.fn() },
+  QrAttendanceSession: { findAll: jest.fn(async () => mockState.sessions), destroy: jest.fn() },
+}));
+jest.mock("../src/modules/outreach/models", () => ({
+  AttendanceException: { destroy: jest.fn() },
+  AttendanceFollowUp: { findAll: jest.fn(async () => mockState.followUps) },
+  OutreachSessionPolicy: { destroy: jest.fn() },
 }));
 jest.mock("../src/helpers/auditLog.helper", () => ({ log: jest.fn() }));
 jest.mock("../src/helpers/logger", () => ({ error: jest.fn() }));
@@ -18,8 +33,16 @@ jest.mock("../src/services/notifications.service", () => ({ bulkCreateNotificati
 jest.mock("../src/helpers/attendanceSummary.helper", () => ({ syncServiceAttendanceSummary: jest.fn(async () => {}) }));
 jest.mock("../src/helpers/scopedLeader.helper", () => ({ isScopedLeader: jest.fn(() => false) }));
 
-const { Service, ServiceResponse } = require("../src/models");
+const { Attendance, Service, ServiceAttendanceSummary, ServiceResponse } = require("../src/models");
 const auditLog = require("../src/helpers/auditLog.helper");
+const {
+  AttendanceBatch,
+  AttendanceBatchItem,
+  AttendanceExpectedMember,
+  EventAttendance,
+  QrAttendanceSession,
+} = require("../src/modules/qr-attendance/models");
+const { AttendanceException, AttendanceFollowUp, OutreachSessionPolicy } = require("../src/modules/outreach/models");
 const service = require("../src/services/services.service");
 
 describe("service details, lifecycle, and capacity updates", () => {
@@ -27,6 +50,9 @@ describe("service details, lifecycle, and capacity updates", () => {
     jest.clearAllMocks();
     mockState.transaction = { LOCK: { UPDATE: "UPDATE" } };
     mockState.reservations = [];
+    mockState.sessions = [];
+    mockState.batches = [];
+    mockState.followUps = [];
     mockState.service = {
       id: 12,
       title: "Sunday Service",
@@ -78,5 +104,53 @@ describe("service details, lifecycle, and capacity updates", () => {
     expect(mockState.service.destroy).toHaveBeenCalled();
     mockState.service = null;
     await expect(service.deleteService(12, 8)).rejects.toMatchObject({ code: "RECORD_NOT_FOUND", status: 404 });
+  });
+
+  test("removes QR dependencies in foreign-key order inside the service transaction", async () => {
+    mockState.sessions = [{ id: 31 }, { id: 32 }];
+    mockState.batches = [{ id: 41 }];
+
+    await expect(service.deleteService(12, 8))
+      .resolves.toMatchObject({ message: "Service deleted successfully." });
+
+    const batchItemOrder = AttendanceBatchItem.destroy.mock.invocationCallOrder[0];
+    const attendanceOrder = Attendance.destroy.mock.invocationCallOrder[0];
+    const batchOrder = AttendanceBatch.destroy.mock.invocationCallOrder[0];
+    const sessionOrder = QrAttendanceSession.destroy.mock.invocationCallOrder[0];
+    const serviceOrder = mockState.service.destroy.mock.invocationCallOrder[0];
+
+    expect(batchItemOrder).toBeLessThan(attendanceOrder);
+    expect(attendanceOrder).toBeLessThan(batchOrder);
+    expect(batchOrder).toBeLessThan(sessionOrder);
+    expect(sessionOrder).toBeLessThan(serviceOrder);
+    expect(EventAttendance.destroy).toHaveBeenCalled();
+    expect(AttendanceExpectedMember.destroy).toHaveBeenCalled();
+    expect(OutreachSessionPolicy.destroy).toHaveBeenCalled();
+    expect(AttendanceException.destroy).toHaveBeenCalled();
+    expect(ServiceResponse.destroy).toHaveBeenCalledWith({
+      where: { service_id: 12 },
+      transaction: mockState.transaction,
+    });
+    expect(ServiceAttendanceSummary.destroy).toHaveBeenCalledWith({
+      where: { service_id: 12 },
+      transaction: mockState.transaction,
+    });
+    expect(auditLog.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "DELETE_SERVICE", targetId: 12 }),
+      { transaction: mockState.transaction },
+    );
+  });
+
+  test("blocks service deletion while linked attendance follow-ups still need the sessions", async () => {
+    mockState.sessions = [{ id: 31 }];
+    mockState.followUps = [{ id: 72 }];
+
+    await expect(service.deleteService(12, 8))
+      .rejects.toMatchObject({ code: "SERVICE_HAS_FOLLOW_UP_HISTORY", status: 409 });
+
+    expect(mockState.service.destroy).not.toHaveBeenCalled();
+    expect(Attendance.destroy).not.toHaveBeenCalled();
+    expect(AttendanceBatchItem.destroy).not.toHaveBeenCalled();
+    expect(QrAttendanceSession.destroy).not.toHaveBeenCalled();
   });
 });
