@@ -146,7 +146,7 @@ export default function AnalyticsReportPage() {
         <div className="analytics-report-actions">
           <button type="button" onClick={downloadCsv} disabled={!data || loading} style={{ ...S.download, opacity: !data || loading ? 0.6 : 1 }}>Download CSV</button>
           <button className="analytics-report-print-button" type="button" onClick={() => window.print()} disabled={!data || loading}>Print / Save PDF</button>
-          <small className="analytics-report-export-note">CSV includes church, scope, period, and units. Print / Save PDF preserves the logo and color theme.</small>
+          <small className="analytics-report-export-note">Excel-friendly five-column CSV with clear units and notes. Print / Save PDF preserves the logo and color theme.</small>
           {downloadNotice && <span className="analytics-report-download-notice" role="status" aria-live="polite">{downloadNotice}</span>}
         </div>
       </header>
