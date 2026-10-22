@@ -289,10 +289,10 @@ exports.createUsage = async (req, res, next) => {
   }
 };
 
-exports.deleteUsage = async (req, res, next) => {
+exports.reverseUsage = async (req, res, next) => {
   try {
     if (forbidScopedInventoryManage(req, res)) return;
-    const data = await inventoryService.deleteUsage(req.params.id, req.user.userId);
+    const data = await inventoryService.reverseUsage(req.params.id, req.user.userId);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

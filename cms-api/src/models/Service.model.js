@@ -13,9 +13,10 @@ const Service = sequelize.define(
     },
     title: { type: DataTypes.STRING(150), allowNull: false },
     service_date: { type: DataTypes.DATEONLY, allowNull: false },
-    service_time: { type: DataTypes.TIME, allowNull: false },
-    capacity: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    total_parking_slots: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    service_time: { type: DataTypes.TIME, allowNull: true },
+    capacity: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    total_parking_slots: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    event_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, unique: true },
     response_deadline: { type: DataTypes.DATE, allowNull: true },
     status: {
       type: DataTypes.ENUM("draft", "published", "cancelled", "completed"),

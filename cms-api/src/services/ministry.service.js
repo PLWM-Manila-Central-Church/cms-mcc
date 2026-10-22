@@ -197,22 +197,28 @@ exports.createAssignment = async (data, createdBy, user = {}) => {
     if (!membership) throw AppError.forbidden("You can only assign members in your ministry roster");
   }
 
-  const existing = await MinistryAssignment.findOne({
-    where: { service_id, member_id, ministry_role_id },
+  const existing = await MinistryAssignment.unscoped().findOne({
+    where: { service_id, member_id },
   });
-  if (existing)
+  if (existing && Number(existing.is_deleted) === 0)
     throw {
       status: 409,
       message: "Member already assigned to this role for this service",
     };
 
-  const assignment = await MinistryAssignment.create({
+  const assignmentData = {
     service_id,
     member_id,
     ministry_role_id,
     confirmed: 0,
     substitute_requested: 0,
-  });
+    is_deleted: 0,
+    deleted_at: null,
+    deleted_by: null,
+  };
+  const assignment = existing
+    ? await existing.update(assignmentData)
+    : await MinistryAssignment.create(assignmentData);
 
   const created = await exports.getAssignmentById(assignment.id, user.leadsMinistryId);
   auditLog.log({ userId: createdBy, action: "CREATE_MINISTRY_ASSIGNMENT", targetTable: "ministry_assignments", targetId: created.id });
@@ -270,7 +276,7 @@ exports.updateAssignment = async (id, data, updatedBy, user = {}) => {
 };
 
 // ── Delete Assignment ────────────────────────────────────────
-exports.deleteAssignment = async (id, deletedBy, user = {}) => {
+exports.archiveAssignment = async (id, deletedBy, user = {}) => {
   const assignment = await MinistryAssignment.findByPk(id);
   if (!assignment)
     throw AppError.notFound("RECORD_NOT_FOUND", "Ministry assignment not found");
@@ -278,10 +284,11 @@ exports.deleteAssignment = async (id, deletedBy, user = {}) => {
     throw AppError.forbidden("This assignment is outside your ministry");
   }
 
-  await assignment.destroy();
-  auditLog.log({ userId: deletedBy, action: "DELETE_MINISTRY_ASSIGNMENT", targetTable: "ministry_assignments", targetId: id });
-  return { message: "Ministry assignment deleted successfully." };
+  await assignment.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy });
+  auditLog.log({ userId: deletedBy, action: "ARCHIVE_MINISTRY_ASSIGNMENT", targetTable: "ministry_assignments", targetId: id });
+  return { message: "Ministry assignment archived and retained in Archives." };
 };
+exports.deleteAssignment = exports.archiveAssignment;
 
 // ── Ministry Leader: Get Pending Substitutes ───────────────────
 exports.getPendingSubstitutes = async (leadsMinistryId) => {
@@ -378,10 +385,13 @@ exports.addMemberToMinistry = async (ministryRoleId, memberId, addedBy) => {
   const member = await Member.findByPk(memberId);
   if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
-  const existing = await MinistryMembership.findOne({
-    where: { member_id: memberId },
-  });
-  if (existing) throw AppError.conflict("DUPLICATE", "Member is already assigned to a ministry");
+  const existing = await MinistryMembership.unscoped().findOne({ where: { member_id: memberId } });
+  if (existing && Number(existing.is_deleted) === 0) throw AppError.conflict("DUPLICATE", "Member is already assigned to a ministry");
+
+  if (existing) {
+    await existing.update({ is_deleted: 0, deleted_at: null, deleted_by: null, ministry_role_id: ministryRoleId, added_by: addedBy });
+    return existing;
+  }
 
   return await MinistryMembership.create({
     ministry_role_id: ministryRoleId,
@@ -391,11 +401,13 @@ exports.addMemberToMinistry = async (ministryRoleId, memberId, addedBy) => {
 };
 
 // ── Ministry Roster — Remove Member ─────────────────────────
-exports.removeMemberFromMinistry = async (ministryRoleId, memberId) => {
+exports.archiveMemberFromMinistry = async (ministryRoleId, memberId, deletedBy) => {
   const row = await MinistryMembership.findOne({
     where: { ministry_role_id: ministryRoleId, member_id: memberId },
   });
   if (!row) throw AppError.notFound("RECORD_NOT_FOUND", "Member is not in this ministry roster");
-  await row.destroy();
-  return { message: "Member removed from ministry roster." };
+  await row.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy });
+  auditLog.log({ userId: deletedBy, action: "ARCHIVE_MINISTRY_MEMBERSHIP", targetTable: "ministry_memberships", targetId: row.id });
+  return { message: "Ministry membership archived and retained in Archives." };
 };
+exports.removeMemberFromMinistry = exports.archiveMemberFromMinistry;

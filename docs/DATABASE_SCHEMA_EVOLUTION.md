@@ -51,6 +51,10 @@ Use this sequence when a schema change affects persisted data or overlaps deploy
 
 For an unused nullable field with no compatibility risk, a single additive migration may be sufficient. Do not apply a multi-release pattern mechanically.
 
+## Pending calendar and retention migration (2026-10-22)
+
+`20261022000001-retain-workflow-records-and-calendar-services.js` is a forward-only application change until it is run against isolated TiDB QA. It adds archive metadata to notifications, emergency contacts, ministry assignments/memberships, and QR batch attendees; creates `event_image_archives` so replaced or removed photos remain restorable; and links one service to an event. Event and service time/capacity/parking fields can remain null when the calendar does not supply those values. Do not run it against `church_cms` until the QA migration and restore flows pass.
+
 ## Current cutover register
 
 | Area | Current state | Safe evolution rule |
@@ -76,3 +80,14 @@ For an unused nullable field with no compatibility risk, a single additive migra
 ## Current baseline
 
 The 2026-10-11 UTC isolated QA catalog contains 58 base tables, 527 columns, 290 indexes, 128 foreign keys, 626 aggregate rows, and 99 applied migrations. The model/live name and supported type comparison is clean, and 39 targeted compatibility checks pass. These figures describe QA only and must be refreshed before a future migration or release; they are not production capacity metrics. The row count includes synthetic login/session history created during browser verification and was refreshed after the Admin mobile route sweep.
+
+## Finance Expenses follow-up (2026-10-22)
+
+The income-only scope was superseded by the user's follow-up request to restore expense recording. The existing income and expense tables remain separate. New expense entries use category, date, amount, payment method, optional description and receipts; they do not select or assign a finance account. The `account_id` columns on `expense_categories` and `expenses` are nullable for new account-free rows. Existing account links are preserved for history and reversible restoration.
+
+- `20261022000002-restore-expenses-with-reversible-archives.js` adds archive metadata to funds, accounts, expense categories and expenses. Nothing is purged.
+- `20261022000003-add-finance-archive-permission.js` grants Finance Team the dedicated `finance:archive` action; System Admin remains the restore authority.
+- `20261022000004-remove-account-assignment-from-expenses.js` makes legacy account links optional. Its forward-only rollback prevents new account-free records from being made invalid.
+- Analytics and CSV reports include received income, expenses and net balance for the selected week, month, year or custom range.
+
+The 2026-10-04 TiDB report inspected an isolated `church_cms` branch and found the newer expense tables empty at that time. That snapshot does not establish current production row counts; production has not been used for synthetic expense testing.

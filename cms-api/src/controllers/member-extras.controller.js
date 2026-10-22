@@ -30,9 +30,9 @@ exports.updateEmergencyContact = async (req, res, next) => {
   }
 };
 
-exports.deleteEmergencyContact = async (req, res, next) => {
+exports.archiveEmergencyContact = async (req, res, next) => {
   try {
-    const data = await memberExtrasService.deleteEmergencyContact(req.params.id);
+    const data = await memberExtrasService.archiveEmergencyContact(req.params.id, req.user.userId);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

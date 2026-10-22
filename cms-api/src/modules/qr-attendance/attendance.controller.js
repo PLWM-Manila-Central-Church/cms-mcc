@@ -266,9 +266,9 @@ exports.addBatchItem = async (req, res, next) => {
   try { respond(res, await batches.addDraftItem(req.params.batchId, req.body, req.user), 201); } catch (error) { next(error); }
 };
 
-exports.removeBatchItem = async (req, res, next) => {
+exports.archiveBatchItem = async (req, res, next) => {
   try {
-    respond(res, await batches.removeDraftItem(
+    respond(res, await batches.archiveDraftItem(
       req.params.batchId, req.params.memberId, req.body.expected_revision, req.user,
     ));
   } catch (error) { next(error); }

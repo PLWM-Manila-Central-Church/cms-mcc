@@ -30,7 +30,6 @@ router.put("/:id", auth, authorize("members", "update"), validate(updateMemberSc
 router.post("/:id/photo", auth, authorize("members", "update"), requireDurableUploadStorage, profileUpload.single("photo"), ctrl.uploadMemberPhoto);
 router.patch("/:id/unassign-scope", auth, authorize("scope_assignments", "manage"), ctrl.unassignMemberFromScope);
 router.patch("/:id/archive", auth, authorize("members", "delete"), ctrl.archiveMember);
-router.delete("/:id", auth, authorize("members", "delete"), ctrl.deleteMember);
 router.post("/bulk", auth, authorize("members", "create"), csvUpload.single("file"), ctrl.bulkCreateMembers);
 router.post("/:id/link-account", auth, authorize("members", "update"), validate(linkMemberAccountSchema), ctrl.linkMemberAccount);
 

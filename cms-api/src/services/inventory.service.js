@@ -615,8 +615,8 @@ exports.createUsage = async (data, usedBy) => {
   return usage;
 };
 
-// ── Delete Usage Record ──────────────────────────────────────
-exports.deleteUsage = async (id, deletedBy) => {
+// ── Reverse Usage Record ─────────────────────────────────────
+exports.reverseUsage = async (id, reversedBy) => {
   let statusChange = null;
   await sequelize.transaction(async (transaction) => {
     const usage = await InventoryUsage.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
@@ -628,8 +628,8 @@ exports.deleteUsage = async (id, deletedBy) => {
     const nextQuantity = Number(item.quantity) + Number(usage.quantity_used);
     const nextStatus = deriveInventoryStatus({ quantity: nextQuantity, low_stock_threshold: item.low_stock_threshold, status: previousStatus });
     await item.update({ quantity: nextQuantity, status: nextStatus }, { transaction });
-    await usage.update({ is_reversed: 1, reversed_at: new Date(), reversed_by: deletedBy }, { transaction });
-    await auditLog.log({ userId: deletedBy, action: "REVERSE_INVENTORY_USAGE", targetTable: "inventory_usage", targetId: id }, { transaction });
+    await usage.update({ is_reversed: 1, reversed_at: new Date(), reversed_by: reversedBy }, { transaction });
+    await auditLog.log({ userId: reversedBy, action: "REVERSE_INVENTORY_USAGE", targetTable: "inventory_usage", targetId: id }, { transaction });
     if (nextStatus !== previousStatus) {
       statusChange = { id: item.id, name: item.name, unit: item.unit, quantity: nextQuantity, status: nextStatus };
     }

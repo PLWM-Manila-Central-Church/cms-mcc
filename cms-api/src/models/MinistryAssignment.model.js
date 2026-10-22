@@ -20,8 +20,12 @@ const MinistryAssignment = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+    deleted_at: { type: DataTypes.DATE, allowNull: true },
+    deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   },
-  { tableName: "ministry_assignments", timestamps: true, underscored: true },
+  { tableName: "ministry_assignments", timestamps: true, underscored: true,
+    defaultScope: { where: { is_deleted: 0 } }, scopes: { withDeleted: {} } },
 );
 
 module.exports = MinistryAssignment;

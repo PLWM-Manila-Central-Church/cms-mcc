@@ -6,7 +6,7 @@ const cache = require("../helpers/cache.helper");
 const { getAttendanceModel } = require("../helpers/attendanceSummary.helper");
 const dateOnlyInTimezone = require("../helpers/dateOnlyInTimezone");
 const {
-  Member, FinancialRecord, FinancialCategory, Service, Event,
+  Member, FinancialRecord, FinancialCategory, Expense, Service, Event,
   InventoryItem, InventoryRequest, AuditLog, User,
   ArchiveRecord, InvitedMember, MinistryMembership, MinistryEventInvite,
   Attendance, CellGroup,
@@ -174,8 +174,10 @@ exports.getStats = async ({
   if (cached) return cached;
   const AttendanceModel = roleName === "Registration Team" ? await getAttendanceModel() : Attendance;
 
-  const financeWhere = { transaction_date: { [Op.gte]: thisMonth } };
+  const financeWhere = { is_deleted: 0, transaction_date: { [Op.gte]: thisMonth } };
   if (isMember && memberId) financeWhere.member_id = memberId;
+  const recentFinanceWhere = { is_deleted: 0, ...(isMember && memberId ? { member_id: memberId } : {}) };
+  const canSeeFinanceDetails = ["System Admin", "Pastor", "Finance Team"].includes(roleName);
 
   // Build member-appropriate aggregates: Members see scoped data, roles see global
   const leaderMemberWhere = isUnifiedLeader ? await getMemberScopeWhere(user) : null;
@@ -197,16 +199,19 @@ exports.getStats = async ({
       ]).then(([t, a, n]) => ({ total: t, active: a, newThisMonth: n }));
 
   const [
-    totalThisMonth, recentRecords,
+    totalThisMonth, totalExpenseThisMonth, recentRecords,
     upcomingServices,
     upcomingEvents,
     pendingRequests, lowStock, recentActivity,
   ] = await Promise.all([
     isUnifiedLeader ? Promise.resolve(0) : FinancialRecord.sum("amount", { where: financeWhere }).then(v => v || 0),
+    canSeeFinanceDetails
+      ? Expense.sum("amount", { where: { is_deleted: 0, date: { [Op.gte]: thisMonth } } }).then((value) => value || 0)
+      : Promise.resolve(0),
     isUnifiedLeader ? Promise.resolve([]) : FinancialRecord.findAll({
+      where: recentFinanceWhere,
       order: [["transaction_date", "DESC"]],
       limit: 5,
-      ...(isMember && memberId ? { where: { member_id: memberId } } : {}),
       include: [
         { model: Member,            attributes: ["id", "first_name", "last_name"], required: false },
         { model: FinancialCategory, as: "category", attributes: ["id", "name"],   required: false },
@@ -331,7 +336,12 @@ exports.getStats = async ({
 
   const result = {
     members:       memberCounts,
-    finance:       { totalThisMonth, recentRecords },
+    finance: {
+      totalThisMonth,
+      totalExpenseThisMonth,
+      netThisMonth: Number(totalThisMonth || 0) - Number(totalExpenseThisMonth || 0),
+      recentRecords,
+    },
     services:      { upcoming: upcomingServices },
     events:        { upcoming: upcomingEvents },
     inventory:     { pendingRequests, lowStock },

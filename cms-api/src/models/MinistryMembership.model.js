@@ -23,12 +23,17 @@ const MinistryMembership = sequelize.define(
       type:      DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
     },
+    is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+    deleted_at: { type: DataTypes.DATE, allowNull: true },
+    deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   },
   {
     tableName:  "ministry_memberships",
     timestamps: true,
     underscored: true,
     updatedAt:  false,
+    defaultScope: { where: { is_deleted: 0 } },
+    scopes: { withDeleted: {} },
     indexes: [
       { fields: ["ministry_role_id"], name: "idx_mm_ministry_role" },
     ],

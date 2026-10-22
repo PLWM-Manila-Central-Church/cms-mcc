@@ -29,7 +29,7 @@ const RESPONSE_META = {
 };
 
 const blankServiceForm = () => ({
-  title: '', service_date: '', service_time: '',
+  title: '', service_date: '', service_time: '', event_id: '',
   capacity: '', total_parking_slots: '', response_deadline: '', status: 'draft',
 });
 
@@ -43,6 +43,7 @@ export default function ServicesPage() {
   const isMember   = user?.roleName === 'Member';
 
   const [services, setServices]     = useState([]);
+  const [eventOptions, setEventOptions] = useState([]);
   const [total, setTotal]           = useState(0);
   const [page, setPage]             = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -54,8 +55,7 @@ export default function ServicesPage() {
 
   // Create service form (admin/regteam)
   const [form, setForm] = useState({
-    title: '', service_date: '', service_time: '',
-    capacity: '', total_parking_slots: '', response_deadline: '', status: 'draft'
+    ...blankServiceForm(),
   });
   const [editingService, setEditingService] = useState(null);
   const [saving, setSaving]       = useState(false);
@@ -91,6 +91,13 @@ export default function ServicesPage() {
 
   useEffect(() => { fetchServices(); }, [fetchServices]);
 
+  useEffect(() => {
+    if (isMember) return;
+    axiosInstance.get('/events?limit=100')
+      .then((res) => setEventOptions((res.data.data?.events || []).filter((event) => ['Upcoming', 'Ongoing'].includes(event.status))))
+      .catch(() => setEventOptions([]));
+  }, [isMember]);
+
   // Fetch member's existing responses for visible services
   useEffect(() => {
     if (!isMember || services.length === 0) return;
@@ -118,7 +125,13 @@ export default function ServicesPage() {
     setSaving(true);
     setFormError('');
     try {
-      const payload = { ...form };
+      const payload = {
+        ...form,
+        service_time: form.service_time || null,
+        event_id: form.event_id ? Number(form.event_id) : null,
+        capacity: form.capacity === '' ? null : Number(form.capacity),
+        total_parking_slots: form.total_parking_slots === '' ? null : Number(form.total_parking_slots),
+      };
       if (editingService) {
         delete payload.status;
         if (!payload.response_deadline) payload.response_deadline = null;
@@ -158,6 +171,7 @@ export default function ServicesPage() {
       title: service.title || '',
       service_date: String(service.service_date || '').slice(0, 10),
       service_time: String(service.service_time || '').slice(0, 5),
+      event_id: service.event_id ? String(service.event_id) : '',
       capacity: String(service.capacity ?? ''),
       total_parking_slots: String(service.total_parking_slots ?? ''),
       response_deadline: toLocalDateTimeInput(service.response_deadline),
@@ -193,7 +207,7 @@ export default function ServicesPage() {
       await axiosInstance.patch(`/services/${service.id}/archive`);
       fetchServices();
     } catch (err) {
-      setError(apiErrorMessage(err, 'Failed to delete service.'));
+      setError(apiErrorMessage(err, 'Failed to archive service.'));
     }
   };
 
@@ -295,20 +309,21 @@ export default function ServicesPage() {
                 <input id="servicespage-service_date" type="date" name="service_date" value={form.service_date} onChange={handleFormChange} required style={styles.input} />
               </div>
               <div style={styles.field}>
-                <label style={styles.label} htmlFor="servicespage-service_time">Time *</label>
-                <input id="servicespage-service_time" type="time" name="service_time" value={form.service_time} onChange={handleFormChange} required style={styles.input} />
+                <label style={styles.label} htmlFor="servicespage-service_time">Time (optional)</label>
+                <input id="servicespage-service_time" type="time" name="service_time" value={form.service_time} onChange={handleFormChange} style={styles.input} />
+                <small style={styles.helperText}>Leave blank when the source schedule does not specify a time.</small>
               </div>
             </div>
             <div style={styles.formRow}>
               <div style={styles.field}>
-                <label style={styles.label} htmlFor="servicespage-capacity">Capacity *</label>
+                <label style={styles.label} htmlFor="servicespage-capacity">Capacity (optional)</label>
                 <input id="servicespage-capacity" type="number" name="capacity" value={form.capacity} onChange={handleFormChange}
-                  min="1" placeholder="500" required style={styles.input} />
+                  min="1" placeholder="Not specified" style={styles.input} />
               </div>
               <div style={styles.field}>
-                <label style={styles.label} htmlFor="servicespage-total_parking_slots">Parking Slots *</label>
+                <label style={styles.label} htmlFor="servicespage-total_parking_slots">Parking Slots (optional)</label>
                 <input id="servicespage-total_parking_slots" type="number" name="total_parking_slots" value={form.total_parking_slots}
-                  onChange={handleFormChange} min="0" placeholder="100" required style={styles.input} />
+                  onChange={handleFormChange} min="0" placeholder="Not specified" style={styles.input} />
               </div>
               <div style={styles.field}>
                 <label style={styles.label} htmlFor="servicespage-response_deadline">Response Deadline</label>
@@ -316,6 +331,16 @@ export default function ServicesPage() {
                   onChange={handleFormChange} style={styles.input} />
               </div>
             </div>
+            {!editingService && (
+              <div style={styles.field}>
+                <label style={styles.label} htmlFor="servicespage-event_id">Linked event (optional)</label>
+                <select id="servicespage-event_id" name="event_id" value={form.event_id} onChange={handleFormChange} style={styles.select}>
+                  <option value="">No linked event</option>
+                  {eventOptions.map((event) => <option key={event.id} value={event.id}>{event.title}</option>)}
+                </select>
+                <small style={styles.helperText}>A linked event can have one attendance service.</small>
+              </div>
+            )}
             <div style={styles.formActions}>
               <button type="button" onClick={closeForm} style={styles.cancelBtn}>Cancel</button>
               <button type="submit" disabled={saving} style={{ ...styles.submitBtn, opacity: saving ? 0.7 : 1 }}>
@@ -379,7 +404,7 @@ export default function ServicesPage() {
                   <td style={{ ...styles.td, fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' }}>{s.title}</td>
                   <td style={styles.td}>{formatDate(s.service_date)}</td>
                   <td style={styles.td}>{formatTime(s.service_time)}</td>
-                  <td style={styles.td}>{s.capacity}</td>
+                  <td style={styles.td}>{s.capacity ?? 'Not specified'}</td>
                   <td style={styles.td}>
                     {(() => {
                       const checked = s.ServiceAttendanceSummary?.total_attended ?? 0;
@@ -389,7 +414,8 @@ export default function ServicesPage() {
                       return (
                         <>
                           <span style={{ fontWeight: '700', color: isPreReg ? '#d97706' : '#0066b3' }}>{display}</span>
-                          <span style={{ color: '#94a3b8' }}> / {s.capacity}</span>
+                          {s.capacity != null && <span style={{ color: '#94a3b8' }}> / {s.capacity}</span>}
+                          {s.event?.title && <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>Event: {s.event.title}</div>}
                           {isPreReg && <div style={{ fontSize: 10, color: '#d97706', fontWeight: 600, marginTop: 2 }}>pre-reg</div>}
                         </>
                       );
@@ -570,6 +596,7 @@ const styles = {
   form:        { display: 'flex', flexDirection: 'column', gap: '16px' },
   formRow:     { display: 'flex', gap: '16px', flexWrap: 'wrap' },
   field:       { display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '160px' },
+  helperText:  { fontSize: '11px', color: 'var(--mcc-secondary, #64748b)', lineHeight: 1.4 },
   label:       { fontSize: '13px', fontWeight: '600', color: '#374151' },
   input:       { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', color: 'var(--mcc-ink, #0f172a)' },
   select:      { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)' },

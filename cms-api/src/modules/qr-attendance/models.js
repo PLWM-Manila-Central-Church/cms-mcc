@@ -163,7 +163,11 @@ const AttendanceBatchItem = sequelize.define("AttendanceBatchItem", {
   },
   service_attendance_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   event_attendance_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
-}, { ...timestamps, tableName: "attendance_batch_items" });
+  is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+  deleted_at: { type: DataTypes.DATE, allowNull: true },
+  deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+}, { ...timestamps, tableName: "attendance_batch_items",
+  defaultScope: { where: { is_deleted: 0 } }, scopes: { withDeleted: {} } });
 
 QrAttendanceSession.belongsTo(Service, { foreignKey: "service_id", as: "service" });
 QrAttendanceSession.belongsTo(Event, { foreignKey: "event_id", as: "event" });

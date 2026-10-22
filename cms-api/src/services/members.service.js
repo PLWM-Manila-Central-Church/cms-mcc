@@ -465,9 +465,9 @@ exports.unassignMemberFromScope = async (id, updatedBy, user = {}) => {
       where: { ministry_role_id: scope.id, member_id: id },
     });
     if (!row) throw AppError.notFound("RECORD_NOT_FOUND", "Member is not in your ministry roster");
-    await row.destroy();
-    auditLog.log({ userId: updatedBy, action: "UNASSIGN_MEMBER_MINISTRY", targetTable: "ministry_memberships", targetId: id });
-    return { message: "Member removed from your ministry roster." };
+    await row.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: updatedBy });
+    auditLog.log({ userId: updatedBy, action: "ARCHIVE_MINISTRY_MEMBERSHIP", targetTable: "ministry_memberships", targetId: row.id });
+    return { message: "Ministry membership archived and retained in Archives." };
   }
 
   const member = await Member.findOne({ where: { id } });

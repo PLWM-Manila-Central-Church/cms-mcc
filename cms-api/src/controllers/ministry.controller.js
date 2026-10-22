@@ -78,9 +78,9 @@ exports.updateAssignment = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteAssignment = async (req, res, next) => {
+exports.archiveAssignment = async (req, res, next) => {
   try {
-    const data = await ministryService.deleteAssignment(req.params.id, req.user.userId, req.user);
+    const data = await ministryService.archiveAssignment(req.params.id, req.user.userId, req.user);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };
@@ -116,12 +116,12 @@ exports.addMemberToMinistry = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.removeMemberFromMinistry = async (req, res, next) => {
+exports.archiveMemberFromMinistry = async (req, res, next) => {
   try {
     if (!req.user.leadsMinistryId)
       return res.status(403).json({ message: "You are not a Ministry Leader" });
-    const data = await ministryService.removeMemberFromMinistry(
-      req.user.leadsMinistryId, req.params.memberId
+    const data = await ministryService.archiveMemberFromMinistry(
+      req.user.leadsMinistryId, req.params.memberId, req.user.userId
     );
     res.json({ success: true, data });
   } catch (err) { next(err); }

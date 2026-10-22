@@ -23,6 +23,7 @@ jest.mock("../src/models", () => ({
   Member: { findByPk: jest.fn(async () => ({ id: mockState.memberId })) },
   Attendance: {
     findOne: jest.fn(async () => mockState.existingAttendance),
+    findAll: jest.fn(async () => mockState.placeholderRows),
     create: jest.fn(async (values) => values),
     destroy: jest.fn(async () => 1),
   },
@@ -39,6 +40,7 @@ describe("service response reservations", () => {
     mockState.memberId = 22;
     mockState.existingResponse = null;
     mockState.existingAttendance = null;
+    mockState.placeholderRows = [];
     mockState.attendingCount = 1;
     mockState.seatConflict = null;
     mockState.parkingConflict = null;
@@ -86,7 +88,7 @@ describe("service response reservations", () => {
       .rejects.toMatchObject({ code: "VALIDATION", status: 400 });
   });
 
-  test.each(["NOT_ATTENDING", "UNDECIDED"])("releasing a %s RSVP clears reservations and removes only the pre-registration attendance row", async (attendanceStatus) => {
+  test.each(["NOT_ATTENDING", "UNDECIDED"])("releasing a %s RSVP clears reservations and archives only the pre-registration attendance row", async (attendanceStatus) => {
     mockState.existingResponse = {
       id: 55,
       attendance_status: "ATTENDING",
@@ -95,13 +97,17 @@ describe("service response reservations", () => {
       update: jest.fn(async (values) => Object.assign(mockState.existingResponse, values)),
     };
 
-    await saveServiceResponse({ serviceId: 11, memberId: 22, attendanceStatus });
+    const placeholder = { update: jest.fn(async () => {}) };
+    mockState.placeholderRows = [placeholder];
+    await saveServiceResponse({ serviceId: 11, memberId: 22, attendanceStatus, overrideBy: 17 });
 
     expect(mockState.existingResponse.update).toHaveBeenCalledWith(expect.objectContaining({ seat_number: null, parking_slot: null }), expect.any(Object));
-    expect(Attendance.destroy).toHaveBeenCalledWith(expect.objectContaining({
-      where: { service_id: 11, member_id: 22, check_in_method: "pre-reg" },
+    expect(Attendance.findAll).toHaveBeenCalledWith(expect.objectContaining({
+      where: { service_id: 11, member_id: 22, check_in_method: "pre-reg", voided_at: null },
       transaction: mockState.transaction,
     }));
+    expect(placeholder.update).toHaveBeenCalledWith(expect.objectContaining({ voided_at: expect.any(Date), voided_by: 17, void_reason: expect.stringContaining("placeholder retained") }), { transaction: mockState.transaction });
+    expect(Attendance.destroy).not.toHaveBeenCalled();
   });
 
   test("allows a member to claim a released seat and parking slot again", async () => {

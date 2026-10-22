@@ -55,11 +55,11 @@ exports.updateEmergencyContact = async (id, data) => {
   return contact;
 };
 
-exports.deleteEmergencyContact = async (id) => {
+exports.archiveEmergencyContact = async (id, deletedBy) => {
   const contact = await EmergencyContact.findByPk(id);
   if (!contact) throw AppError.notFound("CONTACT_NOT_FOUND", "Emergency contact not found");
-  await contact.destroy();
-  return { message: "Emergency contact deleted successfully." };
+  await contact.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: deletedBy });
+  return { message: "Emergency contact archived. It can be restored from Archives." };
 };
 
 // ── Member Notes ─────────────────────────────────────────────

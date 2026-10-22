@@ -152,11 +152,12 @@ const addDraftItem = async (batchId, data, user) => sequelize.transaction(async 
   const member = data.qr_payload
     ? (await resolveMemberQr(data.qr_payload, user, { transaction })).member
     : await assertMemberInActorScope(data.member_id, user, transaction);
-  const existingItem = await QrAttendanceBatchItem.findOne({
+  const existingItem = await QrAttendanceBatchItem.unscoped().findOne({
     where: { batch_id: batch.id, member_id: member.id },
     transaction,
+    lock: transaction.LOCK.UPDATE,
   });
-  if (existingItem) return { batch, member, added: false, reason: "already_in_batch" };
+  if (existingItem && Number(existingItem.is_deleted) === 0) return { batch, member, added: false, reason: "already_in_batch" };
   if (Number(data.expected_revision) !== Number(batch.revision)) {
     throw AppError.conflict("BATCH_REVISION_CHANGED", "Reload this batch before adding another attendee");
   }
@@ -179,7 +180,7 @@ const addDraftItem = async (batchId, data, user) => sequelize.transaction(async 
     throw AppError.conflict("BATCH_LIMIT_REACHED", "This batch is full. Submit it before starting another batch.");
   }
 
-  const item = await QrAttendanceBatchItem.create({
+  const itemData = {
     batch_id: batch.id,
     member_id: member.id,
     captured_by: user.userId,
@@ -188,7 +189,13 @@ const addDraftItem = async (batchId, data, user) => sequelize.transaction(async 
     cell_group_id_at_capture: member.cell_group_id || null,
     group_id_at_capture: member.group_id || null,
     outcome: "pending",
-  }, { transaction });
+    is_deleted: 0,
+    deleted_at: null,
+    deleted_by: null,
+  };
+  const item = existingItem
+    ? await existingItem.update(itemData, { transaction })
+    : await QrAttendanceBatchItem.create(itemData, { transaction });
   await batch.update({ revision: Number(batch.revision) + 1 }, { transaction });
   await writeQrAudit({
     actorId: user.userId,
@@ -217,7 +224,7 @@ const assertDraftOwner = (batch, user) => {
   }
 };
 
-const removeDraftItem = async (batchId, memberId, expectedRevision, user) =>
+const archiveDraftItem = async (batchId, memberId, expectedRevision, user) =>
   sequelize.transaction(async (transaction) => {
     const batch = await findReadableBatch(batchId, user, transaction);
     assertDraftOwner(batch, user);
@@ -230,7 +237,7 @@ const removeDraftItem = async (batchId, memberId, expectedRevision, user) =>
       lock: transaction.LOCK.UPDATE,
     });
     if (!item) throw AppError.notFound("BATCH_ITEM_NOT_FOUND", "Member was not found in this draft");
-    await item.destroy({ transaction });
+    await item.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: user.userId }, { transaction });
     const revision = Number(batch.revision) + 1;
     await batch.update({ revision }, { transaction });
     await writeQrAudit({
@@ -238,7 +245,7 @@ const removeDraftItem = async (batchId, memberId, expectedRevision, user) =>
       action: "QR_ATTENDANCE_BATCH_ITEM_REMOVED",
       table: "attendance_batches",
       recordId: batch.id,
-      newValues: { batch_id: batch.id, member_id: memberId },
+      newValues: { batch_id: batch.id, member_id: memberId, is_deleted: 1 },
       transaction,
     });
     return { batch_id: batch.id, revision };
@@ -669,7 +676,7 @@ module.exports = {
   getBatchQrPng,
   listSessionsBatches,
   rejectBatch,
-  removeDraftItem,
+  archiveDraftItem,
   resolveBatchQr,
   submitBatch,
   withdrawBatch,

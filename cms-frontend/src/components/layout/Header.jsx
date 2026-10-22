@@ -105,11 +105,11 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
     setLoading(false);
   };
 
-  const deleteOne = async (e, id) => {
+  const archiveOne = async (e, id) => {
     e.stopPropagation();
     setActionError('');
     try {
-      await axiosInstance.delete(`/notifications/${id}`);
+      await axiosInstance.patch(`/notifications/${id}/archive`);
       setNotifs(prev => {
         const next = prev.filter(n => n.id !== id);
         setUnread(next.filter(n => !n.is_read).length);
@@ -118,11 +118,11 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
     } catch (_) { setActionError('Could not dismiss the notification. Try again.'); }
   };
 
-  const clearAll = async () => {
+  const archiveAll = async () => {
     setActionError('');
     setLoading(true);
     try {
-      await axiosInstance.delete('/notifications/clear-all');
+      await axiosInstance.patch('/notifications/archive-all');
       setNotifs([]); setUnread(0);
     } catch (_) { setActionError('Could not clear notifications. Try again.'); }
     setLoading(false);
@@ -317,7 +317,7 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
                 </div>
                 <div style={S.panelActions}>
                   {unread > 0 && <button style={S.actionLink} onClick={markAll} disabled={loading}>Mark all read</button>}
-                  {notifs.length > 0 && <button style={{ ...S.actionLink, color: '#ef4444' }} onClick={clearAll} disabled={loading}>Clear all</button>}
+                  {notifs.length > 0 && <button style={{ ...S.actionLink, color: '#ef4444' }} onClick={archiveAll} disabled={loading}>Archive all</button>}
                 </div>
               </div>
               {actionError && <p role="alert" style={{ margin: 0, padding: '12px 16px', color: '#b91c1c', background: '#fef2f2', fontSize: 13 }}>{actionError}</p>}
@@ -343,7 +343,7 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
                           <span style={{ ...S.notifMsg, display: 'block' }}>{n.message}</span>
                           <span style={S.notifTime}>{timeAgo(n.created_at ?? n.createdAt)}</span>
                         </button>
-                        <button type="button" style={S.deleteNotif} onClick={(e) => deleteOne(e, n.id)} aria-label={`Dismiss notification: ${n.message}`} title="Dismiss"><MonoIcon name="close" size={12} /></button>
+                        <button type="button" style={S.deleteNotif} onClick={(e) => archiveOne(e, n.id)} aria-label={`Archive notification: ${n.message}`} title="Archive notification"><MonoIcon name="archive" size={12} /></button>
                       </div>
                     );
                   })

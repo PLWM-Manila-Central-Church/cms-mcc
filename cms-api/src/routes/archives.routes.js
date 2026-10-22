@@ -15,7 +15,6 @@ router.get("/categories/:id",    auth, authorize("archives", "read"),   ctrl.get
 router.post("/categories",       auth, authorize("archives", "update"), ctrl.createCategory);
 router.put("/categories/:id",    auth, authorize("archives", "update"), ctrl.updateCategory);
 router.patch("/categories/:id/archive", auth, authorize("archives", "delete"), ctrl.archiveCategory);
-router.delete("/categories/:id", auth, authorize("archives", "delete"), ctrl.deleteCategory);
 
 // ── Records ──────────────────────────────────────────────────
 router.get("/system-records", auth, requireSystemAdministrator, ctrl.getSystemRecords);
@@ -30,8 +29,6 @@ router.put("/:id", auth, authorize("archives", "update"), requireDurableUploadSt
 router.patch("/:id/approve", auth, authorize("archives", "update"), ctrl.approveRecord);
 router.patch("/:id/archive", auth, authorize("archives", "delete"), ctrl.archiveRecord);
 router.patch("/:id/restore", auth, authorize("archives", "update"), ctrl.restoreRecord);
-// Kept for clients that still call DELETE; the handler now archives the row.
-router.delete("/:id",        auth, authorize("archives", "delete"), ctrl.deleteRecord);
 
 // ── Versions ─────────────────────────────────────────────────
 router.get("/:id/versions", auth, authorize("archives", "read"), ctrl.getVersions);

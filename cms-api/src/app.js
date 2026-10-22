@@ -16,6 +16,7 @@ const csrfOriginCheck = require("./middlewares/csrfOrigin");
 const sequelizeHealth = require("./config/db");
 const { metricsMiddleware, metricsEndpoint } = require("./helpers/metrics");
 const { mountRateLimiters } = require("./middlewares/rateLimiters");
+const rejectHardDelete = require("./middlewares/rejectHardDelete");
 
 const app = express();
 
@@ -111,6 +112,9 @@ app.get("/health", async (_req, res) => {
 
 // ── Rate Limiters ─────────────────────────────────────────────
 mountRateLimiters(app);
+
+// ── Retention policy: no API route may physically delete records ──
+app.use("/api", rejectHardDelete);
 
 // ── Public Routes (no auth) ───────────────────────────────────
 app.use("/api/public",        require("./routes/public.routes"));

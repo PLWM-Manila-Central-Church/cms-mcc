@@ -23,19 +23,17 @@ router.get("/categories",        auth, authorize("events", "read"),   ctrl.getAl
 router.get("/categories/:id",    auth, authorize("events", "read"),   ctrl.getCategoryById);
 router.post("/categories",       auth, authorize("events", "create"), ctrl.createCategory);
 router.put("/categories/:id",    auth, authorize("events", "update"), ctrl.updateCategory);
-router.delete("/categories/:id", auth, authorize("events", "delete"), ctrl.deleteCategory);
 
 // ── Events ───────────────────────────────────────────────────
 router.get("/:id/image", auth, allowVisibleMemberEventImage, ctrl.getEventImage);
 router.post("/:id/image", auth, ctrl.authorizeEventImageUpload, requireDurableUploadStorage, eventImageUpload.single("image"), ctrl.uploadEventImage);
-router.delete("/:id/image", auth, authorize("events", "update"), ctrl.deleteEventImage);
+router.patch("/:id/image/archive", auth, authorize("events", "update"), ctrl.archiveEventImage);
 router.get("/",    auth, authorize("events", "read"), validateQuery(getEventsQuerySchema), ctrl.getAllEvents);
 router.get("/:id", auth, authorize("events", "read"),   ctrl.getEventById);
 router.post("/",   auth, authorize("events", "create"), validate(createEventSchema),       ctrl.createEvent);
 router.put("/:id", auth, authorize("events", "update"), validate(updateEventSchema),       ctrl.updateEvent);
 router.patch("/:id/status", auth, authorize("events", "update"), validate(updateEventStatusSchema), ctrl.updateEventStatus);
 router.patch("/:id/archive", auth, authorize("events", "delete"), ctrl.archiveEvent);
-router.delete("/:id",       auth, authorize("events", "delete"), ctrl.deleteEvent);
 
 // ── Event Registrations ──────────────────────────────────────
 router.get("/:id/registrations",              auth, authorize("events", "read"),   ctrl.getEventRegistrations);
@@ -43,7 +41,7 @@ router.get("/:id/registrations",              auth, authorize("events", "read"),
 router.post("/:id/registrations",             auth, authorize("event_registrations", "create"), validate(registerMemberSchema), ctrl.registerMember);
 router.post("/:id/registrations/bulk",        auth, authorize("event_registrations", "create"), validate(bulkRegisterSchema),   ctrl.bulkRegisterMembers);
 router.put("/:id/registrations/:memberId/reservation", auth, authorize("event_registrations", "update"), validate(updateRegistrationReservationSchema), ctrl.updateRegistrationReservation);
-router.delete("/:id/registrations",           auth, authorize("event_registrations", "delete"), ctrl.unregisterMember);
-router.delete("/:id/registrations/:memberId", auth, authorize("event_registrations", "delete"), ctrl.unregisterMemberById);
+router.post("/:id/registrations/cancel-self", auth, ctrl.unregisterMember);
+router.post("/:id/registrations/:memberId/cancel", auth, authorize("event_registrations", "delete"), ctrl.unregisterMemberById);
 
 module.exports = router;

@@ -17,11 +17,5 @@ router.post("/", auth, authorize("services", "create"), validate(createServiceSc
 router.put("/:id", auth, authorize("services", "update"), validate(updateServiceSchema), ctrl.updateService);
 router.patch("/:id/status", auth, authorize("services", "update"), validate(updateServiceStatusSchema), ctrl.updateStatus);
 router.patch("/:id/archive", auth, authorize("services", "delete"), ctrl.archiveService);
-router.delete(
-  "/:id",
-  auth,
-  authorize("services", "delete"),
-  ctrl.deleteService,
-);
 
 module.exports = router;

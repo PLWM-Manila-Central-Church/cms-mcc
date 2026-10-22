@@ -22,7 +22,6 @@ router.get("/items/:id",    auth, authorize("inventory", "read"),   ctrl.getItem
 router.post("/items",       auth, authorize("inventory", "create"), validate(createItemSchema), ctrl.createItem);
 router.put("/items/:id",    auth, authorize("inventory", "update"), validate(updateItemSchema), ctrl.updateItem);
 router.patch("/items/:id/archive", auth, authorize("inventory", "delete"), ctrl.archiveItem);
-router.delete("/items/:id", auth, authorize("inventory", "delete"), ctrl.deleteItem);
 
 // ── Categories ───────────────────────────────────────────────
 router.get("/request-contexts", auth, authorize("inventory", "read"), ctrl.getRequestContexts);
@@ -30,7 +29,6 @@ router.get("/categories",        auth, authorize("inventory", "read"),   ctrl.ge
 router.get("/categories/:id",    auth, authorize("inventory", "read"),   ctrl.getCategoryById);
 router.post("/categories",       auth, authorize("inventory", "create"), validate(createCategorySchema), ctrl.createCategory);
 router.put("/categories/:id",    auth, authorize("inventory", "update"), validate(updateCategorySchema), ctrl.updateCategory);
-router.delete("/categories/:id", auth, authorize("inventory", "delete"), ctrl.deleteCategory);
 
 // ── Requests — static paths MUST come before /:id ────────────
 router.get("/requests/mine", auth, authorize("inventory", "read"), ctrl.getMyRequests);
@@ -40,11 +38,10 @@ router.get("/requests/:id",  auth, authorize("inventory", "read"), ctrl.getReque
 router.post("/requests",                   auth, authorize("inventory", "read"),   validate(createRequestSchema), ctrl.createRequest);
 router.put("/requests/:id/review",         auth, authorize("inventory", "update"), validate(reviewRequestSchema), ctrl.reviewRequest);
 router.patch("/requests/:id/review",       auth, authorize("inventory", "update"), validate(reviewRequestSchema), ctrl.reviewRequest);
-router.delete("/requests/:id",             auth, authorize("inventory", "delete"), ctrl.deleteRequest);
 
 // ── Usage ────────────────────────────────────────────────────
 router.get("/usage",        auth, authorize("inventory", "read"), validateQuery(getUsageQuerySchema), ctrl.getAllUsage);
 router.post("/usage",       auth, authorize("inventory", "create"), validate(createUsageSchema), ctrl.createUsage);
-router.delete("/usage/:id", auth, authorize("inventory", "delete"), ctrl.deleteUsage);
+router.post("/usage/:id/reverse", auth, authorize("inventory", "delete"), ctrl.reverseUsage);
 
 module.exports = router;

@@ -109,24 +109,42 @@ const saveServiceResponse = async ({
 
     if (attendanceStatus === "ATTENDING") {
       const existingAttendance = await Attendance.findOne({
-        where: { service_id: serviceId, member_id: memberId },
+        where: { service_id: serviceId, member_id: memberId, voided_at: null },
         transaction,
         lock: transaction.LOCK.UPDATE,
       });
-      if (!existingAttendance) {
+      if (existingAttendance) return response;
+
+      const archivedPlaceholder = await Attendance.findOne({
+        where: { service_id: serviceId, member_id: memberId, check_in_method: "pre-reg", voided_at: { [Op.ne]: null } },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (archivedPlaceholder) {
+        await archivedPlaceholder.update({ voided_at: null, voided_by: null, void_reason: null }, { transaction });
+      } else {
         await Attendance.create({
           service_id: serviceId,
           member_id: memberId,
           check_in_method: "pre-reg",
+          entry_source: "legacy",
           checked_in_at: new Date(),
           recorded_by: overrideBy || null,
         }, { transaction });
       }
     } else {
-      await Attendance.destroy({
-        where: { service_id: serviceId, member_id: memberId, check_in_method: "pre-reg" },
+      const placeholders = await Attendance.findAll({
+        where: { service_id: serviceId, member_id: memberId, check_in_method: "pre-reg", voided_at: null },
         transaction,
+        lock: transaction.LOCK.UPDATE,
       });
+      for (const placeholder of placeholders) {
+        await placeholder.update({
+          voided_at: new Date(),
+          voided_by: overrideBy || null,
+          void_reason: `Service response changed to ${attendanceStatus}; pre-registration placeholder retained`,
+        }, { transaction });
+      }
     }
 
     return response;

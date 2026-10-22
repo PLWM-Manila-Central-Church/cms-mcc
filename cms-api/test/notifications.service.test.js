@@ -8,6 +8,7 @@ jest.mock("../src/models", () => ({
     bulkCreate: jest.fn(async (records) => records),
     findAll: jest.fn(),
     findOne: jest.fn(),
+    update: jest.fn(async () => [1]),
   },
   User: { findAll: jest.fn(async () => mockState.recipients) },
   SystemSetting: { findOne: jest.fn(async () => mockState.preference) },
@@ -128,5 +129,22 @@ describe("historic inventory notification visibility", () => {
     Notification.findAll.mockClear();
     await notifications.getUserNotifications(1, "System Admin");
     expect(Notification.findAll).toHaveBeenCalledWith({ where: { user_id: 1 }, order: [["created_at", "DESC"]] });
+  });
+
+  test("archives one notification with actor metadata instead of deleting it", async () => {
+    const update = jest.fn(async (values) => values);
+    Notification.findOne.mockResolvedValue({ update });
+    await notifications.archiveNotification(8, 27, "Member");
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ is_deleted: 1, deleted_by: 27, deleted_at: expect.any(Date) }));
+  });
+
+  test("archives all scoped notifications with one retained-state update", async () => {
+    await notifications.archiveAllNotifications(27, "Member");
+    expect(Notification.update).toHaveBeenCalledWith(
+      expect.objectContaining({ is_deleted: 1, deleted_by: 27, deleted_at: expect.any(Date) }),
+      expect.objectContaining({ where: { user_id: 27, type: { [Op.notIn]: [
+        "inventory_item_low_stock", "inventory_item_out_of_stock", "inventory_item_under_repair", "inventory_item_available",
+      ] } } }),
+    );
   });
 });

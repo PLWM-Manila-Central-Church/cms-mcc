@@ -28,6 +28,7 @@ const FinancialCategory = require("./FinancialCategory.model");
 const FinancialRecord = require("./FinancialRecord.model");
 const EventCategory = require("./EventCategory.model");
 const Event = require("./Event.model");
+const EventImageArchive = require("./EventImageArchive.model");
 const EventRegistration = require("./EventRegistration.model");
 const InventoryCategory = require("./InventoryCategory.model");
 const InventoryItem = require("./InventoryItem.model");
@@ -225,6 +226,10 @@ FinancialRecord.belongsTo(User, {
 EventCategory.hasMany(Event, { foreignKey: "category_id" });
 Event.belongsTo(EventCategory, { foreignKey: "category_id", as: "category" });
 Event.hasMany(EventRegistration, { foreignKey: "event_id" });
+Event.hasOne(Service, { foreignKey: "event_id", as: "attendanceService" });
+Service.belongsTo(Event, { foreignKey: "event_id", as: "event" });
+Event.hasMany(EventImageArchive, { foreignKey: "event_id", as: "archivedImages" });
+EventImageArchive.belongsTo(Event, { foreignKey: "event_id", as: "event" });
 EventRegistration.belongsTo(Event, { foreignKey: "event_id" });
 Member.hasMany(EventRegistration, { foreignKey: "member_id" });
 EventRegistration.belongsTo(Member, { foreignKey: "member_id", as: "member" });
@@ -420,6 +425,7 @@ module.exports = {
   FinancialRecord,
   EventCategory,
   Event,
+  EventImageArchive,
   EventRegistration,
   InventoryCategory,
   InventoryItem,

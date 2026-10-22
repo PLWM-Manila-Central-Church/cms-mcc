@@ -6,7 +6,7 @@ const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
 const cache        = require("../helpers/cache.helper");
 const notifService = require("./notifications.service");
-const { Service, ServiceAttendanceSummary, ServiceResponse, User } = require("../models");
+const { Service, ServiceAttendanceSummary, ServiceResponse, User, Event } = require("../models");
 const { syncServiceAttendanceSummary } = require("../helpers/attendanceSummary.helper");
 const { isScopedLeader } = require("../helpers/scopedLeader.helper");
 const AppError = require("../helpers/AppError");
@@ -33,12 +33,9 @@ exports.getAllServices = async ({ page = 1, limit = 15, status } = {}, user = {}
 
   const { count, rows } = await Service.findAndCountAll({
     where,
-    include: hideChurchwideAttendance ? [] : [
-      {
-        model: ServiceAttendanceSummary,
-        as: "summary",
-        required: false,
-      },
+    include: [
+      { model: Event, as: "event", attributes: ["id", "title", "start_date", "end_date"], required: false },
+      ...(!hideChurchwideAttendance ? [{ model: ServiceAttendanceSummary, as: "summary", required: false }] : []),
     ],
     order: [["service_date", "DESC"], ["service_time", "DESC"]],
     limit: parseInt(limit),
@@ -100,14 +97,26 @@ exports.createService = async (data, createdBy) => {
     total_parking_slots,
     response_deadline,
     status,
+    event_id,
   } = data;
+
+  if (event_id) {
+    const event = await Event.findOne({ where: { id: event_id, is_deleted: 0 } });
+    if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "The linked event was not found");
+    const existingService = await Service.findOne({ where: { event_id } });
+    if (existingService) throw AppError.conflict("EVENT_SERVICE_EXISTS", "This event already has an attendance service");
+    if (service_date < event.start_date || (event.end_date && service_date > event.end_date)) {
+      throw AppError.badRequest("SERVICE_OUTSIDE_EVENT_DATES", "The service date must fall within the linked event dates");
+    }
+  }
 
   const service = await Service.create({
     title,
     service_date,
-    service_time,
-    capacity,
-    total_parking_slots,
+    service_time: service_time || null,
+    capacity: capacity ?? null,
+    total_parking_slots: total_parking_slots ?? null,
+    event_id: event_id || null,
     response_deadline: response_deadline || null,
     status: status || "draft",
   });
@@ -126,7 +135,9 @@ exports.updateService = async (id, data, updatedBy) => {
     total_parking_slots,
     response_deadline,
     status,
+    event_id,
   } = data;
+
   const service = await sequelize.transaction(async (transaction) => {
     const lockedService = await Service.findOne({ where: { id, is_deleted: 0 }, transaction, lock: transaction.LOCK.UPDATE });
     if (!lockedService) throw AppError.notFound("RECORD_NOT_FOUND", "Service not found");
@@ -136,23 +147,45 @@ exports.updateService = async (id, data, updatedBy) => {
 
     if (status !== undefined) ensureStatusTransition(lockedService.status, status);
 
-    const nextCapacity = capacity === undefined ? Number(lockedService.capacity) : Number(capacity);
+    const nextEventId = event_id === undefined ? lockedService.event_id : event_id;
+    if (nextEventId) {
+      const event = await Event.findOne({ where: { id: nextEventId, is_deleted: 0 }, transaction });
+      if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "The linked event was not found");
+      const existingService = await Service.findOne({ where: { event_id: nextEventId }, transaction });
+      if (existingService && Number(existingService.id) !== Number(id)) {
+        throw AppError.conflict("EVENT_SERVICE_EXISTS", "This event already has an attendance service");
+      }
+      const resolvedDate = service_date || lockedService.service_date;
+      if (resolvedDate < event.start_date || (event.end_date && resolvedDate > event.end_date)) {
+        throw AppError.badRequest("SERVICE_OUTSIDE_EVENT_DATES", "The service date must fall within the linked event dates");
+      }
+    }
+
+    const nextCapacity = capacity === undefined
+      ? (lockedService.capacity == null ? null : Number(lockedService.capacity))
+      : (capacity == null ? null : Number(capacity));
     const nextParkingLimit = total_parking_slots === undefined
-      ? Number(lockedService.total_parking_slots)
-      : Number(total_parking_slots);
+      ? (lockedService.total_parking_slots == null ? null : Number(lockedService.total_parking_slots))
+      : (total_parking_slots == null ? null : Number(total_parking_slots));
     if (capacity !== undefined || total_parking_slots !== undefined) {
       const reservations = await ServiceResponse.findAll({
         where: { service_id: id, attendance_status: "ATTENDING" },
         attributes: ["seat_number", "parking_slot"],
         transaction,
       });
-      if (reservations.length > nextCapacity) {
+      if (nextCapacity === null && reservations.some((row) => row.seat_number != null)) {
+        throw AppError.conflict("CAPACITY_REQUIRED_FOR_RESERVED_SEATS", "Capacity cannot be made unknown while seat numbers are reserved");
+      }
+      if (nextParkingLimit === null && reservations.some((row) => row.parking_slot != null)) {
+        throw AppError.conflict("PARKING_LIMIT_REQUIRED_FOR_RESERVED_SLOTS", "Parking capacity cannot be made unknown while parking slots are reserved");
+      }
+      if (nextCapacity !== null && reservations.length > nextCapacity) {
         throw AppError.conflict("CAPACITY_BELOW_CURRENT_RSVPS", `Capacity cannot be less than the ${reservations.length} current attending RSVPs`);
       }
       const invalidSeat = reservations.some((row) => {
         if (!row.seat_number) return false;
         const value = Number(row.seat_number);
-        return !Number.isSafeInteger(value) || value < 1 || value > nextCapacity;
+        return nextCapacity !== null && (!Number.isSafeInteger(value) || value < 1 || value > nextCapacity);
       });
       if (invalidSeat) {
         throw AppError.conflict("CAPACITY_BELOW_RESERVED_SEAT", "Capacity cannot be reduced below an already reserved seat number");
@@ -160,7 +193,7 @@ exports.updateService = async (id, data, updatedBy) => {
       const invalidParking = reservations.some((row) => {
         if (!row.parking_slot) return false;
         const value = Number(row.parking_slot);
-        return !Number.isSafeInteger(value) || value < 1 || value > nextParkingLimit;
+        return nextParkingLimit !== null && (!Number.isSafeInteger(value) || value < 1 || value > nextParkingLimit);
       });
       if (invalidParking) {
         throw AppError.conflict("PARKING_LIMIT_BELOW_RESERVED_SLOT", "Parking slots cannot be reduced below an already reserved slot number");
@@ -173,7 +206,8 @@ exports.updateService = async (id, data, updatedBy) => {
       // Coerce empty strings to null so clearing these fields stores NULL.
       ...(service_time        !== undefined && { service_time: service_time || null }),
       ...(capacity            !== undefined && { capacity }),
-      ...(total_parking_slots !== undefined && { total_parking_slots }),
+      ...(total_parking_slots !== undefined && { total_parking_slots: total_parking_slots ?? null }),
+      ...(event_id            !== undefined && { event_id: event_id || null }),
       ...(response_deadline   !== undefined && { response_deadline: response_deadline || null }),
       ...(status              && { status }),
     }, { transaction });

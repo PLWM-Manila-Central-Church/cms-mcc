@@ -66,7 +66,7 @@ export function MemberMinistryApplications({ c, f, showToast }) {
     }))) return;
     setSavingId(application.ministry_role_id); setError('');
     try {
-      await axiosInstance.delete(`/ministry-applications/${application.id}`);
+      await axiosInstance.post(`/ministry-applications/${application.id}/withdraw`);
       showToast?.('Your application was withdrawn.');
       await load();
     } catch (requestError) {

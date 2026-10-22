@@ -101,7 +101,7 @@ export default function EventDetailPage() {
     setRegLoading(true); setRegMessage(''); setRegError('');
     try {
       if (isRegistered) {
-        await axiosInstance.delete(`/events/${id}/registrations`);
+        await axiosInstance.post(`/events/${id}/registrations/cancel-self`);
         setRegMessage('Your registration has been cancelled.');
       } else {
         await axiosInstance.post(`/events/${id}/registrations`);
@@ -115,18 +115,18 @@ export default function EventDetailPage() {
 
   const handleRemoveReg = async (memberId, name) => {
     if (!(await confirm({
-      title: 'Remove event registration?',
-      message: `Remove the registration for ${name}?`,
-      confirmLabel: 'Remove registration',
+      title: 'Cancel event registration?',
+      message: `Cancel ${name}'s registration? The cancellation stays in event history. The member can register again while registration is open.`,
+      confirmLabel: 'Cancel registration',
       tone: 'warning',
     }))) return;
     setRemovingId(memberId); setRemoveMsg('');
     try {
-      await axiosInstance.delete(`/events/${id}/registrations/${memberId}`);
-      setRemoveMsg(`Registration for ${name} has been removed.`);
+      await axiosInstance.post(`/events/${id}/registrations/${memberId}/cancel`);
+      setRemoveMsg(`Registration for ${name} has been cancelled.`);
       fetchEvent();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to remove registration.');
+      setError(err.response?.data?.message || 'Failed to cancel registration.');
     } finally { setRemovingId(null); }
   };
 
@@ -428,7 +428,7 @@ export default function EventDetailPage() {
                                 cursor: removingId === r.member_id ? 'not-allowed' : 'pointer',
                               }}
                             >
-                              {removingId === r.member_id ? '...' : 'Remove'}
+                              {removingId === r.member_id ? '...' : 'Cancel registration'}
                             </button>}
                           </div>
                         </td>

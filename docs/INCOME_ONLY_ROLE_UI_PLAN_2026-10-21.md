@@ -1,5 +1,7 @@
 # Income-only finance and role UI verification
 
+> Historical scope note: the income-only decision recorded here was superseded by the user's 2026-10-22 request to restore Expenses. Current implementation and verification are tracked in [Finance Expenses Restoration](FINANCE_EXPENSES_RESTORATION_2026-10-22.md).
+
 ## Confirmed scope
 
 - Finance records money received: tithes, offerings, donations and other income. Expenses are excluded.

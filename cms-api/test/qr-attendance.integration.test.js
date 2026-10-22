@@ -130,6 +130,7 @@ describeDatabase("QR attendance API persistence integration", () => {
       userIds: [],
       serviceIds: [],
       eventIds: [],
+      ministryRoleIds: [],
       sessionIds: [],
     };
     const previousQrSetting = await models.SystemSetting.findOne({
@@ -309,6 +310,7 @@ describeDatabase("QR attendance API persistence integration", () => {
       let sessionIds = ids(fixture.sessionIds);
       const cellGroupIds = ids(fixture.cellGroupIds);
       const groupIds = ids(fixture.groupIds);
+      const ministryRoleIds = ids(fixture.ministryRoleIds);
       const destroyIn = async (Model, column, values, transaction) => {
         if (values.length) {
           await Model.destroy({ where: { [column]: { [Op.in]: values } }, transaction });
@@ -339,7 +341,7 @@ describeDatabase("QR attendance API persistence integration", () => {
           : [];
         batchIds = ids(batches.map((batch) => batch.id));
 
-        await destroyIn(qrModels.AttendanceBatchItem, "batch_id", batchIds, transaction);
+        await destroyIn(qrModels.AttendanceBatchItem.unscoped(), "batch_id", batchIds, transaction);
         await destroyIn(qrModels.AttendanceExpectedMember, "session_id", sessionIds, transaction);
         await destroyIn(qrModels.EventAttendance, "session_id", sessionIds, transaction);
         await destroyIn(qrModels.QrServiceAttendance, "service_id", serviceIds, transaction);
@@ -357,14 +359,18 @@ describeDatabase("QR attendance API persistence integration", () => {
         await destroyIn(models.ServiceResponse, "service_id", serviceIds, transaction);
         await destroyIn(models.Attendance, "service_id", serviceIds, transaction);
         await destroyIn(models.ServiceAttendanceSummary, "service_id", serviceIds, transaction);
-        await destroyIn(models.EmergencyContact, "member_id", memberIds, transaction);
+        await destroyIn(models.EmergencyContact.unscoped(), "member_id", memberIds, transaction);
+        await destroyIn(models.MinistryAssignment.unscoped(), "service_id", serviceIds, transaction);
+        await destroyIn(models.MinistryMembership.unscoped(), "member_id", memberIds, transaction);
+        await destroyIn(models.MinistryRole.unscoped(), "id", ministryRoleIds, transaction);
+        await destroyIn(models.EventImageArchive.unscoped(), "event_id", eventIds, transaction);
         await destroyIn(models.MemberNote, "member_id", memberIds, transaction);
         await destroyIn(models.MemberStatusHistory, "member_id", memberIds, transaction);
         await destroyIn(models.CellGroupHistory, "member_id", memberIds, transaction);
         await destroyIn(models.UserLeaderAssignment, "user_id", userIds, transaction);
         await destroyIn(models.UserSession, "user_id", userIds, transaction);
         await destroyIn(models.RefreshToken, "user_id", userIds, transaction);
-        await destroyIn(models.Notification, "user_id", userIds, transaction);
+        await destroyIn(models.Notification.unscoped(), "user_id", userIds, transaction);
         await destroyIn(models.AuditLog, "user_id", userIds, transaction);
         await destroyIn(models.Event, "id", eventIds, transaction);
         await destroyIn(models.Service, "id", serviceIds, transaction);
@@ -1309,12 +1315,12 @@ describeDatabase("QR attendance API persistence integration", () => {
     expect(pastorEventWrite.status).toBe(403);
   });
 
-  it("blocks deleting a team while a leadership assignment references it", async () => {
+  it("blocks archiving a team while a leadership assignment references it", async () => {
     expect(await models.Member.count({ where: { cell_group_id: fixture.assignmentGuardCell.id } })).toBe(0);
 
     const response = await api(
-      "delete",
-      `/api/cellgroups/${fixture.assignmentGuardCell.id}`,
+      "patch",
+      `/api/cellgroups/${fixture.assignmentGuardCell.id}/archive`,
       actors.admin.token,
     );
 
@@ -1323,13 +1329,13 @@ describeDatabase("QR attendance API persistence integration", () => {
     expect(await models.CellGroup.findByPk(fixture.assignmentGuardCell.id)).not.toBeNull();
   });
 
-  it("preserves leader assignment history and invalidates tokens when Admin deletes the account", async () => {
+  it("preserves leader assignment history and invalidates tokens when Admin archives the account", async () => {
     const userId = actors.assignmentGuardLeader.user.id;
     const assignmentCountBefore = await models.UserLeaderAssignment.count({ where: { user_id: userId } });
     expect(assignmentCountBefore).toBe(1);
 
-    const deletion = await api("delete", `/api/users/${userId}`, actors.admin.token);
-    expect(deletion.status).toBe(200);
+    const archive = await api("patch", `/api/users/${userId}/archive`, actors.admin.token);
+    expect(archive.status).toBe(200);
 
     const deletedUser = await models.User.findByPk(userId, { attributes: ["is_active", "is_deleted"] });
     expect(Number(deletedUser.is_active)).toBe(0);
@@ -1338,6 +1344,93 @@ describeDatabase("QR attendance API persistence integration", () => {
 
     const existingToken = await api("get", "/api/auth/session", actors.assignmentGuardLeader.token);
     expect(existingToken.status).toBe(401);
+  });
+
+  it("archives and restores records through the retention center and rejects DELETE", async () => {
+    const forbiddenDelete = await api("delete", `/api/events/${fixture.event.id}`, actors.admin.token);
+    expect(forbiddenDelete.status).toBe(405);
+    expect(forbiddenDelete.body.code).toBe("HARD_DELETE_DISABLED");
+
+    await fixture.event.update({ image_key: "archive-qa/old-event-photo.png", image_url: `/events/${fixture.event.id}/image` });
+    const archivedPhoto = expectData(await api("patch", `/api/events/${fixture.event.id}/image/archive`, actors.admin.token));
+    expect(archivedPhoto.image_url).toBeNull();
+    const photoRow = await models.EventImageArchive.unscoped().findOne({ where: { event_id: fixture.event.id, is_deleted: 1 } });
+    expect(photoRow?.image_key).toBe("archive-qa/old-event-photo.png");
+    expect(expectData(await api("post", `/api/archives/system-records/event_images/${photoRow.id}/restore`, actors.admin.token)).record.type).toBe("event_images");
+    expect((await models.Event.findByPk(fixture.event.id)).image_key).toBe("archive-qa/old-event-photo.png");
+
+    const notification = await models.Notification.create({
+      user_id: actors.memberA.user.id,
+      type: "archive_qa_notice",
+      message: `Archive lifecycle QA ${fixture.suffix}`,
+    });
+    expectData(await api("patch", `/api/notifications/${notification.id}/archive`, actors.memberA.token));
+    expect(Number((await models.Notification.unscoped().findByPk(notification.id)).is_deleted)).toBe(1);
+    expectData(await api("post", `/api/archives/system-records/notifications/${notification.id}/restore`, actors.admin.token));
+    expect(Number((await models.Notification.findByPk(notification.id)).is_deleted)).toBe(0);
+
+    const contact = await models.EmergencyContact.create({ member_id: fixture.memberA.id, name: "QA Contact", relationship: "Other", phone: "09123456789" });
+    expectData(await api("patch", `/api/members/emergency-contacts/${contact.id}/archive`, actors.admin.token));
+    expect(Number((await models.EmergencyContact.unscoped().findByPk(contact.id)).is_deleted)).toBe(1);
+    expectData(await api("post", `/api/archives/system-records/emergency_contacts/${contact.id}/restore`, actors.admin.token));
+    expect(Number((await models.EmergencyContact.findByPk(contact.id)).is_deleted)).toBe(0);
+
+    const ministryRole = await models.MinistryRole.create({ name: `Archive QA Ministry ${fixture.suffix}` });
+    fixture.ministryRoleIds.push(Number(ministryRole.id));
+    const ministryScopeAdmin = await (async () => {
+      const user = await models.User.create({
+        role_id: actors.admin.user.role_id,
+        leads_ministry_id: ministryRole.id,
+        email: `qr-ci-ministry-archive-${fixture.suffix}@example.invalid`,
+        password_hash: "integration-only-not-a-login-password",
+        is_active: 1,
+        force_password_change: 0,
+      });
+      fixture.userIds.push(Number(user.id));
+      return { user, token: tokenFor(user) };
+    })();
+    const membership = await models.MinistryMembership.create({
+      ministry_role_id: ministryRole.id,
+      member_id: fixture.memberA.id,
+      added_by: actors.admin.user.id,
+    });
+    expectData(await api("patch", `/api/ministry/members/${fixture.memberA.id}/archive`, ministryScopeAdmin.token));
+    expect(Number((await models.MinistryMembership.unscoped().findByPk(membership.id)).is_deleted)).toBe(1);
+    expectData(await api("post", `/api/archives/system-records/ministry_memberships/${membership.id}/restore`, actors.admin.token));
+    expect(Number((await models.MinistryMembership.findByPk(membership.id)).is_deleted)).toBe(0);
+
+    const assignmentService = await models.Service.create({
+      title: `Archive QA Assignment Service ${fixture.suffix}`,
+      service_date: dateOnlyInManila(),
+      service_time: null,
+      capacity: null,
+      total_parking_slots: null,
+      status: "draft",
+    });
+    fixture.serviceIds.push(Number(assignmentService.id));
+    const assignment = await models.MinistryAssignment.create({
+      service_id: assignmentService.id,
+      member_id: fixture.memberA.id,
+      ministry_role_id: ministryRole.id,
+    });
+    expectData(await api("patch", `/api/ministry/assignments/${assignment.id}/archive`, actors.admin.token));
+    expect(Number((await models.MinistryAssignment.unscoped().findByPk(assignment.id)).is_deleted)).toBe(1);
+    expectData(await api("post", `/api/archives/system-records/ministry_assignments/${assignment.id}/restore`, actors.admin.token));
+    expect(Number((await models.MinistryAssignment.findByPk(assignment.id)).is_deleted)).toBe(0);
+
+    const draftSession = await makeSession("event", fixture.event.id, `archive-batch-${fixture.suffix}`, "Archive batch QA session");
+    const batchResponse = await api("post", `/api/qr-attendance/sessions/${draftSession.id}/batches`, actors.cellLeader.token)
+      .send({ client_request_id: require("node:crypto").randomUUID() });
+    const batch = expectData(batchResponse, 201).batch;
+    const itemResponse = await api("post", `/api/qr-attendance/batches/${batch.id}/items`, actors.cellLeader.token)
+      .send({ member_id: fixture.memberA.id, expected_revision: batch.revision });
+    const item = expectData(itemResponse, 201).item;
+    const archivedItem = await api("patch", `/api/qr-attendance/batches/${batch.id}/items/${fixture.memberA.id}/archive`, actors.cellLeader.token)
+      .send({ expected_revision: Number(batch.revision) + 1 });
+    expectData(archivedItem);
+    expect(Number((await qrModels.AttendanceBatchItem.unscoped().findByPk(item.id)).is_deleted)).toBe(1);
+    expectData(await api("post", `/api/archives/system-records/attendance_batch_items/${item.id}/restore`, actors.admin.token));
+    expect(Number((await qrModels.AttendanceBatchItem.findByPk(item.id)).is_deleted)).toBe(0);
   });
 
   it("revokes the previous member QR on a reasoned reissue", async () => {

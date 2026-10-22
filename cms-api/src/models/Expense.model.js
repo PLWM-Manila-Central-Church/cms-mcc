@@ -13,7 +13,7 @@ const Expense = sequelize.define(
     },
     account_id: {
       type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false,
+      allowNull: true,
     },
     category_id: {
       type: DataTypes.INTEGER.UNSIGNED,
@@ -39,11 +39,16 @@ const Expense = sequelize.define(
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
     },
+    is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+    deleted_at: { type: DataTypes.DATE, allowNull: true },
+    deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   },
   {
     tableName: "expenses",
     timestamps: true,
     underscored: true,
+    defaultScope: { where: { is_deleted: 0 } },
+    scopes: { withDeleted: {} },
   },
 );
 

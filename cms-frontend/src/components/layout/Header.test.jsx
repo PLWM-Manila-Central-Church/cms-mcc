@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
-const state = vi.hoisted(() => ({ patch: vi.fn(), delete: vi.fn() }));
+const state = vi.hoisted(() => ({ patch: vi.fn() }));
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ user: { roleName: 'System Admin', email: 'admin@example.com' }, logout: vi.fn() }) }));
-vi.mock('../../api/axiosInstance', () => ({ default: { patch: state.patch, delete: state.delete } }));
+vi.mock('../../api/axiosInstance', () => ({ default: { patch: state.patch } }));
 vi.mock('../../hooks/useNotificationPolling', () => ({ default: ({ onNotifications }) => {
   useEffect(() => { onNotifications([{ id: 1, message: 'Sample service update', type: 'info', is_read: 0 }]); }, [onNotifications]);
 } }));

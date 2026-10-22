@@ -74,7 +74,7 @@ describe("inventory usage stock movement", () => {
     mockState.item.quantity = 3;
     mockState.item.status = "Low Stock";
 
-    await inventoryService.deleteUsage(77, 4);
+    await inventoryService.reverseUsage(77, 4);
 
     expect(mockState.item.update).toHaveBeenCalledWith({ quantity: 5, status: "Available" }, expect.objectContaining({ transaction: mockState.transaction }));
     expect(mockState.usage.update).toHaveBeenCalledWith(

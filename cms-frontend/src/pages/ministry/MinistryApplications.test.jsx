@@ -2,8 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfirmationProvider } from '../../context/ConfirmationContext';
 
-const fixture = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn(), patch: vi.fn(), applied: false }));
-vi.mock('../../api/axiosInstance', () => ({ default: { get: fixture.get, post: fixture.post, delete: fixture.delete, patch: fixture.patch } }));
+const fixture = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), applied: false }));
+vi.mock('../../api/axiosInstance', () => ({ default: { get: fixture.get, post: fixture.post, patch: fixture.patch } }));
 
 import { MemberMinistryApplications, MinistryApplicationQueue } from './MinistryApplications';
 

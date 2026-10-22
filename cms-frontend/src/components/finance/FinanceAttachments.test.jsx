@@ -40,6 +40,21 @@ describe('FinanceAttachments', () => {
     expect(screen.getByRole('status')).toHaveTextContent('2 receipts uploaded.');
   });
 
+  it('uploads expense receipts against the expense record', async () => {
+    axiosInstance.post.mockResolvedValue({ data: { success: true } });
+    const onChanged = vi.fn();
+    render(<FinanceAttachments targetType="expense" targetId={61} canUpload onChanged={onChanged} />);
+
+    const receipt = new File(['invoice'], 'invoice.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText('Add receipt to financial record 61'), { target: { files: [receipt] } });
+
+    await waitFor(() => expect(axiosInstance.post).toHaveBeenCalledTimes(1));
+    const body = axiosInstance.post.mock.calls[0][1];
+    expect(body.get('expense_id')).toBe('61');
+    expect(body.get('income_id')).toBeNull();
+    await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
+  });
+
   it('rejects unsupported file types before sending them', async () => {
     axiosInstance.post.mockResolvedValue({ data: { success: true } });
     render(<FinanceAttachments targetType="income" targetId={13} canUpload />);
@@ -83,7 +98,7 @@ describe('FinanceAttachments', () => {
     const onChanged = vi.fn();
     render(<FinanceAttachments
       attachments={[{ id: 8, file_name: 'giving receipt.pdf' }]}
-      canDelete
+      canArchive
       onChanged={onChanged}
     />);
 

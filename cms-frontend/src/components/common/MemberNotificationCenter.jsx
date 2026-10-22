@@ -8,13 +8,13 @@ import MonoIcon from './MonoIcon';
 const COPY = {
   en: {
     title: 'Notifications', unread: (count) => `${count} unread`, markAll: 'Mark all read',
-    clearAll: 'Clear all', empty: "You're all caught up!", emptyHint: 'No notifications yet.',
-    markRead: 'Mark read', open: 'Open', dismiss: 'Dismiss', loadError: 'Notifications could not be loaded.',
+    clearAll: 'Archive all', empty: "You're all caught up!", emptyHint: 'No notifications yet.',
+    markRead: 'Mark read', open: 'Open', dismiss: 'Archive', loadError: 'Notifications could not be loaded.',
   },
   tl: {
     title: 'Mga notification', unread: (count) => `${count} hindi pa nababasa`, markAll: 'Markahan lahat bilang nabasa',
-    clearAll: 'Burahin lahat', empty: 'Wala ka nang bagong notification.', emptyHint: 'Wala pang mga notification.',
-    markRead: 'Markahan na nabasa', open: 'Buksan', dismiss: 'Alisin', loadError: 'Hindi ma-load ang mga notification.',
+    clearAll: 'I-archive lahat', empty: 'Wala ka nang bagong notification.', emptyHint: 'Wala pang mga notification.',
+    markRead: 'Markahan na nabasa', open: 'Buksan', dismiss: 'I-archive', loadError: 'Hindi ma-load ang mga notification.',
   },
 };
 
@@ -93,7 +93,7 @@ export default function MemberNotificationCenter({ colors, isMobile = false, lan
     setLoading(true);
     setError('');
     try {
-      await axiosInstance.delete(`/notifications/${notification.id}`);
+      await axiosInstance.patch(`/notifications/${notification.id}/archive`);
       setNotifications((current) => current.filter((item) => item.id !== notification.id));
     } catch {
       setError(text.loadError);
@@ -106,7 +106,7 @@ export default function MemberNotificationCenter({ colors, isMobile = false, lan
     setLoading(true);
     setError('');
     try {
-      await axiosInstance.delete('/notifications/clear-all');
+      await axiosInstance.patch('/notifications/archive-all');
       setNotifications([]);
     } catch {
       setError(text.loadError);
