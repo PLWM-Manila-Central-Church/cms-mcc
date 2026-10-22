@@ -1,6 +1,7 @@
 import { displayMemberName } from './displayIdentity';
+import { CHURCH_REPORT_NAME } from './reportBranding';
 
-export const FINANCE_STATEMENT_CHURCH_NAME = 'PLWM - MANILA CENTRAL CHURCH';
+export const FINANCE_STATEMENT_CHURCH_NAME = CHURCH_REPORT_NAME;
 
 const toDateOnly = (value) => {
   if (!value) return '';

@@ -1,0 +1,3 @@
+export const CHURCH_REPORT_NAME = 'PLWM - MANILA CENTRAL CHURCH';
+export const CHURCH_REPORT_SHORT_NAME = 'PLWM-MCC';
+export const CHURCH_REPORT_LOGO = '/logo.jpg';
