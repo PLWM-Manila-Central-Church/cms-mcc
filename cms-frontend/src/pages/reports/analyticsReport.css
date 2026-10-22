@@ -1,0 +1,157 @@
+.analytics-report-header {
+  align-items: flex-start !important;
+  gap: 18px !important;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #d7e9f3;
+}
+
+.analytics-report-brand {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.analytics-report-logo {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: #fff;
+}
+
+.analytics-report-brand-copy { min-width: 0; }
+
+.analytics-report-church-name {
+  margin: 0 0 4px;
+  color: #005599;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.analytics-report-brand-copy .workspace-page-title { color: #003d70; }
+
+.analytics-report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 8px;
+  color: #52647a;
+  font-size: 12px;
+}
+
+.analytics-report-meta span { display: inline-flex; flex-wrap: wrap; gap: 5px; }
+.analytics-report-meta strong { color: #173b58; }
+
+.analytics-report-tag {
+  align-self: start;
+  padding: 7px 10px;
+  border: 1px solid #cfe8f5;
+  border-radius: 999px;
+  background: #eff9fd;
+  color: #005599;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+
+.analytics-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.analytics-report-print-button {
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid #c9dceb;
+  border-radius: 8px;
+  background: #fff;
+  color: #005599;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.analytics-report-print-button:disabled { cursor: wait; opacity: .55; }
+.analytics-report-actions button:focus-visible { outline: 3px solid #13b5ea; outline-offset: 2px; }
+
+.analytics-report-export-note,
+.analytics-report-download-notice {
+  max-width: 310px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.analytics-report-download-notice { color: #176b3a; font-weight: 700; }
+
+@media (max-width: 760px) {
+  .analytics-report-header { align-items: stretch !important; }
+  .analytics-report-brand { grid-template-columns: 44px minmax(0, 1fr); gap: 10px; }
+  .analytics-report-logo { width: 44px; height: 44px; }
+  .analytics-report-tag { grid-column: 2; justify-self: start; }
+  .analytics-report-actions { justify-content: stretch; }
+  .analytics-report-actions button { flex: 1 1 145px; }
+  .analytics-report-meta { flex-direction: column; }
+  .analytics-report-export-note,
+  .analytics-report-download-notice { max-width: none; text-align: left; }
+}
+
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+
+  body * { visibility: hidden !important; }
+  .mcc-module-analytics-report,
+  .mcc-module-analytics-report * { visibility: visible !important; }
+
+  .mcc-module-analytics-report {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #0f172a !important;
+  }
+
+  .analytics-report-actions,
+  .analytics-report-filters { display: none !important; }
+  .analytics-report-header {
+    display: block !important;
+    margin-bottom: 14px !important;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #13b5ea;
+    break-inside: avoid;
+  }
+
+  .analytics-report-brand {
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+
+  .analytics-report-logo { width: 46px; height: 46px; }
+  .analytics-report-tag { border-color: #cfe8f5; background: #eff9fd !important; }
+  .analytics-report-meta { font-size: 10px; }
+
+  .mcc-module-analytics-report article,
+  .mcc-module-analytics-report section {
+    break-inside: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .mcc-module-analytics-report h2 { color: #003d70 !important; }
+  .mcc-module-analytics-report p { color: #52647a !important; }
+  .mcc-module-analytics-report div[style*="background"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -2,8 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
-import { buildAnalyticsCsvRows, formatReportBucket, getAnalyticsReportScope, getReportPeriodRange } from '../../utils/analyticsReport';
+import {
+  buildAnalyticsCsvRows,
+  formatReportBucket,
+  formatReportGeneratedAt,
+  formatReportRange,
+  getAnalyticsReportScope,
+  getReportPeriodRange,
+} from '../../utils/analyticsReport';
+import { CHURCH_REPORT_LOGO, CHURCH_REPORT_NAME } from '../../utils/reportBranding';
 import { toCsv } from '../../utils/csv';
+import './analyticsReport.css';
 
 const manilaDate = () => {
   const values = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
@@ -67,6 +76,8 @@ export default function AnalyticsReportPage() {
   const [dateTo, setDateTo] = useState(today());
   const [reportPeriod, setReportPeriod] = useState('year');
   const [data, setData] = useState(null);
+  const [reportGeneratedAt, setReportGeneratedAt] = useState(null);
+  const [downloadNotice, setDownloadNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -76,6 +87,7 @@ export default function AnalyticsReportPage() {
     try {
       const response = await axiosInstance.get('/reports/analytics', { params: { date_from: dateFrom, date_to: dateTo, period: reportPeriod } });
       setData(response.data.data);
+      setReportGeneratedAt(new Date());
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'Could not load the consolidated report.');
     } finally { setLoading(false); }
@@ -85,7 +97,13 @@ export default function AnalyticsReportPage() {
 
   const downloadCsv = () => {
     if (!data) return;
-    const csv = toCsv(buildAnalyticsCsvRows(data, reportScope));
+    const csv = toCsv(buildAnalyticsCsvRows(data, {
+      ...reportScope,
+      dateFrom: data.range?.from || dateFrom,
+      dateTo: data.range?.to || dateTo,
+      reportPeriod: data.period?.preset || reportPeriod,
+      generatedAt: new Date(),
+    }));
     const link = document.createElement('a');
     const blobUrl = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
     link.href = blobUrl;
@@ -93,6 +111,7 @@ export default function AnalyticsReportPage() {
     document.body.appendChild(link);
     link.click();
     link.remove();
+    setDownloadNotice('Analytics CSV download requested.');
     window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
   };
 
@@ -106,13 +125,32 @@ export default function AnalyticsReportPage() {
   };
 
   const maxGrowth = Math.max(1, ...(data?.member_growth || []).map((row) => Number(row.total || 0)));
+  const reportRangeLabel = data?.range ? formatReportRange(data.range) : 'Waiting for report data';
+  const generatedAtLabel = reportGeneratedAt ? formatReportGeneratedAt(reportGeneratedAt) : '';
   return (
     <section className="mcc-module mcc-module-analytics-report" aria-label="Analytics report" style={{ ...S.page, padding: 0 }}>
-      <header style={S.header}>
-        <div><h1 className="workspace-page-title" style={S.title}>Consolidated Analytics</h1><p style={S.subtitle}>{reportDescription}</p></div>
-        <button type="button" onClick={downloadCsv} disabled={!data || loading} style={{ ...S.download, opacity: !data || loading ? 0.6 : 1 }}>Download CSV</button>
+      <header className="analytics-report-header" style={S.header}>
+        <div className="analytics-report-brand">
+          <img className="analytics-report-logo" src={CHURCH_REPORT_LOGO} alt="" />
+          <div className="analytics-report-brand-copy">
+            <p className="analytics-report-church-name">{CHURCH_REPORT_NAME}</p>
+            <h1 className="workspace-page-title" style={S.title}>Consolidated Analytics</h1>
+            <p style={S.subtitle}>{reportDescription}</p>
+            <div className="analytics-report-meta">
+              <span><strong>Report period</strong>{reportRangeLabel}</span>
+              {generatedAtLabel && <span><strong>Generated</strong>{generatedAtLabel} (Asia/Manila)</span>}
+            </div>
+          </div>
+          <span className="analytics-report-tag">ANALYTICS REPORT</span>
+        </div>
+        <div className="analytics-report-actions">
+          <button type="button" onClick={downloadCsv} disabled={!data || loading} style={{ ...S.download, opacity: !data || loading ? 0.6 : 1 }}>Download CSV</button>
+          <button className="analytics-report-print-button" type="button" onClick={() => window.print()} disabled={!data || loading}>Print / Save PDF</button>
+          <small className="analytics-report-export-note">CSV includes church, scope, period, and units. Print / Save PDF preserves the logo and color theme.</small>
+          {downloadNotice && <span className="analytics-report-download-notice" role="status" aria-live="polite">{downloadNotice}</span>}
+        </div>
       </header>
-      <section style={{ ...S.filters, flexDirection: isMobile ? 'column' : 'row' }}>
+      <section className="analytics-report-filters" style={{ ...S.filters, flexDirection: isMobile ? 'column' : 'row' }}>
         <label style={S.filterLabel}>Report period
           <select aria-label="Report period" value={reportPeriod} onChange={(event) => selectPeriod(event.target.value)} style={S.dateInput}>
             <option value="week">Weekly to date</option>
