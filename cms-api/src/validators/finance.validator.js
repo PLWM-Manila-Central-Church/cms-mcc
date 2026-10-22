@@ -67,20 +67,16 @@ exports.updateAccountSchema = Joi.object({
 // ── Expense Category schemas ─────────────────────────────────
 exports.createExpenseCategorySchema = Joi.object({
   category_name: Joi.string().max(100).required(),
-  account_id: Joi.number().integer().positive().required(),
   description: Joi.string().max(500).allow(null, "").optional(),
 });
 
 exports.updateExpenseCategorySchema = Joi.object({
   category_name: Joi.string().max(100).optional(),
-  account_id: Joi.number().integer().positive().optional(),
   description: Joi.string().max(500).allow(null, "").optional(),
 }).min(1);
 
 // ── Expense schemas ──────────────────────────────────────────
 exports.createExpenseSchema = Joi.object({
-  // Optional for older clients; the service derives the account from category_id.
-  account_id: Joi.number().integer().positive().optional(),
   category_id: Joi.number().integer().positive().required(),
   date: Joi.date().iso().required(),
   amount: Joi.number().positive().required(),
@@ -89,7 +85,6 @@ exports.createExpenseSchema = Joi.object({
 });
 
 exports.updateExpenseSchema = Joi.object({
-  account_id: Joi.number().integer().positive().optional(),
   category_id: Joi.number().integer().positive().optional(),
   date: Joi.date().iso().optional(),
   amount: Joi.number().positive().optional(),
@@ -103,7 +98,6 @@ exports.getRecordsQuerySchema = Joi.object({
   category_id:       Joi.number().integer().positive().optional(),
   payment_method:    Joi.string().max(100).optional(),
   payment_method_id: Joi.number().integer().positive().optional(),
-  account_id:        Joi.number().integer().positive().optional(),
   date_from:         Joi.date().iso().optional(),
   date_to:           Joi.date().iso().optional(),
 });

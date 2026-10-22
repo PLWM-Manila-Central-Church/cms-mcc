@@ -71,8 +71,6 @@ exports.archiveRecord = async (req, res, next) => {
     next(err);
   }
 };
-exports.deleteRecord = exports.archiveRecord;
-
 // ── Financial Categories ─────────────────────────────────────
 exports.getAllCategories = async (req, res, next) => {
   try {
@@ -104,15 +102,6 @@ exports.createCategory = async (req, res, next) => {
 exports.updateCategory = async (req, res, next) => {
   try {
     const result = await financeService.updateCategory(req.params.id, req.body);
-    res.json({ success: true, data: result });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.deleteCategory = async (req, res, next) => {
-  try {
-    const result = await financeService.deleteCategory(req.params.id);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -169,9 +158,9 @@ exports.updateFund = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteFund = async (req, res, next) => {
+exports.archiveFund = async (req, res, next) => {
   try {
-    const result = await financeService.deleteFund(req.params.id, req.user.userId);
+    const result = await financeService.archiveFund(req.params.id, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -205,9 +194,9 @@ exports.updateAccount = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteAccount = async (req, res, next) => {
+exports.archiveAccount = async (req, res, next) => {
   try {
-    const result = await financeService.deleteAccount(req.params.id, req.user.userId);
+    const result = await financeService.archiveAccount(req.params.id, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -241,9 +230,9 @@ exports.updateExpenseCategory = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteExpenseCategory = async (req, res, next) => {
+exports.archiveExpenseCategory = async (req, res, next) => {
   try {
-    const result = await financeService.deleteExpenseCategory(req.params.id, req.user.userId);
+    const result = await financeService.archiveExpenseCategory(req.params.id, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -292,9 +281,9 @@ exports.updateExpense = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deleteExpense = async (req, res, next) => {
+exports.archiveExpense = async (req, res, next) => {
   try {
-    const result = await financeService.deleteExpense(req.params.id, req.user.userId);
+    const result = await financeService.archiveExpense(req.params.id, req.user.userId);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -346,4 +335,3 @@ exports.archiveAttachment = async (req, res, next) => {
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
-exports.deleteAttachment = exports.archiveAttachment;

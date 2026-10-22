@@ -18,6 +18,5 @@ router.put("/bulk",  auth, authorize("settings", "update"), ctrl.bulkUpdateSetti
 // PUT /settings/:key — single key update
 router.put("/:key",  auth, authorize("settings", "update"), validate(updateSettingSchema), ctrl.updateSetting);
 
-router.delete("/:key", auth, authorize("settings", "delete"), ctrl.deleteSetting);
 
 module.exports = router;

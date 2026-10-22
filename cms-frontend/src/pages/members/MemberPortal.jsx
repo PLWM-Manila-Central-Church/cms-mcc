@@ -1206,15 +1206,15 @@ export default function MemberPortal() {
   const doCancel = useCallback(async (eid)=>{
     if(!(await confirm({
       title: 'Cancel event registration?',
-      message: 'Your registration for this event will be cancelled.',
+      message: 'Your registration will be marked cancelled and kept in event history. You can register again while registration is open.',
       confirmLabel: 'Cancel registration',
       tone: 'warning',
     }))) return;
     setEvtL(eid);
     setEventRegistrationError('');
     try {
-      await axiosInstance.delete(`/member-portal/events/${eid}/register`);
-      showToast('Registration cancelled.');
+      await axiosInstance.post(`/member-portal/events/${eid}/register/cancel`);
+      showToast('Registration cancelled; its history was retained.');
       const r=await axiosInstance.get('/member-portal/events');
       const nextEvents=r.data.data;
       setEvents(nextEvents);

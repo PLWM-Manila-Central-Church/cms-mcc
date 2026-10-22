@@ -14,11 +14,11 @@ router.get("/unread",  auth, ctrl.getUnreadNotifications);
 // Previously /read-all and /clear-all were AFTER /:id/read and /:id,
 // so Express matched them as id="read-all" / id="clear-all" → 404 every time.
 router.patch("/read-all",  auth, ctrl.markAllAsRead);       // ← moved BEFORE /:id/read
-router.delete("/clear-all", auth, ctrl.deleteAllNotifications); // ← moved BEFORE /:id
+router.patch("/archive-all", auth, ctrl.archiveAllNotifications);
 
 router.get("/:id",       auth, ctrl.getNotificationById);
 router.post("/",         auth, authorize("notifications", "create"), ctrl.createNotification);
 router.patch("/:id/read", auth, ctrl.markAsRead);
-router.delete("/:id",    auth, ctrl.deleteNotification);
+router.patch("/:id/archive", auth, ctrl.archiveNotification);
 
 module.exports = router;

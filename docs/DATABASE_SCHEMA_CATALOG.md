@@ -2,7 +2,7 @@
 
 > Generated from the runtime Sequelize models, including the separate QR attendance model module. This describes the application contract, not verified live TiDB DDL. Migrations define the database schema; compare this catalog with the isolated live schema before relying on constraints, indexes, or columns.
 
-Models: 57
+Models: 58
 
 ## `accounts`
 
@@ -14,6 +14,9 @@ Model: `Account`
 | `name` | STRING(100) | No | No | — |
 | `fund_id` | INTEGER UNSIGNED | No | No | — |
 | `description` | TEXT | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -51,6 +54,9 @@ Model: `ArchiveCategory`
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `name` | STRING(100) | No | No | — |
 | `description` | TEXT | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -128,6 +134,9 @@ Model: `Attachment`
 | `file_name` | STRING(255) | No | No | — |
 | `file_path` | STRING(500) | No | No | — |
 | `uploaded_by` | INTEGER UNSIGNED | No | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `uploaded_at` | DATE | No | No | NOW |
 
 Indexes
@@ -154,6 +163,9 @@ Model: `AttendanceBatchItem`
 | `outcome` | ENUM("pending", "confirmed", "already_confirmed") | No | No | "pending" |
 | `service_attendance_id` | INTEGER UNSIGNED | Yes | No | — |
 | `event_attendance_id` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -357,6 +369,9 @@ Model: `CellGroup`
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `name` | STRING(100) | No | No | — |
 | `area` | STRING(100) | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -376,6 +391,9 @@ Model: `EmergencyContact`
 | `name` | STRING(100) | No | No | — |
 | `relationship` | STRING(50) | No | No | — |
 | `phone` | STRING(30) | No | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -439,6 +457,28 @@ Indexes
 
 Associations
 - HasMany `Events` → `events` via `category_id`
+## `event_image_archives`
+
+Model: `EventImageArchive`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `event_id` | INTEGER UNSIGNED | No | No | — |
+| `image_key` | STRING(500) | Yes | No | — |
+| `image_url` | STRING(1000) | No | No | — |
+| `created_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 1 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `event` → `events` via `event_id`
 ## `event_registrations`
 
 Model: `EventRegistration`
@@ -452,6 +492,9 @@ Model: `EventRegistration`
 | `registered_by` | INTEGER UNSIGNED | Yes | No | — |
 | `seat_number` | INTEGER UNSIGNED | Yes | No | — |
 | `parking_slot` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 
 Indexes
 - Unique `unique_event_member_registration`: event_id, member_id
@@ -478,7 +521,7 @@ Model: `Event`
 | `start_time` | TIME | Yes | No | — |
 | `location` | STRING(255) | Yes | No | — |
 | `capacity` | INTEGER UNSIGNED | Yes | No | — |
-| `total_parking_slots` | INTEGER UNSIGNED | No | No | 0 |
+| `total_parking_slots` | INTEGER UNSIGNED | Yes | No | null |
 | `registration_deadline` | DATE | Yes | No | — |
 | `status` | ENUM("Upcoming", "Ongoing", "Completed", "Cancelled") | No | No | "Upcoming" |
 | `is_deleted` | TINYINT | No | No | 0 |
@@ -498,6 +541,8 @@ Associations
 - BelongsTo `deletedByUser` → `users` via `deleted_by`
 - HasMany `EventRegistrations` → `event_registrations` via `event_id`
 - HasMany `MinistryEventInvites` → `ministry_event_invites` via `event_id`
+- HasMany `archivedImages` → `event_image_archives` via `event_id`
+- HasOne `attendanceService` → `services` via `event_id`
 ## `expense_categories`
 
 Model: `ExpenseCategory`
@@ -505,9 +550,12 @@ Model: `ExpenseCategory`
 | Column | Application type | Nullable | Primary key | Default |
 | --- | --- | --- | --- | --- |
 | `id` | INTEGER UNSIGNED | No | Yes | — |
-| `account_id` | INTEGER UNSIGNED | No | No | — |
+| `account_id` | INTEGER UNSIGNED | Yes | No | — |
 | `category_name` | STRING(100) | No | No | — |
 | `description` | TEXT | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -524,13 +572,16 @@ Model: `Expense`
 | Column | Application type | Nullable | Primary key | Default |
 | --- | --- | --- | --- | --- |
 | `id` | INTEGER UNSIGNED | No | Yes | — |
-| `account_id` | INTEGER UNSIGNED | No | No | — |
+| `account_id` | INTEGER UNSIGNED | Yes | No | — |
 | `category_id` | INTEGER UNSIGNED | No | No | — |
 | `date` | DATEONLY | No | No | — |
 | `amount` | DECIMAL(10, 2) | No | No | — |
 | `description` | TEXT | Yes | No | — |
 | `payment_method_id` | INTEGER UNSIGNED | No | No | — |
 | `created_by` | INTEGER UNSIGNED | No | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -604,6 +655,9 @@ Model: `Fund`
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `name` | STRING(100) | No | No | — |
 | `description` | TEXT | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -643,6 +697,9 @@ Model: `InventoryItem`
 | `status` | ENUM("Available", "Low Stock", "Out of Stock", "Under Repair") | No | No | "Available" |
 | `low_stock_threshold` | INTEGER UNSIGNED | Yes | No | — |
 | `notes` | TEXT | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -722,6 +779,9 @@ Model: `InventoryUsage`
 | `used_by` | INTEGER UNSIGNED | No | No | — |
 | `used_for` | STRING(255) | Yes | No | — |
 | `used_at` | DATE | No | No | — |
+| `is_reversed` | TINYINT | No | No | 0 |
+| `reversed_at` | DATE | Yes | No | — |
+| `reversed_by` | INTEGER UNSIGNED | Yes | No | — |
 
 Indexes
 - None declared in the model
@@ -837,6 +897,7 @@ Model: `Member`
 | `is_deleted` | TINYINT | No | No | 0 |
 | `deleted_at` | DATE | Yes | No | — |
 | `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `archived_linked_user_active` | TINYINT | Yes | No | — |
 | `cell_group_id` | INTEGER UNSIGNED | Yes | No | — |
 | `group_id` | INTEGER UNSIGNED | Yes | No | — |
 | `referred_by` | INTEGER UNSIGNED | Yes | No | — |
@@ -928,6 +989,9 @@ Model: `MinistryAssignment`
 | `ministry_role_id` | INTEGER UNSIGNED | No | No | — |
 | `confirmed` | TINYINT | No | No | 0 |
 | `substitute_requested` | TINYINT | No | No | 0 |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -989,6 +1053,9 @@ Model: `MinistryMembership`
 | `ministry_role_id` | INTEGER UNSIGNED | No | No | — |
 | `member_id` | INTEGER UNSIGNED | No | No | — |
 | `added_by` | INTEGER UNSIGNED | No | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 
 Indexes
@@ -1025,6 +1092,9 @@ Model: `MinistryRole`
 | --- | --- | --- | --- | --- |
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `name` | STRING(100) | No | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -1050,6 +1120,9 @@ Model: `Notification`
 | `reference_type` | STRING(50) | Yes | No | null |
 | `is_read` | TINYINT | No | No | 0 |
 | `read_at` | DATE | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 
 Indexes
@@ -1220,11 +1293,15 @@ Model: `Service`
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `title` | STRING(150) | No | No | — |
 | `service_date` | DATEONLY | No | No | — |
-| `service_time` | TIME | No | No | — |
-| `capacity` | INTEGER UNSIGNED | No | No | — |
-| `total_parking_slots` | INTEGER UNSIGNED | No | No | — |
+| `service_time` | TIME | Yes | No | — |
+| `capacity` | INTEGER UNSIGNED | Yes | No | — |
+| `total_parking_slots` | INTEGER UNSIGNED | Yes | No | — |
+| `event_id` | INTEGER UNSIGNED | Yes | No | — |
 | `response_deadline` | DATE | Yes | No | — |
 | `status` | ENUM("draft", "published", "cancelled", "completed") | No | No | "draft" |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -1232,6 +1309,7 @@ Indexes
 - None declared in the model
 
 Associations
+- BelongsTo `event` → `events` via `event_id`
 - HasMany `Attendances` → `attendances` via `service_id`
 - HasMany `MinistryAssignments` → `ministry_assignments` via `service_id`
 - HasMany `ServiceResponses` → `service_responses` via `service_id`
@@ -1346,6 +1424,9 @@ Model: `User`
 | `locked_until` | DATE | Yes | No | null |
 | `is_deleted` | TINYINT | No | No | 0 |
 | `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `archived_email` | STRING(150) | Yes | No | — |
+| `archived_is_active` | TINYINT | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 

@@ -226,7 +226,7 @@ export default function InventoryPage() {
     } finally { setSavingUsage(false); }
   };
 
-  const handleDeleteUsage = async (usage) => {
+  const handleReverseUsage = async (usage) => {
     if (!(await confirm({
       title: 'Reverse inventory usage?',
       message: `Reverse this usage and restore ${usage.quantity_used} ${usage.item?.unit || 'unit(s)'} to stock? The original usage record will be retained for audit history.`,
@@ -234,7 +234,7 @@ export default function InventoryPage() {
       tone: 'warning',
     }))) return;
     try {
-      await axiosInstance.delete(`/inventory/usage/${usage.id}`);
+      await axiosInstance.post(`/inventory/usage/${usage.id}/reverse`);
       await fetchUsages(usagePage);
       fetchItems();
       fetchReport();
@@ -793,7 +793,7 @@ export default function InventoryPage() {
                         <td style={s.td}>{usage.quantity_used} {usage.item?.unit || ''}</td>
                         <td style={s.td}>{usage.used_for || '—'}</td>
                         <td style={s.td}>{usage.usedByUser?.email || '—'}</td>
-                        {canDelete && <td style={s.td}>{Number(usage.is_reversed) ? <span style={{ ...s.badge, background: '#f1f5f9', color: '#64748b' }}>Reversed</span> : <button onClick={() => handleDeleteUsage(usage)} style={{ ...s.editBtn, background: '#fef2f2', color: '#dc2626' }}>Reverse</button>}</td>}
+                        {canDelete && <td style={s.td}>{Number(usage.is_reversed) ? <span style={{ ...s.badge, background: '#f1f5f9', color: '#64748b' }}>Reversed</span> : <button onClick={() => handleReverseUsage(usage)} style={{ ...s.editBtn, background: '#e8f4fd', color: '#005599' }}>Reverse usage</button>}</td>}
                       </tr>
                     ))}
               </tbody>

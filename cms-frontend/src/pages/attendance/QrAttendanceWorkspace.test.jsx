@@ -6,13 +6,13 @@ import { ConfirmationProvider } from '../../context/ConfirmationContext';
 const fixture = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
-  delete: vi.fn(),
+  patch: vi.fn(),
   user: null,
   permissions: new Set(),
   summary: null,
 }));
 
-vi.mock('../../api/axiosInstance', () => ({ default: { get: fixture.get, post: fixture.post, delete: fixture.delete } }));
+vi.mock('../../api/axiosInstance', () => ({ default: { get: fixture.get, post: fixture.post, patch: fixture.patch } }));
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ user: fixture.user, hasPermission: (moduleName, action) => fixture.permissions.has(`${moduleName}:${action}`) }),
 }));

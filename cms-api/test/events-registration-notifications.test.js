@@ -13,6 +13,7 @@ jest.mock("../src/services/notifications.service", () => ({ createNotification: 
 jest.mock("../src/models", () => ({
   Event: { findOne: jest.fn() },
   EventCategory: {},
+  EventImageArchive: { create: jest.fn() },
   EventRegistration: {
     findOne: jest.fn(),
     unscoped: jest.fn(function unscoped() { return this; }),
@@ -40,12 +41,17 @@ describe("staff event-registration notifications", () => {
     status: "Upcoming",
     capacity: 25,
     registration_deadline: null,
+    image_key: "old/event.jpg",
+    image_url: "/events/12/image",
+    update: jest.fn(async (values) => Object.assign(event, values)),
   };
   const registration = { id: 31, event_id: 12, member_id: 42 };
 
   beforeEach(() => {
     jest.clearAllMocks();
     sequelize.transaction.mockImplementation(async (callback) => callback(transactionContext));
+    event.image_key = "old/event.jpg";
+    event.image_url = "/events/12/image";
     Event.findOne.mockResolvedValue(event);
     EventRegistration.findOne.mockResolvedValue(null);
     EventRegistration.findAll.mockResolvedValue([]);
@@ -94,6 +100,22 @@ describe("staff event-registration notifications", () => {
       reference_id: 12,
       reference_type: "event",
     });
+  });
+
+  test("archives a replaced event image instead of deleting the stored file", async () => {
+    const { EventImageArchive } = require("../src/models");
+    const uploaded = { key: "new/event.jpg" };
+    await eventsService.setEventImage(12, uploaded, 7);
+    expect(EventImageArchive.create).toHaveBeenCalledWith(expect.objectContaining({
+      event_id: 12,
+      image_key: "old/event.jpg",
+      image_url: "/events/12/image",
+      created_by: 7,
+      is_deleted: 1,
+      deleted_at: expect.any(Date),
+      deleted_by: 7,
+    }), { transaction: transactionContext });
+    expect(event.update).toHaveBeenCalledWith({ image_key: "new/event.jpg", image_url: "/events/12/image" }, { transaction: transactionContext });
   });
 
   test("adds the same event reference to every successful bulk registration notice", async () => {

@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
-import { deleteRecordsWithResults } from '../../utils/bulkDelete';
+import { archiveRecordsWithResults } from '../../utils/bulkArchive';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
 
 const ROLE_COLORS = {
@@ -108,13 +108,13 @@ export default function UsersPage() {
     }))) return;
     setBulkDeleting(true);
     try {
-      const { deletedCount, failures } = await deleteRecordsWithResults(
+      const { archivedCount, failures } = await archiveRecordsWithResults(
         [...selected], (id) => axiosInstance.patch(`/users/${id}/archive`),
       );
       setSelected(new Set(failures.map(({ id }) => id)));
       await fetchUsers();
       if (failures.length) {
-        setError(`${deletedCount} account(s) archived; ${failures.length} failed. ${apiErrorMessage(failures[0].error, 'Review the remaining selected accounts.')}`);
+        setError(`${archivedCount} account(s) archived; ${failures.length} failed. ${apiErrorMessage(failures[0].error, 'Review the remaining selected accounts.')}`);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Some accounts could not be archived.');

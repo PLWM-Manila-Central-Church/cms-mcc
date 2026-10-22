@@ -35,7 +35,7 @@ const ROLE_SUBTITLE = {
   [R.ADMIN]: 'System health, users, and operational signals.',
   [R.PASTOR]: 'Read-only church overview and pastoral monitoring.',
   [R.REG]: 'Member onboarding, services, and event operations.',
-  [R.FINANCE]: 'Giving records, monthly totals, and finance archives.',
+  [R.FINANCE]: 'Received income, expenses, monthly totals, and retained finance records.',
   [R.MINISTRY]: 'Your ministry roster, event invites, and requests.',
   [R.LEADER]: 'Your assigned cell groups and groups, with scoped attendance tools.',
   [R.CG]: 'Your cell group members and attendance tasks.',
@@ -497,18 +497,19 @@ function getDashboardConfig({ role, stats, hasPermission }) {
     case R.FINANCE:
       return {
         metrics: [
-          metric('This month', fmtMoney(stats.finance.totalThisMonth), 'Recorded giving', '/finance'),
+          metric('Received income', fmtMoney(stats.finance.totalThisMonth), 'Month to date', '/finance'),
+          metric('Expenses', fmtMoney(stats.finance.totalExpenseThisMonth), 'Month to date', '/finance/expenses'),
+          metric('Net balance', fmtMoney(stats.finance.netThisMonth), 'Income less expenses', '/reports/analytics'),
           metric('Records', fmtNumber(summary.recordsThisMonth), 'Transactions this month', '/finance'),
-          metric('Members', fmtNumber(stats.members.total), 'Search names while recording giving', '/finance'),
-          metric('Pending archives', fmtNumber(summary.pendingArchives), 'Awaiting review', '/archives'),
         ],
         primary: [
-          row('Finance records', 'Record and review contributions.', '/finance'),
+          row('Giving records', 'Record and review received contributions.', '/finance'),
+          row('Expenses', 'Record and review outgoing funds.', '/finance/expenses'),
           row('Giving entry', 'Choose a contributor in the giving form.', '/finance?new=giving'),
           row('Archives', 'Access finance-related documents.', '/archives'),
         ],
         watch: [
-          row('Recent total', 'Month-to-date giving.', '/finance', fmtMoney(stats.finance.totalThisMonth)),
+          row('Month-to-date net', 'Received income less expenses.', '/reports/analytics', fmtMoney(stats.finance.netThisMonth)),
           row('New members', 'Recently added and available in the giving form.', '/finance', fmtNumber(stats.members.newThisMonth)),
         ],
         secondaryTitle: 'Recent Finance Records',

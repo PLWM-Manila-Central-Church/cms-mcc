@@ -94,7 +94,7 @@ exports.uploadEventImage = async (req, res, next) => {
   }
 };
 
-exports.deleteEventImage = async (req, res, next) => {
+exports.archiveEventImage = async (req, res, next) => {
   try {
     if (forbidMinistryLeaderEventManage(req, res)) return;
     const data = await eventsService.removeEventImage(req.params.id, req.user.userId);
@@ -198,7 +198,7 @@ exports.bulkRegisterMembers = async (req, res, next) => {
 exports.unregisterMember = async (req, res, next) => {
   try {
     if (forbidMinistryLeaderEventManage(req, res)) return;
-    const memberId = req.body.member_id || req.user.memberId;
+    const memberId = req.user.memberId;
     if (!memberId)
       return res.status(400).json({ success: false, message: "No member profile linked to this account" });
     const result = await eventsService.unregisterMember(req.params.id, memberId, req.user.userId);

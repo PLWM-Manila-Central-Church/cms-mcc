@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const api = vi.hoisted(() => ({ get: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
+const api = vi.hoisted(() => ({ get: vi.fn(), patch: vi.fn() }));
 vi.mock('../../api/axiosInstance', () => ({ default: api }));
 
 import MemberNotificationCenter from './MemberNotificationCenter';
@@ -22,7 +22,7 @@ describe('MemberNotificationCenter', () => {
     vi.clearAllMocks();
     api.get.mockResolvedValue({ data: { data: [] } });
     api.patch.mockResolvedValue({ data: { success: true } });
-    api.delete.mockResolvedValue({ data: { success: true } });
+    api.patch.mockResolvedValue({ data: { success: true } });
   });
 
   it('keeps the mobile panel inside the viewport and restores bell focus on Escape', async () => {
@@ -43,7 +43,7 @@ describe('MemberNotificationCenter', () => {
     render(<MemoryRouter><MemberNotificationCenter colors={{ ...colors, dk: true, accentT: '#60a5fa' }} /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: 'Notifications' }));
     expect(await screen.findByRole('button', { name: 'Open' })).toHaveStyle({ color: '#60a5fa' });
-    expect(screen.getByRole('button', { name: 'Clear all' })).toHaveStyle({ color: '#fca5a5' });
+    expect(screen.getByRole('button', { name: 'Archive all' })).toHaveStyle({ color: '#fca5a5' });
   });
 
   it('shows and marks a self-registration notice read before opening Events', async () => {
@@ -90,8 +90,18 @@ describe('MemberNotificationCenter', () => {
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/notifications/read-all'));
     await waitFor(() => expect(screen.queryByText('1 unread')).not.toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear all' }));
-    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/notifications/clear-all'));
+    fireEvent.click(screen.getByRole('button', { name: 'Archive all' }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/notifications/archive-all'));
+    expect(await screen.findByText('No notifications yet.')).toBeInTheDocument();
+  });
+
+  it('archives one notification without deleting its retained history', async () => {
+    api.get.mockResolvedValue({ data: { data: [{ id: 81, message: 'Service update', is_read: 1 }] } });
+    render(<MemoryRouter><MemberNotificationCenter colors={colors} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Notifications' }));
+    expect(await screen.findByText('Service update')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/notifications/81/archive'));
     expect(await screen.findByText('No notifications yet.')).toBeInTheDocument();
   });
 });

@@ -273,7 +273,7 @@ exports.getMyEvents = async (memberId) => {
       location:              e.location,
       image_url:             e.image_url || null,
       capacity:              e.capacity,
-      total_parking_slots:   e.total_parking_slots || 0,
+      total_parking_slots:   e.total_parking_slots ?? null,
       registration_deadline: e.registration_deadline,
       status:                e.status,
       category:              plain.category,

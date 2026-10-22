@@ -160,8 +160,10 @@ export default function AnalyticsReportPage() {
           </>}
           {canSeeFinance && data.finance && <section style={S.metricGrid}>
             <article style={S.metric}><span>Received income</span><strong>{money(data.finance.income)}</strong></article>
+            <article style={S.metric}><span>Expenses</span><strong>{money(data.finance.expenses)}</strong></article>
+            <article style={S.metric}><span>Net balance</span><strong>{money(data.finance.net)}</strong></article>
           </section>}
-          {canSeeFinance && data.finance?.buckets && <TrendBars title="Finance trend" rows={data.finance.buckets} firstKey="income" firstLabel="Received income" bucket={data.period?.bucket || 'month'} />}
+          {canSeeFinance && data.finance?.buckets && <TrendBars title="Finance trend" rows={data.finance.buckets} firstKey="income" secondKey="expenses" firstLabel="Received income" secondLabel="Expenses" bucket={data.period?.bucket || 'month'} />}
           <p style={S.footnote}>This report shows aggregate totals. Member names and individual giving records are not included.</p>
         </>
       )}

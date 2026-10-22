@@ -124,13 +124,13 @@ export default function MemberProfilePage() {
 
   const handleEcDelete = async (contactId) => {
     if (!(await confirm({
-      title: 'Remove emergency contact?',
-      message: 'This emergency contact will be removed from the member profile.',
-      confirmLabel: 'Remove contact',
+      title: 'Archive emergency contact?',
+      message: 'The contact will leave the active profile list. Its record is retained and a System Admin can restore it from Archives.',
+      confirmLabel: 'Archive contact',
       tone: 'warning',
     }))) return;
     try {
-      await axiosInstance.delete(`/members/emergency-contacts/${contactId}`);
+      await axiosInstance.patch(`/members/emergency-contacts/${contactId}/archive`);
       fetchMember();
     } catch {}
   };
@@ -298,8 +298,10 @@ export default function MemberProfilePage() {
                       <button
                         onClick={() => handleEcDelete(c.id)}
                         style={styles.ecDeleteBtn}
+                        aria-label={`Archive emergency contact: ${c.name}`}
+                        title="Archive emergency contact"
                       >
-                        <MonoIcon name="close" size={13} />
+                        <MonoIcon name="archive" size={13} />
                       </button>
                     )}
                   </div>

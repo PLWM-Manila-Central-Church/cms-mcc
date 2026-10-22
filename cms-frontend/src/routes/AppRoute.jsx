@@ -23,6 +23,7 @@ const ServicesPage = lazy(() => import('../pages/services/ServicesPage'));
 const AttendancePage = lazy(() => import('../pages/attendance/AttendancePage'));
 const QrAttendancePage = lazy(() => import('../pages/attendance/QrAttendancePage'));
 const FinancePage = lazy(() => import('../pages/finance/FinancePage'));
+const ExpensesPage = lazy(() => import('../pages/finance/ExpensesPage'));
 const AnalyticsReportPage = lazy(() => import('../pages/reports/AnalyticsReportPage'));
 const TeamAttendanceReportPage = lazy(() => import('../pages/reports/TeamAttendanceReportPage'));
 const OutreachPage = lazy(() => import('../pages/notifications/OutreachPage'));
@@ -134,7 +135,7 @@ const AppRoutes = () => {
       <Route path="/attendance" element={<ProtectedRoute module="attendance" action="read"><MainLayout><AttendanceOverviewPage /></MainLayout></ProtectedRoute>} />
       <Route path="/attendance/qr" element={<ProtectedRoute module="qr_attendance" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading attendance tools…</div>}><QrAttendancePage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/finance"    element={<ProtectedRoute module="finance" action="read"><MainLayout><FinancePage /></MainLayout></ProtectedRoute>} />
-      <Route path="/finance/expenses" element={<ProtectedRoute module="finance" action="read"><Navigate to="/finance" replace /></ProtectedRoute>} />
+      <Route path="/finance/expenses" element={<ProtectedRoute module="finance" action="read"><MainLayout><ExpensesPage /></MainLayout></ProtectedRoute>} />
       <Route path="/reports/analytics" element={<ProtectedRoute module="dashboard" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading analytics…</div>}><AnalyticsReportPage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/reports/team-attendance" element={<ProtectedRoute module="attendance" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading team attendance…</div>}><TeamAttendanceReportPage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/outreach" element={<ProtectedRoute module="outreach" action="read"><MainLayout><OutreachPage /></MainLayout></ProtectedRoute>} />

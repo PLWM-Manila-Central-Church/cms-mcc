@@ -200,14 +200,14 @@ function ScopedRosterTab() {
 
   const handleUnassign = async (member) => {
     if (!(await confirm({
-      title: 'Unassign member from ministry?',
-      message: `Unassign ${fullName(member)} from this ministry?`,
-      confirmLabel: 'Unassign member',
+      title: 'Archive ministry membership?',
+      message: `Archive ${fullName(member)} from this ministry roster? The membership record is retained and can be restored from Archives.`,
+      confirmLabel: 'Archive membership',
       tone: 'warning',
     }))) return;
     setActionErr('');
     try {
-      await axiosInstance.delete(`/ministry/members/${member.id}`);
+      await axiosInstance.patch(`/ministry/members/${member.id}/archive`);
       await load();
     } catch (err) {
       setActionErr(err.response?.data?.message || 'Failed to unassign member.');
@@ -533,13 +533,13 @@ function RosterTab({ leadsMinistryId }) {
     let failed = 0;
     for (const id of ids) {
       try {
-        await axiosInstance.delete(`/ministry/members/${id}`);
+        await axiosInstance.patch(`/ministry/members/${id}/archive`);
       } catch { failed++; }
     }
     setSelected(new Set());
     setConfirmBulk(false);
     setBulkRemoving(false);
-    if (failed > 0) setActionErr(`${failed} member(s) could not be removed.`);
+    if (failed > 0) setActionErr(`${failed} ministry membership record(s) could not be archived.`);
     load();
   };
 
@@ -658,32 +658,32 @@ function RosterTab({ leadsMinistryId }) {
             onClick={() => setConfirmBulk(true)}
             style={{ background: 'linear-gradient(135deg,#dc2626,#ef4444)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
           >
-            <MonoIcon name="delete" size={15} /> Remove {selected.size} selected
+            <MonoIcon name="archive" size={15} /> Archive {selected.size} selected
           </button>
         )}
       </div>
 
       {error && <div style={S.errBanner}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><MonoIcon name="warning" size={15} /> {error}</span><button onClick={load} style={S.retryBtn}>Retry</button></div>}
 
-      {/* ── Bulk Remove Confirm Modal ─────────────────────────── */}
+      {/* ── Bulk Archive Confirm Modal ─────────────────────────── */}
       {confirmBulk && (
         <div style={S.backdrop}>
           <div style={S.modalBox}>
             <div style={S.modalAccent} />
             <div style={S.modalBody}>
-              <div style={S.delIcon}><MonoIcon name="delete" size={28} /></div>
-              <div style={S.modalTitle}>Remove {selected.size} Member{selected.size !== 1 ? 's' : ''}?</div>
+              <div style={S.delIcon}><MonoIcon name="archive" size={28} /></div>
+              <div style={S.modalTitle}>Archive {selected.size} Ministry Membership{selected.size !== 1 ? 's' : ''}?</div>
               <div style={S.modalSub}>
-                This will remove the selected {selected.size === 1 ? 'member' : `${selected.size} members`} from the ministry. This action cannot be undone.
+                The selected roster links will leave the active ministry list. Member profiles and ministry history remain available and the links can be restored from Archives.
               </div>
               <div style={S.modalActions}>
                 <button onClick={() => setConfirmBulk(false)} style={S.cancelBtn} disabled={bulkRemoving}>Cancel</button>
                 <button
                   onClick={handleBulkRemove}
-                  style={{ ...S.saveBtn, background: 'linear-gradient(135deg,#dc2626,#ef4444)', opacity: bulkRemoving ? 0.7 : 1 }}
+                  style={{ ...S.saveBtn, background: 'linear-gradient(135deg,#005599,#13B5EA)', opacity: bulkRemoving ? 0.7 : 1 }}
                   disabled={bulkRemoving}
                 >
-                  {bulkRemoving ? <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={S.miniSpinner} />Removing…</span> : 'Yes, Remove'}
+                  {bulkRemoving ? <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={S.miniSpinner} />Archiving…</span> : 'Archive selected memberships'}
                 </button>
               </div>
             </div>
@@ -770,9 +770,9 @@ function RosterTab({ leadsMinistryId }) {
                         <button
                           style={{ ...S.deleteBtn }}
                           onClick={() => { setSelected(new Set([id])); setConfirmBulk(true); }}
-                          title="Remove from ministry"
+                          title="Archive ministry membership"
                         >
-                          Remove
+                          Archive
                         </button>
                       </td>
                     </tr>
@@ -854,8 +854,8 @@ function AssignmentsTab() {
 
   const handleDelete = async () => {
     setDeleting(true); setDelErr('');
-    try { await axiosInstance.delete(`/ministry/assignments/${delTarget.id}`); setDelTarget(null); load(); }
-    catch (e) { setDelErr(e.response?.data?.message || 'Remove failed.'); }
+    try { await axiosInstance.patch(`/ministry/assignments/${delTarget.id}/archive`); setDelTarget(null); load(); }
+    catch (e) { setDelErr(e.response?.data?.message || 'Archive failed.'); }
     finally { setDeleting(false); }
   };
 
@@ -896,7 +896,7 @@ function AssignmentsTab() {
                     <td style={{ ...S.td, maxWidth:'180px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{a.Service?.title || '—'}</td>
                     <td style={S.td}>{fmtDate(a.Service?.service_date)}</td>
                     <td style={S.td}><div style={S.statusCol}><span style={{ ...S.pill, ...(a.confirmed ? S.pillGreen : S.pillGray) }}>{a.confirmed ? 'Confirmed' : 'Pending'}</span>{a.substitute_requested ? <span style={{ ...S.pill, ...S.pillOrange }}>Sub Requested</span> : null}</div></td>
-                    <td style={{ ...S.td, textAlign:'right' }}>{canEdit && <button style={S.editBtn} onClick={() => openEdit(a)}>Edit</button>}{canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(a); setDelErr(''); }}>Remove</button>}</td>
+                    <td style={{ ...S.td, textAlign:'right' }}>{canEdit && <button style={S.editBtn} onClick={() => openEdit(a)}>Edit</button>}{canRemove && <button style={S.deleteBtn} onClick={() => { setDelTarget(a); setDelErr(''); }}><MonoIcon name="archive" size={13} /> Archive</button>}</td>
                   </tr>
                 );
               })}
@@ -931,13 +931,13 @@ function AssignmentsTab() {
           <div style={{ ...S.modalBox, maxWidth:'420px' }} onClick={e => e.stopPropagation()}>
             <div style={{ ...S.modalAccent, background:'#ef4444' }} />
             <div style={S.modalBody}>
-              <div style={S.delIcon}><MonoIcon name="delete" size={28} /></div>
-              <h3 style={S.modalTitle}>Remove Assignment?</h3>
-              <p style={S.modalSub}>Remove <strong>{delTarget.Member?.first_name} {delTarget.Member?.last_name}</strong> as <strong>{delTarget.ministryRole?.name}</strong> from <strong>{delTarget.Service?.title}</strong>?</p>
+              <div style={S.delIcon}><MonoIcon name="archive" size={28} /></div>
+              <h3 style={S.modalTitle}>Archive Assignment?</h3>
+              <p style={S.modalSub}>Archive <strong>{delTarget.Member?.first_name} {delTarget.Member?.last_name}</strong> as <strong>{delTarget.ministryRole?.name}</strong> for <strong>{delTarget.Service?.title}</strong>? The assignment remains restorable from Archives.</p>
               {delErr && <div style={{ ...S.formErr, marginBottom:'12px' }}><MonoIcon name="warning" size={14} /> {delErr}</div>}
               <div style={S.modalActions}>
                 <button style={S.cancelBtn} onClick={() => setDelTarget(null)} disabled={deleting}>Cancel</button>
-                <button style={{ ...S.saveBtn, background:'#ef4444', opacity: deleting ? 0.8 : 1 }} onClick={handleDelete} disabled={deleting}>{deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Removing…</span> : 'Yes, Remove'}</button>
+                <button style={{ ...S.saveBtn, background:'#005599', opacity: deleting ? 0.8 : 1 }} onClick={handleDelete} disabled={deleting}>{deleting ? <span style={S.loadRow}><span style={S.miniSpinner} />Archiving…</span> : 'Archive assignment'}</button>
               </div>
             </div>
           </div>

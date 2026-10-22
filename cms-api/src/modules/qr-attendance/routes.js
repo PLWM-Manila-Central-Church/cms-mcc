@@ -95,11 +95,11 @@ router.post(
   validate(validators.addBatchItemSchema),
   ctrl.addBatchItem,
 );
-router.delete(
-  "/batches/:batchId/items/:memberId",
+router.patch(
+  "/batches/:batchId/items/:memberId/archive",
   authorize("qr_attendance", "record_batch"),
   validate(validators.removeBatchItemSchema),
-  ctrl.removeBatchItem,
+  ctrl.archiveBatchItem,
 );
 router.post("/batches/:batchId/submit", authorize("qr_attendance", "submit_batch"), validate(validators.submitBatchSchema), ctrl.submitBatch);
 router.post("/batches/:batchId/approve", authorize("qr_attendance", "review_batch"), validate(validators.approveBatchSchema), ctrl.approveBatch);

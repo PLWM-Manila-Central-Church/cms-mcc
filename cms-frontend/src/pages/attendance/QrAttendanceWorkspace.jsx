@@ -405,12 +405,12 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
   const removeDraftMember = async (memberId) => {
     setBusy(true); setError('');
     try {
-      await axiosInstance.delete(`/qr-attendance/batches/${draftDetail.batch.id}/items/${memberId}`, {
-        data: { expected_revision: Number(draftDetail.batch.revision) },
+      await axiosInstance.patch(`/qr-attendance/batches/${draftDetail.batch.id}/items/${memberId}/archive`, {
+        expected_revision: Number(draftDetail.batch.revision),
       });
       const detail = await axiosInstance.get(`/qr-attendance/batches/${draftDetail.batch.id}`);
       setDraftDetail(detail.data.data);
-      setNotice('Member removed from the attendance draft.');
+      setNotice('Attendee archived from the draft; the record is retained in Archives.');
     } catch (requestError) { setError(apiError(requestError, 'Could not remove this member.')); }
     finally { setBusy(false); }
   };
@@ -859,7 +859,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
           {draftDetail?.batch && <section className="qr-section qr-workspace-card">
             <div className="qr-section-heading"><h3>Your batch · #{draftDetail.batch.id}</h3><span className={`qr-state-pill qr-status-${draftDetail.batch.state}`}>{draftDetail.batch.state}</span></div>
             {(draftDetail.items || []).length ? <div className="qr-table-wrap"><table className="qr-table"><thead><tr><th>Member</th><th>Captured</th><th>Outcome</th>{draftDetail.batch.state === 'draft' && <th>Action</th>}</tr></thead><tbody>
-              {(draftDetail.items || []).map((item) => <tr key={item.id}><td>{displayMemberName(item.member)}</td><td>{new Date(item.captured_at).toLocaleTimeString()}</td><td>{item.outcome}</td>{draftDetail.batch.state === 'draft' && <td><button type="button" className="qr-danger-button" disabled={busy} onClick={() => removeDraftMember(item.member_id)}>Remove</button></td>}</tr>)}
+              {(draftDetail.items || []).map((item) => <tr key={item.id}><td>{displayMemberName(item.member)}</td><td>{new Date(item.captured_at).toLocaleTimeString()}</td><td>{item.outcome}</td>{draftDetail.batch.state === 'draft' && <td><button type="button" className="qr-danger-button" title="Archive this attendee from the draft; the record remains restorable" disabled={busy} onClick={() => removeDraftMember(item.member_id)}>Archive attendee</button></td>}</tr>)}
             </tbody></table></div> : <div className="qr-muted-box">No members added yet.</div>}
             {draftDetail.batch.state === 'draft' && session.status !== 'open' && <div className="qr-action-row">
               <button type="button" className="qr-primary-button" disabled={busy} onClick={submitDraft}>Submit Batch for Review</button>

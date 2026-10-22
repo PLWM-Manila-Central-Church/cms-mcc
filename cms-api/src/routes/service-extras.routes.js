@@ -17,7 +17,6 @@ router.put("/summary/:serviceId", auth, authorize("services", "update"), ctrl.up
 // ── Service Responses (canonical) ───────────────────────────
 router.get("/responses/:serviceId",  auth, authorize("services", "read"),   ctrl.getResponsesByService);
 router.post("/responses/:serviceId", auth, authorize("services", "create"), validate(createServiceResponseSchema), ctrl.createOrUpdateResponse);
-router.delete("/responses/:id",      auth, authorize("services", "delete"), ctrl.deleteResponse);
 
 // ── Service Responses alias (frontend uses /:id/responses) ──
 router.get("/:id/responses",  auth, authorize("services", "read"),   ctrl.getResponsesByServiceAlias);
@@ -27,7 +26,6 @@ router.post("/:id/responses", auth, authorize("services", "create"), validate(cr
 router.get("/:id/attendance",              auth, authorize("attendance", "read"),   ctrl.getAttendanceByService);
 router.post("/:id/attendance", auth, authorize("attendance", "create"), validate(createAttendanceSchema), ctrl.createAttendanceForService);
 router.patch("/:id/attendance/:memberId/archive", auth, authorize("attendance", "delete"), ctrl.archiveAttendanceForService);
-router.delete("/:id/attendance/:memberId", auth, authorize("attendance", "delete"), ctrl.deleteAttendanceForService);
 
 // ── Substitute Requests ──────────────────────────────────────
 // /mine MUST come before /substitutes/:id to avoid being shadowed
@@ -38,6 +36,5 @@ router.get("/substitutes",                auth, authorize("ministry", "read"),  
 router.get("/substitutes/:id",            auth, authorize("ministry", "read"),   ctrl.getSubstituteRequestById);
 router.post("/substitutes",               auth, authorizeMemberSubstituteSelfService, validate(createSubstituteRequestSchema), ctrl.createSubstituteRequest);
 router.put("/substitutes/:id/resolve",    auth, authorize("ministry", "update"), ctrl.resolveSubstituteRequest);
-router.delete("/substitutes/:id",         auth, authorize("ministry", "delete"), ctrl.deleteSubstituteRequest);
 
 module.exports = router;

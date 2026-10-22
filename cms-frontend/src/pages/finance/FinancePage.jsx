@@ -8,11 +8,13 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
-import { deleteRecordsWithResults } from '../../utils/bulkDelete';
+import { archiveRecordsWithResults } from '../../utils/bulkArchive';
 import { localDateInputValue } from '../../utils/localDateInput';
 import { getDateRangeError } from '../../utils/dateRange';
 import { getIncomeSummaryAmounts } from '../../utils/incomeSummary';
 import FinanceAttachments from '../../components/finance/FinanceAttachments';
+import FinanceNavigation from '../../components/finance/FinanceNavigation';
+import FinanceStatementDialog from './FinanceStatementDialog';
 
 const TYPE_BADGE = {
   Tithes:    { bg: '#ecfdf5', color: '#059669' },
@@ -61,7 +63,7 @@ export default function FinancePage() {
 
   const canCreate = hasPermission('finance', 'create');
   const canUpdate = hasPermission('finance', 'update');
-  const canDelete = hasPermission('finance', 'delete');
+  const canArchive = hasPermission('finance', 'archive');
 
   const formatAmount = (a) => parseFloat(a || 0).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' });
   const formatDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
@@ -82,6 +84,7 @@ export default function FinancePage() {
   const [incFilterSearch, setIncFilterSearch] = useState('');
 
   const [showIncForm, setShowIncForm] = useState(false);
+  const [showFinanceStatement, setShowFinanceStatement] = useState(false);
   const givingDialogRef = useRef(null);
   useDialogFocus(showIncForm, givingDialogRef, () => { if (!incSaving) { resetIncForm(); setShowIncForm(false); } });
   const [editIncRecord, setEditIncRecord] = useState(null);
@@ -271,7 +274,7 @@ export default function FinancePage() {
     setIncomeError('');
     setBulkDeleting(true);
     try {
-      const result = await deleteRecordsWithResults(
+      const result = await archiveRecordsWithResults(
         ids,
         (id) => axiosInstance.patch(`/finance/records/${id}/archive`),
       );
@@ -288,7 +291,7 @@ export default function FinancePage() {
           || result.failures[0].error?.message;
         const failureDetails = firstError ? ` ${firstError}` : '';
         setIncomeError(
-          `${result.deletedCount} record(s) archived. ${result.failures.length} could not be archived and remain selected for retry.${failureDetails}`,
+          `${result.archivedCount} record(s) archived. ${result.failures.length} could not be archived and remain selected for retry.${failureDetails}`,
         );
       }
     } catch (error) {
@@ -335,6 +338,13 @@ export default function FinancePage() {
           <p style={{ fontSize: 14, color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0' }}>Record and monitor offerings, tithes, donations, and other church income in one place.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setShowFinanceStatement(true)}
+            style={{ background: 'var(--mcc-brand, #005599)', color: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-brand, #005599)', borderRadius: 10, padding: '11px 16px', minHeight: 44, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Finance Statement
+          </button>
           {canCreate && (
             <button onClick={() => { resetIncForm(); setShowIncForm(true); }} style={{ background: '#059669', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 8px rgba(5,150,105,0.3)' }}>
               <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Add Financial Record
@@ -342,6 +352,8 @@ export default function FinancePage() {
           )}
         </div>
       </div>
+
+      <FinanceNavigation />
 
       {/* Summary Cards */}
       {(() => {
@@ -437,7 +449,7 @@ export default function FinancePage() {
           <span style={{ fontSize: 14, fontWeight: 600, color: '#991b1b' }}>{selectedIds.length} record(s) selected</span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setSelectedIds([])} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid var(--mcc-border, #e2e8f0)', background: 'var(--mcc-surface, #fff)', color: '#475569', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Clear</button>
-            {canDelete && (
+            {canArchive && (
               <button onClick={handleBulkDelete} disabled={bulkDeleting} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: bulkDeleting ? '#94a3b8' : '#dc2626', color: 'var(--mcc-surface, #fff)', fontWeight: 600, fontSize: 13, cursor: bulkDeleting ? 'wait' : 'pointer', fontFamily: 'inherit' }}>{bulkDeleting ? 'Archiving…' : 'Archive Selected'}</button>
             )}
           </div>
@@ -454,7 +466,7 @@ export default function FinancePage() {
         <ResponsiveTable style={{ width: '100%', minWidth: 980, borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th style={{ display: canDelete ? 'table-cell' : 'none', padding: '12px 14px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--mcc-secondary, #52647a)', borderBottom: '1px solid var(--mcc-border, #e2e8f0)', width: 40 }}>
+              <th style={{ display: canArchive ? 'table-cell' : 'none', padding: '12px 14px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--mcc-secondary, #52647a)', borderBottom: '1px solid var(--mcc-border, #e2e8f0)', width: 40 }}>
                 <input
                   type="checkbox"
                   checked={filtered.length > 0 && filtered.every(r => selectedIds.includes(r.id))}
@@ -481,7 +493,7 @@ export default function FinancePage() {
               const badge = TYPE_BADGE[r.category?.name] || TYPE_BADGE.default;
               return (
                 <tr key={r.id} style={{ background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ display: canDelete ? 'table-cell' : 'none', padding: '14px 14px', textAlign: 'center' }}>
+                  <td style={{ display: canArchive ? 'table-cell' : 'none', padding: '14px 14px', textAlign: 'center' }}>
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(r.id)}
@@ -514,7 +526,7 @@ export default function FinancePage() {
                       targetType="income"
                       targetId={r.id}
                       canUpload={canCreate}
-                      canDelete={canDelete}
+                      canArchive={canArchive}
                       onChanged={fetchIncomeRecords}
                       compact
                     />
@@ -534,7 +546,7 @@ export default function FinancePage() {
                           Edit
                         </button>
                       )}
-                      {canDelete && (
+                      {canArchive && (
                         <button onClick={() => handleIncDelete(r.id)} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                           Archive
                         </button>
@@ -686,6 +698,13 @@ export default function FinancePage() {
             </form>
           </div>
         </div>
+      )}
+      {showFinanceStatement && (
+        <FinanceStatementDialog
+          dateFrom={incFilterDateFrom}
+          dateTo={incFilterDateTo}
+          onClose={() => setShowFinanceStatement(false)}
+        />
       )}
     </div>
   );

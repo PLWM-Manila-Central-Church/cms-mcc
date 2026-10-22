@@ -154,18 +154,21 @@ exports.markAllAsRead = async (userId, roleName) => {
   return { message: "All notifications marked as read." };
 };
 
-// ── Delete Notification ──────────────────────────────────────
-exports.deleteNotification = async (id, userId, roleName) => {
+// ── Archive Notification ────────────────────────────────────
+exports.archiveNotification = async (id, userId, roleName) => {
   const notification = await Notification.findOne({
     where: { ...notificationScope(userId, roleName), id },
   });
   if (!notification) throw AppError.notFound("RECORD_NOT_FOUND", "Notification not found");
-  await notification.destroy();
-  return { message: "Notification deleted successfully." };
+  await notification.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: userId });
+  return { message: "Notification archived. It can be restored by a System Admin from Archives." };
 };
 
-// ── Delete All Notifications for User ───────────────────────
-exports.deleteAllNotifications = async (userId, roleName) => {
-  await Notification.destroy({ where: notificationScope(userId, roleName) });
-  return { message: "All notifications deleted successfully." };
+// ── Archive All Notifications for User ──────────────────────
+exports.archiveAllNotifications = async (userId, roleName) => {
+  await Notification.update(
+    { is_deleted: 1, deleted_at: new Date(), deleted_by: userId },
+    { where: notificationScope(userId, roleName) },
+  );
+  return { message: "Notifications archived. A System Admin can restore them from Archives." };
 };

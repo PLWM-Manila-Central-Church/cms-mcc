@@ -18,7 +18,7 @@ router.get   ("/finance",                                    auth, validateQuery
 router.get   ("/events",                                     auth, ctrl.getMyEvents);
 router.post  ("/events/:eventId/register",                   auth, validate(registerForEventSchema), ctrl.registerForEvent);
 router.patch ("/events/:eventId/reservation",                auth, validate(updateEventReservationSchema), ctrl.updateEventReservation);
-router.delete("/events/:eventId/register",                   auth, ctrl.cancelEventRegistration);
+router.post("/events/:eventId/register/cancel",               auth, ctrl.cancelEventRegistration);
 
 router.get   ("/services",                                   auth, ctrl.getUpcomingServices);
 router.get   ("/services/:serviceId",                        auth, ctrl.getServiceDetails);

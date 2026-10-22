@@ -28,6 +28,8 @@ describe('analytics report role scope', () => {
     expect(rows.filter(([section]) => section === 'Members' || section === 'Attendance')).toEqual([]);
     expect(rows.filter(([section]) => section === 'Finance')).toEqual([
       ['Finance', 'Received income', 900],
+      ['Finance', 'Expenses', 250],
+      ['Finance', 'Net balance', 650],
     ]);
   });
 

@@ -16,7 +16,6 @@ router.get("/roles/:id",    auth, authorize("ministry", "read"),   ctrl.getRoleB
 router.post("/roles",       auth, authorize("ministry", "create"), validate(createRoleSchema), ctrl.createRole);
 router.put("/roles/:id",    auth, authorize("ministry", "update"), validate(updateRoleSchema), ctrl.updateRole);
 router.patch("/roles/:id/archive", auth, authorize("ministry", "delete"), ctrl.archiveRole);
-router.delete("/roles/:id", auth, authorize("ministry", "delete"), ctrl.deleteRole);
 
 // ── Ministry Assignments ─────────────────────────────────────
 router.get("/assignments",                     auth, authorize("ministry", "read"),   ctrl.getAllAssignments);
@@ -24,14 +23,14 @@ router.get("/assignments/:id",                 auth, authorize("ministry", "read
 router.get("/services/:serviceId/assignments", auth, authorize("ministry", "read"),   ctrl.getAssignmentsByService);
 router.post("/assignments",                    auth, authorize("ministry", "create"), validate(createAssignmentSchema), ctrl.createAssignment);
 router.put("/assignments/:id",                 auth, authorize("ministry", "update"), validate(updateAssignmentSchema), ctrl.updateAssignment);
-router.delete("/assignments/:id",              auth, authorize("ministry", "delete"), ctrl.deleteAssignment);
+router.patch("/assignments/:id/archive", auth, authorize("ministry", "delete"), ctrl.archiveAssignment);
 
 // ── Ministry Roster (Ministry Leader only) ───────────────────
 // /members/search MUST be before /members/:memberId to avoid Express matching it as a param
 router.get("/members/search",       auth, authorize("ministry", "read"),   ctrl.searchMembersForRoster);
 router.get("/members",              auth, authorize("ministry", "read"),   ctrl.getMyMinistryMembers);
 router.post("/members",             auth, authorize("scope_assignments", "manage"), ctrl.addMemberToMinistry);
-router.delete("/members/:memberId", auth, authorize("scope_assignments", "manage"), ctrl.removeMemberFromMinistry);
+router.patch("/members/:memberId/archive", auth, authorize("scope_assignments", "manage"), ctrl.archiveMemberFromMinistry);
 
 // ── Ministry Leader: Substitute Requests ─────────────────────
 router.get(

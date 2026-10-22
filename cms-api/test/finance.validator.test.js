@@ -3,7 +3,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
-const { createRecordSchema, createExpenseSchema } = require("../src/validators/finance.validator");
+const { createRecordSchema, createExpenseSchema, createExpenseCategorySchema } = require("../src/validators/finance.validator");
 
 test("accepts a valid giving record without an obsolete type field", () => {
   const payload = {
@@ -68,7 +68,7 @@ test("rejects a member-linked record marked anonymous", () => {
   assert.ok(error);
 });
 
-test("accepts expense creation without an account because the selected category supplies it", () => {
+test("accepts an account-free expense record", () => {
   const { error, value } = createExpenseSchema.validate({
     category_id: 7,
     date: "2026-10-20",
@@ -82,8 +82,8 @@ test("accepts expense creation without an account because the selected category 
   assert.equal(value.account_id, undefined);
 });
 
-test("keeps optional legacy account_id in expense payloads for server-side validation", () => {
-  const { error, value } = createExpenseSchema.validate({
+test("rejects account_id in an expense payload", () => {
+  const { error } = createExpenseSchema.validate({
     account_id: 4,
     category_id: 7,
     date: "2026-10-20",
@@ -91,6 +91,11 @@ test("keeps optional legacy account_id in expense payloads for server-side valid
     payment_method_id: 2,
   });
 
+  assert.ok(error);
+});
+
+test("creates an expense category without an account", () => {
+  const { error, value } = createExpenseCategorySchema.validate({ category_name: "Utilities" });
   assert.equal(error, undefined);
-  assert.equal(value.account_id, 4);
+  assert.equal(value.account_id, undefined);
 });

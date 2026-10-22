@@ -19,12 +19,17 @@ const Notification = sequelize.define(
     reference_type: { type: DataTypes.STRING(50),        allowNull: true, defaultValue: null },
     is_read: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
     read_at: { type: DataTypes.DATE,    allowNull: true },
+    is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+    deleted_at: { type: DataTypes.DATE, allowNull: true },
+    deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
   },
   {
     tableName:   "notifications",
     timestamps:  true,
     underscored: true,
     updatedAt:   false,
+    defaultScope: { where: { is_deleted: 0 } },
+    scopes: { withDeleted: {} },
     indexes: [
       { fields: ["user_id", "is_read"], name: "idx_notif_user_read" },
       { fields: ["user_id", "createdAt"], name: "idx_notifications_user_created" },

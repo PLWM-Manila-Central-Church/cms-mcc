@@ -17,6 +17,29 @@ const {
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 10;
 
+const syncMemberMinistryMembership = async (memberId, ministryRoleId, actorId, transaction) => {
+  const membership = await MinistryMembership.unscoped().findOne({
+    where: { member_id: memberId },
+    ...(transaction && { transaction, lock: transaction.LOCK.UPDATE }),
+  });
+  if (ministryRoleId) {
+    const values = {
+      ministry_role_id: Number(ministryRoleId),
+      member_id: memberId,
+      added_by: actorId,
+      is_deleted: 0,
+      deleted_at: null,
+      deleted_by: null,
+    };
+    if (membership) await membership.update(values, { ...(transaction && { transaction }) });
+    else await MinistryMembership.create(values, { ...(transaction && { transaction }) });
+    return;
+  }
+  if (membership && Number(membership.is_deleted) === 0) {
+    await membership.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: actorId }, { ...(transaction && { transaction }) });
+  }
+};
+
 const userIncludes = [
   { model: Role, as: "role", attributes: ["id", "role_name"] },
   {
@@ -358,22 +381,7 @@ const updateUserWithLeaderScope = async (id, data, actor, requestedRole) => {
     }
 
     if (nextMemberId && data.member_ministry_role_id !== undefined) {
-      if (data.member_ministry_role_id) {
-        const [membership, created] = await MinistryMembership.findOrCreate({
-          where: { member_id: nextMemberId },
-          defaults: {
-            ministry_role_id: Number(data.member_ministry_role_id),
-            member_id: nextMemberId,
-            added_by: actor.userId,
-          },
-          transaction,
-        });
-        if (!created && Number(membership.ministry_role_id) !== Number(data.member_ministry_role_id)) {
-          await membership.update({ ministry_role_id: Number(data.member_ministry_role_id) }, { transaction });
-        }
-      } else {
-        await MinistryMembership.destroy({ where: { member_id: nextMemberId }, transaction });
-      }
+      await syncMemberMinistryMembership(nextMemberId, data.member_ministry_role_id, actor.userId, transaction);
     }
 
     const canEditMembers = (await permissionCache.get(actor.roleId)).has("members:update");
@@ -477,21 +485,7 @@ exports.updateUser = async (id, data, actor) => {
 
   // Update linked member ministry membership
   if (user.member_id && member_ministry_role_id !== undefined) {
-    if (member_ministry_role_id) {
-      const [membership, created] = await MinistryMembership.findOrCreate({
-        where: { member_id: user.member_id },
-        defaults: {
-          ministry_role_id: parseInt(member_ministry_role_id),
-          member_id: user.member_id,
-          added_by: updatedBy,
-        },
-      });
-      if (!created && membership.ministry_role_id !== parseInt(member_ministry_role_id)) {
-        await membership.update({ ministry_role_id: parseInt(member_ministry_role_id) });
-      }
-    } else {
-      await MinistryMembership.destroy({ where: { member_id: user.member_id } });
-    }
+    await syncMemberMinistryMembership(user.member_id, member_ministry_role_id, updatedBy);
   }
 
   // Update linked member if exists — writing member profile fields

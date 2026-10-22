@@ -36,4 +36,27 @@ describe('AnalyticsReportPage period controls and role visibility', () => {
       params: expect.objectContaining({ period: 'week' }),
     })));
   });
+
+  it('shows income, expense and net totals to the Finance Team', async () => {
+    state.roleName = 'Finance Team';
+    state.get.mockResolvedValue({ data: { data: {
+      range: { from: '2026-10-01', to: '2026-10-22' },
+      period: { preset: 'month', bucket: 'week' },
+      members: null,
+      attendance: null,
+      finance: {
+        income: 1200,
+        expenses: 450,
+        net: 750,
+        buckets: [{ period: '2026-10-18', income: 1200, expenses: 450, net: 750 }],
+      },
+    } } });
+
+    render(<AnalyticsReportPage />);
+
+    expect(await screen.findAllByText('Received income')).toHaveLength(2);
+    expect(screen.getAllByText('Expenses')).toHaveLength(2);
+    expect(screen.getByText('Net balance')).toBeInTheDocument();
+    expect(screen.getByText('Finance trend')).toBeInTheDocument();
+  });
 });

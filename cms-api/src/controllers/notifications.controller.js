@@ -56,18 +56,18 @@ exports.markAllAsRead = async (req, res, next) => {
   }
 };
 
-exports.deleteNotification = async (req, res, next) => {
+exports.archiveNotification = async (req, res, next) => {
   try {
-    const data = await notificationsService.deleteNotification(req.params.id, req.user.userId, req.user.roleName);
+    const data = await notificationsService.archiveNotification(req.params.id, req.user.userId, req.user.roleName);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
   }
 };
 
-exports.deleteAllNotifications = async (req, res, next) => {
+exports.archiveAllNotifications = async (req, res, next) => {
   try {
-    const data = await notificationsService.deleteAllNotifications(req.user.userId, req.user.roleName);
+    const data = await notificationsService.archiveAllNotifications(req.user.userId, req.user.roleName);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

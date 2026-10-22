@@ -21,6 +21,7 @@ const {
   User,
   CellGroup,
   Group,
+  EventImageArchive,
 } = require("../models");
 
 const EVENT_STATUS = {
@@ -210,7 +211,7 @@ exports.createEvent = async (data, createdBy) => {
     start_time:            start_time            || null,
     location:              location              || null,
     capacity:              capacity              || null,
-    total_parking_slots:   total_parking_slots   ?? 0,
+    total_parking_slots:   total_parking_slots   ?? null,
     registration_deadline: registration_deadline || null,
     status:                status                || EVENT_STATUS.UPCOMING,
     is_deleted: 0,
@@ -269,7 +270,7 @@ exports.updateEvent = async (id, data, updatedBy) => {
       ...(start_time            !== undefined && { start_time }),
       ...(location              !== undefined && { location }),
       ...(capacity              !== undefined && { capacity }),
-      ...(total_parking_slots   !== undefined && { total_parking_slots: total_parking_slots ?? 0 }),
+      ...(total_parking_slots   !== undefined && { total_parking_slots: total_parking_slots ?? null }),
       ...(registration_deadline !== undefined && { registration_deadline }),
       ...(status                              && { status }),
     }, { transaction });
@@ -281,29 +282,46 @@ exports.updateEvent = async (id, data, updatedBy) => {
 
 exports.setEventImage = async (id, uploadedFile, updatedBy) => {
   if (!uploadedFile) throw AppError.badRequest("IMAGE_REQUIRED", "Choose an event image to upload");
-  const event = await Event.findOne({ where: { id, is_deleted: 0 } });
-  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
   const imageKey = uploadedFile.key || `event-images/${uploadedFile.filename}`;
-  const oldKey = event.image_key;
-  await event.update({ image_key: imageKey, image_url: `/events/${event.id}/image` });
+  const event = await sequelize.transaction(async (transaction) => {
+    const row = await Event.findOne({ where: { id, is_deleted: 0 }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!row) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+    if (row.image_key || row.image_url) {
+      await EventImageArchive.create({
+        event_id: row.id,
+        image_key: row.image_key,
+        image_url: row.image_url || `/events/${row.id}/image`,
+        created_by: updatedBy,
+        is_deleted: 1,
+        deleted_at: new Date(),
+        deleted_by: updatedBy,
+      }, { transaction });
+    }
+    await row.update({ image_key: imageKey, image_url: `/events/${row.id}/image` }, { transaction });
+    return row;
+  });
   auditLog.log({ userId: updatedBy, action: "UPDATE_EVENT_IMAGE", targetTable: "events", targetId: event.id });
-  if (oldKey && oldKey !== imageKey) {
-    try { await require("../middlewares/upload-s3").deleteStoredFile(oldKey); }
-    catch (error) { logger.error(error, "Failed to remove replaced event image"); }
-  }
   return event;
 };
 
 exports.removeEventImage = async (id, updatedBy) => {
-  const event = await Event.findOne({ where: { id, is_deleted: 0 } });
-  if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
-  const oldKey = event.image_key;
-  await event.update({ image_key: null, image_url: null });
-  auditLog.log({ userId: updatedBy, action: "DELETE_EVENT_IMAGE", targetTable: "events", targetId: event.id });
-  if (oldKey) {
-    try { await require("../middlewares/upload-s3").deleteStoredFile(oldKey); }
-    catch (error) { logger.error(error, "Failed to remove event image"); }
-  }
+  const event = await sequelize.transaction(async (transaction) => {
+    const row = await Event.findOne({ where: { id, is_deleted: 0 }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!row) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+    if (!row.image_key && !row.image_url) throw AppError.notFound("IMAGE_NOT_FOUND", "This event does not have an image");
+    await EventImageArchive.create({
+      event_id: row.id,
+      image_key: row.image_key,
+      image_url: row.image_url || `/events/${row.id}/image`,
+      created_by: updatedBy,
+      is_deleted: 1,
+      deleted_at: new Date(),
+      deleted_by: updatedBy,
+    }, { transaction });
+    await row.update({ image_key: null, image_url: null }, { transaction });
+    return row;
+  });
+  auditLog.log({ userId: updatedBy, action: "ARCHIVE_EVENT_IMAGE", targetTable: "events", targetId: event.id });
   return exports.getEventById(event.id);
 };
 

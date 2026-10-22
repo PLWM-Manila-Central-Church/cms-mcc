@@ -58,7 +58,7 @@ export default function EventsPage() {
   const [removeImage, setRemoveImage] = useState(false);
   const [form, setForm] = useState({
     category_id: '', title: '', description: '', start_date: '',
-    end_date: '', start_time: '', location: '', capacity: '', total_parking_slots: '0',
+    end_date: '', start_time: '', location: '', capacity: '', total_parking_slots: '',
     registration_deadline: '', status: 'Upcoming',
   });
   const [formError, setFormError]   = useState('');
@@ -114,7 +114,7 @@ export default function EventsPage() {
   const resetForm = () => {
     setForm({
       category_id: '', title: '', description: '', start_date: '',
-      end_date: '', start_time: '', location: '', capacity: '', total_parking_slots: '0',
+      end_date: '', start_time: '', location: '', capacity: '', total_parking_slots: '',
       registration_deadline: '', status: 'Upcoming',
     });
     setEditEvent(null); setFormError('');
@@ -133,7 +133,7 @@ export default function EventsPage() {
       start_time:            ev.start_time || '',
       location:              ev.location || '',
       capacity:              ev.capacity || '',
-      total_parking_slots:   String(ev.total_parking_slots ?? 0),
+      total_parking_slots:   ev.total_parking_slots == null ? '' : String(ev.total_parking_slots),
       registration_deadline: toLocalDateTimeInput(ev.registration_deadline),
       status: normalizeEventStatus(ev.status),
     });
@@ -160,7 +160,7 @@ export default function EventsPage() {
       if (!payload.end_date)              delete payload.end_date;
       if (!payload.start_time)            delete payload.start_time;
       if (!payload.capacity)              delete payload.capacity;
-      payload.total_parking_slots = Number(payload.total_parking_slots || 0);
+      payload.total_parking_slots = payload.total_parking_slots === '' ? null : Number(payload.total_parking_slots);
       if (!payload.registration_deadline) delete payload.registration_deadline;
       if (!payload.description)           delete payload.description;
       if (!payload.location)              delete payload.location;
@@ -181,7 +181,7 @@ export default function EventsPage() {
           return;
         }
       } else if (removeImage && editEvent?.image_key) {
-        await axiosInstance.delete(`/events/${savedEvent.id}/image`);
+        await axiosInstance.patch(`/events/${savedEvent.id}/image/archive`);
       }
       setShowForm(false); resetForm(); fetchEvents();
     } catch (err) {
@@ -290,11 +290,11 @@ export default function EventsPage() {
             <div style={s.field}>
               <label htmlFor="event-photo-upload" style={s.label}>Event Photo</label>
               <input id="event-photo-upload" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { setImageFile(e.target.files?.[0] || null); setRemoveImage(false); }} style={s.input} />
-              <small style={{ color: 'var(--mcc-secondary, #52647a)' }}>JPG, PNG, or WebP. Maximum 5 MB.</small>
+              <small style={{ color: 'var(--mcc-secondary, #52647a)' }}>JPG, PNG, or WebP. Maximum 5 MB. Replaced or archived photos remain recoverable.</small>
               {(imageFile || (editEvent?.image_url && !removeImage)) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   {(imageFile ? imagePreview : eventImageSrc(editEvent)) && <img src={imageFile ? imagePreview : eventImageSrc(editEvent)} alt="Event preview" style={{ width: 120, height: 72, objectFit: 'cover', borderRadius: 8 }} />}
-                  {editEvent?.image_url && <button type="button" onClick={() => { setImageFile(null); setRemoveImage(true); }} style={s.cancelBtn}>Remove current photo</button>}
+                  {editEvent?.image_url && <button type="button" onClick={() => { setImageFile(null); setRemoveImage(true); }} style={s.cancelBtn}>Archive current photo</button>}
                 </div>
               )}
             </div>
@@ -358,11 +358,11 @@ export default function EventsPage() {
                 />
               </div>
               <div style={s.field}>
-                <label style={s.label}>Parking slots</label>
+                <label style={s.label}>Parking slots (optional)</label>
                 <input
                   type="number" min="0" step="1" value={form.total_parking_slots}
                   onChange={e => setForm(f => ({ ...f, total_parking_slots: e.target.value }))}
-                  placeholder="0" style={s.input}
+                  placeholder="Not specified" style={s.input}
                 />
               </div>
               <div style={s.field}>

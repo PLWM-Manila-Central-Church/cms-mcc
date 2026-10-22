@@ -45,7 +45,7 @@ export default function FinanceAttachments({
   targetType,
   targetId,
   canUpload = false,
-  canDelete = false,
+  canArchive = false,
   onChanged,
   labels = {},
   compact = false,
@@ -80,8 +80,8 @@ export default function FinanceAttachments({
     setNotice('');
     if (!files.length) return;
 
-    if (targetType !== 'income') {
-      setError('Receipts can be added to received-income records only.');
+    if (!['income', 'expense'].includes(targetType)) {
+      setError('Receipts can be added to financial records only.');
       return;
     }
     if (!Number(targetId)) {
@@ -110,7 +110,7 @@ export default function FinanceAttachments({
     for (const file of validFiles) {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('income_id', String(targetId));
+      formData.append(targetType === 'expense' ? 'expense_id' : 'income_id', String(targetId));
       try {
         await axiosInstance.post('/finance/attachments/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -214,7 +214,7 @@ export default function FinanceAttachments({
                     {downloadingId === attachment.id ? '…' : text.download}
                   </button>
                 )}
-                {canDelete && (
+                {canArchive && (
                   <button
                     type="button"
                     onClick={() => setAttachmentToDelete(attachment)}

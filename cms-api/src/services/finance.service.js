@@ -3,7 +3,6 @@
 const cache    = require("../helpers/cache.helper");
 const auditLog  = require("../helpers/auditLog.helper");
 const sequelize = require("../config/db");
-const logger    = require("../helpers/logger");
 const AppError = require("../helpers/AppError");
 const uploadStorage = require("../middlewares/upload-s3");
 const {
@@ -47,13 +46,6 @@ const recordIncludes = [
     separate: true,
   },
 ];
-
-const deleteReceiptFiles = async (filePaths, message) => {
-  for (const filePath of filePaths) {
-    try { await uploadStorage.deleteStoredFile(filePath); }
-    catch (error) { logger.error(error, message); }
-  }
-};
 
 // ── Get All Financial Records (paginated) ────────────────────
 exports.getAllRecords = async ({ page = 1, limit = 20, category_id, payment_method, date_from, date_to } = {}) => {
@@ -258,8 +250,6 @@ exports.archiveRecord = async (id, deletedBy) => {
   cache.keys("dashboard:*").forEach(k => cache.del(k));
   return { message: "Financial record archived. Receipt attachments and giving history were retained." };
 };
-exports.deleteRecord = exports.archiveRecord;
-
 // ── Get All Categories ───────────────────────────────────────
 exports.getAllCategories = async () => {
   return await FinancialCategory.findAll({
@@ -308,19 +298,6 @@ exports.updateCategory = async (id, data) => {
   });
 
   return category;
-};
-
-// ── Delete Category ──────────────────────────────────────────
-exports.deleteCategory = async (id) => {
-  const category = await FinancialCategory.findByPk(id);
-  if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Financial category not found");
-
-  const inUse = await FinancialRecord.count({ where: { category_id: id } });
-  if (inUse > 0)
-    throw AppError.badRequest("VALIDATION", `Cannot delete category. ${inUse} record(s) use this category`);
-
-  await category.destroy();
-  return { message: "Financial category deleted successfully." };
 };
 
 // ── Get My Giving (member's own records) ─────────────────────
@@ -436,17 +413,17 @@ exports.updateFund = async (id, data, userId) => {
   return fund;
 };
 
-exports.deleteFund = async (id, userId) => {
+exports.archiveFund = async (id, userId) => {
   const fund = await exports.getFundById(id);
   const inUse = await Account.count({ where: { fund_id: id } });
   if (inUse > 0)
-    throw AppError.badRequest("VALIDATION", `Cannot delete fund. It is in use by ${inUse} record(s)`);
+    throw AppError.conflict("FUND_IN_USE", `Archive its ${inUse} active account(s) first.`);
 
   await sequelize.transaction(async (t) => {
-    await fund.destroy({ transaction: t });
-    await auditLog.log({ userId, action: "DELETE_FUND", targetTable: "funds", targetId: id }, { transaction: t });
+    await fund.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: userId }, { transaction: t });
+    await auditLog.log({ userId, action: "ARCHIVE_FUND", targetTable: "funds", targetId: id }, { transaction: t });
   });
-  return { message: "Fund deleted successfully." };
+  return { message: "Fund archived. Its history is retained and can be restored from System Archives." };
 };
 
 // ── 2. ACCOUNTS SERVICES ──────────────────────────────────────
@@ -508,48 +485,42 @@ exports.updateAccount = async (id, data, userId) => {
   return await exports.getAccountById(id);
 };
 
-exports.deleteAccount = async (id, userId) => {
+exports.archiveAccount = async (id, userId) => {
   const account = await exports.getAccountById(id);
   const inUseExpenses = await Expense.count({ where: { account_id: id } });
   const inUseCategories = await ExpenseCategory.count({ where: { account_id: id } });
 
   if (inUseExpenses > 0 || inUseCategories > 0)
-    throw AppError.badRequest("VALIDATION", "Cannot delete account. It is in use by categories or expenses.");
+    throw AppError.conflict("ACCOUNT_IN_USE", "Archive its active expenses and categories first.");
 
   await sequelize.transaction(async (t) => {
-    await account.destroy({ transaction: t });
-    await auditLog.log({ userId, action: "DELETE_ACCOUNT", targetTable: "accounts", targetId: id }, { transaction: t });
+    await account.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: userId }, { transaction: t });
+    await auditLog.log({ userId, action: "ARCHIVE_ACCOUNT", targetTable: "accounts", targetId: id }, { transaction: t });
   });
-  return { message: "Account deleted successfully." };
+  return { message: "Account archived. Its history is retained and can be restored from System Archives." };
 };
 
 // ── 3. EXPENSE CATEGORIES SERVICES ────────────────────────────
 exports.getAllExpenseCategories = async () => {
   return await ExpenseCategory.findAll({
-    include: [{ model: Account, as: "account", attributes: ["id", "name"] }],
     order: [["category_name", "ASC"]],
   });
 };
 
 exports.getExpenseCategoryById = async (id) => {
-  const category = await ExpenseCategory.findOne({
-    where: { id },
-    include: [{ model: Account, as: "account", attributes: ["id", "name"] }],
-  });
+  const category = await ExpenseCategory.findOne({ where: { id } });
   if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Expense category not found");
   return category;
 };
 
 exports.createExpenseCategory = async (data, userId) => {
-  const { category_name, account_id, description } = data;
-  const account = await Account.findByPk(account_id);
-  if (!account) throw AppError.notFound("RECORD_NOT_FOUND", "Account not found");
+  const { category_name, description } = data;
 
   const existing = await ExpenseCategory.findOne({ where: { category_name } });
   if (existing) throw AppError.conflict("DUPLICATE", "Expense category name already exists");
 
   const category = await sequelize.transaction(async (t) => {
-    const c = await ExpenseCategory.create({ category_name, account_id, description }, { transaction: t });
+    const c = await ExpenseCategory.create({ category_name, account_id: null, description }, { transaction: t });
     await auditLog.log({ userId, action: "CREATE_EXPENSE_CATEGORY", targetTable: "expense_categories", targetId: c.id }, { transaction: t });
     return c;
   });
@@ -558,12 +529,7 @@ exports.createExpenseCategory = async (data, userId) => {
 
 exports.updateExpenseCategory = async (id, data, userId) => {
   const category = await exports.getExpenseCategoryById(id);
-  const { category_name, account_id, description } = data;
-
-  if (account_id) {
-    const account = await Account.findByPk(account_id);
-    if (!account) throw AppError.notFound("RECORD_NOT_FOUND", "Account not found");
-  }
+  const { category_name, description } = data;
 
   if (category_name && category_name !== category.category_name) {
     const existing = await ExpenseCategory.findOne({ where: { category_name } });
@@ -573,7 +539,6 @@ exports.updateExpenseCategory = async (id, data, userId) => {
   await sequelize.transaction(async (t) => {
     await category.update({
       ...(category_name && { category_name }),
-      ...(account_id && { account_id }),
       ...(description !== undefined && { description }),
     }, { transaction: t });
 
@@ -582,17 +547,17 @@ exports.updateExpenseCategory = async (id, data, userId) => {
   return await exports.getExpenseCategoryById(id);
 };
 
-exports.deleteExpenseCategory = async (id, userId) => {
+exports.archiveExpenseCategory = async (id, userId) => {
   const category = await exports.getExpenseCategoryById(id);
   const inUse = await Expense.count({ where: { category_id: id } });
   if (inUse > 0)
-    throw AppError.badRequest("VALIDATION", `Cannot delete category. It is in use by ${inUse} expense(s)`);
+    throw AppError.conflict("EXPENSE_CATEGORY_IN_USE", `Archive its ${inUse} active expense(s) first.`);
 
   await sequelize.transaction(async (t) => {
-    await category.destroy({ transaction: t });
-    await auditLog.log({ userId, action: "DELETE_EXPENSE_CATEGORY", targetTable: "expense_categories", targetId: id }, { transaction: t });
+    await category.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: userId }, { transaction: t });
+    await auditLog.log({ userId, action: "ARCHIVE_EXPENSE_CATEGORY", targetTable: "expense_categories", targetId: id }, { transaction: t });
   });
-  return { message: "Expense category deleted successfully." };
+  return { message: "Expense category archived. Its history is retained and a System Admin can restore it from System Archives." };
 };
 
 // ── 4. PAYMENT METHODS SERVICES ───────────────────────────────
@@ -603,12 +568,11 @@ exports.getAllPaymentMethods = async () => {
 };
 
 // ── 5. EXPENSES SERVICES ──────────────────────────────────────
-exports.getAllExpenses = async ({ page = 1, limit = 20, account_id, category_id, payment_method_id, date_from, date_to } = {}) => {
+exports.getAllExpenses = async ({ page = 1, limit = 20, category_id, payment_method_id, date_from, date_to } = {}) => {
   const { Op } = require("sequelize");
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where = {};
 
-  if (account_id)        where.account_id        = account_id;
   if (category_id)       where.category_id       = category_id;
   if (payment_method_id) where.payment_method_id = payment_method_id;
   if (date_from || date_to) {
@@ -620,7 +584,6 @@ exports.getAllExpenses = async ({ page = 1, limit = 20, account_id, category_id,
   const { count, rows } = await Expense.findAndCountAll({
     where,
     include: [
-      { model: Account, as: "account", attributes: ["id", "name"] },
       { model: ExpenseCategory, as: "category", attributes: ["id", "category_name"] },
       { model: PaymentMethod, as: "paymentMethod", attributes: ["id", "method_name"] },
       { model: User, as: "creator", attributes: ["id", "email"] },
@@ -640,11 +603,10 @@ exports.getAllExpenses = async ({ page = 1, limit = 20, account_id, category_id,
   };
 };
 
-exports.getExpenseSummary = async ({ date_from, date_to, account_id, category_id } = {}) => {
+exports.getExpenseSummary = async ({ date_from, date_to, category_id } = {}) => {
   const { Op, fn, col } = require("sequelize");
   const where = {};
 
-  if (account_id)  where.account_id  = account_id;
   if (category_id) where.category_id = category_id;
   if (date_from || date_to) {
     where.date = {};
@@ -676,7 +638,6 @@ exports.getExpenseById = async (id) => {
   const expense = await Expense.findOne({
     where: { id },
     include: [
-      { model: Account, as: "account", attributes: ["id", "name"] },
       { model: ExpenseCategory, as: "category", attributes: ["id", "category_name"] },
       { model: PaymentMethod, as: "paymentMethod", attributes: ["id", "method_name"] },
       { model: User, as: "creator", attributes: ["id", "email"] },
@@ -688,22 +649,16 @@ exports.getExpenseById = async (id) => {
 };
 
 exports.createExpense = async (data, userId) => {
-  const { account_id, category_id, date, amount, description, payment_method_id } = data;
+  const { category_id, date, amount, description, payment_method_id } = data;
   const category = await ExpenseCategory.findByPk(category_id);
   if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Expense category not found");
-  const categoryAccountId = Number(category.account_id);
-  if (account_id != null && Number(account_id) !== categoryAccountId) {
-    throw AppError.badRequest("CATEGORY_ACCOUNT_MISMATCH", "The account is determined by the selected expense category");
-  }
-  const account = await Account.findByPk(categoryAccountId);
-  if (!account) throw AppError.notFound("RECORD_NOT_FOUND", "The account assigned to this expense category was not found");
 
   const payMethod = await PaymentMethod.findByPk(payment_method_id);
   if (!payMethod) throw AppError.notFound("RECORD_NOT_FOUND", "Payment method not found");
 
   const expense = await sequelize.transaction(async (t) => {
     const e = await Expense.create({
-      account_id: categoryAccountId,
+      account_id: null,
       category_id,
       date,
       amount,
@@ -723,17 +678,11 @@ exports.updateExpense = async (id, data, userId) => {
   const expense = await Expense.findByPk(id);
   if (!expense) throw AppError.notFound("RECORD_NOT_FOUND", "Expense record not found");
 
-  const { account_id, category_id, date, amount, description, payment_method_id } = data;
+  const { category_id, date, amount, description, payment_method_id } = data;
 
   const nextCategoryId = category_id ?? expense.category_id;
   const category = await ExpenseCategory.findByPk(nextCategoryId);
   if (!category) throw AppError.notFound("RECORD_NOT_FOUND", "Expense category not found");
-  const nextAccountId = Number(category.account_id);
-  if (account_id != null && Number(account_id) !== nextAccountId) {
-    throw AppError.badRequest("CATEGORY_ACCOUNT_MISMATCH", "The account is determined by the selected expense category");
-  }
-  const account = await Account.findByPk(nextAccountId);
-  if (!account) throw AppError.notFound("RECORD_NOT_FOUND", "The account assigned to this expense category was not found");
 
   if (payment_method_id) {
     const payMethod = await PaymentMethod.findByPk(payment_method_id);
@@ -742,7 +691,6 @@ exports.updateExpense = async (id, data, userId) => {
 
   await sequelize.transaction(async (t) => {
     await expense.update({
-      account_id: nextAccountId,
       category_id: nextCategoryId,
       ...(date && { date }),
       ...(amount !== undefined && { amount }),
@@ -756,30 +704,23 @@ exports.updateExpense = async (id, data, userId) => {
       return await exports.getExpenseById(id);
 };
 
-exports.deleteExpense = async (id, userId) => {
+exports.archiveExpense = async (id, userId) => {
   const expense = await Expense.findByPk(id);
   if (!expense) throw AppError.notFound("RECORD_NOT_FOUND", "Expense record not found");
 
-  let attachmentPaths = [];
   await sequelize.transaction(async (t) => {
-    // Cascade delete attachments
-    const attachments = await Attachment.findAll({ where: { expense_id: id }, transaction: t });
-    attachmentPaths = attachments.map((attachment) => attachment.file_path).filter(Boolean);
-    for (const attachment of attachments) await attachment.destroy({ transaction: t });
-
-    await expense.destroy({ transaction: t });
-        await auditLog.log({ userId, action: "DELETE_EXPENSE", targetTable: "expenses", targetId: id }, { transaction: t });
-      });
-  await deleteReceiptFiles(attachmentPaths, "Could not delete expense attachment file");
-      cache.keys("dashboard:*").forEach(k => cache.del(k));
-      return { message: "Expense record deleted successfully." };
+    await expense.update({ is_deleted: 1, deleted_at: new Date(), deleted_by: userId }, { transaction: t });
+    await auditLog.log({ userId, action: "ARCHIVE_EXPENSE", targetTable: "expenses", targetId: id }, { transaction: t });
+  });
+  cache.keys("dashboard:*").forEach((key) => cache.del(key));
+  return { message: "Expense archived. Its receipt files and history are retained and a System Admin can restore it from System Archives." };
 };
 
 // ── Net Balance (income - expenses) ────────────────────────────
 exports.getBalance = async ({ date_from, date_to } = {}) => {
   const { Op, fn, col } = require("sequelize");
   const incomeWhere = { is_deleted: 0 };
-  const expenseWhere = {};
+  const expenseWhere = { is_deleted: 0 };
 
   if (date_from || date_to) {
     incomeWhere.transaction_date = {};
@@ -819,9 +760,6 @@ exports.getBalance = async ({ date_from, date_to } = {}) => {
 
 // ── 6. ATTACHMENTS SERVICES ───────────────────────────────────
 exports.createAttachment = async ({ file_name, file_path, income_id, expense_id }, userId) => {
-  if (expense_id !== null && expense_id !== undefined && String(expense_id).trim() !== "") {
-    throw AppError.badRequest("FEATURE_RETIRED", "Receipt uploads are available for received-income records only");
-  }
   const hasIncomeId = income_id !== null && income_id !== undefined && String(income_id).trim() !== "";
   const hasExpenseId = expense_id !== null && expense_id !== undefined && String(expense_id).trim() !== "";
   if (hasIncomeId === hasExpenseId) {
@@ -847,7 +785,7 @@ exports.createAttachment = async ({ file_name, file_path, income_id, expense_id 
     const income = await FinancialRecord.findOne({ where: { id: ownerId, is_deleted: 0 }, attributes: ["id"] });
     if (!income) throw AppError.notFound("RECORD_NOT_FOUND", "Income record not found");
   } else {
-    const expense = await Expense.findByPk(ownerId, { attributes: ["id"] });
+    const expense = await Expense.findOne({ where: { id: ownerId, is_deleted: 0 }, attributes: ["id"] });
     if (!expense) throw AppError.notFound("RECORD_NOT_FOUND", "Expense record not found");
   }
 
@@ -871,8 +809,17 @@ exports.getAttachmentDownloadKey = async (id) => {
   if (!Number.isSafeInteger(attachmentId) || attachmentId <= 0) {
     throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
   }
-  const attachment = await Attachment.findByPk(attachmentId, { attributes: ["id", "file_path"] });
+  const attachment = await Attachment.findByPk(attachmentId, { attributes: ["id", "file_path", "income_id", "expense_id"] });
   if (!attachment) throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+  if (attachment.income_id) {
+    const income = await FinancialRecord.findOne({ where: { id: attachment.income_id, is_deleted: 0 }, attributes: ["id"] });
+    if (!income) throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+  } else if (attachment.expense_id) {
+    const expense = await Expense.findOne({ where: { id: attachment.expense_id, is_deleted: 0 }, attributes: ["id"] });
+    if (!expense) throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+  } else {
+    throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
+  }
   const key = uploadStorage.getStoredFileKey(attachment.file_path, "receipts");
   if (!key) throw AppError.notFound("RECORD_NOT_FOUND", "Receipt attachment not found");
   return key;
@@ -919,4 +866,3 @@ exports.archiveAttachment = async (id, userId) => {
   });
   return { message: "Receipt archived. The uploaded file remains available for restoration." };
 };
-exports.deleteAttachment = exports.archiveAttachment;
