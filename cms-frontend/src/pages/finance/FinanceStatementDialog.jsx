@@ -81,7 +81,10 @@ export default function FinanceStatementDialog({ dateFrom = '', dateTo = '', onC
     <div className="finance-statement-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="finance-statement-dialog" role="dialog" aria-modal="true" aria-labelledby="finance-statement-title">
         <div className="finance-statement-actions">
-          <span role="status" aria-live="polite">{downloadNotice || 'Finance statement preview'}</span>
+          <div className="finance-statement-export-copy">
+            <span role="status" aria-live="polite">{downloadNotice || 'Finance statement preview'}</span>
+            <small>CSV includes church and report labels. Print / Save PDF preserves the logo and color theme.</small>
+          </div>
           <div>
             <button type="button" onClick={downloadCsv} disabled={!statement || loading}>Download CSV</button>
             <button type="button" onClick={() => window.print()} disabled={!statement || loading}>Print / Save PDF</button>
