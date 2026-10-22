@@ -32,3 +32,9 @@ The restored workflow records outgoing funds by expense category, date, amount, 
 - The CSV contains the church name, statement type, period, generated time, summary totals and detail ledger. The print view uses the church logo and existing blue/cyan theme so it can be saved as a branded PDF.
 - A read-only review of all production Finance pages found the active income rows consistently carry explicit `DEMO-` receipt references and share the same synthetic recorder. No production record has been changed yet; after the archive-capable release, only rows with that explicit sample marker are to be archived and verified in System Archives. Recheck the live set immediately before archiving and preserve any unmarked rows.
 - Statement tests and local UI review use only the isolated local QA database. Production record archival remains a separate post-release action and must be confirmed through the live Finance and System Archives UI.
+
+## Production migration recovery
+
+- The first Render release reached the database, then failed during migration with `Key column 'event_id' doesn't exist in table`. Render kept the previous healthy instance live; the new application version did not become active.
+- The `20261022000001` migration now checks for existing columns and indexes before adding them, so it can resume after partial DDL. The event link column is created independently from its unique lookup index; the API already verifies that a linked event exists.
+- The migration recovery tests cover both a fresh schema and a schema with some archive columns/indexes already present. Production deployment and migration completion remain unconfirmed until Render reports the new commit live and the API health check passes.
