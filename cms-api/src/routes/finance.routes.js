@@ -34,8 +34,8 @@ router.get("/categories/:id",    auth, authorize("finance", "read"),   ctrl.getC
 router.post("/categories",       auth, authorize("finance", "create"), validate(createCategorySchema), ctrl.createCategory);
 router.put("/categories/:id",    auth, authorize("finance", "update"), validate(updateCategorySchema), ctrl.updateCategory);
 
-// Expense setup and records. Account is configured on each category, then
-// derived by the API from the selected category when a user records an expense.
+// Expense records are intentionally account-free. Legacy account links remain
+// in stored history only and are not required for new categories or expenses.
 router.get("/funds", auth, authorize("finance", "read"), ctrl.getAllFunds);
 router.get("/funds/:id", auth, authorize("finance", "read"), ctrl.getFundById);
 router.post("/funds", auth, authorize("finance", "create"), validate(createFundSchema), ctrl.createFund);

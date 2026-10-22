@@ -24,3 +24,11 @@ The restored workflow records outgoing funds by expense category, date, amount, 
 - A fresh local MySQL 8.4 database completed migrations through `20261022000004`; `db:validate:3nf` passed. The generated model catalog matches all 58 Sequelize models.
 - API suite: 418 passed, 20 skipped. Frontend suite: 183 passed. Production frontend build succeeded. SMS/email delivery stayed disabled.
 - These results are local only. No production expense, account, category, member or event data was created or changed, and the restoration is not yet deployed.
+
+## Statement of Account and sample-record review
+
+- Added a Finance Statement preview that combines active giving and expense records for the selected date range, shows opening/period/closing recorded balances, and lists transactions chronologically with income, expense, category, reference, payment method and running balance.
+- Named givers use the system's established `Surname, Given name` display format. Anonymous giving stays labeled as anonymous; expense rows do not expose donor information.
+- The CSV contains the church name, statement type, period, generated time, summary totals and detail ledger. The print view uses the church logo and existing blue/cyan theme so it can be saved as a branded PDF.
+- A read-only review of all production Finance pages found the active income rows consistently carry explicit `DEMO-` receipt references and share the same synthetic recorder. No production record has been changed yet; after the archive-capable release, only rows with that explicit sample marker are to be archived and verified in System Archives. Recheck the live set immediately before archiving and preserve any unmarked rows.
+- Statement tests and local UI review use only the isolated local QA database. Production record archival remains a separate post-release action and must be confirmed through the live Finance and System Archives UI.

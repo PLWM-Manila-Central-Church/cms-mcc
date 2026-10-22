@@ -14,6 +14,7 @@ import { getDateRangeError } from '../../utils/dateRange';
 import { getIncomeSummaryAmounts } from '../../utils/incomeSummary';
 import FinanceAttachments from '../../components/finance/FinanceAttachments';
 import FinanceNavigation from '../../components/finance/FinanceNavigation';
+import FinanceStatementDialog from './FinanceStatementDialog';
 
 const TYPE_BADGE = {
   Tithes:    { bg: '#ecfdf5', color: '#059669' },
@@ -83,6 +84,7 @@ export default function FinancePage() {
   const [incFilterSearch, setIncFilterSearch] = useState('');
 
   const [showIncForm, setShowIncForm] = useState(false);
+  const [showFinanceStatement, setShowFinanceStatement] = useState(false);
   const givingDialogRef = useRef(null);
   useDialogFocus(showIncForm, givingDialogRef, () => { if (!incSaving) { resetIncForm(); setShowIncForm(false); } });
   const [editIncRecord, setEditIncRecord] = useState(null);
@@ -336,6 +338,13 @@ export default function FinancePage() {
           <p style={{ fontSize: 14, color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0' }}>Record and monitor offerings, tithes, donations, and other church income in one place.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setShowFinanceStatement(true)}
+            style={{ background: 'var(--mcc-brand, #005599)', color: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-brand, #005599)', borderRadius: 10, padding: '11px 16px', minHeight: 44, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Finance Statement
+          </button>
           {canCreate && (
             <button onClick={() => { resetIncForm(); setShowIncForm(true); }} style={{ background: '#059669', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 8px rgba(5,150,105,0.3)' }}>
               <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Add Financial Record
@@ -689,6 +698,13 @@ export default function FinancePage() {
             </form>
           </div>
         </div>
+      )}
+      {showFinanceStatement && (
+        <FinanceStatementDialog
+          dateFrom={incFilterDateFrom}
+          dateTo={incFilterDateTo}
+          onClose={() => setShowFinanceStatement(false)}
+        />
       )}
     </div>
   );
