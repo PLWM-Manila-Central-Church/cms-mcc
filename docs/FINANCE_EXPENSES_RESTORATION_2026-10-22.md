@@ -36,5 +36,7 @@ The restored workflow records outgoing funds by expense category, date, amount, 
 ## Production migration recovery
 
 - The first Render release reached the database, then failed during migration with `Key column 'event_id' doesn't exist in table`. Render kept the previous healthy instance live; the new application version did not become active.
-- The `20261022000001` migration now checks for existing columns and indexes before adding them, so it can resume after partial DDL. The event link column is created independently from its unique lookup index; the API already verifies that a linked event exists.
-- The migration recovery tests cover both a fresh schema and a schema with some archive columns/indexes already present. Production deployment and migration completion remain unconfirmed until Render reports the new commit live and the API health check passes.
+- PR #35 merged the re-runnable `20261022000001` migration and Finance statement CSV metadata update as main commit `3dd82d1`. Vercel deployed that commit successfully.
+- The next Render attempt passed the first migration but then failed with `Key column 'deleted_by' doesn't exist in table` while restoring Finance archive metadata. Render kept the prior healthy API instance on `301f507` live.
+- The follow-up fix makes `20261022000002` re-runnable after partial DDL and stores `deleted_by` as nullable audit metadata without an inline foreign key. The API receives the actor ID from the authenticated user, and System Archives retains the audit actor value.
+- Regression coverage exercises both a fresh schema and partially applied archive columns/indexes. The follow-up production migration remains unconfirmed until its Render deployment reaches `live` and `/health` reports database connectivity.
