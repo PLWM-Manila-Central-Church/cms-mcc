@@ -73,6 +73,7 @@ describe('FinancePage responsive layout', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Finance Statement of Account' });
     expect(dialog).toHaveTextContent('PLWM - MANILA CENTRAL CHURCH');
+    expect(dialog).toHaveTextContent('CSV includes church and report labels. Print / Save PDF preserves the logo and color theme.');
     expect(dialog).toHaveTextContent('Sarmiento, Christian');
     expect(dialog).toHaveTextContent('Water bill');
     expect(dialog).toHaveTextContent('₱425.00');

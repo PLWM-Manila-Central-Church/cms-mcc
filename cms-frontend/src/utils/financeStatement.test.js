@@ -36,10 +36,14 @@ describe('finance statement', () => {
 
     expect(rows[0]).toEqual([FINANCE_STATEMENT_CHURCH_NAME]);
     expect(rows[1]).toEqual(['FINANCE STATEMENT OF ACCOUNT']);
-    expect(rows[2]).toEqual(['Statement period', 'All available records', '2026-01-31']);
-    expect(rows[12]).toEqual(['Date', 'Record type', 'Category', 'Name / description', 'Reference', 'Payment method', 'Income (PHP)', 'Expense (PHP)', 'Running recorded balance (PHP)']);
-    expect(rows[13]).toEqual(['2026-01-15', 'Income', 'Tithes', 'Sarmiento, Christian', '', 'Bank Transfer', 100, 0, 100]);
-    expect(rows[14]).toEqual(['2026-01-20', 'Expense', 'Supplies', 'Paper', '', 'Cash', 0, 20, 80]);
+    expect(rows).toContainEqual(['Data included', 'Recorded church income and expenses']);
+    expect(rows).toContainEqual(['Statement period', 'All available records', '2026-01-31']);
+    expect(rows).toContainEqual(['Currency', 'PHP']);
+    expect(rows).toContainEqual(['Transactions included', 2]);
+    const headerIndex = rows.findIndex((row) => row[0] === 'Date');
+    expect(rows[headerIndex]).toEqual(['Date', 'Record type', 'Category', 'Name / description', 'Reference', 'Payment method', 'Income (PHP)', 'Expense (PHP)', 'Running recorded balance (PHP)']);
+    expect(rows[headerIndex + 1]).toEqual(['2026-01-15', 'Income', 'Tithes', 'Sarmiento, Christian', '', 'Bank Transfer', 100, 0, 100]);
+    expect(rows[headerIndex + 2]).toEqual(['2026-01-20', 'Expense', 'Supplies', 'Paper', '', 'Cash', 0, 20, 80]);
 
     const csv = toCsv(rows);
     expect(csv).toContain('"PLWM - MANILA CENTRAL CHURCH"');
