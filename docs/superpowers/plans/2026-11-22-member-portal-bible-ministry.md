@@ -128,3 +128,7 @@ Modified: `pages/members/MemberPortal.jsx` (sixth tab, ministry schedule, money 
   carry no chips.
 - The November–December 2026 schedule supplied for review lives in
   `cms-frontend/src/design-review-events.js` and is served by the local review harness only.
+- Revision (same day): the Overview giving card now carries the same eye control as the Tithes
+  hero, sharing one persisted preference. Calendar chips open the event drawer directly, with
+  a blurred backdrop on both desktop and mobile. Bible reading cells print the day's OT/NT/Ps
+  references and clicking a day opens a panel with its readings and the read toggle.

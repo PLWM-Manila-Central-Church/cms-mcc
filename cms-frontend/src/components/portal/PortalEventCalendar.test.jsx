@@ -51,3 +51,10 @@ test('opens details for an event', () => {
   fireEvent.click(screen.getAllByRole('button', { name: 'View details' })[0]);
   expect(onEventClick).toHaveBeenCalledWith(expect.objectContaining({ id: 3 }));
 });
+
+test('opens an event by clicking its calendar chip', () => {
+  const onEventClick = vi.fn();
+  render(<PortalEventCalendar events={events} onEventClick={onEventClick} c={colors} f={fonts} labels={{}} initialMonth="2026-12" />);
+  fireEvent.click(screen.getByRole('button', { name: 'CG 43 Taguig' }));
+  expect(onEventClick).toHaveBeenCalledWith(expect.objectContaining({ id: 3 }));
+});

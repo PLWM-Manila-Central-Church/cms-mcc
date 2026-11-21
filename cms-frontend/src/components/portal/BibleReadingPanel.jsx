@@ -7,6 +7,9 @@ const manilaToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'As
 const monthLabel = (month) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-PH', {
   month: 'long', year: 'numeric', timeZone: 'UTC',
 });
+const fullDate = (date) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-PH', {
+  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC',
+});
 
 const shiftMonth = (month, delta) => {
   const [year, value] = month.split('-').map(Number);
@@ -20,7 +23,8 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [busyDate, setBusyDate] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -39,17 +43,25 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
   const firstWeekday = data?.days?.length
     ? new Date(`${data.days[0].date}T00:00:00Z`).getUTCDay()
     : 0;
-  const leader = useMemo(() => (data?.days || []).find((day) => day.date === today), [data, today]);
 
-  const toggle = async (day) => {
-    if (day.placeholder || day.date > today || busyDate) return;
-    setBusyDate(day.date);
+  const activeDate = selected && data?.days.some((day) => day.date === selected)
+    ? selected
+    : (data?.days.find((day) => day.date === today && !day.placeholder)?.date
+      || data?.days.find((day) => !day.placeholder)?.date
+      || '');
+  const activeDay = data?.days.find((day) => day.date === activeDate) || null;
+  const isRead = completed.has(activeDate);
+  const canToggle = Boolean(activeDay) && !activeDay.placeholder && activeDate <= today;
+
+  const toggle = async () => {
+    if (!activeDay || !canToggle || busy) return;
+    setBusy(true);
     try {
-      const response = await axiosInstance.post(`/member-portal/bible-reading/${day.date}`);
-      const isCompleted = response.data.data.completed;
+      const response = await axiosInstance.post(`/member-portal/bible-reading/${activeDay.date}`);
+      const nowRead = response.data.data.completed;
       setData((current) => {
         const next = new Set(current.completed);
-        if (isCompleted) next.add(day.date); else next.delete(day.date);
+        if (nowRead) next.add(activeDay.date); else next.delete(activeDay.date);
         const list = [...next];
         return {
           ...current,
@@ -60,7 +72,7 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
       });
     } catch (requestError) {
       showToast?.(requestError.response?.data?.message || 'That reading could not be updated.', 'error');
-    } finally { setBusyDate(''); }
+    } finally { setBusy(false); }
   };
 
   const memory = data?.memoryVerse;
@@ -103,7 +115,7 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
       </section>
 
       <section style={{ ...card }} aria-label={t.readingPlan || 'Bible reading plan'}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 16px', borderBottom: `1px solid ${c.borderL}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 16px', borderBottom: `1px solid ${c.borderL}`, flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontSize: f.base, fontWeight: 700, color: c.t1 }}>{t.readingPlan || 'Bible reading'}</div>
             <div style={{ fontSize: f.xs, color: c.t3 }}>
@@ -137,41 +149,82 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
                     ))}
                     {Array.from({ length: firstWeekday }, (_, index) => <span key={`pad-${index}`} />)}
                     {data.days.map((day) => {
-                      const isDone = completed.has(day.date);
+                      const dayRead = completed.has(day.date);
                       const isToday = day.date === today;
-                      const disabled = day.placeholder || day.date > today;
+                      const isActive = day.date === activeDate;
                       return (
                         <button
                           key={day.date}
                           type="button"
                           role="gridcell"
-                          aria-pressed={isDone}
-                          aria-label={`${day.date}${isDone ? ', completed' : ''}`}
-                          disabled={disabled}
-                          onClick={() => toggle(day)}
+                          aria-pressed={isActive}
+                          aria-label={`${day.date}${dayRead ? ', completed' : ''}`}
+                          onClick={() => setSelected(day.date)}
                           style={{
-                            height: 40, minWidth: 0, borderRadius: 8, cursor: disabled ? 'default' : 'pointer',
-                            border: isToday ? `1.5px solid ${c.accent}` : `1px solid ${isDone ? c.accent : c.borderL}`,
-                            background: isDone ? c.accentL : 'transparent',
-                            color: isDone ? c.accentT : disabled ? c.t3 : c.t1,
-                            fontSize: f.xs, fontWeight: isDone || isToday ? 700 : 500,
-                            opacity: busyDate === day.date ? 0.6 : 1,
+                            height: 54, minWidth: 0, padding: '3px 4px', borderRadius: 8,
+                            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1,
+                            cursor: 'pointer', font: 'inherit', textAlign: 'left',
+                            border: isActive ? `1.5px solid ${c.accent}` : `1px solid ${isToday ? c.accent : c.borderL}`,
+                            background: dayRead ? c.accentL : 'transparent',
+                            color: dayRead ? c.accentT : day.placeholder ? c.t3 : c.t1,
                           }}
                         >
-                          {Number(day.date.slice(8, 10))}
+                          <span style={{ fontSize: f.xs, fontWeight: dayRead || isToday || isActive ? 800 : 500 }}>{Number(day.date.slice(8, 10))}</span>
+                          {!day.placeholder && (
+                            <>
+                              <span style={{ fontSize: 8, lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.ot}</span>
+                              <span style={{ fontSize: 8, lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.nt}</span>
+                              <span style={{ fontSize: 8, lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.ps}</span>
+                            </>
+                          )}
                         </button>
                       );
                     })}
                   </div>
 
-                  {leader && !leader.placeholder && (
+                  {activeDay && (
                     <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${c.borderL}` }}>
-                      <div style={{ fontSize: f.xs, fontWeight: 700, color: c.t3, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                        {t.todayReading || "Today's reading"}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ fontSize: f.xs, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: c.t3 }}>
+                            {t.selectedDay || 'Selected day'}
+                          </div>
+                          <div style={{ fontSize: f.sm, fontWeight: 650, color: c.t1 }}>{fullDate(activeDay.date)}</div>
+                        </div>
+                        {canToggle && (
+                          <button
+                            type="button"
+                            onClick={toggle}
+                            disabled={busy}
+                            style={{
+                              minHeight: 36, padding: '8px 14px', borderRadius: 8, fontSize: f.xs, fontWeight: 700, cursor: 'pointer',
+                              border: `1px solid ${isRead ? c.border : c.accent}`,
+                              background: isRead ? c.surface : c.accent,
+                              color: isRead ? c.t2 : '#fff',
+                              opacity: busy ? 0.6 : 1,
+                            }}
+                          >
+                            {busy ? '…' : isRead ? (t.markUnread || 'Mark as unread') : (t.markRead || 'Mark as read')}
+                          </button>
+                        )}
                       </div>
-                      <div style={{ marginTop: 4, fontSize: f.sm, color: c.t1 }}>
-                        {leader.ot} · {leader.nt} · {leader.ps}
-                      </div>
+
+                      {activeDay.placeholder ? (
+                        <p style={{ margin: '8px 0 0', fontSize: f.sm, color: c.t3 }}>{t.noReading || 'No reading is published for this day.'}</p>
+                      ) : (
+                        <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, margin: '10px 0 0' }}>
+                          {[
+                            [t.oldTestament || 'Old Testament', activeDay.ot],
+                            [t.newTestament || 'New Testament', activeDay.nt],
+                            [t.psalmsProverbs || 'Psalms / Proverbs', activeDay.ps],
+                          ].map(([label, value]) => (
+                            <div key={label} style={{ background: c.surfaceAlt, border: `1px solid ${c.borderL}`, borderRadius: 8, padding: '8px 10px' }}>
+                              <dt style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: c.t3 }}>{label}</dt>
+                              <dd style={{ margin: '2px 0 0', fontSize: f.sm, fontWeight: 650, color: c.t1 }}>{value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
                     </div>
                   )}
                 </>

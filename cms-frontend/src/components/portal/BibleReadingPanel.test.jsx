@@ -47,15 +47,20 @@ test('shows the next Sunday memory verse for the member group', async () => {
   expect(screen.getByText(/Choir · Sunday, Mar 8/)).toBeInTheDocument();
 });
 
-test('marks a past day done and posts the toggle', async () => {
+test('shows the day readings and marks the selected day as read', async () => {
   render(<BibleReadingPanel c={colors} f={fonts} labels={{}} />);
   const done = await screen.findByRole('gridcell', { name: '2026-03-01, completed' });
-  expect(done).toHaveAttribute('aria-pressed', 'true');
+  expect(done).toBeInTheDocument();
+
   fireEvent.click(screen.getByRole('gridcell', { name: '2026-03-02' }));
+  expect(screen.getByText('Monday, March 2, 2026')).toBeInTheDocument();
+  expect(screen.getAllByText('Mark 2').length).toBeGreaterThan(0);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Mark as read' }));
   await waitFor(() => expect(state.post).toHaveBeenCalledWith('/member-portal/bible-reading/2026-03-02'));
 });
 
-test('disables future and unpublished days', async () => {
+test('explains an unpublished day and keeps future days unmarkable', async () => {
   state.get.mockResolvedValue({ data: { data: {
     ...monthFixture,
     days: [
@@ -65,8 +70,13 @@ test('disables future and unpublished days', async () => {
     ],
   } } });
   render(<BibleReadingPanel c={colors} f={fonts} labels={{}} />);
-  expect(await screen.findByRole('gridcell', { name: '2026-03-09' })).toBeDisabled();
-  expect(screen.getByRole('gridcell', { name: '2026-04-01' })).toBeDisabled();
+
+  fireEvent.click(await screen.findByRole('gridcell', { name: '2026-03-09' }));
+  expect(screen.getByText('No reading is published for this day.')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('gridcell', { name: '2026-04-01' }));
+  expect(screen.getAllByText('Judg 1').length).toBeGreaterThan(0);
+  expect(screen.queryByRole('button', { name: 'Mark as read' })).not.toBeInTheDocument();
 });
 
 test('explains that the month is not published yet instead of showing a blank grid', async () => {

@@ -64,6 +64,23 @@ test('shows the next Sunday memory verse on the overview', async () => {
   expect(screen.getByText(/Memory verse · Choir/)).toBeInTheDocument();
 });
 
+test('hides the giving total on the overview with the same eye control', async () => {
+  state.get.mockImplementation(async path => {
+    let data = [];
+    if (path === '/member-portal/profile') data = { first_name: 'Sample', last_name: 'Member', gender: 'Male' };
+    if (path === '/member-portal/attendance') data = { records: [], rate: 0 };
+    if (path.startsWith('/member-portal/finance')) data = { ytdTotal: 1200, total: 0, total_pages: 1, records: [] };
+    return { data: { data } };
+  });
+
+  render(<MemoryRouter initialEntries={['/portal?tab=overview']}><MemberPortal /></MemoryRouter>);
+  expect(await screen.findByText('₱1,200.00')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Hide amounts' }));
+  expect(await screen.findByText('₱ ••••')).toBeInTheDocument();
+  expect(screen.queryByText('₱1,200.00')).not.toBeInTheDocument();
+  expect(localStorage.getItem('plwm_money_hidden')).toBe('1');
+});
+
 test('hides every tithe amount behind one control and remembers it', async () => {
   state.get.mockImplementation(async path => {
     let data = [];

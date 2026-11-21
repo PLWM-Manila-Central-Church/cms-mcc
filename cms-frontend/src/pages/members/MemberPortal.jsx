@@ -61,8 +61,8 @@ const FONTSHARE    = ['Satoshi'];
 const TAB_ICON_NAMES = ['home', 'calendar', 'attendance', 'finance', 'ministry', 'book'];
 
 const LBL = {
-  en:{tabs:['Overview','Calendar','Attendance','Tithes','Ministries','Bible'],portal:'Member Portal',welcome:'Welcome',settings:'Settings',logout:'Logout',attendanceRate:'Attendance Rate',last2mo:'Last month',totalOfferings:'Total Tithes & Offerings',thisYear:'This year',memberSince:'Member Since',myProfile:'My Profile',editProfile:'Edit Profile',save:'Save',cancel:'Cancel',memberId:'Member ID',memberName:'Member Name',spiritual:'Spiritual Birthday',cellGroup:'Cell Group',address:'Address',joinDate:'Join Date',group:'Group',contact:'Contact No',birthdate:'Flesh Birthday',status:'Status',ministry:'Ministry Assignments',services:'Upcoming Services',confirm:'Confirm',confirmed:'Confirmed',noMinistry:'No ministry assignments.',noServices:'No upcoming services.',noEvents:'No upcoming events at this time.',registerNow:'Register Now',cancelReg:'Cancel Registration',closedReg:'Registration Closed',viewDetails:'View Details',myRegs:'My Registrations',regDeadline:'Deadline',of:'of',registered:'registered',attendanceHistory:'My Attendance History',noAttendance:'No attendance records found.',date:'Date',service:'Service',checkin:'Check-in',statusL:'Status',present:'Present',absent:'Absent',offeringsHistory:'My Tithes and Offering History',noOfferings:'No giving records.',type:'Type',amount:'Amount',totalYtd:'Total Year-to-Date',memoryVerse:'Memory verse',verse:'"God loves a cheerful giver." — 2 Corinthians 9:7',excellent:'Excellent',good:'Good',improve:'Needs Improvement',willAttend:'I will attend',wontAttend:'Cannot attend',undecided:'Undecided',rsvp:'RSVP',closePanel:'Close',serviceDetails:'Service Details',eventDetails:'Event Details',attending:'Attending',notAttending:'Not attending',capacity:'Capacity',responseBy:'Response by',yourRsvp:'Your RSVP'},
-  tl:{tabs:['Pangkalahatang-tanaw','Kalendaryo','Pagdalo','Mga Handog','Mga Ministeryo','Bible'],portal:'Portal ng Miyembro',welcome:'Maligayang pagdating',settings:'Mga Setting',logout:'Mag-logout',attendanceRate:'Rate ng Pagdalo',last2mo:'Nakaraang buwan',totalOfferings:'Kabuuang Ikapu at Handog',thisYear:'Ngayong taon',memberSince:'Miyembro Mula',myProfile:'Aking Profile',editProfile:'I-edit',save:'I-save',cancel:'Kanselahin',memberId:'Member ID',memberName:'Pangalan',spiritual:'Espirituwal na Kaarawan',cellGroup:'Cell Group',address:'Tirahan',joinDate:'Petsa ng Pagsali',group:'Grupo',contact:'Numero',birthdate:'Kaarawan',status:'Katayuan',ministry:'Mga Takdang Gawain',services:'Mga Paparating na Serbisyo',confirm:'Kumpirmahin',confirmed:'Nakumpirma',noMinistry:'Walang mga takdang gawain.',noServices:'Walang paparating na serbisyo.',noEvents:'Walang mga kaganapan.',registerNow:'Mag-register Na',cancelReg:'Kanselahin',closedReg:'Sarado na',viewDetails:'Tingnan',myRegs:'Aking mga Pagpaparehistro',regDeadline:'Deadline',of:'sa',registered:'nakapag-register',attendanceHistory:'Kasaysayan ng Pagdalo',noAttendance:'Walang rekord ng pagdalo.',date:'Petsa',service:'Serbisyo',checkin:'Check-in',statusL:'Katayuan',present:'Naroroon',absent:'Wala',offeringsHistory:'Kasaysayan ng Ikapu at Handog',noOfferings:'Walang rekord ng pagbibigay.',type:'Uri',amount:'Halaga',totalYtd:'Kabuuang Ikapu at Handog sa Taon',memoryVerse:'Talata ng alaala',verse:'"Ang nagbibigay nang masaya ay mahal ng Diyos." — 2 Mga Taga-Corinto 9:7',excellent:'Kahusayan',good:'Mabuti',improve:'Kailangan ng Pagpabuti',willAttend:'Darating ako',wontAttend:'Hindi ako makakarating',undecided:'Hindi pa sigurado',rsvp:'RSVP',closePanel:'Isara',serviceDetails:'Detalye ng Serbisyo',eventDetails:'Detalye ng Kaganapan',attending:'Darating',notAttending:'Hindi darating',capacity:'Kapasidad',responseBy:'Sagot bago ang',yourRsvp:'Iyong RSVP'},
+  en:{tabs:['Overview','Calendar','Attendance','Tithes','Ministries','Bible'],portal:'Member Portal',welcome:'Welcome',settings:'Settings',logout:'Logout',attendanceRate:'Attendance Rate',last2mo:'Last month',totalOfferings:'Total Tithes & Offerings',thisYear:'This year',memberSince:'Member Since',myProfile:'My Profile',editProfile:'Edit Profile',save:'Save',cancel:'Cancel',memberId:'Member ID',memberName:'Member Name',spiritual:'Spiritual Birthday',cellGroup:'Cell Group',address:'Address',joinDate:'Join Date',group:'Group',contact:'Contact No',birthdate:'Flesh Birthday',status:'Status',ministry:'Ministry Assignments',services:'Upcoming Services',confirm:'Confirm',confirmed:'Confirmed',noMinistry:'No ministry assignments.',noServices:'No upcoming services.',noEvents:'No upcoming events at this time.',registerNow:'Register Now',cancelReg:'Cancel Registration',closedReg:'Registration Closed',viewDetails:'View Details',myRegs:'My Registrations',regDeadline:'Deadline',of:'of',registered:'registered',attendanceHistory:'My Attendance History',noAttendance:'No attendance records found.',date:'Date',service:'Service',checkin:'Check-in',statusL:'Status',present:'Present',absent:'Absent',offeringsHistory:'My Tithes and Offering History',noOfferings:'No giving records.',type:'Type',amount:'Amount',totalYtd:'Total Year-to-Date',memoryVerse:'Memory verse',hideAmounts:'Hide amounts',showAmounts:'Show amounts',verse:'"God loves a cheerful giver." — 2 Corinthians 9:7',excellent:'Excellent',good:'Good',improve:'Needs Improvement',willAttend:'I will attend',wontAttend:'Cannot attend',undecided:'Undecided',rsvp:'RSVP',closePanel:'Close',serviceDetails:'Service Details',eventDetails:'Event Details',attending:'Attending',notAttending:'Not attending',capacity:'Capacity',responseBy:'Response by',yourRsvp:'Your RSVP'},
+  tl:{tabs:['Pangkalahatang-tanaw','Kalendaryo','Pagdalo','Mga Handog','Mga Ministeryo','Bible'],portal:'Portal ng Miyembro',welcome:'Maligayang pagdating',settings:'Mga Setting',logout:'Mag-logout',attendanceRate:'Rate ng Pagdalo',last2mo:'Nakaraang buwan',totalOfferings:'Kabuuang Ikapu at Handog',thisYear:'Ngayong taon',memberSince:'Miyembro Mula',myProfile:'Aking Profile',editProfile:'I-edit',save:'I-save',cancel:'Kanselahin',memberId:'Member ID',memberName:'Pangalan',spiritual:'Espirituwal na Kaarawan',cellGroup:'Cell Group',address:'Tirahan',joinDate:'Petsa ng Pagsali',group:'Grupo',contact:'Numero',birthdate:'Kaarawan',status:'Katayuan',ministry:'Mga Takdang Gawain',services:'Mga Paparating na Serbisyo',confirm:'Kumpirmahin',confirmed:'Nakumpirma',noMinistry:'Walang mga takdang gawain.',noServices:'Walang paparating na serbisyo.',noEvents:'Walang mga kaganapan.',registerNow:'Mag-register Na',cancelReg:'Kanselahin',closedReg:'Sarado na',viewDetails:'Tingnan',myRegs:'Aking mga Pagpaparehistro',regDeadline:'Deadline',of:'sa',registered:'nakapag-register',attendanceHistory:'Kasaysayan ng Pagdalo',noAttendance:'Walang rekord ng pagdalo.',date:'Petsa',service:'Serbisyo',checkin:'Check-in',statusL:'Katayuan',present:'Naroroon',absent:'Wala',offeringsHistory:'Kasaysayan ng Ikapu at Handog',noOfferings:'Walang rekord ng pagbibigay.',type:'Uri',amount:'Halaga',totalYtd:'Kabuuang Ikapu at Handog sa Taon',memoryVerse:'Talata ng alaala',hideAmounts:'Itago ang halaga',showAmounts:'Ipakita ang halaga',verse:'"Ang nagbibigay nang masaya ay mahal ng Diyos." — 2 Mga Taga-Corinto 9:7',excellent:'Kahusayan',good:'Mabuti',improve:'Kailangan ng Pagpabuti',willAttend:'Darating ako',wontAttend:'Hindi ako makakarating',undecided:'Hindi pa sigurado',rsvp:'RSVP',closePanel:'Isara',serviceDetails:'Detalye ng Serbisyo',eventDetails:'Detalye ng Kaganapan',attending:'Darating',notAttending:'Hindi darating',capacity:'Kapasidad',responseBy:'Sagot bago ang',yourRsvp:'Iyong RSVP'},
 };
 
 const FINANCE_LBL = {
@@ -145,7 +145,7 @@ function Backdrop({onClose,children,isMobile,label='Details'}) {
   useDialogFocus(true, panelRef, onClose);
   if (isMobile) {
     return (
-      <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:500,display:'flex',alignItems:'flex-end'}}>
+      <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(4,20,38,0.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',zIndex:500,display:'flex',alignItems:'flex-end'}}>
         <div ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={e=>e.stopPropagation()} style={{
           width:'100%', maxHeight:'92dvh', overflowY:'auto',
           background:'#fff', borderRadius:'20px 20px 0 0',
@@ -160,7 +160,7 @@ function Backdrop({onClose,children,isMobile,label='Details'}) {
     );
   }
   return (
-    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',zIndex:500,display:'flex',alignItems:'flex-start',justifyContent:'flex-end'}}>
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(4,20,38,0.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',zIndex:500,display:'flex',alignItems:'flex-start',justifyContent:'flex-end'}}>
       <div ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={e=>e.stopPropagation()} style={{width:'min(460px,95vw)',height:'100dvh',overflowY:'auto',background:'#fff',boxShadow:'-4px 0 32px rgba(0,0,0,0.18)',animation:'slideInRight 0.25s ease'}}>
         {children}
       </div>
@@ -333,7 +333,7 @@ function EventModal({evt,onClose,onRegister,onUpdateReservation,onCancel,evtLoad
 // TAB COMPONENTS — defined OUTSIDE MemberPortal to prevent focus loss
 // ══════════════════════════════════════════════════════════════
 
-function OverviewTab({profile,attendance,finance,memoryVerse,editing,editForm,setEditForm,editSaving,editError,setEditError,startEdit,saveEdit,setEditing,c,f,t,avatarUrl,initials,BRAND,PHP,fmtDate,isMobile}) {
+function OverviewTab({profile,attendance,finance,memoryVerse,hideMoney,onToggleMoney,editing,editForm,setEditForm,editSaving,editError,setEditError,startEdit,saveEdit,setEditing,c,f,t,avatarUrl,initials,BRAND,PHP,fmtDate,isMobile}) {
   const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
   const bdg  = (bg,color,border)=>({padding:'3px 10px',borderRadius:20,fontSize:f.xs,fontWeight:700,background:bg,color,border});
 
@@ -355,7 +355,17 @@ function OverviewTab({profile,attendance,finance,memoryVerse,editing,editForm,se
           </div>
         </div>
 
-        <div style={{...card,padding:isMobile?'14px 16px':'20px 22px'}}>
+        <div style={{...card,position:'relative',padding:isMobile?'14px 16px':'20px 22px'}}>
+          <button
+            type="button"
+            onClick={onToggleMoney}
+            aria-pressed={hideMoney}
+            aria-label={hideMoney ? t.showAmounts : t.hideAmounts}
+            title={hideMoney ? t.showAmounts : t.hideAmounts}
+            style={{position:'absolute',top:10,right:10,zIndex:2,width:30,height:30,display:'grid',placeItems:'center',borderRadius:8,border:`1px solid ${c.border}`,background:c.surfaceAlt,color:c.t2,cursor:'pointer'}}
+          >
+            <MonoIcon name={hideMoney ? 'eyeOff' : 'eye'} size={15} />
+          </button>
           <div style={{fontSize:f.xs,color:c.t3,fontWeight:600,marginBottom:4}}>{t.totalOfferings}</div>
           <div style={{fontSize:isMobile?f.lg:f.stat,fontWeight:900,color:c.t1,letterSpacing:'-0.5px',lineHeight:1.1}}>{finance?PHP(finance.ytdTotal):'—'}</div>
           <div style={{fontSize:f.xs,color:c.t3,marginTop:4}}>{t.thisYear}</div>
@@ -1188,7 +1198,7 @@ export default function MemberPortal() {
 
         {loading ? <LoadSkeleton/> : (
           <>
-            {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} memoryVerse={memoryVerse} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} setEditError={setEE} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={money} fmtDate={fmtDate} isMobile={isMobile}/>}
+            {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} memoryVerse={memoryVerse} hideMoney={hideMoney} onToggleMoney={toggleMoney} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} setEditError={setEE} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={money} fmtDate={fmtDate} isMobile={isMobile}/>}
             {tab===1&&<EventsTab events={events} onEventDetailsClick={onEventDetailsClick} c={c} f={f} isMobile={isMobile} labels={CAL_LBL[lang] || CAL_LBL.en}/>}
             {tab===2&&<AttendanceTab attendance={attendance} c={c} f={f} t={t} fmtDate={fmtDate} fmtTime={fmtTime} isMobile={isMobile} language={lang}/>}
             {tab===3&&<FinanceTab finance={finance} initialError={financeError} c={c} f={f} t={t} fmtDate={fmtDate} PHP={money} hideMoney={hideMoney} onToggleMoney={toggleMoney} isMobile={isMobile} language={lang}/>}

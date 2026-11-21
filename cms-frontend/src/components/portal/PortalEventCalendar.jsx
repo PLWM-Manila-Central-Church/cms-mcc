@@ -93,29 +93,47 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
               const isActive = day.date === activeDate;
               const hasEvents = day.events.length > 0;
               return (
-                <button
+                <div
                   key={day.date}
-                  type="button"
                   role="gridcell"
-                  aria-pressed={isActive}
                   aria-label={`${dayLabel(day.date)}, ${day.events.length} ${day.events.length === 1 ? 'event' : 'events'}`}
                   onClick={() => setSelected(day.date)}
                   style={{
                     height: isMobile ? 46 : 78, minWidth: 0, padding: isMobile ? '4px 3px' : '5px 6px',
                     display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'center' : 'stretch', gap: 2,
-                    borderRadius: 7, textAlign: 'left', cursor: 'pointer', font: 'inherit',
+                    borderRadius: 7, textAlign: 'left', cursor: 'pointer',
                     border: isActive ? `1.5px solid ${c.accent}` : `1px solid ${isToday ? c.accent : c.borderL}`,
                     background: hasEvents ? c.accentL : 'transparent',
                     color: c.t1,
                   }}
                 >
-                  <span style={{ fontSize: f.xs, fontWeight: isToday || isActive ? 800 : 600, color: isToday || isActive ? c.accentT : c.t2, alignSelf: isMobile ? 'center' : 'flex-start' }}>
+                  <button
+                    type="button"
+                    onClick={(clickEvent) => { clickEvent.stopPropagation(); setSelected(day.date); }}
+                    aria-pressed={isActive}
+                    aria-label={`Select ${dayLabel(day.date)}`}
+                    style={{
+                      border: 0, background: 'transparent', padding: 0, margin: 0, cursor: 'pointer', font: 'inherit',
+                      fontSize: f.xs, fontWeight: isToday || isActive ? 800 : 600,
+                      color: isToday || isActive ? c.accentT : c.t2,
+                      alignSelf: isMobile ? 'center' : 'flex-start',
+                    }}
+                  >
                     {day.number}
-                  </span>
+                  </button>
                   {hasEvents && !isMobile && day.events.slice(0, 2).map((event) => (
-                    <span key={event.id} style={{ fontSize: 10, lineHeight: 1.15, color: c.accentT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <button
+                      key={event.id}
+                      type="button"
+                      onClick={(clickEvent) => { clickEvent.stopPropagation(); onEventClick?.(event); }}
+                      style={{
+                        border: 0, padding: 0, margin: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left',
+                        font: 'inherit', fontSize: 10, lineHeight: 1.15, color: c.accentT,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%',
+                      }}
+                    >
                       {event.title.replace(/^MCC \| /, '')}
-                    </span>
+                    </button>
                   ))}
                   {hasEvents && !isMobile && day.events.length > 2 && (
                     <span style={{ fontSize: 10, color: c.t3 }}>+{day.events.length - 2}</span>
@@ -123,7 +141,7 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
                   {hasEvents && isMobile && (
                     <span style={{ width: 5, height: 5, borderRadius: 99, background: c.accent, marginTop: 1 }} aria-hidden="true" />
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
