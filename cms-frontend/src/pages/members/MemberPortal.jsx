@@ -12,6 +12,7 @@ import MemberSubstituteRequests from '../../components/ministry/MemberSubstitute
 import BibleReadingPanel from '../../components/portal/BibleReadingPanel';
 import MinistrySchedulePanel from '../../components/portal/MinistrySchedulePanel';
 import PortalEventCalendar from '../../components/portal/PortalEventCalendar';
+import PortalDialog from '../../components/portal/PortalDialog';
 import { uploadUrl } from '../../utils/uploadUrl';
 import { eventImageSrc } from '../../utils/eventImage';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
@@ -88,12 +89,18 @@ const BIBLE_LBL = {
     readingPlan: 'Bible reading', daysDone: 'days', todayReading: "Today's reading",
     planPending: 'The reading plan for this month has not been published yet.',
     previousMonth: 'Previous month', nextMonth: 'Next month', loading: 'Loading the reading plan…',
+    selectedDay: 'Selected day', closeDay: 'Close day readings', markRead: 'Mark as read', markUnread: 'Mark as unread',
+    noReading: 'No reading is published for this day.', futureDay: 'You can mark this day once it arrives.', oldTestament: 'Old Testament', newTestament: 'New Testament',
+    psalmsProverbs: 'Psalms / Proverbs', referencesNote: 'References from the 2026 reading plan. Chapter text is not stored here.',
   },
   tl: {
     memoryVerse: 'Talata ng alaala', forSunday: 'Para sa Linggo', noVerse: 'Wala pang talata ng alaala para sa iyong grupo.',
     readingPlan: 'Pagbasa ng Bibliya', daysDone: 'araw', todayReading: 'Pagbasa ngayong araw',
     planPending: 'Wala pang naisapublikong plano ng pagbasa para sa buwang ito.',
     previousMonth: 'Nakaraang buwan', nextMonth: 'Susunod na buwan', loading: 'Naglo-load ng plano ng pagbasa…',
+    selectedDay: 'Napiling araw', closeDay: 'Isara ang pagbasa', markRead: 'Markahan bilang nabasa', markUnread: 'Markahan bilang hindi pa nabasa',
+    noReading: 'Walang nakasulat na pagbasa para sa araw na ito.', futureDay: 'Maaari mong markahan ang araw na ito kapag dumating na.', oldTestament: 'Lumang Tipan', newTestament: 'Bagong Tipan',
+    psalmsProverbs: 'Mga Awit / Kawikaan', referencesNote: 'Mga sanggunian mula sa 2026 reading plan. Walang teksto ng kabanata rito.',
   },
 };
 
@@ -140,32 +147,8 @@ function Skel({w='100%',h=14,r=6,mt=0}) {
 
 // ── Modal / Sheet backdrop ─────────────────────────────────────
 // On desktop: right-side panel. On mobile: bottom sheet.
-function Backdrop({onClose,children,isMobile,label='Details'}) {
-  const panelRef = useRef(null);
-  useDialogFocus(true, panelRef, onClose);
-  if (isMobile) {
-    return (
-      <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(4,20,38,0.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',zIndex:500,display:'flex',alignItems:'flex-end'}}>
-        <div ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={e=>e.stopPropagation()} style={{
-          width:'100%', maxHeight:'92dvh', overflowY:'auto',
-          background:'#fff', borderRadius:'20px 20px 0 0',
-          boxShadow:'0 -4px 32px rgba(0,0,0,0.18)',
-          animation:'slideUpSheet 0.3s cubic-bezier(0.32,0.72,0,1)',
-          paddingBottom:'calc(16px + env(safe-area-inset-bottom,0px))',
-        }}>
-          <div style={{width:40,height:4,background:'#cbd5e1',borderRadius:99,margin:'12px auto 0'}}/>
-          {children}
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(4,20,38,0.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',zIndex:500,display:'flex',alignItems:'flex-start',justifyContent:'flex-end'}}>
-      <div ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={e=>e.stopPropagation()} style={{width:'min(460px,95vw)',height:'100dvh',overflowY:'auto',background:'#fff',boxShadow:'-4px 0 32px rgba(0,0,0,0.18)',animation:'slideInRight 0.25s ease'}}>
-        {children}
-      </div>
-    </div>
-  );
+function Backdrop({onClose,children,label='Details'}) {
+  return <PortalDialog onClose={onClose} label={label}>{children}</PortalDialog>;
 }
 
 // ── Service RSVP Modal ─────────────────────────────────────────

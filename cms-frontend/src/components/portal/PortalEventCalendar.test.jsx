@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 import PortalEventCalendar from './PortalEventCalendar';
 
@@ -22,9 +22,10 @@ test('shows a month of events and the details of the selected day', () => {
   expect(screen.getByRole('gridcell', { name: /December 10, 2026, 2 events/ })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('gridcell', { name: /December 10, 2026/ }));
-  expect(screen.getByText('MCC | CG 43 Taguig')).toBeInTheDocument();
-  expect(screen.getByText('MCC | CG 11 UPS 5')).toBeInTheDocument();
-  expect(screen.getByText('Registered')).toBeInTheDocument();
+  const dialog = screen.getByRole('dialog', { name: 'Thursday, December 10, 2026' });
+  expect(within(dialog).getByText('MCC | CG 43 Taguig')).toBeInTheDocument();
+  expect(within(dialog).getByText('MCC | CG 11 UPS 5')).toBeInTheDocument();
+  expect(within(dialog).getByText('Registered')).toBeInTheDocument();
 });
 
 test('keeps a multi-day event on every day it covers', () => {
@@ -50,6 +51,7 @@ test('opens details for an event', () => {
   fireEvent.click(screen.getByRole('gridcell', { name: /December 10, 2026/ }));
   fireEvent.click(screen.getAllByRole('button', { name: 'View details' })[0]);
   expect(onEventClick).toHaveBeenCalledWith(expect.objectContaining({ id: 3 }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
 test('opens an event by clicking its calendar chip', () => {

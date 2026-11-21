@@ -1,7 +1,7 @@
 # Centered day dialogs for the member portal
 
 Date: 2026-11-22
-Status: proposed — awaiting approval
+Status: implemented (approved with recommended defaults)
 Supersedes the presentation part of the calendar and Bible-reading work; behaviour and data stay as built.
 
 ## The ask

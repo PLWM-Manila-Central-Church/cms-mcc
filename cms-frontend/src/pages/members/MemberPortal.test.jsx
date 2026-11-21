@@ -4,6 +4,9 @@ import { beforeEach, expect, test, vi } from 'vitest';
 const state = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('../../api/axiosInstance', () => ({ default: { get: state.get, post: state.post } }));
 const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+const DAY_LABEL = new Date(`${TODAY}T00:00:00Z`).toLocaleDateString('en-PH', {
+  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC',
+});
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ user: { roleName: 'Member', email: 'sample@example.com' }, logout: vi.fn() }) }));
 vi.mock('../../context/ConfirmationContext', () => ({ useConfirmation: () => ({ confirm: vi.fn() }) }));
 vi.mock('../../utils/langUtils', () => ({ LANGS: [], getLangCode: () => 'en', saveLangCode: vi.fn(), loadGTScript: vi.fn(), applyGTLang: vi.fn() }));
@@ -28,14 +31,14 @@ beforeEach(() => {
 });
 test('Member event details is named, keyboard dismissible and returns focus', async () => {
   render(<MemoryRouter initialEntries={['/portal?tab=events']}><MemberPortal /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('gridcell', { name: new RegExp(DAY_LABEL) }));
   const trigger = await screen.findByRole('button', { name: 'View details' });
-  trigger.focus();
   fireEvent.click(trigger);
   expect(screen.getByRole('dialog', { name: 'Event Details' })).toHaveAttribute('aria-modal', 'true');
   expect(screen.getByRole('button', { name: 'Close event details' })).toHaveFocus();
   fireEvent.keyDown(document, { key: 'Escape' });
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  expect(trigger).toHaveFocus();
+  await waitFor(() => expect(screen.getByRole('button', { name: `Open ${DAY_LABEL}` })).toHaveFocus());
   expect(document.body.style.overflow).toBe('');
   expect(screen.getByRole('button', { name: 'Calendar', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
@@ -44,8 +47,8 @@ test('shows the calendar and the uploaded artwork in the event details', async (
   render(<MemoryRouter initialEntries={['/portal?tab=events']}><MemberPortal /></MemoryRouter>);
 
   expect(await screen.findByRole('grid', { name: /2026/ })).toBeInTheDocument();
-  expect(screen.getAllByText('Sample Event').length).toBeGreaterThan(0);
-  fireEvent.click(screen.getByRole('button', { name: 'View details' }));
+  fireEvent.click(screen.getByRole('gridcell', { name: new RegExp(DAY_LABEL) }));
+  fireEvent.click(await screen.findByRole('button', { name: 'View details' }));
   expect((await screen.findAllByAltText('Sample Event event'))[0]).toHaveAttribute('src', '/api/events/1/image');
 });
 

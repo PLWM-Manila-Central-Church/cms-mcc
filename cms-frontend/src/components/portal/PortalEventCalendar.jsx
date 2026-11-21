@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import PortalDialog from './PortalDialog';
 
 const pad = (value) => String(value).padStart(2, '0');
 const manilaToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
@@ -27,12 +28,83 @@ const shiftMonth = (month, delta) => {
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}`;
 };
 
-export default function PortalEventCalendar({ events = [], onEventClick, c, f, isMobile, labels = {}, initialMonth }) {
+function DayDialog({ date, events, onClose, onEventClick, c, f, labels }) {
+  const t = labels;
+  return (
+    <PortalDialog onClose={onClose} label={dayLabel(date)} width={560}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '20px 22px 14px', borderBottom: `1px solid ${c.borderL}` }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: c.t3 }}>
+            {t.selectedDay || 'Selected day'}
+          </div>
+          <div style={{ fontSize: f.lg || 17, fontWeight: 700, color: c.t1, marginTop: 2 }}>{dayLabel(date)}</div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t.closeDay || 'Close day details'}
+          style={{ width: 36, height: 36, borderRadius: '50%', border: 0, background: c.surfaceAlt, color: c.t2, cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}
+        >
+          <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>×</span>
+        </button>
+      </div>
+
+      <div style={{ padding: '16px 22px 20px', display: 'grid', gap: 10 }}>
+        {events.length === 0 ? (
+          <p style={{ margin: 0, fontSize: f.sm, color: c.t3 }}>{t.emptyDay || 'Nothing scheduled for this day.'}</p>
+        ) : events.map((event) => {
+          const multiDay = endOf(event) !== dateOf(event);
+          const meta = [
+            multiDay ? `${dateOf(event)} – ${endOf(event)}` : '',
+            event.location,
+          ].filter(Boolean).join(' · ');
+          return (
+            <article key={event.id} style={{ border: `1px solid ${c.border}`, borderRadius: 12, padding: '13px 15px', display: 'grid', gap: 5 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: c.t2, minWidth: 62 }}>
+                  {event.start_time ? timeLabel(event.start_time) : (t.allDay || 'All day')}
+                </span>
+                <span style={{ fontSize: f.sm, fontWeight: 650, color: c.t1, flex: 1, minWidth: 0 }}>{event.title}</span>
+              </div>
+              {meta && <div style={{ fontSize: f.xs, color: c.t3, paddingLeft: 74 }}>{meta}</div>}
+              {event.description && <p style={{ margin: 0, fontSize: f.xs, lineHeight: 1.55, color: c.t2, paddingLeft: 74 }}>{event.description}</p>}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingLeft: 74, marginTop: 2 }}>
+                <span>
+                  {event.is_registered && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: c.success, background: c.successL, borderRadius: 99, padding: '2px 8px' }}>
+                      {t.registered || 'Registered'}
+                    </span>
+                  )}
+                </span>
+                {onEventClick && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const dayButton = document.querySelector(`[aria-label="Open ${dayLabel(date)}"]`);
+                      dayButton?.focus();
+                      onClose();
+                      onEventClick(event);
+                    }}
+                    style={{ border: 0, background: 'transparent', color: c.accentT, fontSize: f.xs, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                  >
+                    {t.viewDetails || 'View details'}
+                  </button>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </PortalDialog>
+  );
+}
+
+export default function PortalEventCalendar({ events = [], onEventClick, c, f, isMobile = false, labels = {}, initialMonth }) {
   const t = labels;
   const [month, setMonth] = useState(initialMonth || manilaMonth);
-  const [selected, setSelected] = useState('');
+  const [openDay, setOpenDay] = useState('');
+  const [today] = useState(manilaToday);
 
-  const today = manilaToday();
   const upcoming = useMemo(() => events
     .filter((event) => event.status !== 'Cancelled')
     .filter((event) => (endOf(event) || today) >= today)
@@ -54,8 +126,7 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
   }, [month, upcoming]);
 
   const monthEvents = new Set(cells.days.flatMap((day) => day.events.map((event) => event.id))).size;
-  const activeDate = selected || (cells.days.find((day) => day.date === today)?.date || cells.days.find((day) => day.events.length)?.date || '');
-  const activeEvents = cells.days.find((day) => day.date === activeDate)?.events || [];
+  const openDayEvents = cells.days.find((day) => day.date === openDay)?.events || [];
 
   const button = {
     width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 8,
@@ -90,32 +161,32 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
             {Array.from({ length: cells.offset }, (_, index) => <span key={`pad-${index}`} />)}
             {cells.days.map((day) => {
               const isToday = day.date === today;
-              const isActive = day.date === activeDate;
+              const isOpen = day.date === openDay;
               const hasEvents = day.events.length > 0;
               return (
                 <div
                   key={day.date}
                   role="gridcell"
                   aria-label={`${dayLabel(day.date)}, ${day.events.length} ${day.events.length === 1 ? 'event' : 'events'}`}
-                  onClick={() => setSelected(day.date)}
+                  onClick={() => setOpenDay(day.date)}
                   style={{
                     height: isMobile ? 46 : 78, minWidth: 0, padding: isMobile ? '4px 3px' : '5px 6px',
                     display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'center' : 'stretch', gap: 2,
                     borderRadius: 7, textAlign: 'left', cursor: 'pointer',
-                    border: isActive ? `1.5px solid ${c.accent}` : `1px solid ${isToday ? c.accent : c.borderL}`,
+                    border: isOpen ? `1.5px solid ${c.accent}` : `1px solid ${isToday ? c.accent : c.borderL}`,
                     background: hasEvents ? c.accentL : 'transparent',
                     color: c.t1,
                   }}
                 >
                   <button
                     type="button"
-                    onClick={(clickEvent) => { clickEvent.stopPropagation(); setSelected(day.date); }}
-                    aria-pressed={isActive}
-                    aria-label={`Select ${dayLabel(day.date)}`}
+                    onClick={(clickEvent) => { clickEvent.stopPropagation(); setOpenDay(day.date); }}
+                    aria-pressed={isOpen}
+                    aria-label={`Open ${dayLabel(day.date)}`}
                     style={{
                       border: 0, background: 'transparent', padding: 0, margin: 0, cursor: 'pointer', font: 'inherit',
-                      fontSize: f.xs, fontWeight: isToday || isActive ? 800 : 600,
-                      color: isToday || isActive ? c.accentT : c.t2,
+                      fontSize: f.xs, fontWeight: isToday || isOpen ? 800 : 600,
+                      color: isToday || isOpen ? c.accentT : c.t2,
                       alignSelf: isMobile ? 'center' : 'flex-start',
                     }}
                   >
@@ -148,46 +219,17 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
         </div>
       </section>
 
-      <section style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 14, padding: '14px 16px' }} aria-label={activeDate ? dayLabel(activeDate) : 'Selected day'}>
-        <div style={{ fontSize: f.xs, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: c.t3 }}>
-          {activeDate ? dayLabel(activeDate) : (t.pickDay || 'Pick a day')}
-        </div>
-        {activeEvents.length === 0 ? (
-          <p style={{ margin: '6px 0 0', fontSize: f.sm, color: c.t3 }}>{t.emptyDay || 'Nothing scheduled for this day.'}</p>
-        ) : (
-          <ul style={{ listStyle: 'none', margin: '4px 0 0', padding: 0 }}>
-            {activeEvents.map((event) => {
-              const multiDay = endOf(event) !== dateOf(event);
-              return (
-                <li key={event.id} style={{ padding: '9px 0', borderTop: `1px solid ${c.borderL}` }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: f.xs, fontWeight: 700, color: c.t2, minWidth: 58 }}>
-                      {event.start_time ? timeLabel(event.start_time) : (t.allDay || 'All day')}
-                    </span>
-                    <span style={{ fontSize: f.sm, fontWeight: 650, color: c.t1, flex: 1, minWidth: 0 }}>{event.title}</span>
-                    {event.is_registered && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: c.success, background: c.successL, borderRadius: 99, padding: '2px 8px' }}>{t.registered || 'Registered'}</span>
-                    )}
-                  </div>
-                  {(event.location || multiDay) && (
-                    <div style={{ fontSize: f.xs, color: c.t3, marginTop: 2, paddingLeft: 66 }}>
-                      {[multiDay ? `${dateOf(event)} – ${endOf(event)}` : '', event.location].filter(Boolean).join(' · ')}
-                    </div>
-                  )}
-                  {onEventClick && (
-                    <div style={{ paddingLeft: 66, marginTop: 4 }}>
-                      <button type="button" onClick={() => onEventClick(event)}
-                        style={{ border: 0, background: 'transparent', color: c.accentT, fontSize: f.xs, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
-                        {t.viewDetails || 'View details'}
-                      </button>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      {openDay && (
+        <DayDialog
+          date={openDay}
+          events={openDayEvents}
+          onClose={() => setOpenDay('')}
+          onEventClick={onEventClick}
+          c={c}
+          f={f}
+          labels={t}
+        />
+      )}
     </div>
   );
 }

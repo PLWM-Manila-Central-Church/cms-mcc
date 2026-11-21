@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import PortalDialog from './PortalDialog';
 
 const manilaMonth = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }).slice(0, 7);
 const manilaToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
@@ -44,14 +45,9 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
     ? new Date(`${data.days[0].date}T00:00:00Z`).getUTCDay()
     : 0;
 
-  const activeDate = selected && data?.days.some((day) => day.date === selected)
-    ? selected
-    : (data?.days.find((day) => day.date === today && !day.placeholder)?.date
-      || data?.days.find((day) => !day.placeholder)?.date
-      || '');
-  const activeDay = data?.days.find((day) => day.date === activeDate) || null;
-  const isRead = completed.has(activeDate);
-  const canToggle = Boolean(activeDay) && !activeDay.placeholder && activeDate <= today;
+  const activeDay = data?.days.find((day) => day.date === selected) || null;
+  const isRead = Boolean(activeDay) && completed.has(activeDay.date);
+  const canToggle = Boolean(activeDay) && !activeDay.placeholder && activeDay.date <= today;
 
   const toggle = async () => {
     if (!activeDay || !canToggle || busy) return;
@@ -151,7 +147,7 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
                     {data.days.map((day) => {
                       const dayRead = completed.has(day.date);
                       const isToday = day.date === today;
-                      const isActive = day.date === activeDate;
+                      const isActive = day.date === selected;
                       return (
                         <button
                           key={day.date}
@@ -182,57 +178,69 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
                     })}
                   </div>
 
-                  {activeDay && (
-                    <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${c.borderL}` }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                        <div>
-                          <div style={{ fontSize: f.xs, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: c.t3 }}>
-                            {t.selectedDay || 'Selected day'}
-                          </div>
-                          <div style={{ fontSize: f.sm, fontWeight: 650, color: c.t1 }}>{fullDate(activeDay.date)}</div>
-                        </div>
-                        {canToggle && (
-                          <button
-                            type="button"
-                            onClick={toggle}
-                            disabled={busy}
-                            style={{
-                              minHeight: 36, padding: '8px 14px', borderRadius: 8, fontSize: f.xs, fontWeight: 700, cursor: 'pointer',
-                              border: `1px solid ${isRead ? c.border : c.accent}`,
-                              background: isRead ? c.surface : c.accent,
-                              color: isRead ? c.t2 : '#fff',
-                              opacity: busy ? 0.6 : 1,
-                            }}
-                          >
-                            {busy ? '…' : isRead ? (t.markUnread || 'Mark as unread') : (t.markRead || 'Mark as read')}
-                          </button>
-                        )}
-                      </div>
-
-                      {activeDay.placeholder ? (
-                        <p style={{ margin: '8px 0 0', fontSize: f.sm, color: c.t3 }}>{t.noReading || 'No reading is published for this day.'}</p>
-                      ) : (
-                        <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, margin: '10px 0 0' }}>
-                          {[
-                            [t.oldTestament || 'Old Testament', activeDay.ot],
-                            [t.newTestament || 'New Testament', activeDay.nt],
-                            [t.psalmsProverbs || 'Psalms / Proverbs', activeDay.ps],
-                          ].map(([label, value]) => (
-                            <div key={label} style={{ background: c.surfaceAlt, border: `1px solid ${c.borderL}`, borderRadius: 8, padding: '8px 10px' }}>
-                              <dt style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: c.t3 }}>{label}</dt>
-                              <dd style={{ margin: '2px 0 0', fontSize: f.sm, fontWeight: 650, color: c.t1 }}>{value}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      )}
-                    </div>
-                  )}
                 </>
               )}
             </>
           )}
         </div>
       </section>
+      {activeDay && (
+        <PortalDialog onClose={() => selected === activeDay.date && setSelected('')} label={fullDate(activeDay.date)} width={520}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '20px 22px 14px', borderBottom: `1px solid ${c.borderL}` }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: c.t3 }}>{t.selectedDay || 'Selected day'}</div>
+              <div style={{ fontSize: f.lg || 17, fontWeight: 700, color: c.t1, marginTop: 2 }}>{fullDate(activeDay.date)}</div>
+            </div>
+            <button type="button" onClick={() => setSelected('')} aria-label={t.closeDay || 'Close day readings'} style={{ width: 36, height: 36, borderRadius: '50%', border: 0, background: c.surfaceAlt, color: c.t2, cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>×</span>
+            </button>
+          </div>
+          <div style={{ padding: '16px 22px 20px', display: 'grid', gap: 12 }}>
+            {activeDay.placeholder ? (
+              <p style={{ margin: 0, fontSize: f.sm, color: c.t3 }}>{t.noReading || 'No reading is published for this day.'}</p>
+            ) : (
+              <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, margin: 0 }}>
+                {[
+                  [t.oldTestament || 'Old Testament', activeDay.ot],
+                  [t.newTestament || 'New Testament', activeDay.nt],
+                  [t.psalmsProverbs || 'Psalms / Proverbs', activeDay.ps],
+                ].map(([label, value]) => (
+                  <div key={label} style={{ background: c.surfaceAlt, border: `1px solid ${c.borderL}`, borderRadius: 10, padding: '10px 12px' }}>
+                    <dt style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: c.t3 }}>{label}</dt>
+                    <dd style={{ margin: '3px 0 0', fontSize: f.md || 14, fontWeight: 650, color: c.t1 }}>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTop: `1px solid ${c.borderL}`, paddingTop: 14 }}>
+              <span style={{ fontSize: f.xs, color: c.t3 }}>
+                {t.referencesNote || 'References from the 2026 reading plan. Chapter text is not stored here.'}
+              </span>
+              {canToggle && (
+                <button
+                  type="button"
+                  onClick={toggle}
+                  disabled={busy}
+                  style={{
+                    minHeight: 38, padding: '9px 16px', borderRadius: 9, fontSize: f.xs, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+                    border: `1px solid ${isRead ? c.border : c.accent}`,
+                    background: isRead ? c.surface : c.accent,
+                    color: isRead ? c.t2 : '#fff',
+                    opacity: busy ? 0.6 : 1,
+                  }}
+                >
+                  {busy ? '…' : isRead ? (t.markUnread || 'Mark as unread') : (t.markRead || 'Mark as read')}
+                </button>
+              )}
+            </div>
+            {!activeDay.placeholder && !canToggle && activeDay.date > today && (
+              <p style={{ margin: 0, fontSize: f.xs, color: c.t3 }}>
+                {t.futureDay || 'You can mark this day once it arrives.'}
+              </p>
+            )}
+          </div>
+        </PortalDialog>
+      )}
     </div>
   );
 }
