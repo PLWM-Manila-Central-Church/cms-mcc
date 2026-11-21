@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { buildAnalyticsCsvRows, getAnalyticsReportScope, getReportPeriodRange } from './analyticsReport';
+import {
+  averagePerBucket,
+  buildAnalyticsCsvRows,
+  expenseRatio,
+  getAnalyticsReportScope,
+  getReportPeriodRange,
+  netMargin,
+  shareOf,
+} from './analyticsReport';
+import { toCsv } from './csv';
 
 describe('analytics report role scope', () => {
   it('describes and exports only member and attendance data for Registration Team', () => {
@@ -95,5 +104,72 @@ describe('analytics report role scope', () => {
     expect(getReportPeriodRange('month', reference)).toEqual({ from: '2026-10-01', to: '2026-10-20' });
     expect(getReportPeriodRange('year', reference)).toEqual({ from: '2026-01-01', to: '2026-10-20' });
     expect(getReportPeriodRange('custom', reference)).toBeNull();
+  });
+});
+
+describe('analytics report derived detail', () => {
+  const scope = getAnalyticsReportScope('System Admin');
+  const data = {
+    range: { from: '2026-01-01', to: '2026-10-20' },
+    period: { preset: 'year', bucket: 'month' },
+    members: { total: 12, active: 10, inactive: 2, new_in_range: 3 },
+    demographics: {
+      age_bands: [{ label: '18-29', total: 8 }, { label: '30-49', total: 4 }],
+      gender: [{ label: 'Female', total: 7 }, { label: 'Male', total: 5 }],
+      cell_groups: [{ id: 1, label: 'Alpha', total: 6 }],
+      groups: [{ id: 1, label: 'Worship', total: 9 }],
+    },
+    member_growth: [{ period: '2026-10', total: 3 }],
+    attendance: {
+      service_checkins: 9,
+      event_checkins: 3,
+      buckets: [
+        { period: '2026-09', service: 4, events: 1 },
+        { period: '2026-10', service: 5, events: 2 },
+      ],
+    },
+    finance: {
+      income: 900,
+      expenses: 250,
+      net: 650,
+      buckets: [{ period: '2026-10', income: 900, expenses: 250, net: 650 }],
+    },
+  };
+
+  it('exports member mix shares without touching the documented finance rows', () => {
+    const rows = buildAnalyticsCsvRows(data, scope);
+
+    expect(rows.filter(([section]) => section === 'Finance')).toEqual([
+      ['Finance', 'Received income', 900, 'PHP', ''],
+      ['Finance', 'Expenses', 250, 'PHP', ''],
+      ['Finance', 'Net balance', 650, 'PHP', ''],
+    ]);
+    expect(rows).toContainEqual(['Member mix', 'Female', 7, 'members', '58.3% of 12 members']);
+    expect(rows).toContainEqual(['Member mix', '18-29', 8, 'members', '66.7% of 12 members']);
+  });
+
+  it('exports interval averages and finance ratios', () => {
+    const rows = buildAnalyticsCsvRows(data, scope);
+
+    expect(rows).toContainEqual(['Attendance summary', 'Average per interval: services', 4.5, 'check-ins', '2 intervals']);
+    expect(rows).toContainEqual(['Finance ratios', 'Expense ratio', 27.8, '%', 'Expenses divided by received income']);
+    expect(rows).toContainEqual(['Finance ratios', 'Net margin', 72.2, '%', 'Net balance divided by received income']);
+  });
+
+  it('keeps five columns when a group label looks like a formula', () => {
+    const rows = buildAnalyticsCsvRows(
+      { ...data, demographics: { ...data.demographics, gender: [{ label: '=SUM(A1:A9)', total: 3 }] } },
+      scope,
+    );
+
+    expect(rows.every((row) => row.length === 5)).toBe(true);
+    expect(toCsv(rows)).toContain('"\'=SUM(A1:A9)"');
+  });
+
+  it('computes ratios without dividing by zero', () => {
+    expect(shareOf(7, 0)).toBe(0);
+    expect(averagePerBucket(9, 0)).toBe(0);
+    expect(expenseRatio(250, 0)).toBe(0);
+    expect(netMargin(650, 900)).toBe(72.2);
   });
 });

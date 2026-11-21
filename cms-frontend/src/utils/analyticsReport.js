@@ -81,8 +81,25 @@ export const getAnalyticsReportScope = (roleName) => {
   };
 };
 
-const analyticsSectionsForScope = ({ canSeeMembersAndAttendance, canSeeFinance }) => [
-  ...(canSeeMembersAndAttendance
+const oneDecimal = (value) => Number((Number(value) || 0).toFixed(1));
+
+export const shareOf = (value, total) => (
+  Number(total) > 0 ? oneDecimal((Number(value) || 0) / Number(total) * 100) : 0
+);
+
+export const averagePerBucket = (total, buckets) => (
+  Number(buckets) > 0 ? oneDecimal((Number(total) || 0) / Number(buckets)) : 0
+);
+
+export const expenseRatio = (expenses, income) => (
+  Number(income) > 0 ? oneDecimal((Number(expenses) || 0) / Number(income) * 100) : 0
+);
+
+export const netMargin = (net, income) => (
+  Number(income) > 0 ? oneDecimal((Number(net) || 0) / Number(income) * 100) : 0
+);
+
+const analyticsSectionsForScope = ({ canSeeMembersAndAttendance, canSeeFinance }) => [  ...(canSeeMembersAndAttendance
     ? ['Member population, demographics, member growth, and service/event attendance']
     : []),
   ...(canSeeFinance
@@ -148,6 +165,20 @@ export const buildAnalyticsCsvRows = (data, {
         rows.push(analyticsCsvRow('Demographics', title + ': ' + item.label, item.total, 'members'));
       }
     }
+    rows.push(analyticsCsvBlankRow(), analyticsCsvRow('MEMBER MIX'), ANALYTICS_CSV_HEADER);
+    for (const key of ['gender', 'age_bands']) {
+      const mixRows = [...(data.demographics?.[key] || [])]
+        .sort((left, right) => (Number(right.total) || 0) - (Number(left.total) || 0));
+      for (const item of mixRows) {
+        rows.push(analyticsCsvRow(
+          'Member mix',
+          item.label,
+          item.total,
+          'members',
+          shareOf(item.total, data.members.total) + '% of ' + data.members.total + ' members',
+        ));
+      }
+    }
     rows.push(analyticsCsvBlankRow(), analyticsCsvRow('MEMBER GROWTH'), ANALYTICS_CSV_HEADER);
     for (const item of data.member_growth || []) {
       rows.push(analyticsCsvRow('Member growth', item.period, item.total, 'members', 'New members per report interval'));
@@ -158,12 +189,21 @@ export const buildAnalyticsCsvRows = (data, {
       analyticsCsvRow('Attendance', 'Service check-ins', data.attendance.service_checkins, 'check-ins'),
       analyticsCsvRow('Attendance', 'Event check-ins', data.attendance.event_checkins, 'check-ins'),
     );
+    const attendanceBuckets = data.attendance.buckets || data.attendance.monthly || [];
+    rows.push(
+      analyticsCsvBlankRow(),
+      analyticsCsvRow('ATTENDANCE SUMMARY'),
+      ANALYTICS_CSV_HEADER,
+      analyticsCsvRow('Attendance summary', 'Average per interval: services', averagePerBucket(data.attendance.service_checkins, attendanceBuckets.length), 'check-ins', attendanceBuckets.length + ' intervals'),
+      analyticsCsvRow('Attendance summary', 'Average per interval: events', averagePerBucket(data.attendance.event_checkins, attendanceBuckets.length), 'check-ins', attendanceBuckets.length + ' intervals'),
+      analyticsCsvRow('Attendance summary', 'Average per interval: total', averagePerBucket((Number(data.attendance.service_checkins) || 0) + (Number(data.attendance.event_checkins) || 0), attendanceBuckets.length), 'check-ins', attendanceBuckets.length + ' intervals'),
+    );
     rows.push(
       analyticsCsvBlankRow(),
       analyticsCsvRow('ATTENDANCE TREND'),
       ANALYTICS_CSV_HEADER,
     );
-    for (const item of data.attendance.buckets || data.attendance.monthly || []) {
+    for (const item of attendanceBuckets) {
       const service = Number(item.service) || 0;
       const events = Number(item.events) || 0;
       rows.push(
@@ -194,6 +234,14 @@ export const buildAnalyticsCsvRows = (data, {
         analyticsCsvRow('Finance trend', item.period + ' net balance', net, 'PHP'),
       );
     }
+    const financeNet = Number(data.finance.net ?? ((Number(data.finance.income) || 0) - (Number(data.finance.expenses) || 0)));
+    rows.push(
+      analyticsCsvBlankRow(),
+      analyticsCsvRow('FINANCE RATIOS'),
+      ANALYTICS_CSV_HEADER,
+      analyticsCsvRow('Finance ratios', 'Expense ratio', expenseRatio(data.finance.expenses, data.finance.income), '%', 'Expenses divided by received income'),
+      analyticsCsvRow('Finance ratios', 'Net margin', netMargin(financeNet, data.finance.income), '%', 'Net balance divided by received income'),
+    );
   }
   rows.push(analyticsCsvBlankRow(), analyticsCsvRow('REPORT NOTES'), ANALYTICS_CSV_HEADER);
   if (canSeeMembersAndAttendance) {
