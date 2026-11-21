@@ -33,9 +33,10 @@ const number = (value) => Number(value || 0).toLocaleString('en-PH');
 const money = (value) => `PHP ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const compactMoney = (value) => {
   const amount = Number(value || 0);
-  if (Math.abs(amount) >= 1000000) return `PHP ${(amount / 1000000).toFixed(1)}M`;
-  if (Math.abs(amount) >= 1000) return `PHP ${(amount / 1000).toFixed(1)}k`;
-  return `PHP ${amount.toFixed(0)}`;
+  const trimmed = (size) => (Number.isInteger(amount / size) ? String(amount / size) : (amount / size).toFixed(1));
+  if (Math.abs(amount) >= 1000000) return `PHP ${trimmed(1000000)}M`;
+  if (Math.abs(amount) >= 1000) return `PHP ${trimmed(1000)}k`;
+  return `PHP ${Math.round(amount)}`;
 };
 const bucketLabel = (period, bucket) => formatReportBucket(period, bucket).replace('Week of ', '');
 
@@ -290,9 +291,9 @@ export default function AnalyticsReportPage() {
                 <div className="ar-chart-row">
                   <MetricRail
                     items={[
-                      { label: 'Received income', value: money(data.finance.income) },
-                      { label: 'Expenses', value: money(data.finance.expenses) },
-                      { label: 'Net balance', value: money(data.finance.net) },
+                      { label: 'Received income', value: compactMoney(data.finance.income), title: money(data.finance.income) },
+                      { label: 'Expenses', value: compactMoney(data.finance.expenses), title: money(data.finance.expenses) },
+                      { label: 'Net balance', value: compactMoney(data.finance.net), title: money(data.finance.net) },
                     ]}
                   />
                   <LineTrend
@@ -328,7 +329,86 @@ export default function AnalyticsReportPage() {
             )}
           </div>
 
-          <p className="ar-footnote">This report shows aggregate totals. Member names and individual giving records are not included.</p>
+          <div className="ar-print-tables">
+          {canSeeMembersAndAttendance && data.demographics && (
+            <table className="ar-table ar-print-only">
+              <caption>Member demographics</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Dimension</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Members</th>
+                  <th scope="col">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ['Gender', genderRows],
+                  ['Age band', ageRows],
+                  ['Cell group', cellGroupRows],
+                  ['Ministry group', ministryGroupRows],
+                ].flatMap(([dimension, rows]) => rows.map((row) => (
+                  <tr key={`${dimension}-${row.id ?? row.label}`}>
+                    <th scope="row">{dimension}</th>
+                    <td>{row.label}</td>
+                    <td>{number(row.total)}</td>
+                    <td>{shareOf(row.total, memberTotal)}%</td>
+                  </tr>
+                )))}
+              </tbody>
+            </table>
+          )}
+
+          {canSeeMembersAndAttendance && attendanceBuckets.length > 0 && (
+            <table className="ar-table ar-print-only">
+              <caption>Attendance by interval</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Interval</th>
+                  <th scope="col">Services</th>
+                  <th scope="col">Events</th>
+                  <th scope="col">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attendanceBuckets.map((row) => (
+                  <tr key={`attendance-${row.period}`}>
+                    <th scope="row">{bucketLabel(row.period, bucket)}</th>
+                    <td>{number(row.service)}</td>
+                    <td>{number(row.events)}</td>
+                    <td>{number((Number(row.service) || 0) + (Number(row.events) || 0))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {canSeeFinance && data.finance && financeBuckets.length > 0 && (
+            <table className="ar-table ar-print-only">
+              <caption>Finance by interval</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Interval</th>
+                  <th scope="col">Received income</th>
+                  <th scope="col">Expenses</th>
+                  <th scope="col">Net balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {financeBuckets.map((row) => (
+                  <tr key={`finance-${row.period}`}>
+                    <th scope="row">{bucketLabel(row.period, bucket)}</th>
+                    <td>{money(row.income)}</td>
+                    <td>{money(row.expenses)}</td>
+                    <td>{money(row.net)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          </div>
+
+          <p className="ar-footnote">This report shows aggregate totals. Member names and individual giving records are not included. Generated by PLWM-MCC Church Management System. Switch off browser headers and footers in the print dialog for a clean sheet.</p>
         </>
       )}
     </section>

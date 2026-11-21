@@ -5,7 +5,9 @@ export default function RankedBars({
   emptyLabel = 'No records for this period.',
 }) {
   const sorted = [...rows].sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
-  const shown = sorted.slice(0, limit);
+  const isOther = (row) => /^Other\b/i.test(String(row.label || ''));
+  const ordered = [...sorted.filter((row) => !isOther(row)), ...sorted.filter(isOther)];
+  const shown = ordered.slice(0, limit);
 
   if (shown.length === 0) return <p className="ar-empty">{emptyLabel}</p>;
 

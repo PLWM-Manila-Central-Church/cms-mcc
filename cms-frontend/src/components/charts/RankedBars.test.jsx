@@ -18,6 +18,12 @@ describe('RankedBars', () => {
     expect(screen.queryByText('Low')).not.toBeInTheDocument();
   });
 
+  it('keeps the Other aggregate as the final row', () => {
+    render(<RankedBars rows={[{ label: 'Other (12 cell groups)', total: 180 }, { label: 'Alpha', total: 20 }]} />);
+    const labels = [...document.querySelectorAll('.ar-ranked-label')].map((node) => node.textContent);
+    expect(labels).toEqual(['Alpha', 'Other (12 cell groups)']);
+  });
+
   it('renders the empty label when there are no rows', () => {
     render(<RankedBars rows={[]} emptyLabel="No groups recorded." />);
     expect(screen.getByText('No groups recorded.')).toBeInTheDocument();

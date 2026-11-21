@@ -87,9 +87,9 @@ visual languages, and the numbers would not align with the plotted geometry.
   (144 KB) from the shared Drive folder `1oLtoBFxd2Wq2Q30Sicj6Bwk4CC_LvrnI`, saved as
   `public/brand/mcc-lockup.png` and `public/brand/mcc-lockup-white.png`. It is a horizontal
   lockup — mark at left, two-line wordmark at right — used as a header band, not a square
-  logo. At the 44mm print width that is roughly 800 dpi, so it prints cleanly; charts are
-  vector SVG and the lockup is the only raster on the sheet. The white variant is for dark
-  surfaces only and never appears in the white print sheet.
+  logo. It prints at 78mm wide (44mm made the wordmark unreadable), roughly 450 dpi, and
+  charts are vector SVG; the lockup is the only raster on the sheet. The white variant is
+  for dark surfaces only and never appears in the white print sheet.
 - **Attendance "average" means average per reporting interval**, not per service: the API
   returns day-bucketed check-in totals and no count of services held. Labels say
   "Average per interval" everywhere, and headline figures read as check-ins, never as
