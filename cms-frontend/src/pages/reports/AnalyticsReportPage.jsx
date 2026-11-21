@@ -3,15 +3,22 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import {
+  averagePerBucket,
   buildAnalyticsCsvRows,
   formatReportBucket,
   formatReportGeneratedAt,
   formatReportRange,
   getAnalyticsReportScope,
   getReportPeriodRange,
+  shareOf,
 } from '../../utils/analyticsReport';
-import { CHURCH_REPORT_LOGO, CHURCH_REPORT_NAME } from '../../utils/reportBranding';
+import { CHURCH_REPORT_BANNER } from '../../utils/reportBranding';
 import { toCsv } from '../../utils/csv';
+import ReportSection from '../../components/charts/ReportSection';
+import MetricRail from '../../components/charts/MetricRail';
+import LineTrend from '../../components/charts/LineTrend';
+import DonutBreakdown from '../../components/charts/DonutBreakdown';
+import RankedBars from '../../components/charts/RankedBars';
 import './analyticsReport.css';
 
 const manilaDate = () => {
@@ -24,53 +31,18 @@ const today = manilaDate;
 const yearStart = () => `${manilaDate().slice(0, 4)}-01-01`;
 const number = (value) => Number(value || 0).toLocaleString('en-PH');
 const money = (value) => `PHP ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-function BarList({ title, rows = [], color = '#0f6aa3' }) {
-  const max = Math.max(1, ...rows.map((item) => Number(item.total || 0)));
-  return (
-    <section style={S.panel}>
-      <h2 style={S.panelTitle}>{title}</h2>
-      {rows.length === 0 ? <p style={S.muted}>No records for this period.</p> : rows.map((item) => (
-        <div key={`${item.id || ''}-${item.label}`} style={S.barRow}>
-          <div style={S.barLabel}><span>{item.label}</span><strong>{number(item.total)}</strong></div>
-          <div style={S.track}><div style={{ ...S.bar, width: `${Math.max(3, (Number(item.total || 0) / max) * 100)}%`, background: color }} /></div>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-function TrendBars({ title, rows = [], firstKey, secondKey, firstLabel, secondLabel, bucket = 'month' }) {
-  const max = Math.max(1, ...rows.flatMap((row) => [Number(row[firstKey] || 0), Number(row[secondKey] || 0)]));
-  const heightFor = (value) => Number(value || 0) > 0 ? `${Math.max(2, Number(value) / max * 100)}%` : 0;
-  return (
-    <section style={S.panel}>
-      <h2 style={S.panelTitle}>{title}</h2>
-      <div style={S.legend}><span><i style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 2, background: '#0f6aa3' }} />{firstLabel}</span>{secondKey && <span><i style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 2, background: '#13b5ea' }} />{secondLabel}</span>}</div>
-      {rows.length === 0 ? <p style={S.muted}>No records for this period.</p> : (
-        <div style={S.trend}>
-          {rows.map((row) => (
-            <div key={row.period} title={`${formatReportBucket(row.period, bucket)} · ${firstLabel}: ${row[firstKey]}${secondKey ? ` · ${secondLabel}: ${row[secondKey]}` : ''}`} style={S.monthColumn}>
-              <div style={S.barPair}>
-                <div style={{ ...S.trendBar, height: heightFor(row[firstKey]), minHeight: Number(row[firstKey] || 0) > 0 ? 2 : 0, background: '#0f6aa3' }} />
-                {secondKey && <div style={{ ...S.trendBar, height: heightFor(row[secondKey]), minHeight: Number(row[secondKey] || 0) > 0 ? 2 : 0, background: '#13b5ea' }} />}
-              </div>
-              <span>{formatReportBucket(row.period, bucket).replace('Week of ', '')}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
+const compactMoney = (value) => {
+  const amount = Number(value || 0);
+  if (Math.abs(amount) >= 1000000) return `PHP ${(amount / 1000000).toFixed(1)}M`;
+  if (Math.abs(amount) >= 1000) return `PHP ${(amount / 1000).toFixed(1)}k`;
+  return `PHP ${amount.toFixed(0)}`;
+};
+const bucketLabel = (period, bucket) => formatReportBucket(period, bucket).replace('Week of ', '');
 
 export default function AnalyticsReportPage() {
   const { user } = useAuth();
   const reportScope = getAnalyticsReportScope(user?.roleName);
   const { canSeeFinance, canSeeMembersAndAttendance, description: reportDescription } = reportScope;
-  const dateFilteredSections = canSeeFinance
-    ? 'member growth, attendance, and finance summaries'
-    : 'member growth and attendance summaries';
-  const demographicDateNote = `Member totals and demographics use the current non-deleted roster; the selected date range applies to ${dateFilteredSections}.`;
   const isMobile = useIsMobile();
   const [dateFrom, setDateFrom] = useState(yearStart());
   const [dateTo, setDateTo] = useState(today());
@@ -82,10 +54,15 @@ export default function AnalyticsReportPage() {
   const [error, setError] = useState('');
 
   const loadReport = useCallback(async () => {
-    if (!dateFrom || !dateTo || dateFrom > dateTo) { setError('Choose a valid date range with the start date on or before the end date.'); return; }
+    if (!dateFrom || !dateTo || dateFrom > dateTo) {
+      setError('Choose a valid date range with the start date on or before the end date.');
+      return;
+    }
     setLoading(true); setError('');
     try {
-      const response = await axiosInstance.get('/reports/analytics', { params: { date_from: dateFrom, date_to: dateTo, period: reportPeriod } });
+      const response = await axiosInstance.get('/reports/analytics', {
+        params: { date_from: dateFrom, date_to: dateTo, period: reportPeriod },
+      });
       setData(response.data.data);
       setReportGeneratedAt(new Date());
     } catch (requestError) {
@@ -124,122 +101,236 @@ export default function AnalyticsReportPage() {
     }
   };
 
-  const maxGrowth = Math.max(1, ...(data?.member_growth || []).map((row) => Number(row.total || 0)));
+  const bucket = data?.period?.bucket || 'month';
+  const growthRows = data?.member_growth || [];
+  const growthPoints = growthRows.map((row) => ({
+    label: bucketLabel(row.period, bucket),
+    values: { total: Number(row.total) || 0 },
+  }));
+  const peakGrowth = growthRows.reduce(
+    (best, row) => (Number(row.total) > Number(best?.total || -1) ? row : best),
+    null,
+  );
+
+  const attendanceBuckets = data?.attendance?.buckets || data?.attendance?.monthly || [];
+  const attendancePoints = attendanceBuckets.map((row) => ({
+    label: bucketLabel(row.period, bucket),
+    values: { service: Number(row.service) || 0, events: Number(row.events) || 0 },
+  }));
+  const attendanceTotal = (Number(data?.attendance?.service_checkins) || 0)
+    + (Number(data?.attendance?.event_checkins) || 0);
+
+  const financeBuckets = data?.finance?.buckets || [];
+  const financePoints = financeBuckets.map((row) => ({
+    label: bucketLabel(row.period, bucket),
+    values: { income: Number(row.income) || 0, expenses: Number(row.expenses) || 0 },
+  }));
+
+  const genderRows = data?.demographics?.gender || [];
+  const ageRows = data?.demographics?.age_bands || [];
+  const cellGroupRows = data?.demographics?.cell_groups || [];
+  const ministryGroupRows = data?.demographics?.groups || [];
+
+  const hasGroups = cellGroupRows.length > 0 || ministryGroupRows.length > 0;
   const reportRangeLabel = data?.range ? formatReportRange(data.range) : 'Waiting for report data';
   const generatedAtLabel = reportGeneratedAt ? formatReportGeneratedAt(reportGeneratedAt) : '';
+  const memberTotal = Number(data?.members?.total) || 0;
+
   return (
-    <section className="mcc-module mcc-module-analytics-report" aria-label="Analytics report" style={{ ...S.page, padding: 0 }}>
-      <header className="analytics-report-header" style={S.header}>
-        <div className="analytics-report-brand">
-          <img className="analytics-report-logo" src={CHURCH_REPORT_LOGO} alt="" />
-          <div className="analytics-report-brand-copy">
-            <p className="analytics-report-church-name">{CHURCH_REPORT_NAME}</p>
-            <h1 className="workspace-page-title" style={S.title}>Consolidated Analytics</h1>
-            <p style={S.subtitle}>{reportDescription}</p>
-            <div className="analytics-report-meta">
+    <section className="mcc-module mcc-module-analytics-report analytics-report" aria-label="Analytics report">
+      <header className="ar-header">
+        <div className="ar-brand">
+          <img className="ar-banner" src={CHURCH_REPORT_BANNER} alt="Philippine Life Word Mission - Manila Central Church" />
+          <div className="ar-brand-copy">
+            <h1 className="ar-title">Consolidated Analytics</h1>
+            <p className="ar-subtitle">{reportDescription}</p>
+            <div className="ar-meta">
               <span><strong>Report period</strong>{reportRangeLabel}</span>
               {generatedAtLabel && <span><strong>Generated</strong>{generatedAtLabel} (Asia/Manila)</span>}
             </div>
           </div>
-          <span className="analytics-report-tag">ANALYTICS REPORT</span>
         </div>
-        <div className="analytics-report-actions">
-          <button type="button" onClick={downloadCsv} disabled={!data || loading} style={{ ...S.download, opacity: !data || loading ? 0.6 : 1 }}>Download CSV</button>
-          <button className="analytics-report-print-button" type="button" onClick={() => window.print()} disabled={!data || loading}>Print / Save PDF</button>
-          <small className="analytics-report-export-note">Excel-friendly five-column CSV with clear units and notes. Print / Save PDF preserves the logo and color theme.</small>
-          {downloadNotice && <span className="analytics-report-download-notice" role="status" aria-live="polite">{downloadNotice}</span>}
+        <div className="ar-actions">
+          <button type="button" className="ar-button ar-button--ghost" onClick={downloadCsv} disabled={!data || loading}>Download CSV</button>
+          <button type="button" className="ar-button" onClick={() => window.print()} disabled={!data || loading}>Print / Save PDF</button>
+          {downloadNotice && <span className="ar-notice" role="status" aria-live="polite">{downloadNotice}</span>}
         </div>
       </header>
-      <section className="analytics-report-filters" style={{ ...S.filters, flexDirection: isMobile ? 'column' : 'row' }}>
-        <label style={S.filterLabel}>Report period
-          <select aria-label="Report period" value={reportPeriod} onChange={(event) => selectPeriod(event.target.value)} style={S.dateInput}>
+
+      <section className="ar-filters" style={{ flexDirection: isMobile ? 'column' : 'row' }} aria-label="Report filters">
+        <label className="ar-field" htmlFor="analytics-period">Report period
+          <select id="analytics-period" value={reportPeriod} onChange={(event) => selectPeriod(event.target.value)}>
             <option value="week">Weekly to date</option>
             <option value="month">Monthly to date</option>
             <option value="year">Annual to date</option>
             <option value="custom">Custom range</option>
           </select>
         </label>
-        <label style={S.filterLabel}>From <input type="date" value={dateFrom} onChange={(event) => { setReportPeriod('custom'); setDateFrom(event.target.value); }} style={S.dateInput} /></label>
-        <label style={S.filterLabel}>To <input type="date" value={dateTo} onChange={(event) => { setReportPeriod('custom'); setDateTo(event.target.value); }} style={S.dateInput} /></label>
-        <button type="button" onClick={loadReport} disabled={loading || !dateFrom || !dateTo || dateFrom > dateTo} style={{ ...S.refresh, opacity: loading ? 0.7 : 1 }}>{loading ? 'Updating…' : 'Refresh report'}</button>
-        {data?.range && <span style={S.muted}>{data.range.from} to {data.range.to}</span>}
+        <label className="ar-field" htmlFor="analytics-from">From
+          <input id="analytics-from" type="date" value={dateFrom} onChange={(event) => { setReportPeriod('custom'); setDateFrom(event.target.value); }} />
+        </label>
+        <label className="ar-field" htmlFor="analytics-to">To
+          <input id="analytics-to" type="date" value={dateTo} onChange={(event) => { setReportPeriod('custom'); setDateTo(event.target.value); }} />
+        </label>
+        <button type="button" className="ar-button ar-button--ghost" onClick={loadReport} disabled={loading || !dateFrom || !dateTo || dateFrom > dateTo}>
+          {loading ? 'Updating…' : 'Refresh report'}
+        </button>
       </section>
-      <p style={S.footnote}>Preset dates use Asia/Manila and end today; weeks start on Sunday. Choose Custom range to enter another period.</p>
-      {canSeeMembersAndAttendance && <p style={S.footnote}>{demographicDateNote}</p>}
-      {error && <div role="alert" style={S.error}>{error}</div>}
-      {loading && !data ? <div style={S.state}>Loading report…</div> : data && (
+
+      <p className="ar-footnote">Preset dates use Asia/Manila and end today; weeks start on Sunday. Member totals and demographics use the current non-deleted roster.</p>
+
+      {error && <div role="alert" className="ar-error">{error}</div>}
+      {loading && !data ? <p className="ar-state">Loading report…</p> : data && (
         <>
-          {canSeeMembersAndAttendance && data.members && <>
-            <section style={S.metricGrid}>
-              {[
-                ['Members', data.members.total], ['Active', data.members.active], ['Inactive', data.members.inactive], ['Joined in range', data.members.new_in_range],
-              ].map(([label, value]) => <article key={label} style={S.metric}><span>{label}</span><strong>{number(value)}</strong></article>)}
-            </section>
-            <section style={S.twoCols}>
-              <BarList title="Age distribution" rows={data.demographics?.age_bands} />
-              <BarList title="Gender distribution" rows={data.demographics?.gender} color="#7c3aed" />
-            </section>
-            <section style={S.twoCols}>
-              <BarList title="Cell group population" rows={data.demographics?.cell_groups} color="#0f7a55" />
-              <BarList title="Group population" rows={data.demographics?.groups} color="#b76b16" />
-            </section>
-            <p style={S.footnote}>Group charts show the 20 largest categories and combine the remaining categories in an Other total.</p>
-            <section style={S.panel}>
-              <h2 style={S.panelTitle}>Member growth</h2>
-              <div style={S.growth}>{(data.member_growth || []).map((row) => <div key={row.period} style={S.growthCol} title={`${formatReportBucket(row.period, data.period?.bucket || 'month')}: ${row.total}`}><span style={{ ...S.growthBar, height: Number(row.total || 0) > 0 ? `${Math.max(2, Number(row.total) / maxGrowth * 100)}%` : 0, minHeight: Number(row.total || 0) > 0 ? 2 : 0 }} /><small>{formatReportBucket(row.period, data.period?.bucket || 'month').replace('Week of ', '')}</small></div>)}</div>
-            </section>
-          </>}
-          {canSeeMembersAndAttendance && data.attendance && <>
-            <section style={S.metricGrid}>
-              <article style={S.metric}><span>Service check-ins</span><strong>{number(data.attendance.service_checkins)}</strong></article>
-              <article style={S.metric}><span>Event check-ins</span><strong>{number(data.attendance.event_checkins)}</strong></article>
-            </section>
-            <TrendBars title="Attendance trend" rows={data.attendance.buckets || data.attendance.monthly} firstKey="service" secondKey="events" firstLabel="Services" secondLabel="Events" bucket={data.period?.bucket || 'month'} />
-          </>}
-          {canSeeFinance && data.finance && <section style={S.metricGrid}>
-            <article style={S.metric}><span>Received income</span><strong>{money(data.finance.income)}</strong></article>
-            <article style={S.metric}><span>Expenses</span><strong>{money(data.finance.expenses)}</strong></article>
-            <article style={S.metric}><span>Net balance</span><strong>{money(data.finance.net)}</strong></article>
-          </section>}
-          {canSeeFinance && data.finance?.buckets && <TrendBars title="Finance trend" rows={data.finance.buckets} firstKey="income" secondKey="expenses" firstLabel="Received income" secondLabel="Expenses" bucket={data.period?.bucket || 'month'} />}
-          <p style={S.footnote}>This report shows aggregate totals. Member names and individual giving records are not included.</p>
+          {canSeeMembersAndAttendance && data.members && (
+            <ReportSection title="Roster" hint="Current non-deleted members">
+              <MetricRail
+                orientation="horizontal"
+                items={[
+                  { label: 'Members', value: number(memberTotal) },
+                  { label: 'Active', value: number(data.members.active), hint: `${shareOf(data.members.active, memberTotal)}% of roster` },
+                  { label: 'Inactive', value: number(data.members.inactive), hint: `${shareOf(data.members.inactive, memberTotal)}% of roster` },
+                  { label: 'New in range', value: number(data.members.new_in_range) },
+                ]}
+              />
+            </ReportSection>
+          )}
+
+          <div className="ar-grid">
+            {canSeeMembersAndAttendance && data.members && (
+              <ReportSection
+                title="Member growth"
+                hint="New members per report interval"
+                className="ar-span-8 ar-chart-section"
+                data-empty={growthPoints.length === 0}
+              >
+                <div className="ar-chart-row">
+                  <MetricRail
+                    items={[
+                      { label: 'New in range', value: number(data.members.new_in_range) },
+                      { label: 'Peak interval', value: peakGrowth ? number(peakGrowth.total) : '0', hint: peakGrowth ? bucketLabel(peakGrowth.period, bucket) : '' },
+                      { label: 'Intervals', value: number(growthPoints.length) },
+                    ]}
+                  />
+                  <LineTrend
+                    ariaLabel="Member growth by interval"
+                    points={growthPoints}
+                    series={[{ key: 'total', label: 'New members', color: '#005599' }]}
+                  />
+                </div>
+              </ReportSection>
+            )}
+
+            {canSeeMembersAndAttendance && data.members && (
+              <ReportSection
+                title="Gender"
+                hint="Share of the current roster"
+                className="ar-span-4"
+                data-empty={genderRows.length === 0}
+              >
+                <DonutBreakdown
+                  ariaLabel="Gender distribution"
+                  rows={genderRows}
+                  total={memberTotal}
+                  centerLabel="members"
+                />
+              </ReportSection>
+            )}
+
+            {canSeeMembersAndAttendance && data.attendance && (
+              <ReportSection
+                title="Attendance"
+                hint="Service and event check-ins per interval"
+                className="ar-span-8 ar-chart-section"
+                data-empty={attendancePoints.length === 0}
+              >
+                <div className="ar-chart-row">
+                  <MetricRail
+                    items={[
+                      { label: 'Service check-ins', value: number(data.attendance.service_checkins) },
+                      { label: 'Event check-ins', value: number(data.attendance.event_checkins) },
+                      { label: 'Average per interval', value: number(averagePerBucket(attendanceTotal, attendanceBuckets.length)), hint: `${attendanceBuckets.length} intervals` },
+                    ]}
+                  />
+                  <LineTrend
+                    ariaLabel="Attendance by interval"
+                    points={attendancePoints}
+                    series={[
+                      { key: 'service', label: 'Services', color: '#005599' },
+                      { key: 'events', label: 'Events', color: '#13b5ea' },
+                    ]}
+                  />
+                </div>
+              </ReportSection>
+            )}
+
+            {canSeeMembersAndAttendance && data.members && (
+              <ReportSection
+                title="Age"
+                hint="Share of the current roster"
+                className="ar-span-4"
+                data-empty={ageRows.length === 0}
+              >
+                <DonutBreakdown
+                  ariaLabel="Age distribution"
+                  rows={ageRows}
+                  total={memberTotal}
+                  centerLabel="members"
+                />
+              </ReportSection>
+            )}
+
+            {canSeeFinance && data.finance && (
+              <ReportSection
+                title="Finance"
+                hint="Recorded income and expenses per interval"
+                className="ar-span-12 ar-chart-section"
+                data-empty={financePoints.length === 0}
+              >
+                <div className="ar-chart-row">
+                  <MetricRail
+                    items={[
+                      { label: 'Received income', value: money(data.finance.income) },
+                      { label: 'Expenses', value: money(data.finance.expenses) },
+                      { label: 'Net balance', value: money(data.finance.net) },
+                    ]}
+                  />
+                  <LineTrend
+                    ariaLabel="Finance by interval"
+                    points={financePoints}
+                    series={[
+                      { key: 'income', label: 'Received income', color: '#005599' },
+                      { key: 'expenses', label: 'Expenses', color: '#5c9dc4' },
+                    ]}
+                    valueFormat={compactMoney}
+                  />
+                </div>
+              </ReportSection>
+            )}
+
+            {canSeeMembersAndAttendance && hasGroups && (
+              <ReportSection
+                title="Groups"
+                hint="Largest cell groups and ministry groups by membership"
+                className="ar-span-12"
+              >
+                <div className="ar-groups">
+                  <div className="ar-groups-col">
+                    <h3 className="ar-subhead">Cell groups</h3>
+                    <RankedBars rows={cellGroupRows} limit={8} emptyLabel="No cell groups recorded." />
+                  </div>
+                  <div className="ar-groups-col">
+                    <h3 className="ar-subhead">Ministry groups</h3>
+                    <RankedBars rows={ministryGroupRows} limit={8} color="#5c9dc4" emptyLabel="No ministry groups recorded." />
+                  </div>
+                </div>
+              </ReportSection>
+            )}
+          </div>
+
+          <p className="ar-footnote">This report shows aggregate totals. Member names and individual giving records are not included.</p>
         </>
       )}
     </section>
   );
 }
-
-const S = {
-  page: { maxWidth: 1240, margin: '0 auto', fontFamily: "'Inter', sans-serif", color: 'var(--mcc-ink, #0f172a)' },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginBottom: 20 },
-  title: { fontSize: 26, margin: 0, fontWeight: 800 },
-  subtitle: { color: 'var(--mcc-secondary, #52647a)', fontSize: 14, margin: '5px 0 0' },
-  download: { border: 0, borderRadius: 8, background: '#0f6aa3', color: 'var(--mcc-surface, #fff)', padding: '10px 16px', fontWeight: 700, cursor: 'pointer' },
-  filters: { display: 'flex', alignItems: 'center', gap: 12, padding: 14, marginBottom: 18, background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 10 },
-  filterLabel: { display: 'flex', alignItems: 'center', gap: 8, color: '#475569', fontWeight: 600, fontSize: 13 },
-  dateInput: { padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 7, color: 'var(--mcc-ink, #0f172a)', fontFamily: 'inherit' },
-  refresh: { border: 0, borderRadius: 7, background: '#0f6aa3', color: 'var(--mcc-surface, #fff)', padding: '9px 14px', fontWeight: 700, cursor: 'pointer' },
-  muted: { color: 'var(--mcc-secondary, #52647a)', fontSize: 13 },
-  error: { padding: 12, marginBottom: 16, borderRadius: 8, color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca' },
-  state: { padding: 48, textAlign: 'center', color: 'var(--mcc-secondary, #52647a)' },
-  metricGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 12, marginBottom: 16 },
-  metric: { display: 'flex', flexDirection: 'column', gap: 8, padding: 18, borderRadius: 10, border: '1px solid var(--mcc-border, #e2e8f0)', background: 'var(--mcc-surface, #fff)' },
-  metricLabel: { color: 'var(--mcc-secondary, #52647a)', fontSize: 13 },
-  twoCols: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 14, marginBottom: 14 },
-  panel: { padding: 18, marginBottom: 14, background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 10 },
-  panelTitle: { margin: '0 0 16px', fontSize: 16 },
-  barRow: { marginBottom: 12 },
-  barLabel: { display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 5, color: '#475569', fontSize: 13 },
-  track: { height: 8, borderRadius: 8, background: '#f1f5f9', overflow: 'hidden' },
-  bar: { height: '100%', borderRadius: 8 },
-  legend: { display: 'flex', gap: 14, color: 'var(--mcc-secondary, #52647a)', fontSize: 12, marginBottom: 8 },
-  legendItem: { display: 'inline-flex', gap: 5 },
-  trend: { display: 'flex', alignItems: 'stretch', gap: 8, height: 190, overflowX: 'auto', paddingTop: 8 },
-  monthColumn: { display: 'flex', flex: '1 0 34px', minWidth: 34, flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 7, color: 'var(--mcc-secondary, #52647a)', fontSize: 10 },
-  barPair: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%', height: '100%', gap: 3 },
-  trendBar: { width: 10, minHeight: 2, borderRadius: '3px 3px 0 0' },
-  growth: { display: 'flex', gap: 8, alignItems: 'stretch', height: 130, overflowX: 'auto' },
-  growthCol: { display: 'flex', flex: '1 0 34px', minWidth: 34, flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 6, color: 'var(--mcc-secondary, #52647a)' },
-  growthBar: { width: '65%', minHeight: 2, background: '#0f7a55', borderRadius: '3px 3px 0 0' },
-  footnote: { color: 'var(--mcc-secondary, #52647a)', fontSize: 12, margin: '4px 0 0' },
-};
