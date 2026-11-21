@@ -35,6 +35,30 @@ const service={id:1,title:'Sunday Worship',description:'Synthetic service for lo
 const qrSession={id:1,title:'Sample check-in session',service_id:1,target_type:'service',status:'open',starts_at:'2099-10-18T01:00:00Z',ends_at:'2099-10-18T03:00:00Z',check_in_opens_at:'2099-10-18T00:30:00Z',check_in_closes_at:'2099-10-18T03:00:00Z',expected_basis:'none',time_zone:'Asia/Manila',service,target:service};
 const stats={roleSummary:{activeUsers:12,pendingArchives:2,upcomingServices:1,todayAttendance:2,recordsThisMonth:2,membersInScope:2,scopeName:leader?'Sample teams':selectedRole==='Ministry Leader'?'Sample Ministry':selectedRole,pendingInvites:1,pendingRequests:1,eligibleCandidates:2,assignedTeamCount:user.leaderAssignments.length},members:{total:2,active:2,inactive:0,newThisMonth:1},finance:{totalThisMonth:1200,recentRecords:[]},inventory:{lowStock:0,pendingRequests:1},events:{upcoming:[event]},services:{upcoming:1},recentActivity:[{id:1,action:'REVIEW_SAMPLE',User:{email:'sample@example.com'}}],attendanceTrend:[],cellGroupAbsences:[],latestService:null};
 let rows = [...members];
+const analyticsMonths = ['01','02','03','04','05','06','07','08','09','10'];
+const analyticsSample = {
+  range:{from:'2026-01-01',to:'2026-10-22'},
+  period:{preset:'year',bucket:'month'},
+  members:{total:1108,active:1092,inactive:16,new_in_range:42},
+  demographics:{
+    age_bands:[{label:'0-17',total:96},{label:'18-29',total:318},{label:'30-49',total:402},{label:'50+',total:254},{label:'Unknown',total:38}],
+    gender:[{label:'Female',total:642},{label:'Male',total:431},{label:'Unspecified',total:35}],
+    cell_groups:[{id:1,label:'Lakefront A',total:128},{id:2,label:'Lakefront B',total:96},{id:3,label:'Grace Cell',total:74},{id:4,label:'Hope Cell',total:61},{id:5,label:'Faith Cell',total:52},{id:null,label:'Other (12 cell groups)',total:180}],
+    groups:[{id:1,label:'Worship',total:164},{id:2,label:'Ushering',total:98},{id:3,label:'Sound & Media',total:76},{id:4,label:'Children',total:64},{id:5,label:'Youth',total:58},{id:null,label:'Other (7 groups)',total:120}],
+  },
+  member_growth:[3,5,2,7,4,9,6,3,1,2].map((total,index)=>({period:`2026-${analyticsMonths[index]}`,total})),
+  attendance:{
+    service_checkins:1240,
+    event_checkins:380,
+    buckets:[120,132,118,145,151,160,143,158,149,164].map((service,index)=>({period:`2026-${analyticsMonths[index]}`,service,events:[28,32,26,35,40,44,38,46,42,49][index]})),
+  },
+  finance:{
+    income:482000,
+    expenses:196500,
+    net:285500,
+    buckets:[42000,39500,47800,51200,46800,52400,48900,55100,47200,50600].map((income,index)=>({period:`2026-${analyticsMonths[index]}`,income,expenses:[18000,17200,19800,21400,18600,22300,20100,23500,18900,21600][index],net:income-[18000,17200,19800,21400,18600,22300,20100,23500,18900,21600][index]})),
+  },
+};
 const paged=(key,value)=>({[key]:value,total:value.length,total_pages:1,page:1});
 function responseData(path,config) {
   if(path==='/auth/session'||path==='/auth/login') return {user,permissions:reviewPermissions,forcePasswordChange:false};
@@ -93,7 +117,7 @@ function responseData(path,config) {
   if(path==='/qr-attendance/sessions/1/attendance') return {records:[],count:0};
   if(path==='/qr-attendance/sessions/1/batches') return {batches:[]};
   if(path.startsWith('/qr-attendance/')) return [];
-  if(path.includes('analytics')) return {range:{},members:{total:2,active:2,inactive:0},demographics:{groups:[],cell_groups:[],genders:[],statuses:[]},member_growth:[],attendance:{},finance:null};
+  if(path.includes('analytics')) return analyticsSample;
   return [];
 }
 // Every API request in this entry is intercepted. No network adapter is called.
