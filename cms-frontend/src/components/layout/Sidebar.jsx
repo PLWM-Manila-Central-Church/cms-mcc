@@ -17,7 +17,8 @@ function NavIcon({ name, size = 18 }) {
 export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
   const { user, hasPermission } = useAuth();
 
-  const visibleItems = NAV_ITEMS.filter(item => isVisibleNavItem(item, user, hasPermission));
+  const visibleItems = NAV_ITEMS.filter(item => isVisibleNavItem(item, user, hasPermission)
+    && (!item.roles || item.roles.includes(user?.roleName)));
   const location = useLocation();
   const activePath = currentNavPath(visibleItems, location.pathname);
   const workspace = getRoleWorkspace(user);

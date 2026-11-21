@@ -51,6 +51,20 @@ export const NAV_ITEMS = [
     permissions: { module: 'attendance', action: 'read' }
   },
   {
+    label: 'Bible Reading',
+    path: '/bible-reading',
+    icon: 'book',
+    permissions: { module: 'attendance', action: 'read' },
+    roles: ['System Admin', 'Pastor', 'Registration Team']
+  },
+  {
+    label: 'Ministry Schedules',
+    path: '/ministry/schedules',
+    icon: 'calendar',
+    permissions: { module: 'ministry', action: 'read' },
+    roles: ['System Admin', 'Pastor', 'Ministry Leader']
+  },
+  {
     label: 'Notifications & Follow-ups',
     path: '/outreach',
     icon: 'attendance',
