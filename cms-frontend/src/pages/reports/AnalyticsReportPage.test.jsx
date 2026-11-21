@@ -116,5 +116,7 @@ describe('AnalyticsReportPage composition and role visibility', () => {
     expect(screen.queryByRole('heading', { name: 'Member growth' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Attendance' })).not.toBeInTheDocument();
     expect(document.querySelectorAll('.ar-section[data-empty="true"]')).toHaveLength(0);
+    expect(screen.queryByText(/non-deleted roster/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/applies to finance summaries/i)).toBeInTheDocument();
   });
 });

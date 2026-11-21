@@ -171,7 +171,8 @@ not columns:
 - `Members`: one row per status share (`Share of roster`, value, `%`).
 - `MEMBER DEMOGRAPHICS`: each row gains its share of the member total in `Notes`
   (e.g. `58.4% of 1,108 members`).
-- New section `MEMBER MIX`: gender and age-band shares, sorted descending.
+- New section `MEMBER MIX`: gender, age-band, cell-group and ministry-group shares,
+  each sorted descending.
 - `ATTENDANCE TREND`: keep per-bucket service/event/total; add `Average per interval`
   rows under a new `ATTENDANCE SUMMARY` section (check-ins divided by bucket count).
 - `FINANCE TREND`: keep per-bucket income/expense/net. Add `FINANCE RATIOS`

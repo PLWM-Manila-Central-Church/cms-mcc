@@ -158,15 +158,23 @@ export const buildAnalyticsCsvRows = (data, {
       analyticsCsvRow('Members', 'Active', data.members.active, 'members', 'Current roster'),
       analyticsCsvRow('Members', 'Inactive', data.members.inactive, 'members', 'Current roster'),
       analyticsCsvRow('Members', 'New in range', data.members.new_in_range, 'members', 'Created within the selected date range'),
+      analyticsCsvRow('Members', 'Active share', shareOf(data.members.active, data.members.total), '%', 'of ' + data.members.total + ' members'),
+      analyticsCsvRow('Members', 'Inactive share', shareOf(data.members.inactive, data.members.total), '%', 'of ' + data.members.total + ' members'),
     );
     rows.push(analyticsCsvBlankRow(), analyticsCsvRow('MEMBER DEMOGRAPHICS'), ANALYTICS_CSV_HEADER);
     for (const [key, title] of [['age_bands', 'Age'], ['gender', 'Gender'], ['cell_groups', 'Cell group'], ['groups', 'Group']]) {
       for (const item of data.demographics?.[key] || []) {
-        rows.push(analyticsCsvRow('Demographics', title + ': ' + item.label, item.total, 'members'));
+        rows.push(analyticsCsvRow(
+          'Demographics',
+          title + ': ' + item.label,
+          item.total,
+          'members',
+          shareOf(item.total, data.members.total) + '% of ' + data.members.total + ' members',
+        ));
       }
     }
     rows.push(analyticsCsvBlankRow(), analyticsCsvRow('MEMBER MIX'), ANALYTICS_CSV_HEADER);
-    for (const key of ['gender', 'age_bands']) {
+    for (const key of ['gender', 'age_bands', 'cell_groups', 'groups']) {
       const mixRows = [...(data.demographics?.[key] || [])]
         .sort((left, right) => (Number(right.total) || 0) - (Number(left.total) || 0));
       for (const item of mixRows) {
@@ -194,9 +202,9 @@ export const buildAnalyticsCsvRows = (data, {
       analyticsCsvBlankRow(),
       analyticsCsvRow('ATTENDANCE SUMMARY'),
       ANALYTICS_CSV_HEADER,
-      analyticsCsvRow('Attendance summary', 'Average per interval: services', averagePerBucket(data.attendance.service_checkins, attendanceBuckets.length), 'check-ins', attendanceBuckets.length + ' intervals'),
-      analyticsCsvRow('Attendance summary', 'Average per interval: events', averagePerBucket(data.attendance.event_checkins, attendanceBuckets.length), 'check-ins', attendanceBuckets.length + ' intervals'),
-      analyticsCsvRow('Attendance summary', 'Average per interval: total', averagePerBucket((Number(data.attendance.service_checkins) || 0) + (Number(data.attendance.event_checkins) || 0), attendanceBuckets.length), 'check-ins', attendanceBuckets.length + ' intervals'),
+      analyticsCsvRow('Attendance summary', 'Average per interval: services', averagePerBucket(data.attendance.service_checkins, attendanceBuckets.length), 'check-ins', data.attendance.service_checkins + ' check-ins over ' + attendanceBuckets.length + ' intervals'),
+      analyticsCsvRow('Attendance summary', 'Average per interval: events', averagePerBucket(data.attendance.event_checkins, attendanceBuckets.length), 'check-ins', data.attendance.event_checkins + ' check-ins over ' + attendanceBuckets.length + ' intervals'),
+      analyticsCsvRow('Attendance summary', 'Average per interval: total', averagePerBucket((Number(data.attendance.service_checkins) || 0) + (Number(data.attendance.event_checkins) || 0), attendanceBuckets.length), 'check-ins', ((Number(data.attendance.service_checkins) || 0) + (Number(data.attendance.event_checkins) || 0)) + ' check-ins over ' + attendanceBuckets.length + ' intervals'),
     );
     rows.push(
       analyticsCsvBlankRow(),

@@ -178,7 +178,13 @@ export default function AnalyticsReportPage() {
         </button>
       </section>
 
-      <p className="ar-footnote">Preset dates use Asia/Manila and end today; weeks start on Sunday. Member totals and demographics use the current non-deleted roster.</p>
+      <p className="ar-footnote">{canSeeMembersAndAttendance && canSeeFinance
+        ? 'Member totals and demographics use the current non-deleted roster; the selected range applies to member growth, attendance and finance.'
+        : canSeeMembersAndAttendance
+          ? 'Member totals and demographics use the current non-deleted roster; the selected range applies to member growth and attendance.'
+          : canSeeFinance
+            ? 'The selected date range applies to finance summaries. Member and attendance sections are not available to this role.'
+            : 'No report sections are available for this role.'}</p>
 
       {error && <div role="alert" className="ar-error">{error}</div>}
       {loading && !data ? <p className="ar-state">Loading report…</p> : data && (

@@ -24,6 +24,17 @@ describe('RankedBars', () => {
     expect(labels).toEqual(['Alpha', 'Other (12 cell groups)']);
   });
 
+  it('reserves the final slot for the Other aggregate when truncating', () => {
+    const rows = Array.from({ length: 20 }, (_, index) => ({ label: `Group ${index}`, total: 100 - index }));
+    rows.push({ label: 'Other (12 cell groups)', total: 40 });
+    render(<RankedBars rows={rows} limit={8} />);
+
+    const labels = [...document.querySelectorAll('.ar-ranked-label')].map((node) => node.textContent);
+    expect(labels).toHaveLength(8);
+    expect(labels[7]).toBe('Other (12 cell groups)');
+    expect(screen.getByText(/Showing top 7 of 21/)).toBeInTheDocument();
+  });
+
   it('renders the empty label when there are no rows', () => {
     render(<RankedBars rows={[]} emptyLabel="No groups recorded." />);
     expect(screen.getByText('No groups recorded.')).toBeInTheDocument();

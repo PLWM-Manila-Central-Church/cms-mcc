@@ -7,14 +7,22 @@ export default function RankedBars({
   const sorted = [...rows].sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
   const isOther = (row) => /^Other\b/i.test(String(row.label || ''));
   const ordered = [...sorted.filter((row) => !isOther(row)), ...sorted.filter(isOther)];
-  const shown = ordered.slice(0, limit);
+  const others = ordered.filter(isOther);
+  const named = ordered.filter((row) => !isOther(row));
+  const reserveForOther = others.length > 0 ? 1 : 0;
+  const shown = [
+    ...named.slice(0, Math.max(0, limit - reserveForOther)),
+    ...others.slice(0, 1),
+  ];
+  const truncated = rows.length > shown.length;
 
   if (shown.length === 0) return <p className="ar-empty">{emptyLabel}</p>;
 
   const max = Math.max(1, ...shown.map((row) => Number(row.total || 0)));
 
   return (
-    <ol className="ar-ranked">
+    <>
+      <ol className="ar-ranked">
       {shown.map((row) => {
         const total = Number(row.total || 0);
         const width = Math.min(100, (total / max) * 100);
@@ -31,6 +39,14 @@ export default function RankedBars({
           </li>
         );
       })}
-    </ol>
+      </ol>
+      {truncated ? (
+        <p className="ar-ranked-note">
+          {`Showing top ${shown.length - reserveForOther} of ${rows.length} groups; the rest are ${
+            reserveForOther ? 'combined in the Other total' : 'not shown'
+          }.`}
+        </p>
+      ) : null}
+    </>
   );
 }

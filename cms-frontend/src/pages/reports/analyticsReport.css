@@ -367,6 +367,8 @@
 .ar-ranked-bar { display: block; height: 100%; border-radius: 4px; }
 .ar-ranked-value { min-width: 34px; text-align: right; font-weight: 650; }
 
+.ar-ranked-note { margin: 9px 0 0; font-size: 11px; line-height: 1.4; color: var(--ar-muted); }
+
 .ar-empty { margin: 0; padding: 14px 0; color: var(--ar-muted); font-size: 13px; }
 
 /* Print-only tables */
@@ -481,9 +483,12 @@
   .ar-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; }
 
   /* Fixed chart height keeps a full-width SVG from doubling its own height. */
-  .ar-line-chart { height: 42mm; width: auto; max-width: 100%; }
-  .ar-donut { grid-template-columns: 30mm minmax(0, 1fr); }
+  .ar-line-chart { height: 52mm; width: auto; max-width: 100%; margin-inline: auto; }
+  .ar-donut { grid-template-columns: 30mm minmax(0, 95mm); }
   .ar-donut-figure { max-width: 30mm; }
+  .ar-line-chart .ar-axis-label { font-size: 15px; }
+  .ar-legend-label { white-space: normal; }
+  .ar-ranked-note { font-size: 8px; }
 
   .ar-line-wrap,
   .ar-donut,
@@ -527,6 +532,7 @@
     print-color-adjust: exact;
   }
 }
+
 
 
 

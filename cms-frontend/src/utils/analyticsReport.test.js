@@ -61,8 +61,8 @@ describe('analytics report role scope', () => {
       attendance: { service_checkins: 0, event_checkins: 0, monthly: [] },
     }, scope);
 
-    expect(rows).toContainEqual(['Demographics', 'Cell group: Other (49 cell groups)', 66, 'members', '']);
-    expect(rows).toContainEqual(['Demographics', 'Group: Other (49 groups)', 64, 'members', '']);
+    expect(rows).toContainEqual(['Demographics', 'Cell group: Other (49 cell groups)', 66, 'members', '40.2% of 164 members']);
+    expect(rows).toContainEqual(['Demographics', 'Group: Other (49 groups)', 64, 'members', '39% of 164 members']);
   });
 
   it('keeps every exported row in a rectangular five-column Excel layout', () => {
@@ -151,9 +151,19 @@ describe('analytics report derived detail', () => {
   it('exports interval averages and finance ratios', () => {
     const rows = buildAnalyticsCsvRows(data, scope);
 
-    expect(rows).toContainEqual(['Attendance summary', 'Average per interval: services', 4.5, 'check-ins', '2 intervals']);
+    expect(rows).toContainEqual(['Attendance summary', 'Average per interval: services', 4.5, 'check-ins', '9 check-ins over 2 intervals']);
     expect(rows).toContainEqual(['Finance ratios', 'Expense ratio', 27.8, '%', 'Expenses divided by received income']);
     expect(rows).toContainEqual(['Finance ratios', 'Net margin', 72.2, '%', 'Net balance divided by received income']);
+  });
+
+  it('carries roster shares, demographic notes and every group dimension into the member mix', () => {
+    const rows = buildAnalyticsCsvRows(data, scope);
+
+    expect(rows).toContainEqual(['Members', 'Active share', 83.3, '%', 'of 12 members']);
+    expect(rows).toContainEqual(['Members', 'Inactive share', 16.7, '%', 'of 12 members']);
+    expect(rows).toContainEqual(['Demographics', 'Gender: Female', 7, 'members', '58.3% of 12 members']);
+    expect(rows).toContainEqual(['Member mix', 'Alpha', 6, 'members', '50% of 12 members']);
+    expect(rows).toContainEqual(['Member mix', 'Worship', 9, 'members', '75% of 12 members']);
   });
 
   it('keeps five columns when a group label looks like a formula', () => {
