@@ -41,6 +41,10 @@ export default function MinistrySchedulePanel({ c, f, data, labels = {} }) {
   const invites = data?.invites || [];
   const byKind = (kind) => schedules.filter((entry) => entry.kind === kind);
   const empty = t.noSchedule || 'Nothing scheduled yet.';
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+  const upcomingAssignments = assignments
+    .filter((assignment) => !assignment.Service?.service_date || assignment.Service.service_date >= todayIso)
+    .sort((left, right) => String(left.Service?.service_date || '').localeCompare(String(right.Service?.service_date || '')));
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -49,7 +53,7 @@ export default function MinistrySchedulePanel({ c, f, data, labels = {} }) {
         f={f}
         title={t.scheduledService || 'Serving schedule'}
         empty={empty}
-        rows={assignments.slice(0, 6).map((assignment) => (
+        rows={upcomingAssignments.slice(0, 6).map((assignment) => (
           <Row
             key={assignment.id}
             c={c}

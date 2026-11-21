@@ -48,6 +48,21 @@ test('shows uploaded event artwork in the member event list and details', async 
   expect((await screen.findAllByAltText('Sample Event event')).length).toBeGreaterThan(1);
 });
 
+test('shows the next Sunday memory verse on the overview', async () => {
+  state.get.mockImplementation(async (path) => {
+    let data = [];
+    if (path === '/member-portal/profile') data = { first_name: 'Sample', last_name: 'Member', gender: 'Male' };
+    if (path === '/member-portal/attendance') data = { records: [], rate: 0 };
+    if (path === '/member-portal/memory-verse') data = { group: 'Choir', verse: { reference: 'Psalm 23:1-6', verse_text: 'The LORD is my shepherd.' } };
+    return { data: { data } };
+  });
+
+  render(<MemoryRouter initialEntries={['/portal']}><MemberPortal /></MemoryRouter>);
+  expect(await screen.findByText('The LORD is my shepherd.')).toBeInTheDocument();
+  expect(screen.getByText('Psalm 23:1-6')).toBeInTheDocument();
+  expect(screen.getByText(/Memory verse · Choir/)).toBeInTheDocument();
+});
+
 test('hides every tithe amount behind one control and remembers it', async () => {
   state.get.mockImplementation(async path => {
     let data = [];

@@ -16,7 +16,7 @@ describe('MinistrySchedulePanel', () => {
         f={fonts}
         labels={{}}
         data={{
-          assignments: [{ id: 1, confirmed: 1, ministryRole: { name: 'Choir' }, Service: { title: 'Sunday Worship', service_date: '2026-03-08', service_time: '09:00:00' } }],
+          assignments: [{ id: 1, confirmed: 1, ministryRole: { name: 'Choir' }, Service: { title: 'Sunday Worship', service_date: '2099-03-08', service_time: '09:00:00' } }],
           schedules: [
             { id: 2, kind: 'practice', title: 'Choir practice', date: '2026-03-06', startTime: '18:00:00', location: 'Sanctuary', ministry: 'Choir' },
             { id: 3, kind: 'cleaning', title: 'Sanctuary cleaning', date: '2026-03-07', ministry: 'Choir' },

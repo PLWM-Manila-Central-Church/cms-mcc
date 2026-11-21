@@ -75,6 +75,7 @@ function responseData(path,config) {
     ],
     invites:[],
   };
+  if(path==='/member-portal/memory-verse') return {group:'Choir',latestSunday:'2026-11-15',upcomingSunday:'2026-11-22',verse:{reference:'Psalm 23:1-6',verse_text:'The LORD is my shepherd; I shall not want.'},thisSundayVerse:null};
   if(path==='/member-portal/bible-reading') {
     const days=Array.from({length:30},(_,index)=>{const date=`2026-11-${String(index+1).padStart(2,'0')}`;return{date,day:'—',ot:`Gen ${index+1}`,nt:`Matt ${index+1}`,ps:`Ps ${index+1}`,placeholder:false};});
     return {month:'2026-11',today:'2026-11-21',target:30,count:12,percent:40,completed:days.slice(0,12).map(day=>day.date),group:'Choir',days,memoryVerse:{latestSunday:'2026-11-15',upcomingSunday:'2026-11-22',verse:{reference:'Psalm 23:1-6',verse_text:'The LORD is my shepherd; I shall not want.'},thisSundayVerse:null}};

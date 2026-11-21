@@ -103,3 +103,15 @@ Modified: `pages/members/MemberPortal.jsx` (sixth tab, ministry schedule, money 
 - Portal "Bible" becomes a sixth tab rather than a new route: the portal is a single-page
   tabbed surface and a route would break the member-only redirect structure.
 - Placeholder months show an explicit "not published" state; no invented readings.
+
+## As built (deviations from this plan, with reasons)
+
+- Ministry schedules became a standalone page at `/ministry/schedules` (nav: Admin, Pastor,
+  Ministry Leader) instead of a tab inside `MinistryPage`: that page is already a six-tab
+  surface for leaders, and a separate route keeps the admin entry discoverable without
+  reworking its tab renderer.
+- The upcoming memory verse also appears as one quiet card on the portal Overview, above the
+  profile card, so the assignment is visible without opening the Bible tab.
+- Reading monitor and verse endpoints are additionally limited to the three role names
+  (not only the `attendance:read` permission), because the data is church-wide member
+  progress rather than team attendance.
