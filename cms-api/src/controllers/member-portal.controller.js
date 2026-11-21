@@ -1,6 +1,16 @@
 "use strict";
 
 const portalService = require("../services/member-portal.service");
+const ministryScheduleService = require("../services/ministrySchedule.service");
+const bibleReadingService = require("../services/bibleReading.service");
+
+const requireMember = (req, res) => {
+  if (!req.user.memberId) {
+    res.status(400).json({ message: "No member profile linked to this account" });
+    return null;
+  }
+  return req.user.memberId;
+};
 
 // ── Profile ──────────────────────────────────────────────────
 exports.getMyProfile = async (req, res, next) => {
@@ -162,6 +172,50 @@ exports.getMyMinistryInvites = async (req, res, next) => {
     if (!req.user.memberId)
       return res.status(400).json({ message: "No member profile linked to this account" });
     const data = await portalService.getMyMinistryInvites(req.user.memberId);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+// ── Ministry schedule (portal) ───────────────────────────────
+exports.getMySchedule = async (req, res, next) => {
+  const memberId = requireMember(req, res);
+  if (!memberId) return;
+  try {
+    const [assignments, schedules, invites] = await Promise.all([
+      portalService.getMyAssignments(memberId),
+      ministryScheduleService.listForMember(memberId),
+      portalService.getMyMinistryInvites(memberId),
+    ]);
+    res.json({ success: true, data: { assignments, schedules, invites } });
+  } catch (err) { next(err); }
+};
+
+// ── Bible reading (portal) ───────────────────────────────────
+exports.getMyBibleReading = async (req, res, next) => {
+  const memberId = requireMember(req, res);
+  if (!memberId) return;
+  try {
+    const month = req.query.month
+      || new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" }).slice(0, 7);
+    const data = await bibleReadingService.getMyMonth(memberId, month);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.toggleMyBibleReading = async (req, res, next) => {
+  const memberId = requireMember(req, res);
+  if (!memberId) return;
+  try {
+    const data = await bibleReadingService.toggleDay(memberId, req.params.date);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.getMyMemoryVerse = async (req, res, next) => {
+  const memberId = requireMember(req, res);
+  if (!memberId) return;
+  try {
+    const data = await bibleReadingService.getMemoryVerse(memberId);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };

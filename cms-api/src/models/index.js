@@ -43,6 +43,9 @@ const Notification = require("./Notification.model");
 const AuditLog = require("./AuditLog.model");
 const SystemSetting = require("./SystemSetting.model");
 const MinistryMembership  = require("./MinistryMembership.model");
+const MinistrySchedule    = require("./MinistrySchedule.model");
+const BibleReadingProgress = require("./BibleReadingProgress.model");
+const GroupMemoryVerse     = require("./GroupMemoryVerse.model");
 const MinistryEventInvite = require("./MinistryEventInvite.model");
 const MinistryApplication = require("./MinistryApplication.model");
 const UserLeaderAssignment = require("./UserLeaderAssignment.model");
@@ -334,6 +337,9 @@ UserLeaderAssignment.belongsTo(User, {
 MinistryMembership.belongsTo(MinistryRole, { foreignKey: "ministry_role_id", as: "ministryRole"  });
 MinistryMembership.belongsTo(Member,       { foreignKey: "member_id",        as: "member"        });
 MinistryMembership.belongsTo(User,         { foreignKey: "added_by",         as: "addedByUser"   });
+MinistrySchedule.belongsTo(MinistryRole, { foreignKey: "ministry_role_id", as: "ministryRole" });
+BibleReadingProgress.belongsTo(Member, { foreignKey: "member_id", as: "member" });
+GroupMemoryVerse.belongsTo(MinistryGroup, { foreignKey: "group_id", as: "group" });
 MinistryRole.hasMany(MinistryMembership,   { foreignKey: "ministry_role_id"                      });
 Member.hasMany(MinistryMembership,         { foreignKey: "member_id", as: "MinistryMemberships"  });
 
@@ -449,4 +455,8 @@ module.exports = {
   PaymentMethod,
   Expense,
   Attachment,
+  MinistrySchedule,
+  BibleReadingProgress,
+  GroupMemoryVerse,
 };
+

@@ -17,6 +17,11 @@ router.post("/roles",       auth, authorize("ministry", "create"), validate(crea
 router.put("/roles/:id",    auth, authorize("ministry", "update"), validate(updateRoleSchema), ctrl.updateRole);
 router.patch("/roles/:id/archive", auth, authorize("ministry", "delete"), ctrl.archiveRole);
 
+// ── Ministry Schedules ─────────────────────────────────────
+router.get("/schedules",        auth, authorize("ministry", "read"),   ctrl.listSchedules);
+router.post("/schedules",       auth, authorize("ministry", "update"), ctrl.createSchedule);
+router.delete("/schedules/:id", auth, authorize("ministry", "update"), ctrl.deleteSchedule);
+
 // ── Ministry Assignments ─────────────────────────────────────
 router.get("/assignments",                     auth, authorize("ministry", "read"),   ctrl.getAllAssignments);
 router.get("/assignments/:id",                 auth, authorize("ministry", "read"),   ctrl.getAssignmentById);
@@ -47,3 +52,4 @@ router.put(
 );
 
 module.exports = router;
+

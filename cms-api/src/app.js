@@ -143,6 +143,7 @@ app.use("/api/settings",      require("./routes/settings.routes"));
 app.use("/api/audit",         require("./routes/audit.routes"));
 app.use("/api/audit-logs",    require("./routes/audit.routes"));
 app.use("/api/member-portal", require("./routes/member-portal.routes"));
+app.use("/api/bible-reading", require("./routes/bible-reading.routes"));
 try {
   const { memberQrSelfRoutes } = require("./modules/qr-attendance/memberQr.routes");
   app.use("/api/member-portal/attendance-qr", memberQrSelfRoutes);
@@ -168,3 +169,4 @@ if (process.env.SENTRY_DSN) {
 app.use(errorHandler);
 
 module.exports = app;
+

@@ -1,6 +1,7 @@
 "use strict";
 
 const ministryService = require("../services/ministry.service");
+const ministryScheduleService = require("../services/ministrySchedule.service");
 
 // ── Ministry Roles ───────────────────────────────────────────
 exports.getAllRoles = async (req, res, next) => {
@@ -154,4 +155,36 @@ exports.resolveSubstitute = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+// ── Ministry Schedules ───────────────────────────────────────
+exports.listSchedules = async (req, res, next) => {
+  try {
+    const data = req.query.ministryRoleId
+      ? await ministryScheduleService.listForMinistry(req.query.ministryRoleId)
+      : await ministryScheduleService.listForMember(req.user.memberId);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.createSchedule = async (req, res, next) => {
+  try {
+    const data = await ministryScheduleService.create({
+      ministryRoleId: req.body.ministry_role_id || req.body.ministryRoleId,
+      kind: req.body.kind,
+      title: req.body.title,
+      date: req.body.date,
+      startTime: req.body.start_time || req.body.startTime,
+      endTime: req.body.end_time || req.body.endTime,
+      location: req.body.location,
+      notes: req.body.notes,
+    }, req.user.userId);
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.deleteSchedule = async (req, res, next) => {
+  try {
+    const data = await ministryScheduleService.remove(req.params.id, req.user.userId);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
 };

@@ -31,4 +31,10 @@ router.post  ("/ministry-assignments/:assignmentId/confirm", auth, ctrl.confirmM
 
 router.get   ("/ministry-invites",                           auth, ctrl.getMyMinistryInvites);
 
+router.get   ("/schedule",                                   auth, ctrl.getMySchedule);
+router.get   ("/bible-reading",                              auth, ctrl.getMyBibleReading);
+router.post  ("/bible-reading/:date",                         auth, ctrl.toggleMyBibleReading);
+router.get   ("/memory-verse",                               auth, ctrl.getMyMemoryVerse);
+
 module.exports = router;
+
