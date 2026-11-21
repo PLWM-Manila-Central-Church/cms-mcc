@@ -89,6 +89,25 @@ function responseData(path,config) {
     return paged('members',rows.filter(m=>`${m.first_name} ${m.last_name} ${m.email}`.toLowerCase().includes(String(query).toLowerCase())));
   }
   if(path==='/members/dropdowns/groups') return [{id:1,name:'Sample Group'}];
+  if(path==='/bible-reading/summary') return {
+    month:'2026-11',target:30,total:4,finished:2,
+    members:[
+      {member_id:1,name:'Alex Sample',completed:30,target:30,percent:100,finished:true},
+      {member_id:2,name:'Jamie Example',completed:30,target:30,percent:100,finished:true},
+      {member_id:3,name:'Ruth Sample',completed:18,target:30,percent:60,finished:false},
+      {member_id:4,name:'Noel Example',completed:7,target:30,percent:23,finished:false},
+    ],
+  };
+  if(path==='/bible-reading/verses') return [
+    {id:1,group:'Sample Group',group_id:1,sunday_date:'2026-11-22',reference:'Psalm 23:1-6',verse_text:'The LORD is my shepherd; I shall not want.'},
+    {id:2,group:'Sample Group',group_id:1,sunday_date:'2026-11-29',reference:'John 3:16',verse_text:'For God so loved the world.'},
+  ];
+  if(path==='/ministry/roles') return [{id:1,name:'Choir'},{id:2,name:'Ushering'},{id:3,name:'Media'}];
+  if(path==='/ministry/schedules') return [
+    {id:1,ministryRoleId:1,ministry:'Choir',kind:'practice',title:'Choir practice',date:'2026-11-26',startTime:'18:30:00',endTime:'20:00:00',location:'Sanctuary'},
+    {id:2,ministryRoleId:1,ministry:'Choir',kind:'cleaning',title:'Sanctuary cleaning',date:'2026-11-28',startTime:'08:00:00',location:'Main Hall'},
+    {id:3,ministryRoleId:1,ministry:'Choir',kind:'service',title:'Sunday Worship Service',date:'2026-11-22',startTime:'09:00:00',location:'Main Hall'},
+  ];
   if(path==='/cellgroups') return [{id:1,name:'Sample Cell',area:'Sample area',member_count:2,leader_id:1}];
   if(path.startsWith('/cellgroups/')) return {group:{id:1,name:'Sample Cell'},members};
   if(path==='/users') return [{id:1,email:'sample@example.com',is_active:1,role:{role_name:selectedRole},member:members[0]}];
