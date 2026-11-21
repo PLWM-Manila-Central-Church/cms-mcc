@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 const state = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('../../api/axiosInstance', () => ({ default: { get: state.get, post: state.post } }));
+const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ user: { roleName: 'Member', email: 'sample@example.com' }, logout: vi.fn() }) }));
 vi.mock('../../context/ConfirmationContext', () => ({ useConfirmation: () => ({ confirm: vi.fn() }) }));
 vi.mock('../../utils/langUtils', () => ({ LANGS: [], getLangCode: () => 'en', saveLangCode: vi.fn(), loadGTScript: vi.fn(), applyGTLang: vi.fn() }));
@@ -21,13 +22,13 @@ beforeEach(() => {
     if (path === '/member-portal/profile') data = { first_name: 'Sample', last_name: 'Member', gender: 'Male' };
     if (path === '/member-portal/attendance') data = { records: [], rate: 0 };
     if (path.startsWith('/member-portal/finance')) data = { records: [], summary: {} };
-    if (path === '/member-portal/events') data = [{ id: 1, title: 'Sample Event', event_date: '2099-10-18', registration_deadline: '2099-10-17', capacity: 100, registration_count: 1, image_url: '/events/1/image' }];
+    if (path === '/member-portal/events') data = [{ id: 1, title: 'Sample Event', start_date: TODAY, end_date: TODAY, registration_deadline: '2099-12-31', capacity: 100, registration_count: 1, image_url: '/events/1/image', status: 'Upcoming' }];
     return { data: { data } };
   });
 });
 test('Member event details is named, keyboard dismissible and returns focus', async () => {
   render(<MemoryRouter initialEntries={['/portal?tab=events']}><MemberPortal /></MemoryRouter>);
-  const trigger = await screen.findByRole('button', { name: 'View Details' });
+  const trigger = await screen.findByRole('button', { name: 'View details' });
   trigger.focus();
   fireEvent.click(trigger);
   expect(screen.getByRole('dialog', { name: 'Event Details' })).toHaveAttribute('aria-modal', 'true');
@@ -36,16 +37,16 @@ test('Member event details is named, keyboard dismissible and returns focus', as
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(trigger).toHaveFocus();
   expect(document.body.style.overflow).toBe('');
-  expect(screen.getByRole('button', { name: 'Events', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Calendar', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('shows uploaded event artwork in the member event list and details', async () => {
+test('shows the calendar and the uploaded artwork in the event details', async () => {
   render(<MemoryRouter initialEntries={['/portal?tab=events']}><MemberPortal /></MemoryRouter>);
-  const eventImages = await screen.findAllByAltText('Sample Event event');
-  expect(eventImages[0]).toHaveAttribute('src', '/api/events/1/image');
 
-  fireEvent.click(screen.getByRole('button', { name: 'View Details' }));
-  expect((await screen.findAllByAltText('Sample Event event')).length).toBeGreaterThan(1);
+  expect(await screen.findByRole('grid', { name: /2026/ })).toBeInTheDocument();
+  expect(screen.getAllByText('Sample Event').length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole('button', { name: 'View details' }));
+  expect((await screen.findAllByAltText('Sample Event event'))[0]).toHaveAttribute('src', '/api/events/1/image');
 });
 
 test('shows the next Sunday memory verse on the overview', async () => {
@@ -57,7 +58,7 @@ test('shows the next Sunday memory verse on the overview', async () => {
     return { data: { data } };
   });
 
-  render(<MemoryRouter initialEntries={['/portal']}><MemberPortal /></MemoryRouter>);
+  render(<MemoryRouter initialEntries={['/portal?tab=overview']}><MemberPortal /></MemoryRouter>);
   expect(await screen.findByText('The LORD is my shepherd.')).toBeInTheDocument();
   expect(screen.getByText('Psalm 23:1-6')).toBeInTheDocument();
   expect(screen.getByText(/Memory verse · Choir/)).toBeInTheDocument();

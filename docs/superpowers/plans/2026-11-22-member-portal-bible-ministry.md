@@ -115,3 +115,16 @@ Modified: `pages/members/MemberPortal.jsx` (sixth tab, ministry schedule, money 
 - Reading monitor and verse endpoints are additionally limited to the three role names
   (not only the `attendance:read` permission), because the data is church-wide member
   progress rather than team attendance.
+
+## Revision (later the same day): the event surface becomes a calendar
+
+- The portal now opens on a full-page **Church calendar** (tab "Calendar", second tab,
+  default landing). It lists every upcoming event, keeps multi-day events on each day they
+  cover, marks registered events, and shows the selected day's details underneath.
+- The old Events tab content was removed: **no upcoming services, no ministry assignment
+  lists, no ministry invite cards** on the calendar surface. Ministry schedules stay on the
+  dedicated Ministries tab and in `/ministry/schedules`.
+- Month navigation uses Manila dates; past events are not invented, and past days simply
+  carry no chips.
+- The November–December 2026 schedule supplied for review lives in
+  `cms-frontend/src/design-review-events.js` and is served by the local review harness only.

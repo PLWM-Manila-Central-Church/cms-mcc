@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { reviewEvents } from './design-review-events';
 import { AuthProvider } from './context/AuthContext';
 import AppRoutes from './routes/AppRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
@@ -80,7 +81,7 @@ function responseData(path,config) {
     const days=Array.from({length:30},(_,index)=>{const date=`2026-11-${String(index+1).padStart(2,'0')}`;return{date,day:'—',ot:`Gen ${index+1}`,nt:`Matt ${index+1}`,ps:`Ps ${index+1}`,placeholder:false};});
     return {month:'2026-11',today:'2026-11-21',target:30,count:12,percent:40,completed:days.slice(0,12).map(day=>day.date),group:'Choir',days,memoryVerse:{latestSunday:'2026-11-15',upcomingSunday:'2026-11-22',verse:{reference:'Psalm 23:1-6',verse_text:'The LORD is my shepherd; I shall not want.'},thisSundayVerse:null}};
   }
-  if(path==='/member-portal/events') return [event];
+  if(path==='/member-portal/events') return reviewEvents;
   if(path==='/member-portal/services') return [service];
   if(path.startsWith('/member-portal/services/')) return {...service,my_response:null};
   if(path.startsWith('/member-portal/')) return [];
