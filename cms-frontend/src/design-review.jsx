@@ -66,7 +66,19 @@ function responseData(path,config) {
   if(path==='/notifications') return [];
   if(path==='/member-portal/profile'||path==='/members/1') return {...members[0],cell_group:{name:'Sample Cell'},group:{name:'Sample Group'}};
   if(path==='/member-portal/attendance') return {records:[],rate:0,total:0,present:0};
-  if(path.startsWith('/member-portal/finance')) return {records:[],summary:{total_year:0},total:0,total_pages:1};
+  if(path.startsWith('/member-portal/finance')) return {records:[{id:1,amount:2500,transaction_date:'2026-11-02',category:{name:'Tithe'},attachments:[]},{id:2,amount:1200,transaction_date:'2026-11-09',category:{name:'Offering'},attachments:[]}],ytdTotal:12500,total:2,total_pages:1,summary:{total_year:12500}};
+  if(path==='/member-portal/schedule') return {
+    assignments:[{id:1,confirmed:1,ministryRole:{name:'Choir'},Service:{title:'Sunday Worship Service',service_date:'2026-11-22',service_time:'09:00:00'}}],
+    schedules:[
+      {id:2,kind:'practice',title:'Choir practice',date:'2026-11-26',startTime:'18:30:00',endTime:'20:00:00',location:'Sanctuary',ministry:'Choir'},
+      {id:3,kind:'cleaning',title:'Sanctuary cleaning',date:'2026-11-28',startTime:'08:00:00',location:'Main Hall',ministry:'Choir'},
+    ],
+    invites:[],
+  };
+  if(path==='/member-portal/bible-reading') {
+    const days=Array.from({length:30},(_,index)=>{const date=`2026-11-${String(index+1).padStart(2,'0')}`;return{date,day:'—',ot:`Gen ${index+1}`,nt:`Matt ${index+1}`,ps:`Ps ${index+1}`,placeholder:false};});
+    return {month:'2026-11',today:'2026-11-21',target:30,count:12,percent:40,completed:days.slice(0,12).map(day=>day.date),group:'Choir',days,memoryVerse:{latestSunday:'2026-11-15',upcomingSunday:'2026-11-22',verse:{reference:'Psalm 23:1-6',verse_text:'The LORD is my shepherd; I shall not want.'},thisSundayVerse:null}};
+  }
   if(path==='/member-portal/events') return [event];
   if(path==='/member-portal/services') return [service];
   if(path.startsWith('/member-portal/services/')) return {...service,my_response:null};

@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
-const state = vi.hoisted(() => ({ get: vi.fn() }));
-vi.mock('../../api/axiosInstance', () => ({ default: { get: state.get } }));
+const state = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
+vi.mock('../../api/axiosInstance', () => ({ default: { get: state.get, post: state.post } }));
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ user: { roleName: 'Member', email: 'sample@example.com' }, logout: vi.fn() }) }));
 vi.mock('../../context/ConfirmationContext', () => ({ useConfirmation: () => ({ confirm: vi.fn() }) }));
 vi.mock('../../utils/langUtils', () => ({ LANGS: [], getLangCode: () => 'en', saveLangCode: vi.fn(), loadGTScript: vi.fn(), applyGTLang: vi.fn() }));
@@ -46,4 +46,34 @@ test('shows uploaded event artwork in the member event list and details', async 
 
   fireEvent.click(screen.getByRole('button', { name: 'View Details' }));
   expect((await screen.findAllByAltText('Sample Event event')).length).toBeGreaterThan(1);
+});
+
+test('hides every tithe amount behind one control and remembers it', async () => {
+  state.get.mockImplementation(async path => {
+    let data = [];
+    if (path === '/member-portal/profile') data = { first_name: 'Sample', last_name: 'Member', gender: 'Male' };
+    if (path === '/member-portal/attendance') data = { records: [], rate: 0 };
+    if (path.startsWith('/member-portal/finance')) {
+      data = {
+        ytdTotal: 1200,
+        total: 1,
+        total_pages: 1,
+        records: [{ id: 9, amount: 1200, transaction_date: '2026-11-01', category: { name: 'Tithe' }, attachments: [] }],
+      };
+    }
+    return { data: { data } };
+  });
+
+  render(<MemoryRouter initialEntries={['/portal?tab=tithes']}><MemberPortal /></MemoryRouter>);
+
+  const toggle = await screen.findByRole('button', { name: 'Hide amounts' });
+  expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  expect(screen.getAllByText('₱1,200.00').length).toBeGreaterThan(0);
+
+  fireEvent.click(toggle);
+
+  expect(await screen.findByRole('button', { name: 'Show amounts' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.queryByText('₱1,200.00')).not.toBeInTheDocument();
+  expect(screen.getAllByText('₱ ••••').length).toBeGreaterThan(0);
+  expect(localStorage.getItem('plwm_money_hidden')).toBe('1');
 });

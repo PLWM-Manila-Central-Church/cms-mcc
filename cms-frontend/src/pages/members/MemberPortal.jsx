@@ -8,8 +8,9 @@ import MonoIcon from '../../components/common/MonoIcon';
 import MemberNotificationCenter from '../../components/common/MemberNotificationCenter';
 import EventReservationFields from '../../components/events/EventReservationFields';
 import FinanceAttachments from '../../components/finance/FinanceAttachments';
-import { MemberMinistryApplications } from '../ministry/MinistryApplications';
 import MemberSubstituteRequests from '../../components/ministry/MemberSubstituteRequests';
+import BibleReadingPanel from '../../components/portal/BibleReadingPanel';
+import MinistrySchedulePanel from '../../components/portal/MinistrySchedulePanel';
 import { uploadUrl } from '../../utils/uploadUrl';
 import { eventImageSrc } from '../../utils/eventImage';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
@@ -56,11 +57,11 @@ const RSVP_META = {
 
 const GOOGLE_FONTS = ['Inter','Open Sans','Lato','Roboto','DM Sans','Space Grotesk','Figtree','Work Sans'];
 const FONTSHARE    = ['Satoshi'];
-const TAB_ICON_NAMES = ['home', 'calendar', 'attendance', 'finance', 'ministry'];
+const TAB_ICON_NAMES = ['home', 'calendar', 'attendance', 'finance', 'ministry', 'book'];
 
 const LBL = {
-  en:{tabs:['Overview','Events','Attendance','Tithes','Ministries'],portal:'Member Portal',welcome:'Welcome',settings:'Settings',logout:'Logout',attendanceRate:'Attendance Rate',last2mo:'Last month',totalOfferings:'Total Tithes & Offerings',thisYear:'This year',memberSince:'Member Since',myProfile:'My Profile',editProfile:'Edit Profile',save:'Save',cancel:'Cancel',memberId:'Member ID',memberName:'Member Name',spiritual:'Spiritual Birthday',cellGroup:'Cell Group',address:'Address',joinDate:'Join Date',group:'Group',contact:'Contact No',birthdate:'Flesh Birthday',status:'Status',ministry:'Ministry Assignments',services:'Upcoming Services',confirm:'Confirm',confirmed:'Confirmed',noMinistry:'No ministry assignments.',noServices:'No upcoming services.',noEvents:'No upcoming events at this time.',registerNow:'Register Now',cancelReg:'Cancel Registration',closedReg:'Registration Closed',viewDetails:'View Details',myRegs:'My Registrations',regDeadline:'Deadline',of:'of',registered:'registered',attendanceHistory:'My Attendance History',noAttendance:'No attendance records found.',date:'Date',service:'Service',checkin:'Check-in',statusL:'Status',present:'Present',absent:'Absent',offeringsHistory:'My Tithes and Offering History',noOfferings:'No giving records.',type:'Type',amount:'Amount',totalYtd:'Total Year-to-Date',verse:'"God loves a cheerful giver." — 2 Corinthians 9:7',excellent:'Excellent',good:'Good',improve:'Needs Improvement',willAttend:'I will attend',wontAttend:'Cannot attend',undecided:'Undecided',rsvp:'RSVP',closePanel:'Close',serviceDetails:'Service Details',eventDetails:'Event Details',attending:'Attending',notAttending:'Not attending',capacity:'Capacity',responseBy:'Response by',yourRsvp:'Your RSVP'},
-  tl:{tabs:['Pangkalahatang-tanaw','Mga Kaganapan','Pagdalo','Mga Handog','Mga Ministeryo'],portal:'Portal ng Miyembro',welcome:'Maligayang pagdating',settings:'Mga Setting',logout:'Mag-logout',attendanceRate:'Rate ng Pagdalo',last2mo:'Nakaraang buwan',totalOfferings:'Kabuuang Ikapu at Handog',thisYear:'Ngayong taon',memberSince:'Miyembro Mula',myProfile:'Aking Profile',editProfile:'I-edit',save:'I-save',cancel:'Kanselahin',memberId:'Member ID',memberName:'Pangalan',spiritual:'Espirituwal na Kaarawan',cellGroup:'Cell Group',address:'Tirahan',joinDate:'Petsa ng Pagsali',group:'Grupo',contact:'Numero',birthdate:'Kaarawan',status:'Katayuan',ministry:'Mga Takdang Gawain',services:'Mga Paparating na Serbisyo',confirm:'Kumpirmahin',confirmed:'Nakumpirma',noMinistry:'Walang mga takdang gawain.',noServices:'Walang paparating na serbisyo.',noEvents:'Walang mga kaganapan.',registerNow:'Mag-register Na',cancelReg:'Kanselahin',closedReg:'Sarado na',viewDetails:'Tingnan',myRegs:'Aking mga Pagpaparehistro',regDeadline:'Deadline',of:'sa',registered:'nakapag-register',attendanceHistory:'Kasaysayan ng Pagdalo',noAttendance:'Walang rekord ng pagdalo.',date:'Petsa',service:'Serbisyo',checkin:'Check-in',statusL:'Katayuan',present:'Naroroon',absent:'Wala',offeringsHistory:'Kasaysayan ng Ikapu at Handog',noOfferings:'Walang rekord ng pagbibigay.',type:'Uri',amount:'Halaga',totalYtd:'Kabuuang Ikapu at Handog sa Taon',verse:'"Ang nagbibigay nang masaya ay mahal ng Diyos." — 2 Mga Taga-Corinto 9:7',excellent:'Kahusayan',good:'Mabuti',improve:'Kailangan ng Pagpabuti',willAttend:'Darating ako',wontAttend:'Hindi ako makakarating',undecided:'Hindi pa sigurado',rsvp:'RSVP',closePanel:'Isara',serviceDetails:'Detalye ng Serbisyo',eventDetails:'Detalye ng Kaganapan',attending:'Darating',notAttending:'Hindi darating',capacity:'Kapasidad',responseBy:'Sagot bago ang',yourRsvp:'Iyong RSVP'},
+  en:{tabs:['Overview','Events','Attendance','Tithes','Ministries','Bible'],portal:'Member Portal',welcome:'Welcome',settings:'Settings',logout:'Logout',attendanceRate:'Attendance Rate',last2mo:'Last month',totalOfferings:'Total Tithes & Offerings',thisYear:'This year',memberSince:'Member Since',myProfile:'My Profile',editProfile:'Edit Profile',save:'Save',cancel:'Cancel',memberId:'Member ID',memberName:'Member Name',spiritual:'Spiritual Birthday',cellGroup:'Cell Group',address:'Address',joinDate:'Join Date',group:'Group',contact:'Contact No',birthdate:'Flesh Birthday',status:'Status',ministry:'Ministry Assignments',services:'Upcoming Services',confirm:'Confirm',confirmed:'Confirmed',noMinistry:'No ministry assignments.',noServices:'No upcoming services.',noEvents:'No upcoming events at this time.',registerNow:'Register Now',cancelReg:'Cancel Registration',closedReg:'Registration Closed',viewDetails:'View Details',myRegs:'My Registrations',regDeadline:'Deadline',of:'of',registered:'registered',attendanceHistory:'My Attendance History',noAttendance:'No attendance records found.',date:'Date',service:'Service',checkin:'Check-in',statusL:'Status',present:'Present',absent:'Absent',offeringsHistory:'My Tithes and Offering History',noOfferings:'No giving records.',type:'Type',amount:'Amount',totalYtd:'Total Year-to-Date',verse:'"God loves a cheerful giver." — 2 Corinthians 9:7',excellent:'Excellent',good:'Good',improve:'Needs Improvement',willAttend:'I will attend',wontAttend:'Cannot attend',undecided:'Undecided',rsvp:'RSVP',closePanel:'Close',serviceDetails:'Service Details',eventDetails:'Event Details',attending:'Attending',notAttending:'Not attending',capacity:'Capacity',responseBy:'Response by',yourRsvp:'Your RSVP'},
+  tl:{tabs:['Pangkalahatang-tanaw','Mga Kaganapan','Pagdalo','Mga Handog','Mga Ministeryo','Bible'],portal:'Portal ng Miyembro',welcome:'Maligayang pagdating',settings:'Mga Setting',logout:'Mag-logout',attendanceRate:'Rate ng Pagdalo',last2mo:'Nakaraang buwan',totalOfferings:'Kabuuang Ikapu at Handog',thisYear:'Ngayong taon',memberSince:'Miyembro Mula',myProfile:'Aking Profile',editProfile:'I-edit',save:'I-save',cancel:'Kanselahin',memberId:'Member ID',memberName:'Pangalan',spiritual:'Espirituwal na Kaarawan',cellGroup:'Cell Group',address:'Tirahan',joinDate:'Petsa ng Pagsali',group:'Grupo',contact:'Numero',birthdate:'Kaarawan',status:'Katayuan',ministry:'Mga Takdang Gawain',services:'Mga Paparating na Serbisyo',confirm:'Kumpirmahin',confirmed:'Nakumpirma',noMinistry:'Walang mga takdang gawain.',noServices:'Walang paparating na serbisyo.',noEvents:'Walang mga kaganapan.',registerNow:'Mag-register Na',cancelReg:'Kanselahin',closedReg:'Sarado na',viewDetails:'Tingnan',myRegs:'Aking mga Pagpaparehistro',regDeadline:'Deadline',of:'sa',registered:'nakapag-register',attendanceHistory:'Kasaysayan ng Pagdalo',noAttendance:'Walang rekord ng pagdalo.',date:'Petsa',service:'Serbisyo',checkin:'Check-in',statusL:'Katayuan',present:'Naroroon',absent:'Wala',offeringsHistory:'Kasaysayan ng Ikapu at Handog',noOfferings:'Walang rekord ng pagbibigay.',type:'Uri',amount:'Halaga',totalYtd:'Kabuuang Ikapu at Handog sa Taon',verse:'"Ang nagbibigay nang masaya ay mahal ng Diyos." — 2 Mga Taga-Corinto 9:7',excellent:'Kahusayan',good:'Mabuti',improve:'Kailangan ng Pagpabuti',willAttend:'Darating ako',wontAttend:'Hindi ako makakarating',undecided:'Hindi pa sigurado',rsvp:'RSVP',closePanel:'Isara',serviceDetails:'Detalye ng Serbisyo',eventDetails:'Detalye ng Kaganapan',attending:'Darating',notAttending:'Hindi darating',capacity:'Kapasidad',responseBy:'Sagot bago ang',yourRsvp:'Iyong RSVP'},
 };
 
 const FINANCE_LBL = {
@@ -69,12 +70,40 @@ const FINANCE_LBL = {
     page: 'Page', of: 'of', record: 'record', records: 'records', loading: 'Loading giving records…',
     retry: 'Retry', invalidRange: 'The start date must be on or before the end date.',
     loadError: 'Giving records could not be loaded.',
+    hideAmounts: 'Hide amounts', showAmounts: 'Show amounts',
   },
   tl: {
     from: 'Mula sa petsa', to: 'Hanggang petsa', clear: 'I-clear ang filter', previous: 'Nakaraan', next: 'Susunod',
     page: 'Pahina', of: 'sa', record: 'rekord', records: 'rekord', loading: 'Naglo-load ng mga rekord…',
     retry: 'Subukan muli', invalidRange: 'Dapat kapareho o mas maaga ang petsa ng simula sa petsa ng wakas.',
     loadError: 'Hindi ma-load ang mga rekord ng pagbibigay.',
+    hideAmounts: 'Itago ang halaga', showAmounts: 'Ipakita ang halaga',
+  },
+};
+
+const BIBLE_LBL = {
+  en: {
+    memoryVerse: 'Memory verse', forSunday: 'For Sunday', noVerse: 'No memory verse is assigned to your group yet.',
+    readingPlan: 'Bible reading', daysDone: 'days', todayReading: "Today's reading",
+    planPending: 'The reading plan for this month has not been published yet.',
+    previousMonth: 'Previous month', nextMonth: 'Next month', loading: 'Loading the reading plan…',
+  },
+  tl: {
+    memoryVerse: 'Talata ng alaala', forSunday: 'Para sa Linggo', noVerse: 'Wala pang talata ng alaala para sa iyong grupo.',
+    readingPlan: 'Pagbasa ng Bibliya', daysDone: 'araw', todayReading: 'Pagbasa ngayong araw',
+    planPending: 'Wala pang naisapublikong plano ng pagbasa para sa buwang ito.',
+    previousMonth: 'Nakaraang buwan', nextMonth: 'Susunod na buwan', loading: 'Naglo-load ng plano ng pagbasa…',
+  },
+};
+
+const MINISTRY_LBL = {
+  en: {
+    scheduledService: 'Serving schedule', practices: 'Practices', cleaning: 'Cleaning duty',
+    ministryEvents: 'Ministry events', noSchedule: 'Nothing scheduled yet.', confirmed: 'Confirmed',
+  },
+  tl: {
+    scheduledService: 'Takdang paglilingkod', practices: 'Pagsasanay', cleaning: 'Takdang paglilinis',
+    ministryEvents: 'Mga kaganapan ng ministeryo', noSchedule: 'Wala pang naka-iskedyul.', confirmed: 'Kumpirmado',
   },
 };
 
@@ -818,7 +847,7 @@ function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile,language}) {
   );
 }
 
-function FinanceTab({finance,initialError,c,f,t,fmtDate,PHP,isMobile,language}) {
+function FinanceTab({finance,initialError,c,f,t,fmtDate,PHP,isMobile,language,hideMoney,onToggleMoney}) {
   const card = {background:c.surface,borderRadius:12,border:`1px solid ${c.border}`,boxShadow:c.shadow};
   const copy = FINANCE_LBL[language] || FINANCE_LBL.en;
   const attachmentLabels = language === 'tl'
@@ -879,7 +908,17 @@ function FinanceTab({finance,initialError,c,f,t,fmtDate,PHP,isMobile,language}) 
     <div style={{...card,overflow:'hidden'}}>
       {/* YTD hero card */}
       {financeView&&(
-        <div style={{padding:isMobile?'16px':'20px 22px',background:'linear-gradient(135deg,#003d70,#005599)',color:'#fff',borderBottom:`1px solid ${c.border}`}}>
+        <div style={{position:'relative',padding:isMobile?'16px':'20px 22px',background:'linear-gradient(135deg,#003d70,#005599)',color:'#fff',borderBottom:`1px solid ${c.border}`}}>
+          <button
+            type="button"
+            onClick={onToggleMoney}
+            aria-pressed={hideMoney}
+            aria-label={hideMoney ? copy.showAmounts : copy.hideAmounts}
+            title={hideMoney ? copy.showAmounts : copy.hideAmounts}
+            style={{position:'absolute',top:12,right:12,zIndex:2,width:38,height:38,display:'grid',placeItems:'center',borderRadius:9,border:'1px solid rgba(255,255,255,0.35)',background:'rgba(255,255,255,0.12)',color:'#fff',cursor:'pointer'}}
+          >
+            <MonoIcon name={hideMoney ? 'eyeOff' : 'eye'} size={17} />
+          </button>
           <div style={{fontSize:f.xs,opacity:0.8,fontWeight:600,marginBottom:6,textTransform:'uppercase',letterSpacing:'0.5px'}}>{t.totalYtd}</div>
           <div style={{fontSize:isMobile?28:f.stat,fontWeight:900,letterSpacing:'-1px',lineHeight:1}}>{PHP(financeView.ytdTotal)}</div>
           <div style={{fontSize:f.xs,opacity:0.7,marginTop:6}}>{t.thisYear}</div>
@@ -1077,6 +1116,18 @@ export default function MemberPortal() {
   const [assigns, setAssigns]   = useState([]);
   const [services, setSvcs]     = useState([]);
   const [invites, setInvites]   = useState([]);
+  const [schedule, setSchedule] = useState(null);
+  const [hideMoney, setHideMoney] = useState(() => {
+    try { return localStorage.getItem('plwm_money_hidden') === '1'; } catch { return false; }
+  });
+  const toggleMoney = useCallback(() => {
+    setHideMoney((current) => {
+      const next = !current;
+      try { localStorage.setItem('plwm_money_hidden', next ? '1' : '0'); } catch { /* storage blocked */ }
+      return next;
+    });
+  }, []);
+  const money = useCallback((value) => (hideMoney ? '₱ ••••' : PHP(value)), [hideMoney]);
   const [inviteResponding, setInviteResponding] = useState(null);
   const [loading, setLoading]   = useState(true);
   const loadPromiseRef = useRef(null);
@@ -1111,7 +1162,7 @@ export default function MemberPortal() {
       setLoading(true);
       // Use allSettled so a single failed endpoint (e.g. no member profile linked)
       // does NOT crash the whole portal — each request resolves independently.
-      const [pR,aR,fR,eR,mR,sR,iR] = await Promise.allSettled([
+      const [pR,aR,fR,eR,mR,sR,iR,nR] = await Promise.allSettled([
         axiosInstance.get('/member-portal/profile'),
         axiosInstance.get('/member-portal/attendance'),
         axiosInstance.get('/member-portal/finance?page=1&limit=20'),
@@ -1119,6 +1170,7 @@ export default function MemberPortal() {
         axiosInstance.get('/member-portal/ministry-assignments'),
         axiosInstance.get('/member-portal/services'),
         axiosInstance.get('/member-portal/ministry-invites'),
+        axiosInstance.get('/member-portal/schedule'),
       ]);
       if (pR.status === 'fulfilled') setProfile(pR.value.data.data);
       if (aR.status === 'fulfilled') setAtt(aR.value.data.data);
@@ -1128,6 +1180,7 @@ export default function MemberPortal() {
       if (mR.status === 'fulfilled') setAssigns(mR.value.data.data);
       if (sR.status === 'fulfilled') setSvcs(sR.value.data.data);
       if (iR.status === 'fulfilled') setInvites(iR.value.data.data);
+      if (nR.status === 'fulfilled') setSchedule(nR.value.data.data);
       // Only show the error toast if profile specifically failed (most critical)
       if (pR.status === 'rejected') showToast('Member profile not linked to this account. Contact your administrator.','error');
       setLoading(false);
@@ -1151,6 +1204,7 @@ export default function MemberPortal() {
     if (params.get('tab') === 'attendance') setTab(2);
     if (params.get('tab') === 'tithes' || params.get('tab') === 'giving') setTab(3);
     if (params.get('tab') === 'ministries') setTab(4);
+    if (params.get('tab') === 'bible' || params.get('tab') === 'reading') setTab(5);
   }, [location.search]);
 
   const startEdit = useCallback(()=>{
@@ -1383,19 +1437,20 @@ export default function MemberPortal() {
           <div className="member-welcome-actions"><button type="button" onClick={()=>setTab(2)}>Attendance &amp; QR</button><button type="button" onClick={()=>setTab(1)}>{t.tabs[1]}</button></div>
         </section> : <section className="member-tab-intro" style={{color:c.t1}} aria-label={`${t.tabs[tab]} overview`}>
           <span style={{display:'grid',placeItems:'center',width:44,height:44,borderRadius:12,background:c.accentL,color:c.accentT,flexShrink:0}}><MonoIcon name={TAB_ICON_NAMES[tab]} size={20}/></span>
-          <div><h2>{t.tabs[tab]}</h2><p style={{color:c.t2}}>{['','Find your next gathering and follow your registrations.','Show your QR and review your personal check-in history.','Your recorded giving, dates and supporting receipts.','Explore ways to serve and follow ministry requests.'][tab]}</p></div>
+          <div><h2>{t.tabs[tab]}</h2><p style={{color:c.t2}}>{['','Find your next gathering and follow your registrations.','Show your QR and review your personal check-in history.','Your recorded giving, dates and supporting receipts.','Follow your ministry schedule, practices and cleaning duty.','Follow the reading plan and your group memory verse.'][tab]}</p></div>
         </section>}
 
         {loading ? <LoadSkeleton/> : (
           <>
-            {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} setEditError={setEE} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={PHP} fmtDate={fmtDate} isMobile={isMobile}/>}
+            {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} setEditError={setEE} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={money} fmtDate={fmtDate} isMobile={isMobile}/>}
             {tab===1&&<EventsTab events={events} assigns={assigns} services={services} invites={invites} evtL={evtL} confL={confL} inviteResponding={inviteResponding} doRegister={doRegister} doCancel={doCancel} doConfirm={doConfirm} onServiceClick={onServiceClick} onEventDetailsClick={onEventDetailsClick} onInviteRespond={onInviteRespond} c={c} f={f} t={t} fmtDate={fmtDate} fmtShort={fmtShort} fmtSvcT={fmtSvcT} isMobile={isMobile}/>}
             {tab===2&&<AttendanceTab attendance={attendance} c={c} f={f} t={t} fmtDate={fmtDate} fmtTime={fmtTime} isMobile={isMobile} language={lang}/>}
-            {tab===3&&<FinanceTab finance={finance} initialError={financeError} c={c} f={f} t={t} fmtDate={fmtDate} PHP={PHP} isMobile={isMobile} language={lang}/>}
+            {tab===3&&<FinanceTab finance={finance} initialError={financeError} c={c} f={f} t={t} fmtDate={fmtDate} PHP={money} hideMoney={hideMoney} onToggleMoney={toggleMoney} isMobile={isMobile} language={lang}/>}
             {tab===4&&<>
-              <MemberMinistryApplications c={c} f={f} showToast={showToast}/>
+              <MinistrySchedulePanel c={c} f={f} data={schedule} labels={MINISTRY_LBL[lang] || MINISTRY_LBL.en}/>
               <div style={{marginTop:24}}><MemberSubstituteRequests c={c} isMobile={isMobile}/></div>
             </>}
+            {tab===5&&<BibleReadingPanel c={c} f={f} labels={BIBLE_LBL[lang] || BIBLE_LBL.en} showToast={showToast}/>}
           </>
         )}
       </main>
