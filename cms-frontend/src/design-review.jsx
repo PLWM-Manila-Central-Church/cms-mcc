@@ -90,6 +90,29 @@ function responseData(path,config) {
     return paged('members',rows.filter(m=>`${m.first_name} ${m.last_name} ${m.email}`.toLowerCase().includes(String(query).toLowerCase())));
   }
   if(path==='/members/dropdowns/groups') return [{id:1,name:'Sample Group'}];
+  if(path==='/reports/registration') return {
+    range:{from:'2026-08-25',to:'2026-11-22'},
+    events:[
+      {id:1,title:'Grand Bible Seminar',category:'Seminar',start_date:'2026-11-23',capacity:200,registered:164,seats:120,parking:40,fill_rate:82},
+      {id:2,title:'YAG Fellowship',category:'Fellowship',start_date:'2026-11-28',capacity:80,registered:61,seats:30,parking:12,fill_rate:76.3},
+      {id:3,title:'Filipino Service',category:'Special Service',start_date:'2026-11-22',capacity:300,registered:212,seats:180,parking:55,fill_rate:70.7},
+      {id:4,title:'Christmas Eve',category:'Special Service',start_date:'2026-12-24',capacity:null,registered:48,seats:0,parking:0,fill_rate:null},
+    ],
+    totals:{events:4,registrations:485,capacity:580,fill_rate:83.6,seats:330,parking:107},
+    categories:[{label:'Seminar',total:164},{label:'Special Service',total:260},{label:'Fellowship',total:61}],
+    timeline:Array.from({length:20},(_,i)=>({date:`2026-11-${String(i+1).padStart(2,'0')}`,total:8,cumulative:(i+1)*8})),
+    attendance:{services_held:4,check_ins:812,average:203,rows:[
+      {id:1,title:'Sunday Service',date:'2026-11-16',present:221,capacity:300,rate:73.7},
+      {id:2,title:'Sunday Service',date:'2026-11-09',present:198,capacity:300,rate:66},
+      {id:3,title:'Prayer Meeting',date:'2026-11-06',present:142,capacity:200,rate:71},
+      {id:4,title:'Sunday Service',date:'2026-11-02',present:251,capacity:300,rate:83.7},
+    ]},
+  };
+  if(path.startsWith('/reports/registration/events/')) return {
+    event:{id:1,title:'Grand Bible Seminar',category:'Seminar',start_date:'2026-11-23',capacity:200,registered:164,seats:120,parking:40,fill_rate:82},
+    timeline:Array.from({length:8},(_,i)=>({date:`2026-11-${String(15+i).padStart(2,'0')}`,cumulative:(i+1)*20})),
+    registrations:Array.from({length:6},(_,i)=>({id:i+1,name:['Alex Sample','Jamie Example','Ruth Sample','Noel Example','Maria Cruz','Ben Reyes'][i],registered_at:`2026-11-${String(15+i).padStart(2,'0')}T09:00:00Z`,seat_number:i<3?i+1:null,parking_slot:i===0?1:null})),
+  };
   if(path==='/bible-reading/summary') return {
     month:'2026-11',target:30,total:4,finished:2,
     members:[

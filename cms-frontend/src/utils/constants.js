@@ -51,6 +51,13 @@ export const NAV_ITEMS = [
     permissions: { module: 'attendance', action: 'read' }
   },
   {
+    label: 'Registration Analytics',
+    path: '/reports/registration',
+    icon: 'attendance',
+    permissions: { module: 'attendance', action: 'read' },
+    roles: ['System Admin', 'Pastor', 'Registration Team']
+  },
+  {
     label: 'Bible Reading',
     path: '/bible-reading',
     icon: 'book',

@@ -19,6 +19,7 @@ const CellGroupsPage = lazy(() => import('../pages/cellgroups/CellGroupsPage'));
 const MinistryPage = lazy(() => import('../pages/ministry/MinistryPage'));
 const MinistrySchedulesPage = lazy(() => import('../pages/ministry/MinistrySchedulesPage'));
 const BibleReadingPage = lazy(() => import('../pages/reports/BibleReadingPage'));
+const RegistrationAnalyticsPage = lazy(() => import('../pages/reports/RegistrationAnalyticsPage'));
 const UsersPage = lazy(() => import('../pages/users/UsersPage'));
 const UserFormPage = lazy(() => import('../pages/users/UserFormPage'));
 const ServicesPage = lazy(() => import('../pages/services/ServicesPage'));
@@ -140,6 +141,7 @@ const AppRoutes = () => {
       <Route path="/finance/expenses" element={<ProtectedRoute module="finance" action="read"><MainLayout><ExpensesPage /></MainLayout></ProtectedRoute>} />
       <Route path="/reports/analytics" element={<ProtectedRoute module="dashboard" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading analytics…</div>}><AnalyticsReportPage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/reports/team-attendance" element={<ProtectedRoute module="attendance" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading team attendance…</div>}><TeamAttendanceReportPage /></Suspense></MainLayout></ProtectedRoute>} />
+      <Route path="/reports/registration" element={<ProtectedRoute module="attendance" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading registration analytics…</div>}><RegistrationAnalyticsPage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/bible-reading" element={<ProtectedRoute module="attendance" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading the reading monitor…</div>}><BibleReadingPage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/ministry/schedules" element={<ProtectedRoute module="ministry" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading ministry schedules…</div>}><MinistrySchedulesPage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/outreach" element={<ProtectedRoute module="outreach" action="read"><MainLayout><OutreachPage /></MainLayout></ProtectedRoute>} />
