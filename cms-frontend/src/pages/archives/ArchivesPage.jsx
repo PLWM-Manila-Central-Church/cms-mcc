@@ -180,6 +180,13 @@ export default function ArchivesPage() {
     } catch (err) { setError(err.response?.data?.message || 'Failed to restore record.'); }
   };
 
+  const handleRetentionHold = async (id, hold) => {
+    try {
+      await axiosInstance.patch(`/archives/retention/${id}`, { hold });
+      setDetailRecord((prev) => (prev ? { ...prev, retention_hold: hold, retention: hold ? 'held' : 'scheduled' } : prev));
+    } catch (err) { setError(err.response?.data?.message || 'The deletion hold could not be updated.'); }
+  };
+
   const saveDownloadedFile = (data, fileName) => {
     const blob = data instanceof Blob ? data : new Blob([data]);
     const objectUrl = window.URL.createObjectURL(blob);
@@ -307,6 +314,17 @@ export default function ArchivesPage() {
         )}
 
         {/* Actions */}
+        {detailRecord.is_deleted && (
+          <p style={{ margin: '0 0 10px', fontSize: 12, color: '#52647a' }}>
+            {detailRecord.retention === 'held'
+              ? 'Deletion on hold — excluded from the 60-day purge.'
+              : detailRecord.days_remaining == null
+                ? 'Deletion not scheduled.'
+                : detailRecord.days_remaining <= 0
+                  ? 'Due for permanent deletion.'
+                  : `Permanently deleted in ${detailRecord.days_remaining} days.`}
+          </p>
+        )}
         <div style={s.detailActions}>
           {!detailRecord.is_deleted && canUpdate && (detailRecord.uploaded_by === user?.id || isApprover) && (
             <button onClick={() => openEdit(detailRecord)} style={s.editBtn}>Edit</button>
@@ -316,6 +334,11 @@ export default function ArchivesPage() {
           )}
           {isAdmin && !detailRecord.is_deleted && (
             <button onClick={() => handleArchive(detailRecord.id)} style={s.deleteBtn}>Archive record</button>
+          )}
+          {isAdmin && detailRecord.is_deleted && (
+            <button onClick={() => handleRetentionHold(detailRecord.id, !detailRecord.retention_hold)} style={s.editBtn}>
+              {detailRecord.retention_hold ? 'Release deletion hold' : 'Hold deletion'}
+            </button>
           )}
           {isAdmin && detailRecord.is_deleted && <button onClick={() => handleRestore(detailRecord.id)} style={s.approveBtn}>Restore record</button>}
         </div>
@@ -343,6 +366,11 @@ export default function ArchivesPage() {
 
   return (
     <div className="mcc-module mcc-module-archives-page" style={s.page}>
+      {showArchived && (
+        <p role="note" style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 10, background: '#eff6ff', border: '1px solid #cfe3f2', color: '#003d70', fontSize: 13 }}>
+          Archived items are permanently deleted 60 days after archiving. Financial Records documents and items on hold are exempt.
+        </p>
+      )}
       <div style={{ ...s.layout, flexDirection: isMobile ? 'column' : 'row' }}>
         {/* ── LEFT PANEL ────────────────────────────────── */}
         <div style={s.leftPanel}>

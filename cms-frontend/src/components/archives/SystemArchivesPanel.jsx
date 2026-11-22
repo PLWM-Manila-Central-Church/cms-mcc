@@ -96,7 +96,13 @@ export default function SystemArchivesPanel() {
                   return <tr key={key}>
                     <td style={cellStyle}><span style={typeBadge}>{record.entity_label}</span></td>
                     <td style={{ ...cellStyle, fontWeight: 650, color: 'var(--mcc-ink, #0f172a)' }}>{record.title || `Record #${record.entity_id}`}</td>
-                    <td style={cellStyle}>{formatArchivedAt(record.archived_at)}</td>
+                    <td style={cellStyle}>
+                      {formatArchivedAt(record.archived_at)}
+                      {record.archived_at && (() => {
+                        const days = Math.ceil((new Date(record.archived_at).getTime() + 60 * 86400000 - Date.now()) / 86400000);
+                        return <span style={{ display: 'block', fontSize: 11, color: '#52647a' }}>{days <= 0 ? 'Deletion due' : `Deletes in ${days} days`}</span>;
+                      })()}
+                    </td>
                     <td style={{ ...cellStyle, textAlign: 'right' }}>
                       <button type="button" onClick={() => restore(record)} disabled={Boolean(restoringKey)} style={restoreButton}>
                         <MonoIcon name="refresh" size={14} /> {restoringKey === key ? 'Restoring…' : 'Restore'}

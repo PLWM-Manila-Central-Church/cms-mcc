@@ -36,6 +36,7 @@ const InventoryUsage = require("./InventoryUsage.model");
 const InventoryTransaction = require("./InventoryTransaction.model");
 const InventoryRequest = require("./InventoryRequest.model");
 const ArchiveCategory = require("./ArchiveCategory.model");
+const ArchiveHold = require("./ArchiveHold.model");
 const ArchiveRecord = require("./ArchiveRecord.model");
 const ArchiveVersion = require("./ArchiveVersion.model");
 const ArchiveAccessLog = require("./ArchiveAccessLog.model");
@@ -439,6 +440,7 @@ module.exports = {
   InventoryTransaction,
   InventoryRequest,
   ArchiveCategory,
+  ArchiveHold,
   ArchiveRecord,
   ArchiveVersion,
   ArchiveAccessLog,

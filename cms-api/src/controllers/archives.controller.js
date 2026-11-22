@@ -5,6 +5,8 @@ const uploadStorage   = require("../middlewares/upload-s3");
 const { normalizeArchiveFileType } = require("../helpers/archiveFileMetadata.helper");
 const { getFileUrl } = uploadStorage;
 const systemArchivesService = require("../services/system-archives.service");
+const retentionService = require("../services/archiveRetention.service");
+const AppError = require("../helpers/AppError");
 
 exports.getSystemRecords = async (req, res, next) => {
   try {
@@ -221,3 +223,44 @@ exports.archiveCategory = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 exports.deleteCategory = exports.archiveCategory;
+
+
+// ── Retention (60-day auto purge) ───────────────────────────
+exports.getRetention = async (req, res, next) => {
+  try {
+    res.json({ success: true, data: await retentionService.getSummary() });
+  } catch (err) { next(err); }
+};
+
+exports.setRecordRetention = async (req, res, next) => {
+  try {
+    const data = await retentionService.setDocumentHold(
+      req.params.id,
+      { hold: Boolean(req.body.hold), reason: req.body.reason },
+      req.user.userId,
+    );
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.setSystemRetention = async (req, res, next) => {
+  try {
+    const data = await retentionService.setSystemHold(
+      req.params.type,
+      req.params.id,
+      { hold: Boolean(req.body.hold), reason: req.body.reason },
+      req.user.userId,
+    );
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+exports.purgeDue = async (req, res, next) => {
+  try {
+    if (req.body?.confirm !== true) {
+      throw AppError.badRequest("CONFIRMATION_REQUIRED", "Send confirm: true to purge archived records that are due.");
+    }
+    const data = await retentionService.purgeDue({ actorId: req.user.userId });
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};

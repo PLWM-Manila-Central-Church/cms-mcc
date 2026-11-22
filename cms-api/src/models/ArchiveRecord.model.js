@@ -37,6 +37,9 @@ const ArchiveRecord = sequelize.define(
     is_deleted: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
     deleted_at: { type: DataTypes.DATE, allowNull: true },
     deleted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    purge_after: { type: DataTypes.DATE, allowNull: true },
+    retention_hold: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+    hold_reason: { type: DataTypes.STRING(255), allowNull: true },
   },
   {
     tableName: "archive_records",
@@ -46,6 +49,7 @@ const ArchiveRecord = sequelize.define(
     scopes: { withDeleted: {} },
     indexes: [
       { fields: ["status"], name: "idx_archive_status" },
+      { fields: ["purge_after"], name: "idx_archive_purge_after" },
     ],
   },
 );

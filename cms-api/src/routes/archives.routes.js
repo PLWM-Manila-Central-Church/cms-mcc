@@ -19,6 +19,12 @@ router.patch("/categories/:id/archive", auth, authorize("archives", "delete"), c
 // ── Records ──────────────────────────────────────────────────
 router.get("/system-records", auth, requireSystemAdministrator, ctrl.getSystemRecords);
 router.post("/system-records/:type/:id/restore", auth, requireSystemAdministrator, ctrl.restoreSystemRecord);
+router.patch("/system-records/:type/:id/retention", auth, requireSystemAdministrator, ctrl.setSystemRetention);
+
+// ── Retention (must be before /:id) ─────────────────────────
+router.get("/retention", auth, requireSystemAdministrator, ctrl.getRetention);
+router.post("/retention/purge", auth, requireSystemAdministrator, ctrl.purgeDue);
+router.patch("/retention/:id", auth, requireSystemAdministrator, ctrl.setRecordRetention);
 
 router.get("/",    auth, authorize("archives", "read"), validateQuery(getArchivesQuerySchema), ctrl.getAllRecords);
 router.get("/:id", auth, authorize("archives", "read"),   ctrl.getRecordById);

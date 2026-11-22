@@ -4,6 +4,7 @@ const app = require("./app");
 const sequelize = require("./config/db");
 const logger = require("./helpers/logger");
 const { startScheduler, stopScheduler } = require("./modules/outreach/scheduler");
+const { startArchiveRetention, stopArchiveRetention } = require("./modules/archives/retentionScheduler");
 const { execSync } = require("child_process");
 
 const PORT = process.env.PORT || 5000;
@@ -58,6 +59,7 @@ const assertSecretStrength = (name) => {
       logger.info("API running on port", { port: PORT })
     );
     startScheduler();
+    startArchiveRetention();
 
     // ── Graceful Shutdown ──────────────────────────────────────
     let shuttingDown = false;
@@ -74,6 +76,7 @@ const assertSecretStrength = (name) => {
         process.exit(1);
       }, SHUTDOWN_TIMEOUT_MS).unref();
 
+      stopArchiveRetention();
       stopScheduler().then(() => sequelize.close())
         .then(() => {
           logger.info("Database pool closed");

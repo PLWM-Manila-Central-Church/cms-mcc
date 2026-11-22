@@ -23,6 +23,7 @@ const FINANCE_ARCHIVE_CATEGORY = "Financial Records";
 // Remap Sequelize aliases to the names the frontend expects
 const remapRecord = (r) => {
   const plain = typeof r.toJSON === "function" ? r.toJSON() : r;
+  if (Number(plain.is_deleted) === 1) Object.assign(plain, retention.decorateRetention(plain));
   plain.ArchiveCategory = plain.category       || null;
   plain.uploadedBy      = plain.uploadedByUser || null;
   plain.approvedBy      = plain.approvedByUser || null;
@@ -339,6 +340,7 @@ exports.archiveRecord = async (id, archivedBy) => {
     is_deleted: 1,
     deleted_at: new Date(),
     deleted_by: archivedBy,
+    purge_after: retention.computePurgeAfter(new Date()),
   });
 
   auditLog.log({ userId: archivedBy, action: "ARCHIVE_RECORD", targetTable: "archive_records", targetId: id });
@@ -364,6 +366,9 @@ exports.restoreRecord = async (id, restoredBy) => {
     deleted_at: null,
     deleted_by: null,
     status: restoredStatus,
+    purge_after: null,
+    retention_hold: 0,
+    hold_reason: null,
   });
   auditLog.log({
     userId: restoredBy,
