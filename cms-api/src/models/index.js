@@ -461,4 +461,3 @@ module.exports = {
   BibleReadingProgress,
   GroupMemoryVerse,
 };
-

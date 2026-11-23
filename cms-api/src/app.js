@@ -169,4 +169,3 @@ if (process.env.SENTRY_DSN) {
 app.use(errorHandler);
 
 module.exports = app;
-

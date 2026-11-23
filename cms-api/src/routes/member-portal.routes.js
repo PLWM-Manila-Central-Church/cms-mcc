@@ -37,4 +37,3 @@ router.post  ("/bible-reading/:date",                         auth, ctrl.toggleM
 router.get   ("/memory-verse",                               auth, ctrl.getMyMemoryVerse);
 
 module.exports = router;
-
