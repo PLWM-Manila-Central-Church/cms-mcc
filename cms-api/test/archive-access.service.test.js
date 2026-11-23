@@ -213,6 +213,9 @@ describe("archive access and version integrity", () => {
       deleted_at: null,
       deleted_by: null,
       status: "approved",
+      purge_after: null,
+      retention_hold: 0,
+      hold_reason: null,
     });
     expect(auditLog.log).toHaveBeenCalledWith(expect.objectContaining({
       action: "RESTORE_ARCHIVE",
