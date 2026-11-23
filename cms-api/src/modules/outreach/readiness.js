@@ -11,6 +11,7 @@ const REQUIRED = {
   outreach_delivery_attempts: ["delivery_id", "attempt_number", "mode", "status", "error_code", "provider_message_id", "started_at", "finished_at"],
 };
 let cache = null;
+let campaignCache = null;
 const readiness = async () => {
   if (cache && cache.until > Date.now()) return cache.ready;
   try {
@@ -28,10 +29,35 @@ const readiness = async () => {
     return false;
   }
 };
+const campaignReadiness = async () => {
+  if (campaignCache && campaignCache.until > Date.now()) return campaignCache.ready;
+  try {
+    const qi = sequelize.getQueryInterface();
+    const tables = new Set((await qi.showAllTables()).map((table) => typeof table === "string" ? table : Object.values(table)[0]));
+    if (!tables.has("notification_campaigns") || !tables.has("outreach_deliveries") || !tables.has("outreach_preferences")) throw new Error("missing table");
+    const campaignColumns = await qi.describeTable("notification_campaigns");
+    if (["id", "status", "scheduled_at", "created_by"].some((field) => !campaignColumns[field])) throw new Error("missing campaign column");
+    const deliveryColumns = await qi.describeTable("outreach_deliveries");
+    if (!deliveryColumns.campaign_id) throw new Error("missing campaign link");
+    const preferenceColumns = await qi.describeTable("outreach_preferences");
+    if (!preferenceColumns.campaign_notifications) throw new Error("missing campaign preference");
+    campaignCache = { until: Date.now() + 30000, ready: true };
+    return true;
+  } catch {
+    campaignCache = { until: Date.now() + 5000, ready: false };
+    return false;
+  }
+};
 const requireSchema = async (_req, _res, next) => {
   try {
     if (!await readiness()) throw new AppError("OUTREACH_SCHEMA_NOT_READY", 503, "Notification management needs its database migration. Other modules remain available.");
     next();
   } catch (error) { next(error); }
 };
-module.exports = { readiness, requireSchema, clearReadiness: () => { cache = null; } };
+const requireCampaignSchema = async (_req, _res, next) => {
+  try {
+    if (!await campaignReadiness()) throw new AppError("CAMPAIGN_SCHEMA_NOT_READY", 503, "Notification campaigns need their database migration. Other outreach features remain available.");
+    next();
+  } catch (error) { next(error); }
+};
+module.exports = { readiness, campaignReadiness, requireSchema, requireCampaignSchema, clearReadiness: () => { cache = null; campaignCache = null; } };

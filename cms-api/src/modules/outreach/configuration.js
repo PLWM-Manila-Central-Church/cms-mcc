@@ -18,6 +18,15 @@ const getConfiguration = async () => {
     ? [...new Set(config.reminder_days.filter((n) => Number.isInteger(n) && n >= 1 && n <= 30))].slice(0, 5) : [3, 1];
   config.reminder_hour = Number.isInteger(config.reminder_hour) && config.reminder_hour >= 0 && config.reminder_hour <= 23 ? config.reminder_hour : 9;
   config.daily_sms_cap = Math.min(100, Math.max(1, Number(config.daily_sms_cap) || 10));
+  config.campaigns_enabled = config.campaigns_enabled === true;
+  config.campaign_unit_cost_php = Math.min(100, Math.max(0, Number(config.campaign_unit_cost_php) || DEFAULTS.campaign_unit_cost_php));
+  config.campaign_monthly_budget_php = Math.min(1000000, Math.max(0, Number(config.campaign_monthly_budget_php) || DEFAULTS.campaign_monthly_budget_php));
+  config.campaign_weekly_member_cap = Math.min(20, Math.max(1, Number(config.campaign_weekly_member_cap) || 2));
+  config.campaign_monthly_member_cap = Math.min(100, Math.max(1, Number(config.campaign_monthly_member_cap) || 6));
+  config.campaign_approval_recipient_threshold = Math.min(10000, Math.max(1, Number(config.campaign_approval_recipient_threshold) || 50));
+  config.campaign_approval_cost_threshold = Math.min(100000, Math.max(0, Number(config.campaign_approval_cost_threshold) || 50));
+  config.campaign_quiet_start = Math.min(23, Math.max(0, Number(config.campaign_quiet_start) || 8));
+  config.campaign_quiet_end = Math.min(23, Math.max(1, Number(config.campaign_quiet_end) || 20));
   for (const name of ["reminder_template", "followup_template"]) {
     if (typeof config[name] !== "string" || !config[name].trim() || config[name].length > 480) config[name] = DEFAULTS[name];
   }

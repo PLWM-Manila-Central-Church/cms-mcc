@@ -6,6 +6,8 @@ const { evaluatePage, evaluateMembers } = require("./evaluation");
 const { processQueue } = require("./dispatcher");
 const { audienceIds } = require("./repository");
 const { QrAttendanceSession } = require("../qr-attendance/models");
+const { NotificationCampaign } = require("./models");
+const { queueDueCampaigns, refreshCampaignStatus } = require("./campaigns.service");
 let cursor = 0;
 let running = null;
 let interval = null;
@@ -15,8 +17,11 @@ const runCycle = async () => {
     if (!await readiness()) return { ready: false };
     const result = await evaluatePage({ cursor });
     cursor = result.next_cursor || 0;
+    const campaignQueue = await queueDueCampaigns();
     const delivery = await processQueue({ limit: 25 });
-    return { evaluation: result, delivery };
+    const sending = await NotificationCampaign.findAll({ where: { status: "sending" }, attributes: ["id"], limit: 25 });
+    for (const campaign of sending) await refreshCampaignStatus(campaign.id);
+    return { evaluation: result, campaigns: campaignQueue, delivery };
   })();
   try { return await running; } finally { running = null; }
 };

@@ -47,7 +47,11 @@ const getPreference = async (memberId, user, { self = false } = {}) => {
     member_id: member.id, member_name: member.first_name + " " + member.last_name, phone: member.phone || "",
     sms_enabled: Boolean(preference?.sms_enabled), sms_effective: hasSmsConsent(member, preference),
     activity_reminders: preference?.activity_reminders ?? true, attendance_followups: preference?.attendance_followups ?? true,
+    campaign_notifications: preference?.campaign_notifications ?? true,
     consent_at: preference?.consent_at || null, opted_out_at: preference?.opted_out_at || null,
+    is_minor: (ageOn(member.birthdate) ?? 18) < 18,
+    guardian_name: preference?.guardian_name || "", guardian_phone: preference?.guardian_phone || "",
+    guardian_consent_at: preference?.guardian_consent_at || null,
     needs_reconsent: Boolean(preference?.sms_enabled && normalizePhone(member.phone) !== preference.consent_phone),
   };
 };
@@ -72,6 +76,10 @@ const setPreference = async (memberId, data, user, { self = false } = {}) => {
     if (data.phone !== undefined) await member.update({ phone: phone || null }, { transaction });
     const values = {
       sms_enabled: data.sms_enabled, activity_reminders: data.activity_reminders, attendance_followups: data.attendance_followups,
+      campaign_notifications: data.campaign_notifications === undefined ? (existing?.campaign_notifications ?? true) : data.campaign_notifications,
+      ...(data.guardian_name !== undefined ? { guardian_name: data.guardian_name || null } : {}),
+      ...(data.guardian_phone !== undefined ? { guardian_phone: normalizePhone(data.guardian_phone) || null } : {}),
+      ...(data.guardian_consent_confirmed ? { guardian_consent_at: new Date(), guardian_consent_note: data.guardian_consent_note || null } : {}),
       ...(requiresConsent ? { consent_phone: phone, consent_at: new Date(), consent_source: ownConsent ? "member" : "staff_recorded" } : {}),
       opted_out_at: data.sms_enabled ? null : new Date(), recorded_by: user.userId,
       consent_note: ownConsent ? "Member updated own notification preferences" : data.consent_note.trim(),
@@ -85,9 +93,10 @@ const setPreference = async (memberId, data, user, { self = false } = {}) => {
       const disabledKinds = [];
       if (!data.activity_reminders) disabledKinds.push("activity_reminder");
       if (!data.attendance_followups) disabledKinds.push("absence_followup");
+      if (data.campaign_notifications === false) disabledKinds.push("campaign");
       if (disabledKinds.length) await OutreachDelivery.update({ status: "cancelled", last_error_code: "PREFERENCE_DISABLED" }, { where: { member_id: member.id, status: "queued", kind: { [Op.in]: disabledKinds } }, transaction });
     }
-    await audit(user, "OUTREACH_PREFERENCES_UPDATED", "outreach_preferences", member.id, { sms_enabled: data.sms_enabled, phone: maskedPhone(phone), activity_reminders: data.activity_reminders, attendance_followups: data.attendance_followups }, transaction);
+    await audit(user, "OUTREACH_PREFERENCES_UPDATED", "outreach_preferences", member.id, { sms_enabled: data.sms_enabled, phone: maskedPhone(phone), activity_reminders: data.activity_reminders, attendance_followups: data.attendance_followups, campaign_notifications: data.campaign_notifications, guardian: Boolean(data.guardian_phone) }, transaction);
   });
   return getPreference(memberId, user, { self });
 };

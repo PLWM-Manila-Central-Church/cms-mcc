@@ -16,7 +16,7 @@ if (!import.meta.env.DEV) throw new Error('Role design review is development-onl
 const roles = ['System Admin','Pastor','Registration Team','Finance Team','Ministry Leader','Cell Leader','Group Leader','Combined Leader','Member'];
 const selected = new URLSearchParams(location.search).get('role') || 'System Admin';
 const selectedRole = roles.includes(selected) ? selected : 'System Admin';
-const modules = ['dashboard','members','cell_groups','ministry','attendance','qr_attendance','services','events','finance','inventory','archives','audit','users','settings'];
+const modules = ['dashboard','members','cell_groups','ministry','attendance','qr_attendance','services','events','finance','inventory','archives','audit','users','settings','outreach'];
 const grants = modules.flatMap(module => ['read','create','update','delete','approve','export','manage'].map(action => `${module}:${action}`));
 const qrActions = ['read','configure_session','check_in','review_batch','correct','finalize','record_batch','submit_batch'];
 grants.push(...qrActions.map(action=>`qr_attendance:${action}`));
@@ -61,6 +61,19 @@ const analyticsSample = {
   },
 };
 const paged=(key,value)=>({[key]:value,total:value.length,total_pages:1,page:1});
+let campaignRows=[
+  {id:1,title:'All-member Christmas Eve reminder',audience_type:'all_members',message:'Hi {{first_name}}, join us for Christmas Eve at 7 PM. PLWM-MCC',status:'pending_approval',scheduled_at:'2099-12-23T10:00:00Z',recipient_count:2,estimated_cost_php:0.93,approval_required:true,created_by:2,approved_by:null},
+  {id:2,title:'Community Gathering reminder',audience_type:'event',event_id:1,message:'Hi {{first_name}}, {{activity}} is on {{date}} at {{time}}. See you! PLWM-MCC',status:'approved',scheduled_at:'2099-10-17T01:00:00Z',recipient_count:2,estimated_cost_php:0.93,approval_required:false,created_by:1,approved_by:1},
+  {id:3,title:'Ministry practice',audience_type:'ministry',ministry_id:1,message:'Hi {{first_name}}, practice is on Saturday at 6 PM. PLWM-MCC',status:'draft',scheduled_at:'2099-10-20T10:00:00Z',recipient_count:2,estimated_cost_php:0.93,approval_required:false,created_by:1,approved_by:null},
+];
+const campaignPreviewFor = (body) => {
+  const message=String(body.message||'');
+  const segments=Math.max(1,Math.ceil(message.length/160));
+  return {recipients:[{member_id:1,name:'Alex Sample',phone_masked:'+6391*****67',is_minor:false},{member_id:2,name:'Jamie Example',phone_masked:'+6391*****68',is_minor:false}],
+    recipient_count:2,excluded:{inactive:0,no_phone:0,no_consent:0,duplicate:0,frequency_cap:0},total_segments:2*segments,segment_count:segments,
+    unit_cost_php:0.463,estimated_cost_php:Number((2*segments*0.463).toFixed(2)),monthly_remaining_php:500,
+    approval_required:body.audience_type==='all_members',warning:null};
+};
 function responseData(path,config) {
   if(path==='/auth/session'||path==='/auth/login') return {user,permissions:reviewPermissions,forcePasswordChange:false};
   if(path==='/dashboard/stats') return stats;
@@ -179,6 +192,19 @@ function responseData(path,config) {
 // Every API request in this entry is intercepted. No network adapter is called.
 api.defaults.adapter=async config=>{
   const path=new URL(config.url,'http://review.local').pathname;
+  const method=String(config.method||'get').toLowerCase();
+  const body=typeof config.data==='string'?JSON.parse(config.data||'{}'):(config.data||{});
+  const canCampaign=['System Admin','Pastor','Registration Team','Ministry Leader','Cell Leader','Group Leader','Combined Leader','Leader'].includes(selectedRole);
+  const canBroadcast=['System Admin','Pastor'].includes(selectedRole);
+  if(path==='/outreach/availability') return {data:{success:true,data:{schema_ready:true,campaigns_schema_ready:true,enabled:true,mode:'simulation',campaigns_enabled:true,sms_delivery_enabled:false,provider_configured:true,recipient_restriction_configured:true,scheduler_enabled:true,capabilities:{configure:selectedRole==='System Admin',manage:['System Admin','Registration Team'].includes(selectedRole),global:['System Admin','Pastor','Registration Team'].includes(selectedRole),resolve:true,process:['System Admin','Registration Team'].includes(selectedRole),campaigns:canCampaign,broadcast:canBroadcast,approve:canBroadcast}}},status:200,headers:{},config};
+  if(path==='/outreach/configuration') return {data:{success:true,data:{enabled:true,mode:'simulation',reminder_days:[3,1],reminder_hour:9,daily_sms_cap:30,reminder_template:'Hi {{first_name}}, reminder: {{activity}} on {{date}} at {{time}}. {{venue}} PLWM-MCC',followup_template:'Hi {{first_name}}, PLWM-MCC is checking in. Please contact your leader.',campaigns_enabled:true,campaign_unit_cost_php:0.463,campaign_monthly_budget_php:500,campaign_weekly_member_cap:2,campaign_monthly_member_cap:6,campaign_approval_recipient_threshold:50,campaign_approval_cost_threshold:50,campaign_quiet_start:8,campaign_quiet_end:20}},status:200,headers:{},config};
+  if(path==='/outreach/overview') return {data:{success:true,data:{followups:{open:1,assigned:0,resolved:2},deliveries:{queued:0,simulated:1,failed:0,unknown:0}}},status:200,headers:{},config};
+  if(['/outreach/follow-ups','/outreach/deliveries','/outreach/members','/outreach/sessions'].includes(path)) return {data:{success:true,data:{items:[],total:0,page:1,total_pages:0}},status:200,headers:{},config};
+  if(path==='/outreach/campaigns' && method==='get'){const status=new URL(config.url,'http://review.local').searchParams.get('status');const rows=status?campaignRows.filter(row=>row.status===status):campaignRows;return {data:{success:true,data:{items:rows,total:rows.length,page:1,total_pages:1}},status:200,headers:{},config};}
+  if(path==='/outreach/campaigns/preview' && method==='post') return {data:{success:true,data:campaignPreviewFor(body)},status:200,headers:{},config};
+  if(path==='/outreach/campaigns' && method==='post'){const preview=campaignPreviewFor(body);const row={id:Math.max(...campaignRows.map(item=>item.id))+1,title:body.title,audience_type:body.audience_type,event_id:body.event_id,ministry_id:body.ministry_id,cell_group_id:body.cell_group_id,message:body.message,status:'draft',scheduled_at:body.scheduled_at,recipient_count:preview.recipient_count,estimated_cost_php:preview.estimated_cost_php,approval_required:preview.approval_required,created_by:user.userId,approved_by:null};campaignRows=[row,...campaignRows];return {data:{success:true,data:row},status:200,headers:{},config};}
+  const campaignMatch=path.match(/^\/outreach\/campaigns\/(\d+)(\/.*)?$/);
+  if(campaignMatch){const id=Number(campaignMatch[1]);const row=campaignRows.find(item=>item.id===id);const action=campaignMatch[2]||'';if(!row) return {data:{success:true,data:null},status:200,headers:{},config};if(method==='post'&&action==='/submit'){row.status=row.approval_required?'pending_approval':'approved';}if(method==='post'&&action==='/approve'){row.status='approved';row.approved_by=user.userId;}if(method==='post'&&action==='/reject'){row.status='rejected';row.rejection_reason=body.reason;}if(method==='post'&&action==='/cancel'){row.status='cancelled';}if(action==='/deliveries') return {data:{success:true,data:{items:[],total:0,page:1,total_pages:0}},status:200,headers:{},config};return {data:{success:true,data:action?row:{campaign:row,delivery_summary:{}}},status:200,headers:{},config};}
   let data=responseData(path,config);
   if(config.method!=='get' && !path.startsWith('/auth/')) data={message:'Synthetic review action only'};
   return {data:{success:true,data},status:200,statusText:'OK',headers:{},config};

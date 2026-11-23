@@ -3,11 +3,11 @@
 const { Op } = require("sequelize");
 const { randomUUID } = require("node:crypto");
 const sequelize = require("../../config/db");
-const { Member, User, Notification, SystemSetting } = require("../../models");
+const { Member, User, Notification, SystemSetting, Event } = require("../../models");
 const { getSessionWithParent } = require("../qr-attendance/sessions.service");
 const AppError = require("../../helpers/AppError");
 const { getConfiguration, transportState } = require("./configuration");
-const { normalizePhone, hasSmsConsent, findAbsenceEpisode, reminderIsDue, renderMessage, estimateSegments } = require("./policy");
+const { normalizePhone, hasSmsConsent, hasCampaignConsent, campaignRecipientPhone, findAbsenceEpisode, reminderIsDue, renderMessage, estimateSegments } = require("./policy");
 const { historyForMembers } = require("./evaluation");
 const { OutreachPreference, OutreachSessionPolicy, AttendanceFollowUp, OutreachDelivery, OutreachDeliveryAttempt, audienceIds, audit } = require("./repository");
 
@@ -19,6 +19,29 @@ const preflight = async (job, config, now = new Date(), transaction) => {
   const member = await Member.findByPk(job.member_id, { transaction, ...(transaction && { lock: transaction.LOCK.UPDATE }) });
   if (!member || member.status !== "Active") return { reason: "MEMBER_INACTIVE" };
   const preference = await OutreachPreference.findOne({ where: { member_id: member.id }, transaction });
+  if (job.kind === "campaign") {
+    if (!config.campaigns_enabled) return { hold: true, reason: "CAMPAIGNS_DISABLED" };
+    if (!preference || preference.campaign_notifications === false) return { reason: "CAMPAIGN_PREFERENCE_DISABLED" };
+    const { NotificationCampaign } = require("./models");
+    const campaign = await NotificationCampaign.findByPk(job.campaign_id, { transaction });
+    if (!campaign || !["approved", "scheduled", "sending"].includes(String(campaign.status))) return { reason: "CAMPAIGN_NOT_ACTIVE" };
+    if (campaign.window_end && now > new Date(campaign.window_end)) return { reason: "CAMPAIGN_EXPIRED" };
+    if (campaign.event_id) {
+      const event = await Event.findByPk(campaign.event_id, { attributes: ["id", "status"], transaction });
+      if (!event || event.status === "Cancelled") return { reason: "EVENT_CANCELLED" };
+    }
+    if (job.channel !== "sms") return { reason: "CAMPAIGN_SMS_ONLY" };
+    if (!hasCampaignConsent(member, preference) || campaignRecipientPhone(member, preference) !== job.recipient_phone) return { reason: "SMS_CONSENT_MISSING_OR_CHANGED" };
+    if (config.mode === "disabled") return { hold: true, reason: "SMS_DISABLED" };
+    if (config.mode === "live") {
+      const state = transportState();
+      if (!state.sms_delivery_enabled || !state.provider_configured || !state.recipient_restriction_configured) return { hold: true, reason: "LIVE_SMS_DISABLED" };
+      if (!allowedRecipient(job.recipient_phone)) return { reason: "RECIPIENT_NOT_ALLOWED" };
+    }
+    const message = String(job.message || "");
+    if (config.mode === "live" && estimateSegments(message) > Math.max(1, Math.min(5, Number(process.env.SMS_MAX_SEGMENTS) || 1))) return { failed: true, reason: "SMS_SEGMENT_LIMIT" };
+    return { eligible: true, member, message, campaign };
+  }
   if (preference && !(job.kind === "activity_reminder" ? preference.activity_reminders : preference.attendance_followups)) return { reason: "PREFERENCE_DISABLED" };
   let session;
   try { session = await getSessionWithParent(job.session_id, transaction); } catch (error) {

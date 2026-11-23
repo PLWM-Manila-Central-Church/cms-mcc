@@ -60,3 +60,38 @@
 .outreach-link { color:#005599; font-weight:700; }
 .outreach-empty { padding:30px 14px; text-align:center; color:#52647a; }
 @media(max-width:600px) { .outreach-card { padding:15px; } .outreach-dialog { padding:16px; max-height:94dvh; } .outreach-overlay { padding:8px; } .outreach-header .outreach-actions { width:100%; } .outreach-header .outreach-actions button { flex:1; } .outreach-toolbar button { width:100%; } .outreach-tabs { max-width:100%; } }
+
+/* ── Notification campaigns ───────────────────────────────── */
+.campaigns-panel { display:grid; gap:14px; }
+.campaigns-toolbar { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+.campaigns-toolbar h2 { margin:0 0 4px; color:#003d70; font-size:20px; }
+.campaigns-toolbar p { margin:0; max-width:640px; }
+.campaign-filter { display:flex; align-items:center; gap:9px; font-size:12px; color:#52647a; max-width:280px; }
+.campaign-filter select { flex:1; }
+.campaigns-table td:first-child { min-width:220px; max-width:340px; }
+.campaigns-table td:first-child p { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.campaign-composer { width:min(100%,760px); }
+.campaign-composer form { display:grid; gap:12px; }
+.campaign-composer textarea { min-height:112px; }
+.campaign-composer small { display:block; margin-top:4px; }
+.campaign-placeholders { display:flex; gap:6px; flex-wrap:wrap; }
+.campaign-placeholders button { font-size:11px; padding:5px 8px; background:#eef7ff; border-color:#c9e6fb; color:#005599; }
+.campaign-preview { background:#f5f9fd; border:1px solid #d5e7f6; border-radius:10px; padding:13px 15px; display:grid; gap:5px; }
+.campaign-preview h3 { margin:0; font-size:15px; color:#003d70; }
+.campaign-preview p { margin:0; font-size:13px; }
+.campaign-preview ul { margin:6px 0 0; padding-left:18px; font-size:12px; color:#52647a; }
+.campaign-preview summary { cursor:pointer; font-size:12px; color:#005599; font-weight:700; }
+.campaign-detail { width:min(100%,820px); }
+.campaign-detail-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr)); gap:12px; margin-bottom:16px; }
+.campaign-detail-grid > div { background:#f5f9fd; border:1px solid #dce9f4; border-radius:9px; padding:10px 12px; display:grid; gap:4px; }
+.campaign-detail-grid span { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#52647a; }
+.campaign-detail-grid strong { font-size:14px; color:#0f172a; }
+.campaign-message { border-left:3px solid #13b5ea; padding-left:12px; margin-bottom:14px; }
+.campaign-message h3 { margin:0 0 5px; font-size:14px; color:#003d70; }
+.campaign-message p { margin:0; white-space:pre-wrap; }
+.outreach-badge.draft { color:#52647a; background:#eef2f6; }
+.outreach-badge.pending_approval { color:#92400e; background:#fef3c7; }
+.outreach-badge.approved, .outreach-badge.scheduled, .outreach-badge.sending { color:#005599; background:#e0f2fe; }
+.outreach-badge.completed { color:#166534; background:#dcfce7; }
+.outreach-badge.cancelled, .outreach-badge.rejected { color:#991b1b; background:#fee2e2; }
+@media(max-width:600px) { .campaigns-toolbar .outreach-actions { width:100%; } .campaigns-toolbar .outreach-actions button { flex:1; } .campaign-filter { max-width:none; } .campaign-detail-grid { grid-template-columns:1fr 1fr; } }

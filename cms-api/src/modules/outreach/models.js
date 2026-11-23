@@ -16,12 +16,17 @@ const OutreachPreference = define("OutreachPreference", "outreach_preferences", 
   sms_enabled: bool(false),
   activity_reminders: bool(true),
   attendance_followups: bool(true),
+  campaign_notifications: bool(true),
   consent_phone: { type: D.STRING(20), allowNull: true },
   consent_at: { type: D.DATE, allowNull: true },
   consent_source: { type: D.STRING(30), allowNull: true },
   consent_note: { type: D.STRING(500), allowNull: true },
   recorded_by: ref(true),
   opted_out_at: { type: D.DATE, allowNull: true },
+  guardian_name: { type: D.STRING(120), allowNull: true },
+  guardian_phone: { type: D.STRING(20), allowNull: true },
+  guardian_consent_at: { type: D.DATE, allowNull: true },
+  guardian_consent_note: { type: D.STRING(500), allowNull: true },
 });
 const OutreachSessionPolicy = define("OutreachSessionPolicy", "outreach_session_policies", {
   session_id: { ...ref(), unique: true },
@@ -60,8 +65,10 @@ const OutreachDelivery = define("OutreachDelivery", "outreach_deliveries", {
   user_id: ref(true),
   session_id: ref(true),
   follow_up_id: ref(true),
+  campaign_id: ref(true),
+  cost_php: { type: D.DECIMAL(10, 2), allowNull: true },
   channel: { type: D.ENUM("in_app", "sms"), allowNull: false },
-  kind: { type: D.ENUM("activity_reminder", "absence_followup"), allowNull: false },
+  kind: { type: D.ENUM("activity_reminder", "absence_followup", "campaign"), allowNull: false },
   reminder_days: { type: D.INTEGER.UNSIGNED, allowNull: true },
   idempotency_key: { type: D.STRING(64), allowNull: false, unique: true },
   message: { type: D.STRING(1000), allowNull: false },
@@ -91,10 +98,43 @@ const OutreachDeliveryAttempt = define("OutreachDeliveryAttempt", "outreach_deli
   started_at: { type: D.DATE, allowNull: false },
   finished_at: { type: D.DATE, allowNull: true },
 });
+const NotificationCampaign = define("NotificationCampaign", "notification_campaigns", {
+  title: { type: D.STRING(150), allowNull: false },
+  audience_type: { type: D.ENUM("event", "ministry", "cell_group", "all_members"), allowNull: false },
+  event_id: ref(true),
+  ministry_id: ref(true),
+  cell_group_id: ref(true),
+  message: { type: D.STRING(480), allowNull: false },
+  status: {
+    type: D.ENUM("draft", "pending_approval", "approved", "scheduled", "sending", "completed", "cancelled", "rejected", "failed"),
+    allowNull: false, defaultValue: "draft",
+  },
+  scheduled_at: { type: D.DATE, allowNull: true },
+  window_end: { type: D.DATE, allowNull: true },
+  recipient_count: { type: D.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0 },
+  segment_count: { type: D.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
+  estimated_cost_php: { type: D.DECIMAL(10, 2), allowNull: false, defaultValue: 0 },
+  actual_cost_php: { type: D.DECIMAL(10, 2), allowNull: false, defaultValue: 0 },
+  budget_cap_php: { type: D.DECIMAL(10, 2), allowNull: true },
+  approval_required: bool(true),
+  created_by: ref(),
+  approved_by: ref(true),
+  approved_at: { type: D.DATE, allowNull: true },
+  rejected_by: ref(true),
+  rejected_at: { type: D.DATE, allowNull: true },
+  rejection_reason: { type: D.STRING(500), allowNull: true },
+  cancelled_by: ref(true),
+  cancelled_at: { type: D.DATE, allowNull: true },
+  cancel_reason: { type: D.STRING(500), allowNull: true },
+});
 
 for (const model of [OutreachPreference, AttendanceException, AttendanceFollowUp, OutreachDelivery]) {
   model.belongsTo(Member, { foreignKey: "member_id", as: "member" });
 }
+NotificationCampaign.belongsTo(User, { foreignKey: "created_by", as: "creator" });
+NotificationCampaign.belongsTo(User, { foreignKey: "approved_by", as: "approver" });
+NotificationCampaign.hasMany(OutreachDelivery, { foreignKey: "campaign_id", as: "deliveries" });
+OutreachDelivery.belongsTo(NotificationCampaign, { foreignKey: "campaign_id", as: "campaign" });
 OutreachSessionPolicy.belongsTo(QrAttendanceSession, { foreignKey: "session_id", as: "session" });
 AttendanceException.belongsTo(QrAttendanceSession, { foreignKey: "session_id", as: "session" });
 AttendanceFollowUp.belongsTo(User, { foreignKey: "assigned_to", as: "assignee" });
@@ -102,4 +142,4 @@ AttendanceFollowUp.belongsTo(QrAttendanceSession, { foreignKey: "trigger_session
 OutreachDelivery.belongsTo(AttendanceFollowUp, { foreignKey: "follow_up_id", as: "followUp" });
 OutreachDelivery.belongsTo(Notification, { foreignKey: "notification_id", as: "notification" });
 OutreachDeliveryAttempt.belongsTo(OutreachDelivery, { foreignKey: "delivery_id", as: "delivery" });
-module.exports = { OutreachPreference, OutreachSessionPolicy, AttendanceException, AttendanceFollowUp, OutreachDelivery, OutreachDeliveryAttempt };
+module.exports = { OutreachPreference, OutreachSessionPolicy, AttendanceException, AttendanceFollowUp, OutreachDelivery, OutreachDeliveryAttempt, NotificationCampaign };

@@ -39,7 +39,13 @@ const cases = [
   { role: 'System Admin', route: '/bible-reading', expect: /bible reading/i, name: 'admin-bible' },
   { role: 'System Admin', route: '/ministry/schedules', expect: /ministry schedule/i, name: 'admin-ministry-schedules' },
   { role: 'System Admin', route: '/members', expect: /members/i, name: 'admin-members' },
-  { role: 'System Admin', route: '/outreach', expect: /notifications|follow-up/i, name: 'admin-outreach' },
+  { role: 'System Admin', route: '/outreach', expect: /notifications|follow-up/i, name: 'admin-outreach', after: async (page) => {
+    await page.getByRole('tab', { name: 'Campaigns' }).click();
+    await page.getByRole('button', { name: 'New notification' }).click();
+    await page.getByRole('button', { name: 'Preview audience & cost' }).click();
+    await page.getByText(/eligible recipient/).first().waitFor({ timeout: 4000 });
+    await page.keyboard.press('Escape');
+  } },
   { role: 'Registration Team', route: '/dashboard', expect: /dashboard|welcome/i, name: 'reg-dashboard' },
   { role: 'Registration Team', route: '/attendance', expect: /attendance/i, name: 'reg-attendance' },
   { role: 'Registration Team', route: '/reports/registration', expect: /registration analytics/i, name: 'reg-analytics' },

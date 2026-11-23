@@ -7,6 +7,15 @@ const DEFAULTS = Object.freeze({
   daily_sms_cap: 10,
   reminder_template: "Hi {{first_name}}, reminder: {{activity}} on {{date}} at {{time}}. {{venue}} PLWM-MCC",
   followup_template: "Hi {{first_name}}, PLWM-MCC is checking in. Need prayer or assistance? Please contact your leader. We hope to see you soon.",
+  campaigns_enabled: false,
+  campaign_unit_cost_php: 0.463,
+  campaign_monthly_budget_php: 500,
+  campaign_weekly_member_cap: 2,
+  campaign_monthly_member_cap: 6,
+  campaign_approval_recipient_threshold: 50,
+  campaign_approval_cost_threshold: 50,
+  campaign_quiet_start: 8,
+  campaign_quiet_end: 20,
 });
 const normalizePhone = (value) => {
   const phone = String(value || "").replace(/[\s()-]/g, "");
@@ -59,6 +68,29 @@ const reminderIsDue = (policy, session, days, config, now) => {
 const hasSmsConsent = (member, preference) => Boolean(member && !Number(member.is_deleted) && member.status === "Active"
   && preference?.sms_enabled && preference.consent_at && !preference.opted_out_at
   && normalizePhone(member.phone) && normalizePhone(member.phone) === preference.consent_phone);
+const ageOn = (birthdate, now = new Date()) => {
+  if (!birthdate) return null;
+  const born = new Date(birthdate);
+  if (Number.isNaN(born.getTime())) return null;
+  let age = now.getFullYear() - born.getFullYear();
+  const month = now.getMonth() - born.getMonth();
+  if (month < 0 || (month === 0 && now.getDate() < born.getDate())) age--;
+  return age;
+};
+const campaignRecipientPhone = (member, preference, now = new Date()) => {
+  const age = ageOn(member?.birthdate, now);
+  if (age !== null && age < 18) return normalizePhone(preference?.guardian_phone);
+  return normalizePhone(member?.phone);
+};
+const hasCampaignConsent = (member, preference, now = new Date()) => {
+  if (!member || Number(member.is_deleted) || member.status !== "Active" || !preference) return false;
+  if (!preference.sms_enabled || !preference.consent_at || preference.opted_out_at || preference.campaign_notifications === false) return false;
+  const age = ageOn(member.birthdate, now);
+  if (age !== null && age < 18) {
+    return Boolean(normalizePhone(preference.guardian_phone) && preference.guardian_consent_at);
+  }
+  return Boolean(normalizePhone(member.phone) && normalizePhone(preference.consent_phone) === normalizePhone(member.phone));
+};
 const clean = (value, max) => String(value || "").replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 const renderMessage = (template, member, session = {}) => {
   const activity = session.target || {};
@@ -83,4 +115,22 @@ const estimateSegments = (text) => {
   }
   return length <= 160 ? 1 : Math.ceil(length / 153);
 };
-module.exports = { DEFAULTS, DAY, normalizePhone, maskedPhone, key, isFinalized, getOutcome, findAbsenceEpisode, reminderWindow, reminderIsDue, hasSmsConsent, renderMessage, estimateSegments };
+const renderCampaignMessage = (template, member, activity = {}) => {
+  const date = activity.date ? new Date(activity.date) : null;
+  const variables = {
+    first_name: clean(member.first_name, 30),
+    activity: clean(activity.title, 60),
+    date: date && !Number.isNaN(date.getTime())
+      ? new Intl.DateTimeFormat("en-PH", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric" }).format(date) : "",
+    time: activity.time ? clean(activity.time, 20) : "",
+    venue: clean(activity.venue, 40),
+  };
+  return clean(String(template).replace(/\{\{([a-z_]+)\}\}/g, (_match, name) => variables[name] || ""), 480);
+};
+const estimateCampaignCost = (recipients, template, activity, unitCost) => {
+  const segments = recipients.map((recipient) => estimateSegments(renderCampaignMessage(template, recipient, activity)));
+  const totalSegments = segments.reduce((total, count) => total + count, 0);
+  return { segment_count: Math.max(1, ...segments), total_segments: totalSegments,
+    estimated_cost_php: Math.round(totalSegments * Number(unitCost) * 100) / 100 };
+};
+module.exports = { DEFAULTS, DAY, normalizePhone, maskedPhone, key, isFinalized, getOutcome, findAbsenceEpisode, reminderWindow, reminderIsDue, hasSmsConsent, hasCampaignConsent, campaignRecipientPhone, ageOn, renderMessage, renderCampaignMessage, estimateCampaignCost, estimateSegments };

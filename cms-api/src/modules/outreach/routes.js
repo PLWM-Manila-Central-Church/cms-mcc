@@ -6,14 +6,18 @@ const auth = require("../../middlewares/verifyToken");
 const authorize = require("../../middlewares/authorize");
 const AppError = require("../../helpers/AppError");
 const { Member, User } = require("../../models");
-const { readiness, requireSchema } = require("./readiness");
+const readinessModule = require("./readiness");
+const { readiness, requireSchema } = readinessModule;
+const campaignReadiness = readinessModule.campaignReadiness || (async () => true);
+const requireCampaignSchema = readinessModule.requireCampaignSchema || requireSchema;
 const { DEFAULTS } = require("./policy");
 const { getConfiguration, saveConfiguration, transportState } = require("./configuration");
-const { READ_ROLES, STAFF_ROLES, GLOBAL_ROLES, requireRole } = require("./permissions");
+const { READ_ROLES, STAFF_ROLES, GLOBAL_ROLES, CAMPAIGN_ROLES, requireRole, canBroadcast, canApprove } = require("./permissions");
 const repository = require("./repository");
 const { historyForMembers, evaluatePage, notifyAssignee } = require("./evaluation");
 const { processQueue, retryDelivery } = require("./dispatcher");
 const schemas = require("./validators");
+const campaigns = require("./campaigns.service");
 const validate = (schema, part = "body") => (req, _res, next) => {
   const { value, error } = schema.validate(req[part], { abortEarly: false, allowUnknown: false, convert: true });
   if (error) return next(AppError.badRequest("VALIDATION_ERROR", error.details.map((detail) => detail.message).join("; ")));
@@ -24,6 +28,7 @@ const handle = (fn) => async (req, res, next) => {
 };
 router.param("id", (req, _res, next, value) => /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value)) ? next() : next(AppError.badRequest("INVALID_ID", "A valid record ID is required")));
 router.param("memberId", (req, _res, next, value) => /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value)) ? next() : next(AppError.badRequest("INVALID_ID", "A valid member ID is required")));
+router.param("campaignId", (req, _res, next, value) => /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value)) ? next() : next(AppError.badRequest("INVALID_ID", "A valid campaign ID is required")));
 
 router.post("/jobs/run", async (req, res, next) => {
   try {
@@ -41,14 +46,24 @@ router.use(auth);
 router.get("/availability", handle(async (req) => {
   const ready = await readiness();
   const config = ready ? await getConfiguration() : DEFAULTS;
-  return { schema_ready: ready, enabled: config.enabled, mode: config.mode, ...transportState(),
+  return { schema_ready: ready, campaigns_schema_ready: ready && await campaignReadiness(), enabled: config.enabled, mode: config.mode, campaigns_enabled: config.campaigns_enabled, ...transportState(),
     capabilities: { configure: req.user.roleName === "System Admin", manage: STAFF_ROLES.includes(req.user.roleName),
       global: GLOBAL_ROLES.includes(req.user.roleName), resolve: READ_ROLES.includes(req.user.roleName),
-      process: STAFF_ROLES.includes(req.user.roleName) } };
+      process: STAFF_ROLES.includes(req.user.roleName), campaigns: CAMPAIGN_ROLES.includes(req.user.roleName),
+      broadcast: canBroadcast(req.user), approve: canApprove(req.user) } };
 }));
 router.get("/me/preferences", requireSchema, handle((req) => repository.getPreference(req.user.memberId, req.user, { self: true })));
 router.put("/me/preferences", requireSchema, validate(schemas.preference), handle((req) => repository.setPreference(req.user.memberId, req.body, req.user, { self: true })));
 router.use(requireRole(READ_ROLES), authorize("outreach", "read"), requireSchema);
+router.get("/campaigns", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.collection, "query"), handle((req) => campaigns.list(req.query, req.user)));
+router.post("/campaigns/preview", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.campaignPreview), handle((req) => campaigns.preview(req.body, req.user)));
+router.post("/campaigns", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.campaign), handle((req) => campaigns.create(req.body, req.user)));
+router.get("/campaigns/:campaignId", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, handle((req) => campaigns.get(req.params.campaignId, req.user)));
+router.get("/campaigns/:campaignId/deliveries", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.collection, "query"), handle((req) => campaigns.deliveries(req.params.campaignId, req.query)));
+router.post("/campaigns/:campaignId/submit", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.empty), handle((req) => campaigns.submit(req.params.campaignId, req.user)));
+router.post("/campaigns/:campaignId/approve", requireRole(["System Admin", "Pastor"]), requireCampaignSchema, validate(schemas.campaignNote), handle((req) => campaigns.approve(req.params.campaignId, req.user, req.body.note)));
+router.post("/campaigns/:campaignId/reject", requireRole(["System Admin", "Pastor"]), requireCampaignSchema, validate(schemas.campaignReason), handle((req) => campaigns.reject(req.params.campaignId, req.user, req.body.reason)));
+router.post("/campaigns/:campaignId/cancel", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.campaignNote), handle((req) => campaigns.cancel(req.params.campaignId, req.user, req.body.note)));
 router.get("/configuration", requireRole(["System Admin"]), handle(getConfiguration));
 router.put("/configuration", requireRole(["System Admin"]), authorize("outreach", "configure"), validate(schemas.configuration), handle((req) => saveConfiguration(req.body, req.user)));
 router.get("/overview", handle((req) => repository.overview(req.user)));

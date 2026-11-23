@@ -4,6 +4,7 @@ import api from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import useDialogFocus from '../../components/attendance/useQrDialogFocus';
 import NotificationPreferencesCard from '../../components/notifications/NotificationPreferencesCard';
+import CampaignsPanel from './CampaignsPanel';
 import { toCsv } from '../../utils/csv';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
 import './outreach.css';
@@ -331,6 +332,20 @@ function Configuration({ availability, onUpdated }) {
       <label>Activity reminder template<textarea value={form.reminder_template} onChange={(event) => setForm({ ...form, reminder_template: event.target.value })} minLength={10} maxLength={480} required /></label>
       <label>Attendance follow-up template<textarea value={form.followup_template} onChange={(event) => setForm({ ...form, followup_template: event.target.value })} minLength={10} maxLength={480} required /></label>
       <p className="outreach-muted">Available placeholders: {'{{first_name}}, {{activity}}, {{date}}, {{time}}, {{venue}}'}. Longer messages may use multiple SMS parts. Live sending has a separate server limit.</p>
+      <fieldset className="outreach-card" style={{ padding: 14 }}>
+        <legend>Notification campaigns</legend>
+        <label className="outreach-check"><input type="checkbox" checked={Boolean(form.campaigns_enabled)} onChange={(event) => setForm({ ...form, campaigns_enabled: event.target.checked })} />Enable custom event, ministry and all-member notifications</label>
+        <div className="outreach-grid">
+          <label>Unit cost per SMS · PHP<input type="number" min="0" step="0.001" value={form.campaign_unit_cost_php} onChange={(event) => setForm({ ...form, campaign_unit_cost_php: Number(event.target.value) })} /></label>
+          <label>Monthly SMS budget · PHP<input type="number" min="0" step="1" value={form.campaign_monthly_budget_php} onChange={(event) => setForm({ ...form, campaign_monthly_budget_php: Number(event.target.value) })} /></label>
+          <label>Weekly messages per member<input type="number" min="1" max="20" value={form.campaign_weekly_member_cap} onChange={(event) => setForm({ ...form, campaign_weekly_member_cap: Number(event.target.value) })} /></label>
+          <label>Monthly messages per member<input type="number" min="1" max="100" value={form.campaign_monthly_member_cap} onChange={(event) => setForm({ ...form, campaign_monthly_member_cap: Number(event.target.value) })} /></label>
+          <label>Approval threshold · recipients<input type="number" min="1" value={form.campaign_approval_recipient_threshold} onChange={(event) => setForm({ ...form, campaign_approval_recipient_threshold: Number(event.target.value) })} /></label>
+          <label>Approval threshold · PHP<input type="number" min="0" value={form.campaign_approval_cost_threshold} onChange={(event) => setForm({ ...form, campaign_approval_cost_threshold: Number(event.target.value) })} /></label>
+          <label>Send window starts<input type="number" min="0" max="23" value={form.campaign_quiet_start} onChange={(event) => setForm({ ...form, campaign_quiet_start: Number(event.target.value) })} /></label>
+          <label>Send window ends<input type="number" min="1" max="23" value={form.campaign_quiet_end} onChange={(event) => setForm({ ...form, campaign_quiet_end: Number(event.target.value) })} /></label>
+        </div>
+      </fieldset>
       <button type="submit" className="outreach-primary" disabled={busy}>{busy ? 'Saving…' : 'Save configuration'}</button>
     </form>}
   </section>;
@@ -379,7 +394,10 @@ export default function OutreachPage() {
   };
   const caps = availability?.capabilities || {};
   const readOnly = user.roleName === 'Leader' && (!activeLeaderScopeKey || activeLeaderScopeKey === 'all');
-  const tabs = [['followups', 'Follow-ups'], ...(caps.global ? [['sessions', 'Activity rules']] : []),
+  const tabs = [['followups', 'Follow-ups'],
+    ...(availability?.campaigns_enabled && caps.campaigns ? [['campaigns', 'Campaigns']] : []),
+    ...(availability?.campaigns_enabled && caps.approve ? [['approvals', 'Approvals']] : []),
+    ...(caps.global ? [['sessions', 'Activity rules']] : []),
     ['deliveries', 'Delivery history'], ...(caps.manage ? [['consent', 'Member consent']] : []), ...(caps.configure ? [['configuration', 'Configuration']] : [])];
   const selectTab = (value) => { setTab(value); setError(''); setNotice(''); };
   const navigateTabs = (event, value) => {
@@ -415,6 +433,8 @@ export default function OutreachPage() {
         onKeyDown={(event) => navigateTabs(event, value)} onClick={() => selectTab(value)}>{label}</button>)}</div>
       <div role="tabpanel" id="outreach-panel" aria-labelledby={'outreach-tab-' + tab} key={activeLeaderScopeKey || 'global'}>
         {tab === 'followups' && <FollowUps refreshKey={refreshKey} canResolve={caps.resolve && hasPermission('outreach', 'resolve')} readOnly={readOnly} onUpdated={updated} />}
+        {tab === 'campaigns' && <CampaignsPanel user={user} caps={caps} refreshKey={refreshKey} onUpdated={updated} />}
+        {tab === 'approvals' && <CampaignsPanel user={user} caps={caps} refreshKey={refreshKey} onUpdated={updated} approvalsOnly />}
         {tab === 'sessions' && caps.global && <Sessions refreshKey={refreshKey} canManage={caps.manage} onUpdated={updated} />}
         {tab === 'deliveries' && <DeliveryHistory refreshKey={refreshKey} canManage={caps.manage} onUpdated={updated} />}
         {tab === 'consent' && caps.manage && <Consent />}
