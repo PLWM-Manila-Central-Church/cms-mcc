@@ -23,6 +23,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e:qr": "node scripts/qr-attendance-browser-e2e.mjs",
+    "test:ui": "node scripts/ui-smoke.mjs",
     "test:watch": "vitest"
   },
   "devDependencies": {
