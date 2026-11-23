@@ -25,7 +25,7 @@ const getConfiguration = async () => {
 };
 const transportState = () => ({
   sms_delivery_enabled: process.env.SMS_DELIVERY_ENABLED === "true",
-  provider_configured: Boolean(process.env.MOCEAN_API_KEY && process.env.MOCEAN_API_SECRET && process.env.MOCEAN_SENDER_ID),
+  provider_configured: Boolean(process.env.MOCEAN_SENDER_ID && (process.env.MOCEAN_API_TOKEN || (process.env.MOCEAN_API_KEY && process.env.MOCEAN_API_SECRET))),
   recipient_restriction_configured: process.env.SMS_ALLOW_ALL_OPTED_IN === "true" || Boolean((process.env.SMS_ALLOWED_RECIPIENTS || "").trim()),
   scheduler_enabled: process.env.OUTREACH_SCHEDULER_ENABLED !== "false" && process.env.NODE_ENV !== "test",
 });

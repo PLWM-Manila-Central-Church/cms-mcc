@@ -4,7 +4,7 @@ const transport = require("../src/modules/outreach/mocean.transport");
 const { transportState } = require("../src/modules/outreach/configuration");
 
 describe("SMS no-send safety", () => {
-  const keys = ["SMS_DELIVERY_ENABLED", "SMS_ALLOWED_RECIPIENTS", "SMS_ALLOW_ALL_OPTED_IN", "MOCEAN_API_KEY", "MOCEAN_API_SECRET", "MOCEAN_SENDER_ID"];
+  const keys = ["SMS_DELIVERY_ENABLED", "SMS_ALLOWED_RECIPIENTS", "SMS_ALLOW_ALL_OPTED_IN", "MOCEAN_API_TOKEN", "MOCEAN_API_KEY", "MOCEAN_API_SECRET", "MOCEAN_SENDER_ID"];
   const original = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   const originalFetch = global.fetch;
 
