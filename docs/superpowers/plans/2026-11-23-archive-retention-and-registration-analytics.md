@@ -1,7 +1,7 @@
 # Archive retention and registration analytics
 
 Date: 2026-11-23
-Status: implementing
+Status: implemented locally; not deployed or run against production TiDB
 
 ## Part 1 — Archive lifetime, listing and safeguards
 
@@ -58,3 +58,22 @@ Design:
 Files: `services/registrationAnalytics.service.js`, `helpers/registrationAnalytics.helper.js`
 (+ test), reports controller/routes, `pages/reports/RegistrationAnalyticsPage.jsx` (+ test),
 `AppRoute.jsx`, `constants.js`, `Sidebar.jsx` (roles filter already supported).
+
+
+## As built (2026-11-23)
+
+Verified locally:
+
+- archive retention helper: 7 tests; registration analytics helper: 3 tests;
+  Mocean transport: 5 tests; existing SMS safety: 2 tests.
+- frontend: 235/235 tests and production build pass; UI smoke harness 25/25 routes.
+- Mocean live: one SMS accepted (HTTP 202, status 0, 1 credit), received on the handset.
+
+Not done / not verified:
+
+- Neither migration has been applied to production TiDB; the archive purge and registration APIs
+  have not run against real data.
+- System-record retention holds exist as an API only; there is no toggle in the system archive UI.
+- The registration page has only been exercised against the mock harness, not live registrations.
+- Deployment is blocked: the org rejects the supplied GitHub PAT (lifetime policy), so Render is
+  still running the 22 Oct build.
