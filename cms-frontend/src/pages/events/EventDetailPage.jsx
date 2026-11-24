@@ -8,6 +8,7 @@ import { normalizeEventStatus } from '../../utils/eventStatus';
 import { eventImageSrc } from '../../utils/eventImage';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
 import EventReservationFields from '../../components/events/EventReservationFields';
+import EventWorkspacePanel from '../../components/events/EventWorkspacePanel';
 
 const STATUS_META = {
   Upcoming:  { bg: '#dcfce7', color: '#16a34a', label: 'Upcoming' },
@@ -545,7 +546,7 @@ export default function EventDetailPage() {
                   onClick={handleSendInvites}
                   disabled={sendingInvites || selectedIds.size === 0}
                   style={{
-                    background: selectedIds.size === 0 ? '#e2e8f0' : 'linear-gradient(135deg,#7c3aed,#9333ea)',
+                    background: selectedIds.size === 0 ? '#e2e8f0' : '#005599',
                     color: selectedIds.size === 0 ? '#94a3b8' : 'var(--mcc-surface, #fff)',
                     border: 'none', borderRadius: 8, padding: '10px 20px',
                     fontSize: 14, fontWeight: 700, cursor: selectedIds.size === 0 ? 'not-allowed' : 'pointer',
@@ -566,6 +567,10 @@ export default function EventDetailPage() {
             </>
           )}
         </div>
+      )}
+
+      {user?.roleName !== 'Member' && event?.id && (
+        <EventWorkspacePanel eventId={event.id} />
       )}
     </div>
   );

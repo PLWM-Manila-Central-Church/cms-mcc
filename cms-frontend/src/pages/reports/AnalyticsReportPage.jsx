@@ -197,7 +197,11 @@ export default function AnalyticsReportPage() {
                   { label: 'Members', value: number(memberTotal) },
                   { label: 'Active', value: number(data.members.active), hint: `${shareOf(data.members.active, memberTotal)}% of roster` },
                   { label: 'Inactive', value: number(data.members.inactive), hint: `${shareOf(data.members.inactive, memberTotal)}% of roster` },
-                  { label: 'New in range', value: number(data.members.new_in_range) },
+                  { label: 'New in range', value: number(data.members.new_in_range), hint: data.member_insights?.yoy_delta_pct != null ? `${data.member_insights.yoy_delta_pct >= 0 ? '+' : ''}${data.member_insights.yoy_delta_pct}% YoY` : undefined },
+                  ...(data.member_insights ? [
+                    { label: 'Net growth', value: `${data.member_insights.net_growth >= 0 ? '+' : ''}${number(data.member_insights.net_growth)}`, hint: `${number(data.member_insights.archived_in_range)} archived` },
+                    { label: 'Retention rate', value: `${data.member_insights.retention_rate_pct}%`, hint: 'Active share' },
+                  ] : []),
                 ]}
               />
             </ReportSection>
@@ -257,6 +261,10 @@ export default function AnalyticsReportPage() {
                       { label: 'Service check-ins', value: number(data.attendance.service_checkins) },
                       { label: 'Event check-ins', value: number(data.attendance.event_checkins) },
                       { label: 'Average per interval', value: number(averagePerBucket(attendanceTotal, attendanceBuckets.length)), hint: `${attendanceBuckets.length} intervals` },
+                      ...(data.attendance_insights ? [
+                        { label: 'Avg / gathering', value: number(data.attendance_insights.average_per_gathering), hint: `${number(data.attendance_insights.gatherings_count)} services` },
+                        { label: 'Visitors', value: number(data.attendance_insights.total_visitors), hint: `${number(data.attendance_insights.first_time_visitors)} first-time` },
+                      ] : []),
                     ]}
                   />
                   <LineTrend
@@ -287,6 +295,37 @@ export default function AnalyticsReportPage() {
               </ReportSection>
             )}
 
+            {canSeeMembersAndAttendance && data.attendance_insights && (
+              <ReportSection
+                title="Gatherings & Visitor Care"
+                hint="Attendance breakdown by gathering type, visitors, and follow-up watch"
+                className="ar-span-12"
+              >
+                <div className="ar-groups">
+                  <div className="ar-groups-col">
+                    <h3 className="ar-subhead">Check-ins by gathering type</h3>
+                    <RankedBars
+                      rows={data.attendance_insights.by_gathering_type || []}
+                      limit={6}
+                      emptyLabel="No gatherings recorded in this range."
+                    />
+                  </div>
+                  <div className="ar-groups-col">
+                    <h3 className="ar-subhead">Engagement &amp; visitor summary</h3>
+                    <MetricRail
+                      orientation="horizontal"
+                      items={[
+                        { label: 'Attendance rate', value: `${data.attendance_insights.attendance_rate_pct ?? 0}%`, hint: 'Avg vs active roster' },
+                        { label: 'First-time visitors', value: number(data.attendance_insights.first_time_visitors) },
+                        { label: 'Returning visitors', value: number(data.attendance_insights.returning_visitors) },
+                        { label: 'Active follow-ups', value: number(data.attendance_insights.absent_streak_count), hint: 'Absence care queue' },
+                      ]}
+                    />
+                  </div>
+                </div>
+              </ReportSection>
+            )}
+
             {canSeeFinance && data.finance && (
               <ReportSection
                 title="Finance"
@@ -300,6 +339,10 @@ export default function AnalyticsReportPage() {
                       { label: 'Received income', value: compactMoney(data.finance.income), title: money(data.finance.income) },
                       { label: 'Expenses', value: compactMoney(data.finance.expenses), title: money(data.finance.expenses) },
                       { label: 'Net balance', value: compactMoney(data.finance.net), title: money(data.finance.net) },
+                      ...(data.finance_insights ? [
+                        { label: 'Expense ratio', value: `${data.finance_insights.expense_ratio_pct}%` },
+                        { label: 'Net margin', value: `${data.finance_insights.net_margin_pct}%` },
+                      ] : []),
                     ]}
                   />
                   <LineTrend
@@ -315,10 +358,42 @@ export default function AnalyticsReportPage() {
               </ReportSection>
             )}
 
+            {canSeeFinance && data.finance_insights && (
+              (data.finance_insights.by_income_category?.length > 0 || data.finance_insights.by_expense_category?.length > 0) && (
+                <ReportSection
+                  title="Finance Categories"
+                  hint="Income and expense distribution across categories"
+                  className="ar-span-12"
+                >
+                  <div className="ar-groups">
+                    <div className="ar-groups-col">
+                      <h3 className="ar-subhead">Income by category</h3>
+                      <RankedBars
+                        rows={data.finance_insights.by_income_category || []}
+                        limit={8}
+                        valueFormat={compactMoney}
+                        emptyLabel="No income categories recorded."
+                      />
+                    </div>
+                    <div className="ar-groups-col">
+                      <h3 className="ar-subhead">Expenses by category</h3>
+                      <RankedBars
+                        rows={data.finance_insights.by_expense_category || []}
+                        limit={8}
+                        color="#5c9dc4"
+                        valueFormat={compactMoney}
+                        emptyLabel="No expense categories recorded."
+                      />
+                    </div>
+                  </div>
+                </ReportSection>
+              )
+            )}
+
             {canSeeMembersAndAttendance && hasGroups && (
               <ReportSection
                 title="Groups"
-                hint="Largest cell groups and ministry groups by membership"
+                hint="Largest cell groups and ministries by membership"
                 className="ar-span-12"
               >
                 <div className="ar-groups">
@@ -327,10 +402,84 @@ export default function AnalyticsReportPage() {
                     <RankedBars rows={cellGroupRows} limit={8} emptyLabel="No cell groups recorded." />
                   </div>
                   <div className="ar-groups-col">
-                    <h3 className="ar-subhead">Ministry groups</h3>
-                    <RankedBars rows={ministryGroupRows} limit={8} color="#5c9dc4" emptyLabel="No ministry groups recorded." />
+                    <h3 className="ar-subhead">Ministries</h3>
+                    <RankedBars rows={ministryGroupRows} limit={8} color="#5c9dc4" emptyLabel="No ministries recorded." />
                   </div>
                 </div>
+              </ReportSection>
+            )}
+
+            {canSeeMembersAndAttendance && data.group_insights && (
+              (data.group_insights.ministry_participation?.length > 0 || data.group_insights.quiet_cell_groups?.length > 0) && (
+                <ReportSection
+                  title="Ministry & Cell Health"
+                  hint="Active participation rates by ministry and cell groups with no activity in 30 days"
+                  className="ar-span-12"
+                >
+                  <div className="ar-groups">
+                    <div className="ar-groups-col">
+                      <h3 className="ar-subhead">Ministry active rate</h3>
+                      <table className="ar-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Ministry</th>
+                            <th scope="col">Active / Total</th>
+                            <th scope="col">Active %</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(data.group_insights.ministry_participation || []).map((row) => (
+                            <tr key={row.id ?? row.label}>
+                              <td>{row.label}</td>
+                              <td>{number(row.active)} / {number(row.total)}</td>
+                              <td>{row.active_rate_pct}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="ar-groups-col">
+                      <h3 className="ar-subhead">Cell groups needing check-in (30d quiet)</h3>
+                      {(data.group_insights.quiet_cell_groups || []).length === 0 ? (
+                        <p className="ar-footnote">All active cell groups have recorded attendance within the past 30 days.</p>
+                      ) : (
+                        <table className="ar-table">
+                          <thead>
+                            <tr>
+                              <th scope="col">Cell Group</th>
+                              <th scope="col">Members</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.group_insights.quiet_cell_groups.map((cg) => (
+                              <tr key={cg.id ?? cg.label}>
+                                <td>{cg.label}</td>
+                                <td>{number(cg.member_count)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </div>
+                </ReportSection>
+              )
+            )}
+
+            {data.operations_snapshot && (
+              <ReportSection
+                title="Operations & Backup Status"
+                hint="Inventory readiness and latest verified backup"
+                className="ar-span-12"
+              >
+                <MetricRail
+                  orientation="horizontal"
+                  items={[
+                    { label: 'Inventory items', value: number(data.operations_snapshot.inventory_total_items) },
+                    { label: 'Low-stock alerts', value: number(data.operations_snapshot.inventory_low_stock) },
+                    { label: 'Last verified backup', value: data.operations_snapshot.last_verified_backup_at || 'Not recorded' },
+                  ]}
+                />
               </ReportSection>
             )}
           </div>

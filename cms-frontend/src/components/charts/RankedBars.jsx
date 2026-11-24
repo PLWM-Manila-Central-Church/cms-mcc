@@ -18,21 +18,27 @@ export default function RankedBars({
 
   if (shown.length === 0) return <p className="ar-empty">{emptyLabel}</p>;
 
-  const max = Math.max(1, ...shown.map((row) => Number(row.total || 0)));
+  const namedShown = shown.filter((row) => !isOther(row));
+  const max = Math.max(1, ...(namedShown.length ? namedShown : shown).map((row) => Number(row.total || 0)));
 
   return (
     <>
       <ol className="ar-ranked">
       {shown.map((row) => {
         const total = Number(row.total || 0);
+        const otherRow = isOther(row);
         const width = Math.min(100, (total / max) * 100);
         return (
-          <li className="ar-ranked-row" key={`${row.id ?? ''}-${row.label}`}>
+          <li
+            className={`ar-ranked-row${otherRow ? ' ar-ranked-row--other' : ''}`}
+            key={`${row.id ?? ''}-${row.label}`}
+            style={otherRow ? { borderTop: '1px dashed #e2e8f0', paddingTop: 8, marginTop: 2 } : undefined}
+          >
             <span className="ar-ranked-label" title={row.label}>{row.label}</span>
             <span className="ar-ranked-track">
               <span
                 className="ar-ranked-bar"
-                style={{ width: `${width}%`, background: color }}
+                style={{ width: `${width}%`, background: otherRow ? '#9dc0d8' : color }}
               />
             </span>
             <span className="ar-ranked-value">{total.toLocaleString('en-PH')}</span>

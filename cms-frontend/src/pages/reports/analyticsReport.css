@@ -435,8 +435,11 @@
   .analytics-report * { visibility: visible !important; }
 
   /* The shell must stop reserving space, or every page is offset and clipped. */
+  .mcc-workspace { display: block !important; }
   .mcc-main { margin-left: 0 !important; padding: 0 !important; }
   .mcc-header,
+  .mcc-sidebar-rail,
+  .mcc-sidebar,
   .mcc-nav,
   .mcc-skip-link,
   .workspace-context { display: none !important; }

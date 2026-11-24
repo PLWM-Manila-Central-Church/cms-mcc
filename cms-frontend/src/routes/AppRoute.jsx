@@ -16,6 +16,8 @@ const MemberPortal = lazy(() => import('../pages/members/MemberPortal'));
 const MemberPortalSettings = lazy(() => import('../pages/members/MemberPortalSettings'));
 const MemberProfilePage = lazy(() => import('../pages/members/MemberProfilePage'));
 const CellGroupsPage = lazy(() => import('../pages/cellgroups/CellGroupsPage'));
+const MinistriesHubPage = lazy(() => import('../pages/ministries/MinistriesHubPage'));
+const OrgGroupsPage = lazy(() => import('../pages/groups/OrgGroupsPage'));
 const MinistryPage = lazy(() => import('../pages/ministry/MinistryPage'));
 const MinistrySchedulesPage = lazy(() => import('../pages/ministry/MinistrySchedulesPage'));
 const BibleReadingPage = lazy(() => import('../pages/reports/BibleReadingPage'));
@@ -27,6 +29,9 @@ const AttendancePage = lazy(() => import('../pages/attendance/AttendancePage'));
 const QrAttendancePage = lazy(() => import('../pages/attendance/QrAttendancePage'));
 const FinancePage = lazy(() => import('../pages/finance/FinancePage'));
 const ExpensesPage = lazy(() => import('../pages/finance/ExpensesPage'));
+const FinanceFundsAccountsPage = lazy(() => import('../pages/finance/FinanceFundsAccountsPage'));
+const FinanceApprovalsPage = lazy(() => import('../pages/finance/FinanceApprovalsPage'));
+const FinanceReportsLedgerPage = lazy(() => import('../pages/finance/FinanceReportsLedgerPage'));
 const AnalyticsReportPage = lazy(() => import('../pages/reports/AnalyticsReportPage'));
 const TeamAttendanceReportPage = lazy(() => import('../pages/reports/TeamAttendanceReportPage'));
 const OutreachPage = lazy(() => import('../pages/notifications/OutreachPage'));
@@ -139,6 +144,9 @@ const AppRoutes = () => {
       <Route path="/attendance/qr" element={<ProtectedRoute module="qr_attendance" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading attendance tools…</div>}><QrAttendancePage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/finance"    element={<ProtectedRoute module="finance" action="read"><MainLayout><FinancePage /></MainLayout></ProtectedRoute>} />
       <Route path="/finance/expenses" element={<ProtectedRoute module="finance" action="read"><MainLayout><ExpensesPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/finance/funds" element={<ProtectedRoute module="finance" action="read"><MainLayout><FinanceFundsAccountsPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/finance/approvals" element={<ProtectedRoute module="finance" action="read"><MainLayout><FinanceApprovalsPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/finance/reports" element={<ProtectedRoute module="finance" action="read"><MainLayout><FinanceReportsLedgerPage /></MainLayout></ProtectedRoute>} />
       <Route path="/reports/analytics" element={<ProtectedRoute module="dashboard" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading analytics…</div>}><AnalyticsReportPage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/reports/team-attendance" element={<ProtectedRoute module="attendance" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading team attendance…</div>}><TeamAttendanceReportPage /></Suspense></MainLayout></ProtectedRoute>} />
       <Route path="/reports/registration" element={<ProtectedRoute module="attendance" action="read"><MainLayout><Suspense fallback={<div style={{ padding: 32 }}>Loading registration analytics…</div>}><RegistrationAnalyticsPage /></Suspense></MainLayout></ProtectedRoute>} />
@@ -165,6 +173,8 @@ const AppRoutes = () => {
       <Route path="/members/:id/edit" element={<ProtectedRoute module="members" action="update"><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
 
       <Route path="/cell-groups" element={<ProtectedRoute module="cell_groups" action="read"><MainLayout><CellGroupsPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/ministries"  element={<ProtectedRoute module="members" action="read"><MainLayout><MinistriesHubPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/groups"      element={<ProtectedRoute module="ministry" action="read"><MainLayout><OrgGroupsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/ministry"    element={<ProtectedRoute module="ministry" action="read"><MainLayout><MinistryPage /></MainLayout></ProtectedRoute>} />
 
       <Route path="/unauthorized" element={<UnauthorizedPage />} />

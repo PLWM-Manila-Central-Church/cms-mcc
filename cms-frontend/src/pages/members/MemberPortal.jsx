@@ -11,6 +11,7 @@ import FinanceAttachments from '../../components/finance/FinanceAttachments';
 import MemberSubstituteRequests from '../../components/ministry/MemberSubstituteRequests';
 import BibleReadingPanel from '../../components/portal/BibleReadingPanel';
 import MinistrySchedulePanel from '../../components/portal/MinistrySchedulePanel';
+import PortalEngagementPanel from '../../components/portal/PortalEngagementPanel';
 import PortalEventCalendar from '../../components/portal/PortalEventCalendar';
 import PortalDialog from '../../components/portal/PortalDialog';
 import { uploadUrl } from '../../utils/uploadUrl';
@@ -1187,6 +1188,7 @@ export default function MemberPortal() {
             {tab===3&&<FinanceTab finance={finance} initialError={financeError} c={c} f={f} t={t} fmtDate={fmtDate} PHP={money} hideMoney={hideMoney} onToggleMoney={toggleMoney} isMobile={isMobile} language={lang}/>}
             {tab===4&&<>
               <MinistrySchedulePanel c={c} f={f} data={schedule} labels={MINISTRY_LBL[lang] || MINISTRY_LBL.en}/>
+              <PortalEngagementPanel colors={c}/>
               <div style={{marginTop:24}}><MemberSubstituteRequests c={c} isMobile={isMobile}/></div>
             </>}
             {tab===5&&<BibleReadingPanel c={c} f={f} labels={BIBLE_LBL[lang] || BIBLE_LBL.en} showToast={showToast}/>}

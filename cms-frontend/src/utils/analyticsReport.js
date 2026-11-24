@@ -191,6 +191,13 @@ export const buildAnalyticsCsvRows = (data, {
     for (const item of data.member_growth || []) {
       rows.push(analyticsCsvRow('Member growth', item.period, item.total, 'members', 'New members per report interval'));
     }
+    if (data.member_insights) {
+      rows.push(
+        analyticsCsvRow('Member insights', 'Archived in range', data.member_insights.archived_in_range ?? 0, 'members'),
+        analyticsCsvRow('Member insights', 'Net growth', data.member_insights.net_growth ?? 0, 'members'),
+        analyticsCsvRow('Member insights', 'Retention rate', data.member_insights.retention_rate_pct ?? 0, '%'),
+      );
+    }
   }
   if (canSeeMembersAndAttendance && data?.attendance) {
     rows.push(
@@ -219,6 +226,18 @@ export const buildAnalyticsCsvRows = (data, {
         analyticsCsvRow('Attendance trend', item.period + ' event', events, 'check-ins'),
         analyticsCsvRow('Attendance trend', item.period + ' total', service + events, 'check-ins'),
       );
+    }
+    if (data.attendance_insights) {
+      rows.push(
+        analyticsCsvRow('Attendance insights', 'Average per gathering', data.attendance_insights.average_per_gathering ?? 0, 'check-ins'),
+        analyticsCsvRow('Attendance insights', 'Attendance rate', data.attendance_insights.attendance_rate_pct ?? 0, '%'),
+        analyticsCsvRow('Attendance insights', 'First-time visitors', data.attendance_insights.first_time_visitors ?? 0, 'visitors'),
+        analyticsCsvRow('Attendance insights', 'Returning visitors', data.attendance_insights.returning_visitors ?? 0, 'visitors'),
+        analyticsCsvRow('Attendance insights', 'Active absence follow-ups', data.attendance_insights.absent_streak_count ?? 0, 'cases'),
+      );
+      for (const gt of data.attendance_insights.by_gathering_type || []) {
+        rows.push(analyticsCsvRow('Attendance by gathering', gt.label, gt.total, 'check-ins', `${gt.services_count} services`));
+      }
     }
   }
   if (canSeeFinance && data?.finance) {

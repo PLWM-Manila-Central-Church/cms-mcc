@@ -166,13 +166,14 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
               return (
                 <div
                   key={day.date}
+                  className="portal-cal-cell"
                   role="gridcell"
                   aria-label={`${dayLabel(day.date)}, ${day.events.length} ${day.events.length === 1 ? 'event' : 'events'}`}
                   onClick={() => setOpenDay(day.date)}
                   style={{
-                    height: isMobile ? 46 : 78, minWidth: 0, padding: isMobile ? '4px 3px' : '5px 6px',
-                    display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'center' : 'stretch', gap: 2,
-                    borderRadius: 7, textAlign: 'left', cursor: 'pointer',
+                    height: isMobile ? 46 : 82, minWidth: 0, padding: isMobile ? '4px 3px' : '5px 6px',
+                    display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'center' : 'stretch', gap: 3,
+                    borderRadius: 7, textAlign: 'left', cursor: 'pointer', overflow: 'hidden',
                     border: isOpen ? `1.5px solid ${c.accent}` : `1px solid ${isToday ? c.accent : c.borderL}`,
                     background: hasEvents ? c.accentL : 'transparent',
                     color: c.t1,
@@ -185,9 +186,9 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
                     aria-label={`Open ${dayLabel(day.date)}`}
                     style={{
                       border: 0, background: 'transparent', padding: 0, margin: 0, cursor: 'pointer', font: 'inherit',
-                      fontSize: f.xs, fontWeight: isToday || isOpen ? 800 : 600,
+                      fontSize: f.xs, fontWeight: isToday || isOpen ? 800 : 600, minHeight: 0, lineHeight: 1.2,
                       color: isToday || isOpen ? c.accentT : c.t2,
-                      alignSelf: isMobile ? 'center' : 'flex-start',
+                      alignSelf: isMobile ? 'center' : 'flex-start', flexShrink: 0,
                     }}
                   >
                     {day.number}
@@ -198,8 +199,9 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
                       type="button"
                       onClick={(clickEvent) => { clickEvent.stopPropagation(); onEventClick?.(event); }}
                       style={{
-                        border: 0, padding: 0, margin: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left',
-                        font: 'inherit', fontSize: 10, lineHeight: 1.15, color: c.accentT,
+                        border: 0, padding: '1px 4px', margin: 0, background: 'rgba(0,85,153,0.08)', borderRadius: 4,
+                        cursor: 'pointer', textAlign: 'left', minHeight: 0, flexShrink: 0,
+                        font: 'inherit', fontSize: 10, lineHeight: 1.3, color: c.accentT,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%',
                       }}
                     >

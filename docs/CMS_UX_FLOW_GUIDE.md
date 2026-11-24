@@ -615,3 +615,15 @@ Portal Settings  /portal/settings
 | Register for event | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Download archive file | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | View audit logs | ✅ | ✅ | ✅ | ✅ | — | — | — | — |
+
+---
+
+## 13. Upgraded Church Management Modules (Phases 1–7)
+
+- **Ministries (`/ministries`) vs. Serving Groups (`/groups`):** Life-stage fellowship ministries (Young Adults, High School, Men's, Women's, Elementary, Preschool, Toddlers) are managed separately from multi-membership Serving Groups & Teams (Choir, Ushers, Sound & Broadcast, Teachers, Committees) with defined team positions, activities, and tasks.
+- **Consolidated Analytics (`/reports/analytics`):** Includes `join_date`-accurate member growth (filtering bulk-import spikes), retention & YoY growth, gathering-type attendance breakdown, first-time/returning visitors, income & expense category charts, quiet cell-group watch, and inventory/backup readiness.
+- **Church Financial Management (`/finance/funds`, `/finance/approvals`, `/finance/reports`):** Designated Funds vs. Financial Accounts (Cash, Petty Cash, Bank, GCash), internal Fund/Account Transfers excluded from Income/Expense totals, maker-checker Expense Approval Workflow (`Draft → Pending Approval → Approved → Paid`), Consolidated Monthly Financial Statement (`Ending = Beginning + Income − Paid Expenses`), 5 Expense Reports, and Unified Audit Ledger.
+- **Event Workspace (`/events/:id`):** Embedded 5-tab planning & hybrid finance workspace (Program Run-Sheet, Committees & Volunteer Assignments, Budget Proposals, Cash Advances tracked immediately without expense inflation, Receipt Liquidations posted once to Finance with zero double-counting, Inventory Resources, and Completion Checklist).
+- **Ministry Engagement & Calm Member Portal (`/ministries`, `/portal?tab=ministries`, `/members/:id`):** Activity RSVPs (`Yes`/`Maybe`/`No` + optional reason) strictly separate from verified attendance check-ins, Ministry Announcements, Leader–Member Direct Messages, Confidential Prayer Requests, and 5-Stage Pastoral Care & Visitation tracking.
+- **Cell Group Meetings & Service Program Builder (`/cell-groups`, `/services`):** Leaderless/quiet 30-day cell group health alerts, weekly cell meeting logs, recurring weekly service rule generator, Service Program Builder, and Servant Assignment Conflict Detection.
+- **Inventory Operations (`/inventory`):** Reusable Assets vs. Consumables tracking, authoritative transactional Stock Ledger (with `FOR UPDATE` locking, non-negative stock guard, and optional Finance purchase approval request), Equipment Borrowing & Return Reconciliation, Maintenance/Repair logs, and Asset Valuation summary.

@@ -1,17 +1,15 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { NAV_ITEMS, NAV_ICONS } from '../../utils/constants';
+import { NAV_ITEMS } from '../../utils/constants';
 import { isVisibleNavItem } from '../../utils/roleAccess';
-import SafeIcon from '../common/SafeIcon';
+import MonoIcon from '../common/MonoIcon';
 import { currentNavPath } from '../../utils/navigationState';
 import { getRoleWorkspace, workspaceNavigation } from '../../utils/roleWorkspace';
 
 const LOGO = process.env.PUBLIC_URL + '/logo.jpg';
 
 function NavIcon({ name, size = 18 }) {
-  const svg = NAV_ICONS[name];
-  if (!svg) return null;
-  return <SafeIcon svg={svg} size={size} />;
+  return <MonoIcon name={name || 'file'} size={size} strokeWidth={1.75} />;
 }
 
 export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
@@ -27,7 +25,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
   const showText = isMobile || !collapsed;
 
   return (
-    <aside className="mcc-sidebar" aria-label="Church workspace" style={{ ...S.sidebar, width: isMobile ? '260px' : (collapsed ? '68px' : '244px') }}>
+    <aside className="mcc-sidebar" aria-label="Church workspace" style={{ ...S.sidebar, width: isMobile ? '260px' : '100%' }}>
       {/* Logo */}
       <div style={{ ...S.logoWrap, justifyContent: showText ? 'flex-start' : 'center', padding: showText ? '18px 16px' : '20px 0' }}>
         <img src={LOGO} alt="PLWM-MCC" style={S.logoImg} />
@@ -55,12 +53,11 @@ export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
             onClick={isMobile ? onToggle : undefined}
             style={() => ({
               ...S.navItem,
-              background:     activePath === item.path ? 'rgba(19,181,234,0.14)' : 'transparent',
+              background:     activePath === item.path ? 'rgba(19,181,234,0.16)' : 'transparent',
               borderLeft:     activePath === item.path ? '3px solid #13B5EA' : '3px solid transparent',
               color:          activePath === item.path ? '#fff' : '#c5d9eb',
               justifyContent: showText ? 'flex-start'             : 'center',
-              paddingLeft:    showText ? '18px'                   : '0',
-              padding:        isMobile ? '13px 18px' : showText ? '10px 18px' : '10px 0',
+              padding:        isMobile ? '12px 16px' : showText ? '9px 14px' : '10px 0',
             })}
           >
             <NavIcon name={item.icon} size={18} />
@@ -71,8 +68,10 @@ export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
       </nav>
 
       {!isMobile && (
-        <button onClick={onToggle} style={S.toggleBtn} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={!collapsed} title={collapsed ? 'Expand' : 'Collapse'}>
-          {collapsed ? '▶' : '◀'}
+        <button onClick={onToggle} style={S.toggleBtn} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={!collapsed} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {collapsed ? <polyline points="9 18 15 12 9 6" /> : <polyline points="15 18 9 12 15 6" />}
+          </svg>
         </button>
       )}
     </aside>
@@ -82,34 +81,36 @@ export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
 const S = {
   sidebar: {
     height: '100vh',
+    position: 'sticky',
+    top: 0,
     background: '#00284a',
     display: 'flex', flexDirection: 'column',
     overflowX: 'hidden', overflowY: 'auto',
     borderRight: '1px solid rgba(255,255,255,0.08)',
-    transition: 'width 0.25s ease',
   },
   logoWrap: {
     display: 'flex', alignItems: 'center', gap: '11px',
     borderBottom: '1px solid rgba(255,255,255,0.1)',
-    minHeight: '72px', flexShrink: 0,
+    minHeight: '64px', flexShrink: 0,
   },
-  logoImg:      { width: '38px', height: '38px', objectFit: 'contain', flexShrink: 0, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', padding: '3px' },
+  logoImg:      { width: '36px', height: '36px', objectFit: 'contain', flexShrink: 0, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', padding: '3px' },
   logoTextWrap: { display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-  logoText:     { color: '#fff', fontWeight: '800', fontSize: '15px', letterSpacing: '1.5px', whiteSpace: 'nowrap' },
-  logoSub:      { color: 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '500', whiteSpace: 'nowrap', letterSpacing: '0.5px', marginTop: '2px' },
-  nav:          { flex: 1, display: 'flex', flexDirection: 'column', gap: 3, padding: '14px 8px', overflowY: 'auto', overflowX: 'hidden' },
+  logoText:     { color: '#fff', fontWeight: '800', fontSize: '15px', letterSpacing: '1.2px', whiteSpace: 'nowrap' },
+  logoSub:      { color: 'rgba(255,255,255,0.62)', fontSize: '11px', fontWeight: '500', whiteSpace: 'nowrap', marginTop: '1px' },
+  nav:          { flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 8px', overflowY: 'auto', overflowX: 'hidden' },
   navItem: {
     display: 'flex', alignItems: 'center', gap: '11px',
-    padding: '10px 18px', textDecoration: 'none',
-    fontSize: '13.5px', fontWeight: '500', minHeight: 44, borderRadius: 8,
-    transition: 'all 0.15s', whiteSpace: 'nowrap',
+    padding: '9px 14px', textDecoration: 'none',
+    fontSize: '13.5px', fontWeight: '500', minHeight: 40, borderRadius: 8,
+    transition: 'background-color 0.15s, color 0.15s', whiteSpace: 'nowrap',
   },
-  navLabel:  { overflow: 'hidden', letterSpacing: '0.1px' },
+  navLabel:  { overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '0.1px' },
   toggleBtn: {
     background: 'rgba(0,0,0,0.2)', border: 'none',
     borderTop: '1px solid rgba(255,255,255,0.1)',
-    color: 'rgba(255,255,255,0.6)', padding: '14px',
-    cursor: 'pointer', fontSize: '12px', transition: 'background 0.15s',
+    color: 'rgba(255,255,255,0.7)', padding: '12px',
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'background 0.15s',
     flexShrink: 0,
   },
 };

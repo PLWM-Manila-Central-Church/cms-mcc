@@ -2,10 +2,10 @@ export const ROLE_ALLOWED_PATHS = {
   // Members use self-scoped APIs through the standalone portal only.
   Member: ['/portal'],
   'Finance Team': ['/dashboard', '/finance', '/archives', '/my-settings', '/reports/analytics'],
-  'Ministry Leader': ['/dashboard', '/ministry', '/events', '/attendance', '/reports/team-attendance', '/inventory', '/archives', '/my-settings'],
+  'Ministry Leader': ['/dashboard', '/groups', '/ministry', '/ministry/schedules', '/events', '/attendance', '/reports/team-attendance', '/inventory', '/archives', '/my-settings'],
   'Cell Group Leader': ['/dashboard', '/cell-groups', '/attendance', '/reports/team-attendance', '/events', '/inventory', '/archives', '/my-settings'],
-  'Group Leader': ['/dashboard', '/members', '/attendance', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
-  Leader: ['/dashboard', '/leader/teams', '/cell-groups', '/members', '/attendance', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
+  'Group Leader': ['/dashboard', '/ministries', '/members', '/attendance', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
+  Leader: ['/dashboard', '/leader/teams', '/cell-groups', '/ministries', '/members', '/attendance', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
 };
 
 export const ROLE_TAB_SETS = {
@@ -25,12 +25,12 @@ export const ROLE_TAB_SETS = {
     { label: 'Home', path: '/dashboard', icon: 'dashboard' },
     { label: 'Attendance', path: '/attendance', icon: 'attendance', permissions: { module: 'attendance', action: 'read' } },
     { label: 'Events', path: '/events', icon: 'events', permissions: { module: 'events', action: 'read' } },
-    { label: 'QR Attendance', path: '/attendance/qr', icon: 'attendance', permissions: { module: 'qr_attendance', action: 'read' } },
+    { label: 'QR Attendance', path: '/attendance/qr', icon: 'qr', permissions: { module: 'qr_attendance', action: 'read' } },
   ],
   'Finance Team': [
     { label: 'Home', path: '/dashboard', icon: 'dashboard' },
     { label: 'Finance', path: '/finance', icon: 'finance' },
-    { label: 'Archives', path: '/archives', icon: 'archives' },
+    { label: 'Archives', path: '/archives', icon: 'archive' },
   ],
   'Cell Group Leader': [
     { label: 'Home', path: '/dashboard', icon: 'dashboard' },
@@ -46,13 +46,13 @@ export const ROLE_TAB_SETS = {
   ],
   'Ministry Leader': [
     { label: 'Home', path: '/dashboard', icon: 'dashboard' },
-    { label: 'Ministry', path: '/ministry', icon: 'ministry' },
+    { label: 'Ministry', path: '/ministry', icon: 'groups' },
     { label: 'Events', path: '/events', icon: 'events' },
     { label: 'Attendance', path: '/attendance', icon: 'attendance' },
   ],
   Leader: [
     { label: 'Home', path: '/dashboard', icon: 'dashboard' },
-    { label: 'My Teams', path: '/leader/teams', icon: 'cellgroups' },
+    { label: 'My Teams', path: '/leader/teams', icon: 'myTeams' },
     { label: 'Attendance', path: '/attendance', icon: 'attendance', permissions: { module: 'attendance', action: 'read' } },
     { label: 'Events', path: '/events', icon: 'events', permissions: { module: 'events', action: 'read' } },
   ],
@@ -80,7 +80,7 @@ export const isAllowedForRolePath = (roleName, pathname, leaderAssignments = [],
     const hasGroup = leaderAssignments.some((assignment) => ['group', 'member_group'].includes(assignment.scopeType || assignment.scope_type));
     const selectedType = leaderScopeKey === 'all' ? 'all' : String(leaderScopeKey || '').split(':')[0];
     if (pathname.startsWith('/cell-groups')) return selectedType === 'all' ? hasCell : selectedType === 'cell_group' && hasCell;
-    if (pathname.startsWith('/members')) return selectedType === 'all'
+    if (pathname.startsWith('/members') || pathname.startsWith('/ministries')) return selectedType === 'all'
       ? hasGroup
       : ['member_group', 'group'].includes(selectedType) && hasGroup;
     if (!hasCell && !hasGroup && pathname !== '/dashboard' && pathname !== '/my-settings' && pathname !== '/leader/teams') return false;
@@ -102,7 +102,7 @@ export const isVisibleNavItem = (item, user, hasPermission) => {
       : selectedType === 'cell_group';
     return Boolean(assigned && (!item.permissions || hasPermission(item.permissions.module, item.permissions.action)));
   }
-  if (user?.roleName === 'Leader' && item.path === '/members') {
+  if (user?.roleName === 'Leader' && (item.path === '/members' || item.path === '/ministries')) {
     const selectedType = user.activeLeaderScopeKey === 'all' ? 'all' : String(user.activeLeaderScopeKey || '').split(':')[0];
     const assigned = selectedType === 'all'
       ? user.leaderAssignments?.some((assignment) => ['group', 'member_group'].includes(assignment.scopeType || assignment.scope_type)) || false

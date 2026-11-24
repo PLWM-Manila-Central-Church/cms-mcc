@@ -3,11 +3,10 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useAuth } from '../../context/AuthContext';
-import { NAV_ITEMS, NAV_ICONS } from '../../utils/constants';
+import { NAV_ITEMS } from '../../utils/constants';
 import { LANGS, getLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
 import { DEFAULT_TABS, ROLE_TAB_SETS, isVisibleNavItem } from '../../utils/roleAccess';
 import MonoIcon from '../common/MonoIcon';
-import SafeIcon from '../common/SafeIcon';
 import useWindowWidth from '../../hooks/useWindowWidth';
 import useIdleTimer from '../../hooks/useIdleTimer';
 import IdleLockScreen from '../common/IdleLockScreen';
@@ -17,9 +16,7 @@ import WorkspaceContext from './WorkspaceContext';
 import { getRoleWorkspace, getWorkspaceModule } from '../../utils/roleWorkspace';
 
 function NavIcon({ name, size = 20 }) {
-  const MORE_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
-  const svg = NAV_ICONS[name] || MORE_SVG;
-  return <SafeIcon svg={svg} size={size} />;
+  return <MonoIcon name={name || 'more'} size={size} strokeWidth={1.75} />;
 }
 
 const BP_TABLET = 1024;
@@ -116,7 +113,8 @@ function MobileMoreDrawer({ open, onClose }) {
   const dialogRef = useRef(null);
   useDialogFocus(open, dialogRef, onClose);
 
-  const visibleItems = NAV_ITEMS.filter(item => visibleForRole(item, user, hasPermission));
+  const visibleItems = NAV_ITEMS.filter(item => visibleForRole(item, user, hasPermission)
+    && (!item.roles || item.roles.includes(user?.roleName)));
   const activePath = currentNavPath(visibleItems, location.pathname);
 
   if (!open) return null;
@@ -293,21 +291,26 @@ export default function MainLayout({ children }) {
   const mainPadLeft  = isMobile ? '0px' : sidebarWidth;
 
   return (
-    <div className={`mcc-workspace workspace-${workspace.key}`} data-workspace={workspace.key} data-module={module?.key || 'dashboard'} style={S.root}>
+    <div
+      className={`mcc-workspace workspace-${workspace.key}`}
+      data-workspace={workspace.key}
+      data-module={module?.key || 'dashboard'}
+      style={{
+        ...S.root,
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : `${sidebarWidth} minmax(0, 1fr)`,
+      }}
+    >
       <a className="mcc-skip-link" href="#mcc-main">Skip to content</a>
       {/* Hidden Google Translate widget for CMS */}
       <div id="google_translate_element_cms" style={{ position: 'fixed', bottom: -200, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1 }} />
 
-      {/* Desktop/tablet sidebar */}
+      {/* Desktop/tablet sidebar inside dedicated CSS Grid column — never overlapped by wide content */}
       {!isMobile && (
-        <div style={{
+        <div className="mcc-sidebar-rail" style={{
           ...S.sidebarWrapper,
           width: sidebarWidth,
-          transform: 'none',
-          transition: 'width 0.25s ease',
-          zIndex: 100,
-          position: 'fixed',
-          left: 0, top: 0,
+          zIndex: 110,
         }}>
           <Sidebar
             collapsed={collapsed}
@@ -317,28 +320,28 @@ export default function MainLayout({ children }) {
         </div>
       )}
 
-      {/* Header */}
-      <Header
-        sidebarWidth={mainPadLeft}
-        isMobile={isMobile}
-        isTablet={isTablet}
-        isNarrowDesktop={width <= 1440}
-      />
+      {/* Right column: Header + Main content */}
+      <div style={S.contentColumn}>
+        <Header
+          sidebarWidth={mainPadLeft}
+          isMobile={isMobile}
+          isTablet={isTablet}
+          isNarrowDesktop={width <= 1440}
+        />
 
-      {/* Main content */}
-      <main id="mcc-main" className="mcc-main" tabIndex={-1} style={{
-        ...S.main,
-        marginLeft: mainPadLeft,
-        padding: isMobile
-          ? '72px 12px 0'
-          : isTablet
-            ? '80px 20px 20px'
-            : '80px 28px 28px',
-        paddingBottom: isMobile ? 'calc(68px + env(safe-area-inset-bottom, 0px))' : (isTablet ? '20px' : '28px'),
-      }}>
-        <WorkspaceContext />
-        <div className={`workspace-page mcc-module workspace-page-${module?.key || 'dashboard'}`}>{children}</div>
-      </main>
+        <main id="mcc-main" className="mcc-main" tabIndex={-1} style={{
+          ...S.main,
+          padding: isMobile
+            ? '74px 12px 0'
+            : isTablet
+              ? '80px 20px 24px'
+              : '80px 28px 32px',
+          paddingBottom: isMobile ? 'calc(72px + env(safe-area-inset-bottom, 0px))' : (isTablet ? '24px' : '32px'),
+        }}>
+          <WorkspaceContext />
+          <div className={`workspace-page mcc-module workspace-page-${module?.key || 'dashboard'}`}>{children}</div>
+        </main>
+      </div>
 
       {/* Mobile bottom tab bar */}
       {isMobile && <BottomTabBar moreOpen={moreOpen} onMoreOpen={() => setMoreOpen(true)} />}
@@ -354,22 +357,26 @@ export default function MainLayout({ children }) {
 
 const S = {
   root: {
-    display: 'flex',
     minHeight: '100vh',
     background: 'var(--mcc-canvas)',
     fontFamily: "'Inter', 'Segoe UI', -apple-system, sans-serif",
     position: 'relative',
+    transition: 'grid-template-columns 0.2s ease',
   },
   sidebarWrapper: {
-    height: '100vh',
+    minHeight: '100vh',
+    position: 'relative',
     flexShrink: 0,
-    overflowX: 'hidden',
+  },
+  contentColumn: {
+    minWidth: 0,
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
   },
   main: {
     flex: 1,
     minWidth: 0,
-    minHeight: '100vh',
-    transition: 'margin-left 0.25s ease, padding 0.25s ease',
-    overflowX: 'hidden',
+    overflowX: 'clip',
   },
 };

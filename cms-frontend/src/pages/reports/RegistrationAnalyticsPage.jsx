@@ -96,7 +96,9 @@ export default function RegistrationAnalyticsPage() {
 
       {!data ? <p className="ar-state">Loading registration analytics…</p> : (
         <>
-          <MetricRail items={rail} />
+          <div style={{ padding: '16px 0 12px', borderBottom: '1px solid var(--ar-rule)' }}>
+            <MetricRail items={rail} orientation="horizontal" />
+          </div>
 
           <div className="ar-grid">
             <ReportSection className="ar-span-8" title="Registration trend" hint="Cumulative registrations in the selected range">
@@ -202,7 +204,7 @@ export default function RegistrationAnalyticsPage() {
           <div style={{ padding: '14px 20px 18px', display: 'grid', gap: 14 }}>
             {detailLoading && !detail.event ? <p style={{ margin: 0, color: 'var(--ar-muted)' }}>Loading…</p> : detail.event && (
               <>
-                <MetricRail items={[
+                <MetricRail orientation="horizontal" items={[
                   { label: 'Registered', value: detail.event.registered },
                   { label: 'Capacity', value: detail.event.capacity ?? '—' },
                   { label: 'Fill', value: detail.event.fill_rate == null ? '—' : `${detail.event.fill_rate}%` },

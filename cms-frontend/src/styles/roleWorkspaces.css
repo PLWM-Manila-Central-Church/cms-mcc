@@ -56,11 +56,15 @@
 .role-action-bar button { padding:10px 16px; border:1px solid var(--mcc-border); border-radius:10px; background:#fff; color:var(--mcc-brand); font-size:13px; font-weight:600; }
 .role-action-bar .role-action-primary { background:var(--mcc-brand); border-color:var(--mcc-brand); color:#fff; }
 .role-dashboard-metrics > button { min-width:0; border-radius:var(--mcc-radius) !important; }
+.role-dashboard-work, .role-dashboard-secondary { align-items: start; }
 .role-dashboard-work > section, .role-dashboard-secondary > section { min-width:0; border-radius:var(--mcc-radius) !important; }
 .role-workflow-guide { list-style:none; counter-reset:step; display:grid; gap:16px; padding:22px; margin:0; }
 .role-workflow-guide li { counter-increment:step; display:flex; align-items:flex-start; gap:12px; color:#52647a; font-size:13px; line-height:1.6; }
 .role-workflow-guide li::before { content:counter(step); display:grid; place-items:center; width:24px; height:24px; flex-shrink:0; background:#eaf4fc; border-radius:50%; color:#005599; font-size:11px; font-weight:700; }
 .role-dashboard-admin .role-dashboard-hero { border-top:3px solid #003d70 !important; }
+@media (min-width: 900px) {
+  .role-dashboard-admin .role-dashboard-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
 .role-dashboard-pastor .role-dashboard-hero { padding:32px !important; border:0 !important; background:#eaf3fa !important; }
 .role-dashboard-registration .role-action-bar { background:#fff; padding:20px; border:1px solid var(--mcc-border); border-radius:12px; }
 .role-dashboard-finance .role-dashboard-metrics strong { font-variant-numeric:tabular-nums; font-size:clamp(22px,2vw,30px) !important; overflow-wrap:anywhere; }
