@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { isScopedLeaderRole } from '../../utils/roleDisplay';
 import { fetchAllPages } from '../../api/fetchAllPages';
 import { displayMemberName } from '../../utils/displayIdentity';
+import { sanitizePersonName, sanitizePhone } from '../../utils/inputConstraints';
 
 export default function MemberFormPage() {
   const { id } = useParams();
@@ -17,7 +18,7 @@ export default function MemberFormPage() {
 
   const [form, setForm] = useState({
     first_name: '', last_name: '', email: '', phone: '',
-    birthdate: '', spiritual_birthday: '', address: '',
+    birthdate: '', spiritual_birthday: '', join_date: '', address: '',
     gender: '', status: 'Active',
     cell_group_id: '', group_id: '', referred_by: '', ministry_role_id: '',
   });
@@ -67,6 +68,7 @@ export default function MemberFormPage() {
           phone:              m.phone              || '',
           birthdate:          m.birthdate          || '',
           spiritual_birthday: m.spiritual_birthday || '',
+          join_date:          m.join_date          || '',
           address:            m.address            || '',
           gender:             m.gender             || '',
           status:             m.status             || 'Active',
@@ -85,7 +87,11 @@ export default function MemberFormPage() {
   }, [id, isEdit]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let nextValue = value;
+    if (name === 'first_name' || name === 'last_name') nextValue = sanitizePersonName(value, 80);
+    else if (name === 'phone') nextValue = sanitizePhone(value, 20);
+    setForm({ ...form, [name]: nextValue });
     setError('');
   };
 
@@ -139,12 +145,13 @@ export default function MemberFormPage() {
         <div style={styles.section}>
           <h2 style={styles.sectionTitle}>Personal Information</h2>
           <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'16px' }}>
-            <Field label="First Name *" name="first_name" value={form.first_name} onChange={handleChange} required />
-            <Field label="Last Name (optional for single-name members)" name="last_name" value={form.last_name} onChange={handleChange} />
-            <Field label="Email"        name="email"      value={form.email}       onChange={handleChange} type="email" />
-            <Field label="Phone"        name="phone"      value={form.phone}       onChange={handleChange} />
+            <Field label="First Name *" name="first_name" value={form.first_name} onChange={handleChange} maxLength={80} required />
+            <Field label="Last Name (optional for single-name members)" name="last_name" value={form.last_name} onChange={handleChange} maxLength={80} />
+            <Field label="Email"        name="email"      value={form.email}       onChange={handleChange} type="email" maxLength={120} />
+            <Field label="Phone"        name="phone"      value={form.phone}       onChange={handleChange} type="tel" inputMode="tel" maxLength={20} />
             <Field label="Birthdate"    name="birthdate"  value={form.birthdate}   onChange={handleChange} type="date" />
             <Field label="Spiritual Birthday" name="spiritual_birthday" value={form.spiritual_birthday} onChange={handleChange} type="date" />
+            <Field label="Church Join Date" name="join_date" value={form.join_date} onChange={handleChange} type="date" />
           </div>
           <div style={{ marginTop: '16px' }}>
             <label style={styles.label} htmlFor="memberformpage-address">Address</label>
@@ -152,6 +159,7 @@ export default function MemberFormPage() {
               name="address"
               value={form.address}
               onChange={handleChange}
+              maxLength={300}
               rows={3}
               style={styles.textarea}
               placeholder="Full address"
@@ -193,7 +201,7 @@ export default function MemberFormPage() {
             </div>
 
             <div style={styles.fieldWrap}>
-              <label style={styles.label} htmlFor="memberformpage-group_id">Group</label>
+              <label style={styles.label} htmlFor="memberformpage-group_id">Ministry</label>
               <select id="memberformpage-group_id" name="group_id" value={form.group_id} onChange={handleChange} style={styles.select}>
                 <option value="">— Select —</option>
                 {groups.map(g => (
@@ -218,7 +226,7 @@ export default function MemberFormPage() {
 
             {!isEdit && (
               <div style={styles.fieldWrap}>
-                <label style={styles.label} htmlFor="memberformpage-ministry_role_id">Ministry</label>
+                <label style={styles.label} htmlFor="memberformpage-ministry_role_id">Serving Group / Team</label>
                 <select id="memberformpage-ministry_role_id" name="ministry_role_id" value={form.ministry_role_id} onChange={handleChange} style={styles.select}>
                   <option value="">— None —</option>
                   {ministryRoles.map(mr => (
@@ -246,7 +254,7 @@ export default function MemberFormPage() {
   );
 }
 
-function Field({ label, name, value, onChange, type = 'text', required }) {
+function Field({ label, name, value, onChange, type = 'text', required, ...rest }) {
   return (
     <div style={styles.fieldWrap}>
       <label htmlFor={`member-${name}`} style={styles.label}>{label}</label>
@@ -260,6 +268,7 @@ function Field({ label, name, value, onChange, type = 'text', required }) {
         style={styles.input}
         onFocus={e => e.target.style.borderColor = '#0066b3'}
         onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+        {...rest}
       />
 
     </div>

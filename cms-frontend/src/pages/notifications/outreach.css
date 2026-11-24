@@ -62,7 +62,8 @@
 @media(max-width:600px) { .outreach-card { padding:15px; } .outreach-dialog { padding:16px; max-height:94dvh; } .outreach-overlay { padding:8px; } .outreach-header .outreach-actions { width:100%; } .outreach-header .outreach-actions button { flex:1; } .outreach-toolbar button { width:100%; } .outreach-tabs { max-width:100%; } }
 
 /* ── Notification campaigns ───────────────────────────────── */
-.campaigns-panel { display:grid; gap:14px; }
+.campaigns-panel { display:grid; grid-template-columns:minmax(0,1fr); gap:14px; min-width:0; max-width:100%; }
+.campaigns-panel > * { min-width:0; max-width:100%; }
 .campaigns-toolbar { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
 .campaigns-toolbar h2 { margin:0 0 4px; color:#003d70; font-size:20px; }
 .campaigns-toolbar p { margin:0; max-width:640px; }

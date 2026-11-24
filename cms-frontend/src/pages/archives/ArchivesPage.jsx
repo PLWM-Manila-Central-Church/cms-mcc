@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
+import IconActionButton from '../../components/common/IconActionButton';
 import ArchiveCategoriesManager from '../../components/archives/ArchiveCategoriesManager';
 import SystemArchivesPanel from '../../components/archives/SystemArchivesPanel';
 import { archiveDownloadName, archiveDownloadPath } from '../../utils/archiveDownload';
@@ -307,7 +308,7 @@ export default function ArchivesPage() {
               <div key={v.id} style={s.versionRow}>
                 <span style={s.versionNum}>v{v.version_number}</span>
                 <span style={s.versionMeta}>{v.file_type?.toUpperCase()} · {displayAccount(v.uploadedByUser?.email)}</span>
-                {!detailRecord.is_deleted && <button onClick={() => handleDownloadFile(detailRecord, v)} style={s.versionLink}>Download</button>}
+                {!detailRecord.is_deleted && <IconActionButton icon="download" label="Download" title="Download version" tone="primary" size="xs" onClick={() => handleDownloadFile(detailRecord, v)} />}
               </div>
             ))}
           </div>
@@ -325,22 +326,24 @@ export default function ArchivesPage() {
                   : `Permanently deleted in ${detailRecord.days_remaining} days.`}
           </p>
         )}
-        <div style={s.detailActions}>
+        <div style={{ ...s.detailActions, alignItems: 'center' }}>
           {!detailRecord.is_deleted && canUpdate && (detailRecord.uploaded_by === user?.id || isApprover) && (
-            <button onClick={() => openEdit(detailRecord)} style={s.editBtn}>Edit</button>
+            <IconActionButton icon="edit" label="Edit" title="Edit record" tone="neutral" onClick={() => openEdit(detailRecord)} />
           )}
           {!detailRecord.is_deleted && detailRecord.status === 'pending' && canApprove && (
             <button onClick={() => handleApprove(detailRecord.id)} style={s.approveBtn}><MonoIcon name="check" size={14} /> Approve</button>
           )}
           {isAdmin && !detailRecord.is_deleted && (
-            <button onClick={() => handleArchive(detailRecord.id)} style={s.deleteBtn}>Archive record</button>
+            <IconActionButton icon="archive" label="Archive record" title="Archive record" tone="danger" onClick={() => handleArchive(detailRecord.id)} />
           )}
           {isAdmin && detailRecord.is_deleted && (
             <button onClick={() => handleRetentionHold(detailRecord.id, !detailRecord.retention_hold)} style={s.editBtn}>
               {detailRecord.retention_hold ? 'Release deletion hold' : 'Hold deletion'}
             </button>
           )}
-          {isAdmin && detailRecord.is_deleted && <button onClick={() => handleRestore(detailRecord.id)} style={s.approveBtn}>Restore record</button>}
+          {isAdmin && detailRecord.is_deleted && (
+            <IconActionButton icon="rotateCcw" label="Restore record" title="Restore record" tone="success" onClick={() => handleRestore(detailRecord.id)} />
+          )}
         </div>
 
         {/* Access logs */}
@@ -515,12 +518,12 @@ export default function ArchivesPage() {
 
                     {showArchived && isAdmin ? (
                       <div style={s.pendingActions} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => handleRestore(record.id)} style={s.approveBtn}>Restore</button>
+                        <IconActionButton icon="rotateCcw" label="Restore" title="Restore record" tone="success" onClick={() => handleRestore(record.id)} />
                       </div>
                     ) : record.status === 'pending' && isApprover && (
-                      <div style={s.pendingActions} onClick={e => e.stopPropagation()}>
+                      <div style={{ ...s.pendingActions, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                         <button onClick={() => handleApprove(record.id)} style={s.approveBtn}><MonoIcon name="check" size={14} /> Approve</button>
-                        {isAdmin && <button onClick={() => handleArchive(record.id)} style={s.rejectBtn}>Archive</button>}
+                        {isAdmin && <IconActionButton icon="archive" label="Archive" title="Archive record" tone="danger" onClick={() => handleArchive(record.id)} />}
                       </div>
                     )}
                   </div>

@@ -4,6 +4,8 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import MonoIcon from '../../components/common/MonoIcon';
+import IconActionButton from '../../components/common/IconActionButton';
+import { blockInvalidIntegerKeys, sanitizeWholeNumber } from '../../utils/inputConstraints';
 import { normalizeEventStatus } from '../../utils/eventStatus';
 import { eventImageSrc } from '../../utils/eventImage';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
@@ -345,6 +347,7 @@ export default function EventsPage() {
                 <label style={s.label}>Location</label>
                 <input
                   value={form.location}
+                  maxLength={150}
                   onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
                   placeholder="Venue / address" style={s.input}
                 />
@@ -353,7 +356,8 @@ export default function EventsPage() {
                 <label style={s.label}>Registration / seat capacity</label>
                 <input
                   type="number" min="1" value={form.capacity}
-                  onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))}
+                  onKeyDown={blockInvalidIntegerKeys}
+                  onChange={e => setForm(f => ({ ...f, capacity: sanitizeWholeNumber(e.target.value, { maxLength: 6 }) }))}
                   placeholder="Optional" style={s.input}
                 />
               </div>
@@ -361,7 +365,8 @@ export default function EventsPage() {
                 <label style={s.label}>Parking slots (optional)</label>
                 <input
                   type="number" min="0" step="1" value={form.total_parking_slots}
-                  onChange={e => setForm(f => ({ ...f, total_parking_slots: e.target.value }))}
+                  onKeyDown={blockInvalidIntegerKeys}
+                  onChange={e => setForm(f => ({ ...f, total_parking_slots: sanitizeWholeNumber(e.target.value, { maxLength: 5 }) }))}
                   placeholder="Not specified" style={s.input}
                 />
               </div>
@@ -482,29 +487,38 @@ export default function EventsPage() {
                   </div>
                 )}
 
-                <div style={s.cardActions}>
-                  <button onClick={() => navigate(`/events/${ev.id}`)} style={s.viewBtn}>
-                    View
+                <div style={{ ...s.cardActions, justifyContent: 'space-between', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/events/${ev.id}`)}
+                    style={{ ...s.viewBtn, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', minHeight: 34 }}
+                  >
+                    <MonoIcon name="eye" size={14} /> View
                   </button>
                   {!isMember && (canUpdate || canDelete) && (
-                    <>
-                      {canUpdate && <button onClick={() => openEdit(ev)} style={s.editBtn}>Edit</button>}
-                      {nextStatuses.map(ns => (
-                        <button
-                          key={ns}
-                          onClick={() => handleStatusChange(ev.id, ns)}
-                          disabled={statusUpdating === ev.id}
-                          style={{ ...s.statusBtn, ...STATUS_ACTION_STYLE[ns] }}
-                        >
-                          {STATUS_ACTION_LABEL[ns]}
-                        </button>
-                      ))}
-                      {canDelete && ['Completed', 'Cancelled'].includes(status) && (
-                        <button onClick={() => handleDelete(ev.id)} style={s.deleteBtn}>
-                          Archive
-                        </button>
+                    <div className="mcc-icon-action-group">
+                      {canUpdate && (
+                        <IconActionButton icon="edit" label="Edit" title="Edit event" tone="neutral" onClick={() => openEdit(ev)} />
                       )}
-                    </>
+                      {nextStatuses.map(ns => {
+                        const iconName = ns === 'Ongoing' ? 'play' : ns === 'Completed' ? 'check' : 'close';
+                        const tone = ns === 'Ongoing' ? 'primary' : ns === 'Completed' ? 'success' : 'danger';
+                        return (
+                          <IconActionButton
+                            key={ns}
+                            icon={iconName}
+                            label={STATUS_ACTION_LABEL[ns]}
+                            title={`${STATUS_ACTION_LABEL[ns]} event`}
+                            tone={tone}
+                            disabled={statusUpdating === ev.id}
+                            onClick={() => handleStatusChange(ev.id, ns)}
+                          />
+                        );
+                      })}
+                      {canDelete && ['Completed', 'Cancelled'].includes(status) && (
+                        <IconActionButton icon="archive" label="Archive" title="Archive event" tone="danger" onClick={() => handleDelete(ev.id)} />
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

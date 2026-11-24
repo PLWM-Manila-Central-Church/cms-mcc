@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import api from '../../api/axiosInstance';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
+import { sanitizePersonName, sanitizePhone } from '../../utils/inputConstraints';
 import '../../pages/notifications/outreach.css';
 
 export default function NotificationPreferencesCard({ memberId, onSaved, theme = 'light' }) {
@@ -51,8 +52,8 @@ export default function NotificationPreferencesCard({ memberId, onSaved, theme =
     {data && <form onSubmit={save}>
       {memberId && <p><strong>{data.member_name}</strong></p>}
       <label htmlFor={id + '-phone'}>Mobile number
-        <input id={id + '-phone'} type="tel" autoComplete="tel" inputMode="tel" maxLength={30} value={data.phone}
-          onChange={(event) => { setData({ ...data, phone: event.target.value }); setConfirmed(false); }} placeholder="09XXXXXXXXX or +639XXXXXXXXX" />
+        <input id={id + '-phone'} type="tel" autoComplete="tel" inputMode="tel" maxLength={20} value={data.phone}
+          onChange={(event) => { setData({ ...data, phone: sanitizePhone(event.target.value, 20) }); setConfirmed(false); }} placeholder="09XXXXXXXXX or +639XXXXXXXXX" />
       </label>
       <label className="outreach-check"><input type="checkbox" checked={data.sms_enabled}
         onChange={(event) => { setData({ ...data, sms_enabled: event.target.checked }); setConfirmed(false); }} />Allow SMS notifications</label>
@@ -64,8 +65,8 @@ export default function NotificationPreferencesCard({ memberId, onSaved, theme =
         onChange={(event) => setData({ ...data, campaign_notifications: event.target.checked })} />Event and church notifications</label>
       {memberId && data.is_minor && <fieldset className="outreach-card" style={{ padding: 12 }}>
         <legend>Guardian for a minor</legend>
-        <label>Guardian name<input value={data.guardian_name || ''} onChange={(event) => setData({ ...data, guardian_name: event.target.value })} maxLength={120} /></label>
-        <label>Guardian mobile<input type="tel" value={data.guardian_phone || ''} onChange={(event) => setData({ ...data, guardian_phone: event.target.value, guardian_consent_confirmed: false })} maxLength={30} placeholder="09XXXXXXXXX" /></label>
+        <label>Guardian name<input value={data.guardian_name || ''} onChange={(event) => setData({ ...data, guardian_name: sanitizePersonName(event.target.value, 100) })} maxLength={100} /></label>
+        <label>Guardian mobile<input type="tel" inputMode="tel" value={data.guardian_phone || ''} onChange={(event) => setData({ ...data, guardian_phone: sanitizePhone(event.target.value, 20), guardian_consent_confirmed: false })} maxLength={20} placeholder="09XXXXXXXXX" /></label>
         <label className="outreach-check"><input type="checkbox" checked={Boolean(data.guardian_consent_confirmed)}
           onChange={(event) => setData({ ...data, guardian_consent_confirmed: event.target.checked })} />Guardian agreed to receive SMS for this minor</label>
       </fieldset>}

@@ -6,6 +6,8 @@ import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import { cellGroupPageTitle } from '../../utils/roleDisplay';
 import MonoIcon from '../../components/common/MonoIcon';
+import IconActionButton from '../../components/common/IconActionButton';
+import CellMeetingsPanel from '../../components/cellgroups/CellMeetingsPanel';
 
 const EMPTY_FORM = { name: '', area: '' };
 
@@ -526,9 +528,9 @@ export default function CellGroupsPage() {
                   </td>
                   {(canUpdate || canDelete) && (
                     <td style={{ ...S.td, textAlign: 'right' }}>
-                      <div style={S.actionsRow}>
-                        {canUpdate && <button onClick={() => openEdit(g)} style={S.editBtn}><MonoIcon name="edit" size={14} /> Edit</button>}
-                        {canDelete && <button onClick={() => { setDelTarget(g); setDelError(''); }} style={S.deleteBtn}><MonoIcon name="archive" size={14} /> Archive</button>}
+                      <div className="mcc-icon-action-group" style={{ justifyContent: 'flex-end' }}>
+                        {canUpdate && <IconActionButton icon="edit" label="Edit" title="Edit cell group" tone="primary" onClick={() => openEdit(g)} />}
+                        {canDelete && <IconActionButton icon="archive" label="Archive" title="Archive cell group" tone="danger" onClick={() => { setDelTarget(g); setDelError(''); }} />}
                       </div>
                     </td>
                   )}
@@ -582,9 +584,9 @@ export default function CellGroupsPage() {
                     <td style={S.td}>{m.email || '-'}</td>
                     <td style={S.td}>{m.phone || '-'}</td>
                     <td style={{ ...S.td, textAlign: 'right' }}>
-                      <div style={S.actionsRow}>
-                        <button onClick={() => navigate(`/members/${m.id}/edit`)} style={S.editBtn}>Edit</button>
-                        <button onClick={() => handleUnassignMember(m)} style={S.deleteBtn}>Remove</button>
+                      <div className="mcc-icon-action-group" style={{ justifyContent: 'flex-end' }}>
+                        <IconActionButton icon="edit" label="Edit" title="Edit member" tone="primary" onClick={() => navigate(`/members/${m.id}/edit`)} />
+                        <IconActionButton icon="userMinus" label="Remove" title="Remove from cell group" tone="danger" onClick={() => handleUnassignMember(m)} />
                       </div>
                     </td>
                   </tr>
@@ -593,6 +595,10 @@ export default function CellGroupsPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {groups.length > 0 && (
+        <CellMeetingsPanel groups={groups} canUpdate={hasPermission('cell_groups', 'update')} />
       )}
 
       {modal && (
@@ -614,6 +620,7 @@ export default function CellGroupsPage() {
                 <label style={S.label}>Group Name <span style={{ color: '#ef4444' }}>*</span></label>
                 <input
                   type="text"
+                  maxLength={100}
                   value={form.name}
                   onChange={e => { setForm({ ...form, name: e.target.value }); setFormError(''); }}
                   placeholder="e.g. Victory Cell Group"
@@ -627,6 +634,7 @@ export default function CellGroupsPage() {
                 <label style={S.label}>Area <span style={S.optional}>(optional)</span></label>
                 <input
                   type="text"
+                  maxLength={100}
                   value={form.area}
                   onChange={e => setForm({ ...form, area: e.target.value })}
                   placeholder="e.g. Parañaque, BGC, Alabang"

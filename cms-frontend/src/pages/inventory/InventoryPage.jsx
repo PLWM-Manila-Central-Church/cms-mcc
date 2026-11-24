@@ -4,9 +4,12 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import MonoIcon from '../../components/common/MonoIcon';
+import IconActionButton from '../../components/common/IconActionButton';
+import { blockInvalidIntegerKeys, sanitizeAlphaLabel, sanitizeWholeNumber } from '../../utils/inputConstraints';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
 import { formatDate } from '../../utils/formatDate';
 import { createInventoryRequestKey } from '../../utils/inventoryRequestKey';
+import InventoryOperationsPanel from '../../components/inventory/InventoryOperationsPanel';
 
 const CONDITION_STYLE = {
   'Good':         { bg: '#f0fdf4', color: '#16a34a' },
@@ -424,7 +427,7 @@ export default function InventoryPage() {
                 <div style={s.formRow}>
                   <div style={{ ...s.field, flex: 2 }}>
                     <label style={s.label}>Item Name *</label>
-                    <input value={itemForm.name} onChange={e => setItemForm(f => ({ ...f, name: e.target.value }))}
+                    <input value={itemForm.name} maxLength={120} onChange={e => setItemForm(f => ({ ...f, name: e.target.value }))}
                       placeholder="e.g. Plastic Chair" required style={s.input} />
                   </div>
                   <div style={s.field}>
@@ -439,11 +442,12 @@ export default function InventoryPage() {
                   <div style={s.field}>
                     <label style={s.label}>Quantity *</label>
                     <input type="number" min="0" value={itemForm.quantity}
-                      onChange={e => setItemForm(f => ({ ...f, quantity: e.target.value }))} required style={s.input} />
+                      onKeyDown={blockInvalidIntegerKeys}
+                      onChange={e => setItemForm(f => ({ ...f, quantity: sanitizeWholeNumber(e.target.value, { maxLength: 6 }) }))} required style={s.input} />
                   </div>
                   <div style={s.field}>
                     <label style={s.label}>Unit</label>
-                    <input value={itemForm.unit} onChange={e => setItemForm(f => ({ ...f, unit: e.target.value }))}
+                    <input value={itemForm.unit} maxLength={30} onChange={e => setItemForm(f => ({ ...f, unit: sanitizeAlphaLabel(e.target.value, 30) }))}
                       placeholder="pcs, sets, boxes..." style={s.input} />
                   </div>
                   <div style={s.field}>
@@ -462,7 +466,8 @@ export default function InventoryPage() {
                   <div style={s.field}>
                     <label style={s.label}>Low Stock Alert</label>
                     <input type="number" min="0" value={itemForm.low_stock_threshold}
-                      onChange={e => setItemForm(f => ({ ...f, low_stock_threshold: e.target.value }))}
+                      onKeyDown={blockInvalidIntegerKeys}
+                      onChange={e => setItemForm(f => ({ ...f, low_stock_threshold: sanitizeWholeNumber(e.target.value, { maxLength: 6 }) }))}
                       placeholder="e.g. 5" style={s.input} />
                   </div>
                 </div>
@@ -543,9 +548,9 @@ export default function InventoryPage() {
                       </td>
                       {(canManage || canDelete) && (
                         <td style={s.td}>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            {canUpdate && <button onClick={() => openEditItem(item)} style={s.editBtn}>Edit</button>}
-                            {canDelete && <button onClick={() => handleDeleteItem(item)} style={{ ...s.editBtn, background: '#fef2f2', color: '#dc2626' }}><MonoIcon name="archive" size={13} /> Archive</button>}
+                          <div className="mcc-icon-action-group">
+                            {canUpdate && <IconActionButton icon="edit" label="Edit" title="Edit item" tone="primary" onClick={() => openEditItem(item)} />}
+                            {canDelete && <IconActionButton icon="archive" label="Archive" title="Archive item" tone="danger" onClick={() => handleDeleteItem(item)} />}
                           </div>
                         </td>
                       )}
@@ -589,7 +594,8 @@ export default function InventoryPage() {
                   <div style={s.field}>
                     <label style={s.label}>Quantity *</label>
                     <input type="number" min="1" value={reqForm.quantity}
-                      onChange={e => updateRequestField('quantity', e.target.value)} required style={s.input} />
+                      onKeyDown={blockInvalidIntegerKeys}
+                      onChange={e => updateRequestField('quantity', sanitizeWholeNumber(e.target.value, { maxLength: 6 }))} required style={s.input} />
                   </div>
                 </div>
                 <div style={s.formRow}>
@@ -747,7 +753,8 @@ export default function InventoryPage() {
                     <input id="inventory-usage-quantity" type="number" min="1" step="1"
                       max={usageItems.find(item => String(item.id) === String(usageForm.item_id))?.quantity}
                       value={usageForm.quantity_used} required
-                      onChange={e => setUsageForm(f => ({ ...f, quantity_used: e.target.value }))} style={s.input} />
+                      onKeyDown={blockInvalidIntegerKeys}
+                      onChange={e => setUsageForm(f => ({ ...f, quantity_used: sanitizeWholeNumber(e.target.value, { maxLength: 6 }) }))} style={s.input} />
                     <small style={{ color: 'var(--mcc-secondary, #52647a)' }}>
                       {usageItems.find(item => String(item.id) === String(usageForm.item_id))
                         ? `Available: ${usageItems.find(item => String(item.id) === String(usageForm.item_id)).quantity}`
@@ -793,7 +800,7 @@ export default function InventoryPage() {
                         <td style={s.td}>{usage.quantity_used} {usage.item?.unit || ''}</td>
                         <td style={s.td}>{usage.used_for || '—'}</td>
                         <td style={s.td}>{usage.usedByUser?.email || '—'}</td>
-                        {canDelete && <td style={s.td}>{Number(usage.is_reversed) ? <span style={{ ...s.badge, background: '#f1f5f9', color: '#64748b' }}>Reversed</span> : <button onClick={() => handleReverseUsage(usage)} style={{ ...s.editBtn, background: '#e8f4fd', color: '#005599' }}>Reverse usage</button>}</td>}
+                        {canDelete && <td style={s.td}>{Number(usage.is_reversed) ? <span style={{ ...s.badge, background: '#f1f5f9', color: '#64748b' }}>Reversed</span> : <IconActionButton icon="rotateCcw" label="Reverse usage" title="Reverse usage" tone="primary" onClick={() => handleReverseUsage(usage)} />}</td>}
                       </tr>
                     ))}
               </tbody>
@@ -853,6 +860,14 @@ export default function InventoryPage() {
             </>
           )}
         </section>
+      )}
+
+      {!scopedRequestOnly && (
+        <InventoryOperationsPanel
+          items={items}
+          canManage={canManage}
+          onStockChanged={() => fetchItems()}
+        />
       )}
 
       {reviewDialog && (
@@ -920,7 +935,7 @@ const s = {
   title:        { fontSize: '24px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
   subtitle:     { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0 0' },
   headerActions:{ display: 'flex', gap: '10px' },
-  addBtn:       { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+  addBtn:       { background: '#005599', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
   tabBar:       { display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' },
   tab:          { border: 'none', borderRadius: '20px', padding: '8px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
   formCard:     { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
@@ -933,7 +948,7 @@ const s = {
   select:       { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)' },
   formActions:  { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
   cancelBtn:    { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  submitBtn:    { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  submitBtn:    { background: '#005599', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   filterBar:    { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
   filterInput:  { padding: '8px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', flex: 1, minWidth: '160px' },
   filterSelect: { padding: '8px 12px', fontSize: '14px', border: '1.5px solid #e2e8f0', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)' },

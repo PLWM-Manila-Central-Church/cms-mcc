@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../../api/axiosInstance';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
+import { blockInvalidDecimalKeys, sanitizeCurrency } from '../../utils/inputConstraints';
 import useDialogFocus from '../../components/attendance/useQrDialogFocus';
 
 const errorText = (error) => apiErrorMessage(error, 'The notification could not be saved.');
@@ -129,7 +130,7 @@ export default function CampaignComposer({ user, caps, onClose, onCreated }) {
         </div>
         <div className="outreach-grid">
           <label>Send at · Asia/Manila<input type="datetime-local" value={scheduledAt} onChange={(event) => { setScheduledAt(event.target.value); setPreview(null); }} required /></label>
-          <label>Budget cap · optional<input type="number" min="0" step="0.01" value={budgetCap} onChange={(event) => setBudgetCap(event.target.value)} placeholder="Auto" /></label>
+          <label>Budget cap · optional<input type="number" min="0" step="0.01" value={budgetCap} onKeyDown={blockInvalidDecimalKeys} onChange={(event) => setBudgetCap(sanitizeCurrency(event.target.value))} placeholder="Auto" /></label>
         </div>
         <p className="outreach-muted">Sends only between 08:00 and 20:00 Asia/Manila. All-member messages need a second approver. Frequency caps and consent are checked again at send time.</p>
         {preview && <section className="campaign-preview" aria-label="Audience preview">

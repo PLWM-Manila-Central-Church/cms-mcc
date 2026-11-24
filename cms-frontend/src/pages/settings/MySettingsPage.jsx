@@ -4,6 +4,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { LANGS, saveLangCode } from '../../utils/langUtils';
 import MonoIcon from '../../components/common/MonoIcon';
 import { uploadUrl } from '../../utils/uploadUrl';
+import { blockInvalidIntegerKeys, sanitizeWholeNumber } from '../../utils/inputConstraints';
 import NotificationPreferencesCard from '../../components/notifications/NotificationPreferencesCard';
 
 // ── Constants ─────────────────────────────────────────────────
@@ -257,9 +258,9 @@ export default function MySettingsPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <input
                 id="staff-preference-size" type="number" min={12} max={40} value={fontSizeInput}
-                onChange={e => setFontSizeInput(e.target.value)}
+                onChange={e => setFontSizeInput(sanitizeWholeNumber(e.target.value, { max: 40, maxLength: 2 }))}
                 onBlur={handleFontSizeBlur}
-                onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                onKeyDown={e => { blockInvalidIntegerKeys(e); if (e.key === 'Enter') e.target.blur(); }}
                 style={{ ...inp, width: 84, textAlign: 'center' }}
               />
               <span style={{ fontSize: 13, color: '#52647a' }}>current: <strong>{fontSize}px</strong></span>

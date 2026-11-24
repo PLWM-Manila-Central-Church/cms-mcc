@@ -15,6 +15,9 @@ import { getIncomeSummaryAmounts } from '../../utils/incomeSummary';
 import FinanceAttachments from '../../components/finance/FinanceAttachments';
 import FinanceNavigation from '../../components/finance/FinanceNavigation';
 import FinanceStatementDialog from './FinanceStatementDialog';
+import MonoIcon from '../../components/common/MonoIcon';
+import IconActionButton from '../../components/common/IconActionButton';
+import { blockInvalidDecimalKeys, sanitizeCurrency, sanitizePersonName, sanitizeReference } from '../../utils/inputConstraints';
 
 const TYPE_BADGE = {
   Tithes:    { bg: '#ecfdf5', color: '#059669' },
@@ -337,17 +340,18 @@ export default function FinancePage() {
           <h1 className="workspace-page-title" style={{ fontSize: 28, fontWeight: 800, color: 'var(--mcc-ink, #0f172a)', margin: 0 }}>Finance Records</h1>
           <p style={{ fontSize: 14, color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0' }}>Record and monitor offerings, tithes, donations, and other church income in one place.</p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             type="button"
             onClick={() => setShowFinanceStatement(true)}
-            style={{ background: 'var(--mcc-brand, #005599)', color: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-brand, #005599)', borderRadius: 10, padding: '11px 16px', minHeight: 44, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
+            style={{ background: 'var(--mcc-surface, #fff)', color: '#003d70', border: '1.5px solid #cbd5e1', borderRadius: 10, padding: '10px 15px', minHeight: 44, fontWeight: 600, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 7 }}
           >
-            Finance Statement
+            <MonoIcon name="document" size={15} />
+            <span>Finance Statement</span>
           </button>
           {canCreate && (
-            <button onClick={() => { resetIncForm(); setShowIncForm(true); }} style={{ background: '#059669', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 8px rgba(5,150,105,0.3)' }}>
-              <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Add Financial Record
+            <button onClick={() => { resetIncForm(); setShowIncForm(true); }} style={{ background: '#005599', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: 10, padding: '11px 20px', minHeight: 44, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 8px rgba(0,85,153,0.22)' }}>
+              <MonoIcon name="plus" size={16} /> Add Financial Record
             </button>
           )}
         </div>
@@ -374,7 +378,7 @@ export default function FinancePage() {
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, color: 'var(--mcc-secondary, #52647a)', fontWeight: 500 }}>{card.label}</div>
-                  <div className="mcc-finance-card-value" style={{ fontSize: 22, fontWeight: 700, color: '#059669', marginTop: 2 }}>{formatAmount(card.value)}</div>
+                  <div className="mcc-finance-card-value" style={{ fontSize: 22, fontWeight: 700, color: '#003d70', marginTop: 2 }}>{formatAmount(card.value)}</div>
                   <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>All time total</div>
                 </div>
               </div>
@@ -386,7 +390,7 @@ export default function FinancePage() {
       {/* Filter Bar */}
       <div style={{ background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 220px', position: 'relative' }}>
-          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 15 }}>&#128269;</span>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', display: 'inline-flex', pointerEvents: 'none' }}><MonoIcon name="search" size={15} /></span>
           <input
             type="text"
             placeholder="Search name or reference..."
@@ -434,12 +438,14 @@ export default function FinancePage() {
         </div>
 
         {hasActiveFilter && (
-          <button
+          <IconActionButton
+            icon="close"
+            label="Clear Filters"
+            title="Clear filters"
+            tone="neutral"
+            size="md"
             onClick={() => { setIncFilterCategory(''); setIncFilterDateFrom(''); setIncFilterDateTo(''); setIncFilterSearch(''); setIncomePage(1); }}
-            style={{ background: 'none', color: 'var(--mcc-secondary, #52647a)', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
-          >
-            &#8634; Clear Filters
-          </button>
+          />
         )}
       </div>
 
@@ -532,24 +538,29 @@ export default function FinancePage() {
                     />
                   </td>
                   <td style={{ padding: '14px 22px' }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="mcc-icon-action-group">
                       {canUpdate && (
-                        <button
+                        <IconActionButton
+                          icon="edit"
+                          label="Edit"
+                          title="Edit record"
+                          tone="primary"
                           onClick={() => {
                             setEditIncRecord(r);
                             setIncForm({ member_id: r.member_id || '', is_anonymous: Boolean(r.is_anonymous), category_id: r.category_id, amount: r.amount, transaction_date: r.transaction_date, receipt_number: r.receipt_number || '', notes: r.notes || '' });
                             setIncMemberSearch(r.is_anonymous ? '' : memberName);
                             setShowIncForm(true);
                           }}
-                          style={{ background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                        >
-                          Edit
-                        </button>
+                        />
                       )}
                       {canArchive && (
-                        <button onClick={() => handleIncDelete(r.id)} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          Archive
-                        </button>
+                        <IconActionButton
+                          icon="archive"
+                          label="Archive"
+                          title="Archive record"
+                          tone="danger"
+                          onClick={() => handleIncDelete(r.id)}
+                        />
                       )}
                     </div>
                   </td>
@@ -595,7 +606,7 @@ export default function FinancePage() {
                   <button
                     key={idx}
                     onClick={() => setIncomePage(p)}
-                    style={{ width: 34, height: 34, borderRadius: 8, border: 'none', background: p === incomePage ? '#059669' : 'transparent', color: p === incomePage ? 'var(--mcc-surface, #fff)' : '#475569', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                    style={{ width: 34, height: 34, borderRadius: 8, border: 'none', background: p === incomePage ? '#005599' : 'transparent', color: p === incomePage ? 'var(--mcc-surface, #fff)' : '#475569', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
                   >
                     {p}
                   </button>
@@ -650,7 +661,7 @@ export default function FinancePage() {
                 <div>
                   <label htmlFor="finance-giver-search" style={F.label}>Search Giver (Member) *</label>
                   <div style={{ position: 'relative' }}>
-                    <input id="finance-giver-search" value={incMemberSearch} onChange={e => handleIncMemberSearch(e.target.value)} placeholder="Type name..." style={F.input} />
+                    <input id="finance-giver-search" value={incMemberSearch} maxLength={80} onChange={e => handleIncMemberSearch(sanitizePersonName(e.target.value, 80))} placeholder="Type name..." style={F.input} />
                     {incMemberResults.length > 0 && (
                       <ul aria-label="Matching members" style={{ position: 'absolute', background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 8, left: 0, right: 0, zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', listStyle:'none', margin:0, padding:0, maxHeight:240, overflowY:'auto' }}>
                         {incMemberResults.map(m => (
@@ -678,7 +689,7 @@ export default function FinancePage() {
                 </div>
                 <div>
                   <label style={F.label}>Amount (PHP) *</label>
-                  <input aria-label="Amount (PHP)" type="number" min="0.01" step="0.01" value={incForm.amount} onChange={e => setIncForm(f => ({ ...f, amount: e.target.value }))} required style={F.input} />
+                  <input aria-label="Amount (PHP)" type="number" min="0.01" step="0.01" value={incForm.amount} onKeyDown={blockInvalidDecimalKeys} onChange={e => setIncForm(f => ({ ...f, amount: sanitizeCurrency(e.target.value) }))} required style={F.input} />
                 </div>
                 <div>
                   <label style={F.label}>Date *</label>
@@ -686,12 +697,12 @@ export default function FinancePage() {
                 </div>
                 <div>
                   <label style={F.label}>Receipt Number</label>
-                  <input aria-label="Receipt Number" value={incForm.receipt_number || ''} onChange={e => setIncForm(f => ({ ...f, receipt_number: e.target.value }))} placeholder="Optional" style={F.input} />
+                  <input aria-label="Receipt Number" maxLength={50} value={incForm.receipt_number || ''} onChange={e => setIncForm(f => ({ ...f, receipt_number: sanitizeReference(e.target.value, 50) }))} placeholder="Optional" style={F.input} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                 <button disabled={incSaving} type="button" onClick={() => { resetIncForm(); setShowIncForm(false); }} style={{ padding: '10px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: 'var(--mcc-surface, #fff)', color: '#475569', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>Cancel</button>
-                <button disabled={incSaving} type="submit" style={{ background: '#059669', color: 'var(--mcc-surface, #fff)', padding: '10px 24px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
+                <button disabled={incSaving} type="submit" style={{ background: '#005599', color: 'var(--mcc-surface, #fff)', padding: '10px 24px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
                   {incSaving ? 'Saving...' : 'Save Record'}
                 </button>
               </div>

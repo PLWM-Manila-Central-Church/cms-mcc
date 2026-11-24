@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
+import { sanitizePersonName, sanitizePhone } from '../../utils/inputConstraints';
 
 function EyeIcon({ open }) {
   return open ? (
@@ -140,7 +141,10 @@ export default function UserFormPage() {
         member_ministry_role_id: '',
       }));
     } else {
-      setForm(f => ({ ...f, [name]: value, ...(!isEdit && name === 'email' ? { member_id: null } : {}) }));
+      let nextValue = value;
+      if (name === 'first_name' || name === 'last_name') nextValue = sanitizePersonName(value, 80);
+      else if (name === 'phone') nextValue = sanitizePhone(value, 20);
+      setForm(f => ({ ...f, [name]: nextValue, ...(!isEdit && name === 'email' ? { member_id: null } : {}) }));
       if (name === 'email') setMemberCandidate(null);
     }
     setError('');

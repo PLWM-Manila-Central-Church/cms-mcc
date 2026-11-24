@@ -1,3 +1,5 @@
+import { blockInvalidIntegerKeys, sanitizeWholeNumber } from '../../utils/inputConstraints';
+
 export default function EventReservationFields({
   capacity,
   totalParkingSlots,
@@ -49,7 +51,8 @@ export default function EventReservationFields({
               max={seatLimit}
               step="1"
               value={seatNumber ?? ''}
-              onChange={(event) => onSeatNumberChange?.(event.target.value)}
+              onKeyDown={blockInvalidIntegerKeys}
+              onChange={(event) => onSeatNumberChange?.(sanitizeWholeNumber(event.target.value, { max: seatLimit }))}
               style={inputStyle}
             />
           </label>
@@ -64,7 +67,8 @@ export default function EventReservationFields({
               max={parkingLimit}
               step="1"
               value={parkingSlot ?? ''}
-              onChange={(event) => onParkingSlotChange?.(event.target.value)}
+              onKeyDown={blockInvalidIntegerKeys}
+              onChange={(event) => onParkingSlotChange?.(sanitizeWholeNumber(event.target.value, { max: parkingLimit }))}
               style={inputStyle}
             />
           </label>

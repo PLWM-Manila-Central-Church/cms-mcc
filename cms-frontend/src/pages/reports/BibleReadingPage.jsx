@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import IconActionButton from '../../components/common/IconActionButton';
+import { sanitizeScriptureRef } from '../../utils/inputConstraints';
 
 const currentMonth = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }).slice(0, 7);
 const monthLabel = (month) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-PH', {
@@ -156,7 +158,7 @@ export default function BibleReadingPage() {
                   <span style={{ fontSize: 12, color: '#52647a' }}> · {dateLabel(verse.sunday_date)} · {verse.reference}</span>
                   <span style={{ display: 'block', fontSize: 12, color: '#475569', marginTop: 2 }}>{verse.verse_text}</span>
                 </span>
-                <button type="button" style={S.button} onClick={() => removeVerse(verse.id)}>Remove</button>
+                <IconActionButton icon="archive" label="Remove" title="Remove memory verse" tone="danger" onClick={() => removeVerse(verse.id)} />
               </li>
             ))}
           </ul>
@@ -173,10 +175,10 @@ export default function BibleReadingPage() {
             <input aria-label="Sunday" type="date" required style={S.input} value={form.sunday_date} onChange={(event) => setForm({ ...form, sunday_date: event.target.value })} />
           </label>
           <label style={S.field}>Reference
-            <input aria-label="Reference" required placeholder="Psalm 23:1-6" style={S.input} value={form.reference} onChange={(event) => setForm({ ...form, reference: event.target.value })} />
+            <input aria-label="Reference" maxLength={80} required placeholder="Psalm 23:1-6" style={S.input} value={form.reference} onChange={(event) => setForm({ ...form, reference: sanitizeScriptureRef(event.target.value, 80) })} />
           </label>
           <label style={{ ...S.field, gridColumn: '1 / -1' }}>Verse text
-            <textarea aria-label="Verse text" required rows={2} style={{ ...S.input, resize: 'vertical' }} value={form.verse_text} onChange={(event) => setForm({ ...form, verse_text: event.target.value })} />
+            <textarea aria-label="Verse text" maxLength={1000} required rows={2} style={{ ...S.input, resize: 'vertical' }} value={form.verse_text} onChange={(event) => setForm({ ...form, verse_text: event.target.value })} />
           </label>
           <button type="submit" style={S.primary} disabled={saving}>{saving ? 'Saving…' : 'Assign verse'}</button>
         </form>

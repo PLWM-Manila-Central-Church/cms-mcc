@@ -28,7 +28,7 @@ test('lists the selected ministry schedules and deletes one', async () => {
   expect(screen.getAllByText('Practice').length).toBeGreaterThan(0);
 
   fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0]);
-  await waitFor(() => expect(state.delete).toHaveBeenCalledWith('/ministry/schedules/11'));
+  await waitFor(() => expect(state.post).toHaveBeenCalledWith('/ministry/schedules/11/archive'));
 });
 
 test('adds a schedule entry for the selected ministry', async () => {

@@ -7,6 +7,8 @@ import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
 import { fullName as getFullName } from '../../utils/member';
 import { uploadUrl } from '../../utils/uploadUrl';
+import { sanitizeAlphaLabel, sanitizePersonName, sanitizePhone } from '../../utils/inputConstraints';
+import MemberEngagementCard from '../../components/members/MemberEngagementCard';
 const OperationalMemberQrPanel = lazy(() => import('../../components/attendance/OperationalMemberQrPanel'));
 
 const STATUS_COLORS = {
@@ -252,21 +254,26 @@ export default function MemberProfilePage() {
                 <input
                   placeholder="Full Name *"
                   value={ecForm.name}
-                  onChange={e => setEcForm({ ...ecForm, name: e.target.value })}
+                  maxLength={80}
+                  onChange={e => setEcForm({ ...ecForm, name: sanitizePersonName(e.target.value, 80) })}
                   required
                   style={styles.ecInput}
                 />
                 <input
                   placeholder="Relationship *"
                   value={ecForm.relationship}
-                  onChange={e => setEcForm({ ...ecForm, relationship: e.target.value })}
+                  maxLength={40}
+                  onChange={e => setEcForm({ ...ecForm, relationship: sanitizeAlphaLabel(e.target.value, 40) })}
                   required
                   style={styles.ecInput}
                 />
                 <input
+                  type="tel"
+                  inputMode="tel"
                   placeholder="Phone Number *"
                   value={ecForm.phone}
-                  onChange={e => setEcForm({ ...ecForm, phone: e.target.value })}
+                  maxLength={20}
+                  onChange={e => setEcForm({ ...ecForm, phone: sanitizePhone(e.target.value, 20) })}
                   required
                   style={styles.ecInput}
                 />
@@ -337,6 +344,7 @@ export default function MemberProfilePage() {
               </ol>
             )}
           </div>
+          <MemberEngagementCard memberId={id} />
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import IconActionButton from '../../components/common/IconActionButton';
 
 const dateLabel = (date) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-PH', {
   weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC',
@@ -19,9 +20,9 @@ const S = {
   sub: { margin: '4px 0 0', fontSize: 13, color: 'var(--mcc-secondary, #52647a)' },
   panel: { marginTop: 18, border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 12, background: '#fff', padding: 16 },
   panelTitle: { margin: '0 0 10px', fontSize: 17, fontWeight: 650 },
-  row: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, alignItems: 'end' },
-  field: { display: 'grid', gap: 4, fontSize: 12, color: 'var(--mcc-secondary, #52647a)', fontWeight: 600 },
-  input: { minHeight: 38, padding: '7px 10px', border: '1px solid #cbd5e1', borderRadius: 7, font: 'inherit', fontSize: 13, color: 'var(--mcc-ink, #0f172a)', background: '#fff' },
+  row: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: 12, alignItems: 'end' },
+  field: { display: 'grid', gap: 5, fontSize: 12, color: 'var(--mcc-secondary, #52647a)', fontWeight: 600, minWidth: 0 },
+  input: { width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 40, padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 7, font: 'inherit', fontSize: 13, color: 'var(--mcc-ink, #0f172a)', background: '#fff' },
   primary: { minHeight: 38, padding: '8px 14px', border: '1px solid #005599', borderRadius: 8, background: '#005599', color: '#fff', fontWeight: 650, fontSize: 13, cursor: 'pointer' },
   button: { minHeight: 34, padding: '6px 10px', border: '1px solid #c9dceb', borderRadius: 8, background: '#fff', color: '#005599', fontWeight: 650, fontSize: 12, cursor: 'pointer' },
   empty: { margin: 0, padding: '8px 0', color: 'var(--mcc-secondary, #52647a)', fontSize: 13 },
@@ -77,10 +78,10 @@ export default function MinistrySchedulesPage() {
   const remove = async (id) => {
     setError('');
     try {
-      await axiosInstance.delete(`/ministry/schedules/${id}`);
+      await axiosInstance.post(`/ministry/schedules/${id}/archive`);
       await load();
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'The schedule could not be removed.');
+      setError(requestError.response?.data?.message || 'The schedule could not be archived.');
     }
   };
 
@@ -113,7 +114,7 @@ export default function MinistrySchedulesPage() {
                     {[dateLabel(entry.date), [entry.startTime, entry.endTime].filter(Boolean).map(timeLabel).join('–'), entry.location].filter(Boolean).join(' · ')}
                   </span>
                 </span>
-                <button type="button" style={S.button} onClick={() => remove(entry.id)}>Remove</button>
+                <IconActionButton icon="archive" label="Remove" title="Remove schedule" tone="danger" onClick={() => remove(entry.id)} />
               </li>
             ))}
           </ul>
@@ -131,7 +132,7 @@ export default function MinistrySchedulesPage() {
             </select>
           </label>
           <label style={S.field}>Title
-            <input aria-label="Title" required style={S.input} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
+            <input aria-label="Title" maxLength={150} required style={S.input} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
           </label>
           <label style={S.field}>Date
             <input aria-label="Date" type="date" required style={S.input} value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
@@ -143,7 +144,7 @@ export default function MinistrySchedulesPage() {
             <input aria-label="End time" type="time" style={S.input} value={form.end_time} onChange={(event) => setForm({ ...form, end_time: event.target.value })} />
           </label>
           <label style={S.field}>Location
-            <input aria-label="Location" style={S.input} value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} />
+            <input aria-label="Location" maxLength={150} style={S.input} value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} />
           </label>
           <button type="submit" style={S.primary} disabled={saving || !ministryId}>{saving ? 'Saving…' : 'Add schedule'}</button>
         </form>

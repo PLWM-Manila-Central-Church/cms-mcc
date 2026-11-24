@@ -6,6 +6,7 @@ import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import { groupMembersTitle, isScopedLeaderRole } from '../../utils/roleDisplay';
 import MonoIcon from '../../components/common/MonoIcon';
+import IconActionButton from '../../components/common/IconActionButton';
 import { displayMemberName } from '../../utils/displayIdentity';
 import { fullName } from '../../utils/member';
 import { uploadUrl } from '../../utils/uploadUrl';
@@ -90,10 +91,10 @@ function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMem
       {isMember ? (
         <MonoIcon name="chevronDown" size={18} style={{ color: '#cbd5e1', flexShrink: 0, transform:'rotate(-90deg)' }} />
       ) : (
-        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-          <button onClick={() => onView(m.id)} style={actionBtnSm('#e8f4fd', '#0066b3')}>View</button>
-          {canEdit && <button onClick={() => onEdit(m.id)} style={actionBtnSm('#f0fdf4', '#16a34a')}>Edit</button>}
-          {canUnassign && <button onClick={() => onUnassign(m)} style={actionBtnSm('#fef2f2', '#dc2626')}>Unassign</button>}
+        <div className="mcc-icon-action-group" style={{ flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+          <IconActionButton icon="eye" label="View" title="View profile" tone="primary" onClick={() => onView(m.id)} />
+          {canEdit && <IconActionButton icon="edit" label="Edit" title="Edit member" tone="neutral" onClick={() => onEdit(m.id)} />}
+          {canUnassign && <IconActionButton icon="userMinus" label="Unassign" title="Unassign from group" tone="danger" onClick={() => onUnassign(m)} />}
         </div>
       )}
     </div>
@@ -125,10 +126,10 @@ function TableRow({ m, idx, canEdit, canUnassign, canSelect, selected, onToggleS
         </span>
       </td>
       <td style={tdStyle} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={() => onView(m.id)} style={actionBtnSm('#e8f4fd', '#0066b3')}>View</button>
-          {canEdit && <button onClick={() => onEdit(m.id)} style={actionBtnSm('#f0fdf4', '#16a34a')}>Edit</button>}
-          {canUnassign && <button onClick={() => onUnassign(m)} style={actionBtnSm('#fef2f2', '#dc2626')}>Unassign</button>}
+        <div className="mcc-icon-action-group">
+          <IconActionButton icon="eye" label="View" title="View profile" tone="primary" onClick={() => onView(m.id)} />
+          {canEdit && <IconActionButton icon="edit" label="Edit" title="Edit member" tone="neutral" onClick={() => onEdit(m.id)} />}
+          {canUnassign && <IconActionButton icon="userMinus" label="Unassign" title="Unassign from group" tone="danger" onClick={() => onUnassign(m)} />}
         </div>
       </td>
     </tr>
@@ -471,9 +472,22 @@ export default function MembersPage() {
           <h1 className="cms-page-title">{isGroupLeader ? groupMembersTitle(user) : 'Members'}</h1>
           <p className="cms-page-sub">{total} total members</p>
         </div>
-        {canCreate && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {canCreate && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <input ref={importInputRef} type="file" accept=".csv,text/csv" onChange={handleRosterImport} hidden />
-          <button type="button" onClick={() => importInputRef.current?.click()} className="cms-add-btn" disabled={bulkImporting} title="Import up to 500 members from one CSV file">{bulkImporting ? 'Importing…' : 'Import CSV'}</button>
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            disabled={bulkImporting}
+            title="Import up to 500 members from one CSV file"
+            style={{
+              background: '#fff', color: '#003d70', border: '1.5px solid #cbd5e1', borderRadius: 10,
+              padding: '9px 14px', minHeight: 44, fontSize: 13.5, fontWeight: 600, cursor: bulkImporting ? 'wait' : 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'inherit',
+            }}
+          >
+            <MonoIcon name="upload" size={15} />
+            <span>{bulkImporting ? 'Importing…' : 'Import CSV'}</span>
+          </button>
           <button type="button" onClick={() => navigate('/members/new')} className="cms-add-btn">+ Add Member</button>
         </div>}
       </div>
@@ -526,7 +540,7 @@ export default function MembersPage() {
 
       {/* Filter bar */}
       <div className="cms-filter-bar">
-        <div style={{ display: 'flex', gap: 8, flex: 1, minWidth: isMobile ? '100%' : 280 }}>
+        <div style={{ display: 'flex', gap: 8, flex: 1, minWidth: isMobile ? '100%' : 280, alignItems: 'center' }}>
           <input
             value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={handleKey}
             placeholder="Search name, email, phone…"
@@ -534,9 +548,7 @@ export default function MembersPage() {
             onFocus={e => e.target.style.borderColor = '#0066b3'}
             onBlur={e => e.target.style.borderColor = '#e2e8f0'}
           />
-          <button onClick={handleSearch} style={{ background: '#005599', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: 9, padding: '10px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-            Search
-          </button>
+          <IconActionButton icon="search" label="Search" title="Search members" tone="solid" size="md" onClick={handleSearch} />
         </div>
 
         {!isScopedLeader && (
@@ -553,13 +565,13 @@ export default function MembersPage() {
               ))}
             </select>
 
-            {/* Group filter */}
+            {/* Ministry filter */}
             <select
               value={groupFilter}
               onChange={e => { setPage(1); setGroupFilter(e.target.value); }}
               style={{ padding: '8px 12px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 9, outline: 'none', background: 'var(--mcc-surface, #fff)', fontFamily: 'inherit', color: groupFilter ? '#005599' : 'var(--mcc-secondary, #52647a)', fontWeight: groupFilter ? 600 : 400, minHeight: 38 }}
             >
-              <option value="">All Groups</option>
+              <option value="">All Ministries</option>
               {groups.map(g => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
@@ -579,7 +591,7 @@ export default function MembersPage() {
         </select>
 
         {(search || statusFilter || cgFilter || groupFilter) && (
-          <button onClick={clearFilters} style={{ background: 'none', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 9, padding: '7px 14px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', minHeight: 38, display:'inline-flex', alignItems:'center', gap:6 }}><MonoIcon name="close" size={13} /> Clear</button>
+          <IconActionButton icon="close" label="Clear" title="Clear filters" tone="neutral" size="md" onClick={clearFilters} />
         )}
       </div>
 
@@ -626,7 +638,7 @@ export default function MembersPage() {
                       onChange={toggleAll} style={{ cursor:'pointer', width:15, height:15 }} />
                     }
                   </th>
-                  {[['Name','name',null],['Cell Group','cg',null],['Group','group',null],['Status','status',null],['Actions',null,null]].map(([label, col, w]) => (
+                  {[['Name','name',null],['Cell Group','cg',null],['Ministry','group',null],['Status','status',null],['Actions',null,null]].map(([label, col, w]) => (
                     <th key={label} onClick={col ? ()=>toggleSort(col) : undefined}
                       style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'var(--mcc-secondary, #52647a)', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid var(--mcc-border, #e2e8f0)', whiteSpace:'nowrap', cursor:col?'pointer':'default', userSelect:'none', width:w||undefined, transition:'background 0.1s' }}
                       onMouseEnter={e=>{if(col)e.currentTarget.style.background='#f0f7ff';}}

@@ -6,6 +6,7 @@ import useNotificationPolling from '../../hooks/useNotificationPolling';
 import { LANGS, getLangCode, saveLangCode } from '../../utils/langUtils';
 import { timeAgo } from '../../utils/timeAgo';
 import MonoIcon from '../common/MonoIcon';
+import IconActionButton from '../common/IconActionButton';
 import { getRoleWorkspace } from '../../utils/roleWorkspace';
 
 const TYPE_ICON = {
@@ -253,7 +254,13 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
           </>
         )}
 
-        <button type="button" aria-label="My Settings" title="My Settings" onClick={() => navigate('/my-settings')} style={S.logoutBtn}>{isMobile ? <MonoIcon name="settings" size={17} /> : 'Settings'}</button>
+        <IconActionButton
+          icon="settings"
+          label="My Settings"
+          tone="neutral"
+          size="md"
+          onClick={() => navigate('/my-settings')}
+        />
         {/* Language picker */}
         <div ref={langRef} style={{ position: 'relative' }}>
           <button
@@ -353,9 +360,13 @@ export default function Header({ sidebarWidth, isMobile = false, isTablet = fals
           )}
         </div>
 
-        <button aria-label="Sign Out" title="Sign Out" onClick={handleLogout} style={{ ...S.logoutBtn, padding: isMobile ? '7px 10px' : '7px 16px', fontSize: isMobile ? '12px' : '13px' }}>
-          {isMobile ? '↩' : 'Sign Out'}
-        </button>
+        <IconActionButton
+          icon="logout"
+          label="Sign Out"
+          tone="neutral"
+          size="md"
+          onClick={handleLogout}
+        />
       </div>
 
       <style>{`@keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }`}</style>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import IconActionButton from '../common/IconActionButton';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp']);
@@ -195,51 +196,54 @@ export default function FinanceAttachments({
                   {attachment.file_name}
                 </span>
                 {download.sameOrigin ? (
-                  <a
+                  <IconActionButton
+                    icon="download"
+                    label={`${text.download} ${attachment.file_name}`}
+                    title={`Download ${attachment.file_name}`}
+                    tone="primary"
+                    size="xs"
                     href={download.href}
                     download={download.fileName}
-                    aria-label={`${text.download} ${attachment.file_name}`}
-                    style={{ border: 0, background: 'transparent', color: '#075985', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '3px 4px', textDecoration: 'none' }}
-                  >
-                    {text.download}
-                  </a>
+                  />
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => downloadAttachment(attachment)}
+                  <IconActionButton
+                    icon="download"
+                    label={`${text.download} ${attachment.file_name}`}
+                    title={`Download ${attachment.file_name}`}
+                    tone="primary"
+                    size="xs"
                     disabled={downloadingId === attachment.id}
-                    aria-label={`${text.download} ${attachment.file_name}`}
-                    style={{ border: 0, background: 'transparent', color: '#075985', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '3px 4px' }}
-                  >
-                    {downloadingId === attachment.id ? '…' : text.download}
-                  </button>
+                    onClick={() => downloadAttachment(attachment)}
+                  />
                 )}
                 {canArchive && (
-                  <button
-                    type="button"
+                  <IconActionButton
+                    icon="archive"
+                    label={`${text.remove} ${attachment.file_name}`}
+                    title={`Archive ${attachment.file_name}`}
+                    tone="danger"
+                    size="xs"
                     onClick={() => setAttachmentToDelete(attachment)}
-                    aria-label={`${text.remove} ${attachment.file_name}`}
-                    style={{ border: 0, background: 'transparent', color: '#b91c1c', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '3px 4px' }}
-                  >
-                    {text.remove}
-                  </button>
+                  />
                 )}
               </li>
             );
           })}
         </ul>
       )}
-      {!attachments.length && <span style={{ color: '#94a3b8', fontSize: 12 }}>{text.empty}</span>}
+      {!attachments.length && !canUpload && <span style={{ color: '#94a3b8', fontSize: 12 }}>{text.empty}</span>}
       {canUpload && targetId && (
-        <>
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {!attachments.length && <span style={{ color: '#94a3b8', fontSize: 12 }}>{text.empty}</span>}
+          <IconActionButton
+            icon="paperclip"
+            label={uploading ? text.uploading : text.add}
+            title={uploading ? text.uploading : text.add}
+            tone="neutral"
+            size="xs"
             disabled={uploading}
-            style={{ justifySelf: 'start', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff', color: '#334155', padding: '5px 8px', fontSize: 12, fontWeight: 700, cursor: uploading ? 'wait' : 'pointer' }}
-          >
-            {uploading ? text.uploading : text.add}
-          </button>
+            onClick={() => inputRef.current?.click()}
+          />
           <input
             ref={inputRef}
             type="file"
@@ -249,7 +253,7 @@ export default function FinanceAttachments({
             onChange={uploadFiles}
             style={{ display: 'none' }}
           />
-        </>
+        </div>
       )}
       {error && !attachmentToDelete && <div role="alert" style={{ color: '#b91c1c', fontSize: 12, maxWidth: 260 }}>{error}</div>}
       {notice && <div role="status" style={{ color: '#166534', fontSize: 12 }}>{notice}</div>}

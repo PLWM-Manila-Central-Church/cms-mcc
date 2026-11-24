@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
+import IconActionButton from '../../components/common/IconActionButton';
 import { archiveRecordsWithResults } from '../../utils/bulkArchive';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
 
@@ -179,9 +180,7 @@ export default function UsersPage() {
           onBlur={e => e.target.style.borderColor = '#e2e8f0'}
         />
         {search && (
-          <button onClick={() => setSearch('')} style={{ background: '#f1f5f9', border: 'none', borderRadius: 9, padding: '10px 14px', fontSize: 13, color: 'var(--mcc-secondary, #52647a)', cursor: 'pointer', fontFamily: 'inherit' }}>
-            <MonoIcon name="close" size={13} /> Clear
-          </button>
+          <IconActionButton icon="close" label="Clear" title="Clear search" tone="neutral" size="md" onClick={() => setSearch('')} />
         )}
       </div>
 
@@ -224,18 +223,22 @@ export default function UsersPage() {
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: u.is_active ? '#dcfce7' : '#f3f4f6', color: u.is_active ? '#16a34a' : '#6b7280' }}>{u.is_active ? 'Active' : 'Inactive'}</span>
                   </div>
                   {u.member && <div style={{ fontSize: 12, color: 'var(--mcc-secondary, #52647a)', marginTop: 4, display:'flex', alignItems:'center', gap:4 }}><MonoIcon name="users" size={12} /> {u.member.first_name} {u.member.last_name}</div>}
-                  <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                  <div className="mcc-icon-action-group" style={{ marginTop: 8 }}>
                     {hasPermission('users', 'update') && (
-                      <button onClick={() => navigate(`/users/${u.id}/edit`)} style={{ background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+                      <IconActionButton icon="edit" label="Edit" title="Edit user" tone="primary" onClick={() => navigate(`/users/${u.id}/edit`)} />
                     )}
                     {hasPermission('users', 'update') && (
-                      <button onClick={() => handleToggleActive(u)} disabled={actionLoading === u.id}
-                        style={{ border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: u.is_active ? '#fef2f2' : '#f0fdf4', color: u.is_active ? '#dc2626' : '#16a34a', opacity: actionLoading === u.id ? 0.6 : 1 }}>
-                        {actionLoading === u.id ? '...' : u.is_active ? 'Deactivate' : 'Activate'}
-                      </button>
+                      <IconActionButton
+                        icon="power"
+                        label={u.is_active ? 'Deactivate' : 'Activate'}
+                        title={u.is_active ? 'Deactivate account' : 'Activate account'}
+                        tone={u.is_active ? 'warning' : 'success'}
+                        disabled={actionLoading === u.id}
+                        onClick={() => handleToggleActive(u)}
+                      />
                     )}
                     {hasPermission('users', 'delete') && u.id !== currentUser?.id && (
-                      <button onClick={() => { setDeleteTarget(u); setDeleteError(''); }} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}><MonoIcon name="archive" size={13} /> Archive</button>
+                      <IconActionButton icon="archive" label="Archive" title="Archive user" tone="danger" onClick={() => { setDeleteTarget(u); setDeleteError(''); }} />
                     )}
                   </div>
                 </div>
@@ -327,39 +330,34 @@ export default function UsersPage() {
                   </span>
                 </td>
                 <td style={styles.td}>
-                  <div style={styles.actions}>
+                  <div className="mcc-icon-action-group">
                     {hasPermission('users', 'update') && (
-                      <button
+                      <IconActionButton
+                        icon="edit"
+                        label="Edit"
+                        title="Edit user"
+                        tone="primary"
                         onClick={() => navigate(`/users/${u.id}/edit`)}
-                        style={styles.editBtn}
-                      >
-                        Edit
-                      </button>
+                      />
                     )}
                     {hasPermission('users', 'update') && (
-                      <button
-                        onClick={() => handleToggleActive(u)}
+                      <IconActionButton
+                        icon="power"
+                        label={u.is_active ? 'Deactivate' : 'Activate'}
+                        title={u.is_active ? 'Deactivate account' : 'Activate account'}
+                        tone={u.is_active ? 'warning' : 'success'}
                         disabled={actionLoading === u.id}
-                        style={{
-                          ...styles.toggleBtn,
-                          background: u.is_active ? '#fef2f2' : '#f0fdf4',
-                          color:      u.is_active ? '#dc2626' : '#16a34a',
-                          opacity:    actionLoading === u.id ? 0.6 : 1,
-                        }}
-                      >
-                        {actionLoading === u.id
-                          ? '...'
-                          : u.is_active ? 'Deactivate' : 'Activate'
-                        }
-                      </button>
+                        onClick={() => handleToggleActive(u)}
+                      />
                     )}
                     {hasPermission('users', 'delete') && u.id !== currentUser?.id && (
-                      <button
+                      <IconActionButton
+                        icon="archive"
+                        label="Archive"
+                        title="Archive user"
+                        tone="danger"
                         onClick={() => { setDeleteTarget(u); setDeleteError(''); }}
-                        style={styles.deleteBtn}
-                      >
-                        <MonoIcon name="archive" size={13} /> Archive
-                      </button>
+                      />
                     )}
                   </div>
                 </td>

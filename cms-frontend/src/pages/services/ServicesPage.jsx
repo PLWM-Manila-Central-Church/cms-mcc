@@ -5,6 +5,9 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import MonoIcon from '../../components/common/MonoIcon';
+import IconActionButton from '../../components/common/IconActionButton';
+import { blockInvalidIntegerKeys, sanitizeWholeNumber } from '../../utils/inputConstraints';
+import ServicePlannerPanel from '../../components/services/ServicePlannerPanel';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
 import { toLocalDateTimeInput } from '../../utils/localDateTimeInput';
 
@@ -317,13 +320,17 @@ export default function ServicesPage() {
             <div style={styles.formRow}>
               <div style={styles.field}>
                 <label style={styles.label} htmlFor="servicespage-capacity">Capacity (optional)</label>
-                <input id="servicespage-capacity" type="number" name="capacity" value={form.capacity} onChange={handleFormChange}
+                <input id="servicespage-capacity" type="number" name="capacity" value={form.capacity}
+                  onKeyDown={blockInvalidIntegerKeys}
+                  onChange={e => setForm(f => ({ ...f, capacity: sanitizeWholeNumber(e.target.value, { maxLength: 6 }) }))}
                   min="1" placeholder="Not specified" style={styles.input} />
               </div>
               <div style={styles.field}>
                 <label style={styles.label} htmlFor="servicespage-total_parking_slots">Parking Slots (optional)</label>
                 <input id="servicespage-total_parking_slots" type="number" name="total_parking_slots" value={form.total_parking_slots}
-                  onChange={handleFormChange} min="0" placeholder="Not specified" style={styles.input} />
+                  onKeyDown={blockInvalidIntegerKeys}
+                  onChange={e => setForm(f => ({ ...f, total_parking_slots: sanitizeWholeNumber(e.target.value, { maxLength: 5 }) }))}
+                  min="0" placeholder="Not specified" style={styles.input} />
               </div>
               <div style={styles.field}>
                 <label style={styles.label} htmlFor="servicespage-response_deadline">Response Deadline</label>
@@ -427,33 +434,38 @@ export default function ServicesPage() {
                     </span>
                   </td>
                   <td style={styles.td}>
-                    <div style={styles.actions}>
-                      {/* Admin/RegTeam: Attendance + Status buttons */}
+                    <div style={{ ...styles.actions, alignItems: 'center' }}>
+                      {/* Admin/RegTeam: Attendance + compact icon actions */}
                       {!isMember && (
-                        <button onClick={() => navigate(`/services/${s.id}/attendance`)} style={styles.viewBtn}>
-                          Attendance
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/services/${s.id}/attendance`)}
+                          style={{ ...styles.viewBtn, display: 'inline-flex', alignItems: 'center', gap: 5, minHeight: 34, padding: '6px 11px' }}
+                        >
+                          <MonoIcon name="attendance" size={14} /> Attendance
                         </button>
                       )}
                       {canUpdate && !isMember && !['completed', 'cancelled'].includes(s.status) && (
-                        <button onClick={() => openEditForm(s)} style={styles.viewBtn}>
-                          Edit
-                        </button>
+                        <IconActionButton icon="edit" label="Edit" title="Edit service" tone="neutral" onClick={() => openEditForm(s)} />
                       )}
-                      {nextStatuses.map(ns => (
-                        <button key={ns}
-                          onClick={() => handleStatusChange(s.id, ns)}
-                          disabled={statusUpdating === s.id}
-                          style={{ ...styles.statusBtn, ...STATUS_ACTION_STYLE[ns] }}>
-                          {STATUS_ACTION_LABEL[ns]}
-                        </button>
-                      ))}
-      {/* Archive button for completed/cancelled — admin/regteam only */}
+                      {nextStatuses.map(ns => {
+                        const iconName = ns === 'published' ? 'checkCircle' : ns === 'completed' ? 'check' : 'close';
+                        const tone = ns === 'published' ? 'primary' : ns === 'completed' ? 'success' : 'danger';
+                        return (
+                          <IconActionButton
+                            key={ns}
+                            icon={iconName}
+                            label={STATUS_ACTION_LABEL[ns]}
+                            title={`${STATUS_ACTION_LABEL[ns]} service`}
+                            tone={tone}
+                            disabled={statusUpdating === s.id}
+                            onClick={() => handleStatusChange(s.id, ns)}
+                          />
+                        );
+                      })}
+                      {/* Archive button for completed/cancelled — admin/regteam only */}
                       {canDelete && !isMember && ['completed', 'cancelled'].includes(s.status) && (
-                        <button
-                          onClick={() => handleDeleteService(s)}
-                          style={{ ...styles.statusBtn, background: '#fef2f2', color: '#dc2626' }}>
-                          Archive
-                        </button>
+                        <IconActionButton icon="archive" label="Archive" title="Archive service" tone="danger" onClick={() => handleDeleteService(s)} />
                       )}
                       {/* Member: Pre-register button */}
                       {canPreReg && (
@@ -487,6 +499,15 @@ export default function ServicesPage() {
           <span style={styles.pageInfo}>Page {page} of {totalPages}</span>
           <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={styles.pageBtn}>Next →</button>
         </div>
+      )}
+
+      {!isMember && services.length > 0 && (
+        <ServicePlannerPanel
+          services={services}
+          canCreate={canCreate}
+          canUpdate={canUpdate}
+          onServicesGenerated={fetchServices}
+        />
       )}
 
       {/* Pre-Registration Modal */}

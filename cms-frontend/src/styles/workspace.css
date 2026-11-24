@@ -30,11 +30,139 @@
 .mcc-main .cms-filter-bar { gap: 12px; }
 .mcc-main .cms-error-box { color: #b91c1c; }
 .mcc-header button { min-width: 44px; }
+.mcc-header .mcc-icon-btn { min-width: 38px; width: 38px; height: 38px; min-height: 38px; }
+
+/* Compact accessible icon buttons for repetitive row & utility actions */
+.mcc-workspace .mcc-icon-btn,
+.mcc-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--mcc-border, #e2e8f0);
+  background: var(--mcc-surface, #fff);
+  color: var(--mcc-secondary, #52647a);
+  cursor: pointer;
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease, transform 0.12s ease;
+}
+.mcc-workspace .mcc-icon-btn--xs,
+.mcc-icon-btn--xs {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 6px;
+}
+.mcc-workspace .mcc-icon-btn--md,
+.mcc-icon-btn--md {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: 9px;
+}
+.mcc-icon-btn.mcc-icon-btn--neutral {
+  background: #f8fafc;
+  border-color: #dbe4ee;
+  color: #334155;
+}
+.mcc-icon-btn.mcc-icon-btn--neutral:hover:not(:disabled) {
+  background: #e8f4fd;
+  border-color: #bae6fd;
+  color: #005599;
+}
+.mcc-icon-btn.mcc-icon-btn--primary {
+  background: #e8f4fd;
+  border-color: #cfe4f7;
+  color: #005599;
+}
+.mcc-icon-btn.mcc-icon-btn--primary:hover:not(:disabled) {
+  background: #005599;
+  border-color: #005599;
+  color: #fff;
+}
+.mcc-icon-btn.mcc-icon-btn--solid {
+  background: #005599;
+  border-color: #005599;
+  color: #fff;
+}
+.mcc-icon-btn.mcc-icon-btn--solid:hover:not(:disabled) {
+  background: #003d70;
+  border-color: #003d70;
+  color: #fff;
+}
+.mcc-icon-btn.mcc-icon-btn--success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+.mcc-icon-btn.mcc-icon-btn--success:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+.mcc-icon-btn.mcc-icon-btn--warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+.mcc-icon-btn.mcc-icon-btn--warning:hover:not(:disabled) {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+.mcc-icon-btn.mcc-icon-btn--danger {
+  background: #fff;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+.mcc-icon-btn.mcc-icon-btn--danger:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+.mcc-icon-btn.mcc-icon-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: #52647a;
+}
+.mcc-icon-btn.mcc-icon-btn--ghost:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #005599;
+}
+.mcc-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.mcc-icon-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+@media (max-width: 768px) {
+  .mcc-workspace .mcc-icon-btn:not(.mcc-icon-btn--xs),
+  .mcc-icon-btn:not(.mcc-icon-btn--xs) {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+}
 .mcc-finance-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px; margin-bottom: 24px; }
 .mcc-finance-card { min-width: 0; }
 .mcc-finance-card-value { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .mcc-portal { --mcc-secondary: #52647a; }
 .mcc-portal button { min-height: 44px; }
+.mcc-portal .portal-cal-cell { overflow: hidden; }
+.mcc-portal .portal-cal-cell button { min-height: 0; line-height: 1.2; }
 .mcc-auth { background: var(--mcc-canvas); }
 @media(max-width:1250px) { .mcc-header-email { display: none; } }
 @media(max-width:1100px) { .mcc-header-title { display: none; } }

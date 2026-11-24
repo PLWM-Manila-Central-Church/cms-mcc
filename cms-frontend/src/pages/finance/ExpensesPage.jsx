@@ -8,6 +8,8 @@ import { localDateInputValue } from '../../utils/localDateInput';
 import { getDateRangeError } from '../../utils/dateRange';
 import FinanceAttachments from '../../components/finance/FinanceAttachments';
 import FinanceNavigation from '../../components/finance/FinanceNavigation';
+import IconActionButton from '../../components/common/IconActionButton';
+import { blockInvalidDecimalKeys, sanitizeCurrency } from '../../utils/inputConstraints';
 
 const PAGE_SIZE = 20;
 const EMPTY_EXPENSE = () => ({ category_id: '', amount: '', date: localDateInputValue(), payment_method_id: '', description: '' });
@@ -23,7 +25,7 @@ const fieldStyle = {
 };
 const labelStyle = { display: 'grid', gap: 6, color: 'var(--mcc-secondary, #52647a)', fontSize: 12, fontWeight: 700 };
 const cardStyle = { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 14, padding: 18 };
-const primaryButton = { minHeight: 40, border: 0, borderRadius: 9, background: '#16834b', color: '#fff', padding: '9px 14px', fontWeight: 700, cursor: 'pointer', font: 'inherit' };
+const primaryButton = { minHeight: 40, border: 0, borderRadius: 9, background: '#005599', color: '#fff', padding: '9px 16px', fontWeight: 700, cursor: 'pointer', font: 'inherit' };
 const quietButton = { minHeight: 36, border: '1px solid var(--mcc-border, #d7e0e8)', borderRadius: 8, background: '#fff', color: '#334155', padding: '7px 11px', fontWeight: 650, cursor: 'pointer', font: 'inherit' };
 
 export default function ExpensesPage() {
@@ -269,8 +271,10 @@ export default function ExpensesPage() {
                       <td style={{ ...cellStyle, color: '#9a3412', fontWeight: 750 }}>{money(record.amount)}</td>
                       <td style={{ ...cellStyle, minWidth: 150 }}><FinanceAttachments attachments={record.attachments || []} targetType="expense" targetId={record.id} canUpload={canCreate} canArchive={canArchive} onChanged={loadPage} labels={{ title: 'Receipts', empty: 'No receipts', add: 'Add receipt' }} compact /></td>
                       <td style={{ ...cellStyle, whiteSpace: 'nowrap' }}>
-                        {canUpdate && <button type="button" onClick={() => openExpenseForm(record)} style={quietButton}>Edit</button>}
-                        {canArchive && <button type="button" onClick={() => archiveExpense(record)} style={{ ...quietButton, marginLeft: 6, color: '#9a3412' }}>Archive</button>}
+                        <div className="mcc-icon-action-group">
+                          {canUpdate && <IconActionButton icon="edit" label="Edit" title="Edit expense" tone="primary" onClick={() => openExpenseForm(record)} />}
+                          {canArchive && <IconActionButton icon="archive" label="Archive" title="Archive expense" tone="danger" onClick={() => archiveExpense(record)} />}
+                        </div>
                       </td>
                     </tr>)}
               </tbody>
@@ -298,7 +302,7 @@ export default function ExpensesPage() {
           <label style={labelStyle}>Expense category<select required aria-label="Expense category" value={expenseForm.category_id} onChange={(event) => setExpenseForm((form) => ({ ...form, category_id: event.target.value }))} style={fieldStyle}>
             <option value="">Select a category</option>{categories.map((category) => <option value={category.id} key={category.id}>{category.category_name}</option>)}
           </select></label>
-          <label style={labelStyle}>Amount (PHP)<input required aria-label="Amount (PHP)" type="number" min="0.01" step="0.01" value={expenseForm.amount} onChange={(event) => setExpenseForm((form) => ({ ...form, amount: event.target.value }))} style={fieldStyle} /></label>
+          <label style={labelStyle}>Amount (PHP)<input required aria-label="Amount (PHP)" type="number" min="0.01" step="0.01" value={expenseForm.amount} onKeyDown={blockInvalidDecimalKeys} onChange={(event) => setExpenseForm((form) => ({ ...form, amount: sanitizeCurrency(event.target.value) }))} style={fieldStyle} /></label>
           <label style={labelStyle}>Date<input required aria-label="Expense date" type="date" value={expenseForm.date} onChange={(event) => setExpenseForm((form) => ({ ...form, date: event.target.value }))} style={fieldStyle} /></label>
           <label style={labelStyle}>Payment method<select required aria-label="Payment method" value={expenseForm.payment_method_id} onChange={(event) => setExpenseForm((form) => ({ ...form, payment_method_id: event.target.value }))} style={fieldStyle}>
             <option value="">Select payment method</option>{paymentMethods.map((method) => <option value={method.id} key={method.id}>{method.method_name}</option>)}
@@ -336,7 +340,7 @@ function SetupSection({ title, description, onAdd, canCreate, children }) {
 function SetupRow({ title, subtitle, canUpdate, canArchive, onEdit, onArchive }) {
   return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, border: '1px solid #edf1f5', borderRadius: 9, padding: '10px 12px' }}>
     <div style={{ minWidth: 0 }}><strong style={{ display: 'block', color: '#1f2937', fontSize: 13 }}>{title}</strong><span style={{ display: 'block', marginTop: 3, color: '#64748b', fontSize: 12 }}>{subtitle}</span></div>
-    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>{canUpdate && <button type="button" onClick={onEdit} style={quietButton}>Edit</button>}{canArchive && <button type="button" onClick={onArchive} style={{ ...quietButton, color: '#9a3412' }}>Archive</button>}</div>
+    <div className="mcc-icon-action-group" style={{ flexShrink: 0 }}>{canUpdate && <IconActionButton icon="edit" label="Edit" title="Edit category" tone="primary" onClick={onEdit} />}{canArchive && <IconActionButton icon="archive" label="Archive" title="Archive category" tone="danger" onClick={onArchive} />}</div>
   </div>;
 }
 

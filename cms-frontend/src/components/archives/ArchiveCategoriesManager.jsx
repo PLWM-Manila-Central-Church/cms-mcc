@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
+import IconActionButton from '../common/IconActionButton';
 
 const RESERVED_FINANCE_CATEGORY = 'Financial Records';
 
@@ -120,13 +121,14 @@ export default function ArchiveCategoriesManager({ categories = [], canManage, c
 
   return (
     <>
-      <button
-        type="button"
+      <IconActionButton
+        icon="folder"
+        label="Manage categories"
+        title="Manage archive categories"
+        tone="neutral"
+        size="md"
         onClick={() => { setOpen(true); setNotice(''); setError(''); }}
-        style={{ ...secondaryButton, whiteSpace: 'nowrap' }}
-      >
-        Manage categories
-      </button>
+      />
 
       {open && (
         <div
@@ -185,9 +187,9 @@ export default function ArchiveCategoriesManager({ categories = [], canManage, c
                       <div style={{ color: '#0f172a', fontWeight: 700, wordBreak: 'break-word' }}>{category.name}{reserved && <span style={{ marginLeft: 8, color: '#64748b', fontWeight: 500, fontSize: 12 }}>Required by Finance</span>}</div>
                       {category.description && <div style={{ marginTop: 3, color: '#64748b', fontSize: 13, whiteSpace: 'pre-wrap' }}>{category.description}</div>}
                     </div>
-                    <div style={{ display: 'flex', gap: 7, flexShrink: 0 }}>
-                      <button type="button" disabled={busy} onClick={() => startEdit(category)} style={secondaryButton}>Edit</button>
-                      {canDelete && !reserved && <button type="button" disabled={busy} onClick={() => { setError(''); setCategoryToDelete(category); }} style={{ ...secondaryButton, color: '#b91c1c' }}>Archive</button>}
+                    <div className="mcc-icon-action-group" style={{ flexShrink: 0 }}>
+                      <IconActionButton icon="edit" label="Edit" title="Edit category" tone="primary" disabled={busy} onClick={() => startEdit(category)} />
+                      {canDelete && !reserved && <IconActionButton icon="archive" label="Archive" title="Archive category" tone="danger" disabled={busy} onClick={() => { setError(''); setCategoryToDelete(category); }} />}
                     </div>
                   </div>
                 );

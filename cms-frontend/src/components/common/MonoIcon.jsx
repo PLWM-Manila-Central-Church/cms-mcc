@@ -1,12 +1,30 @@
 const ICONS = {
+  alertCircle: [
+    <circle key="ac1" cx="12" cy="12" r="9" />,
+    <line key="ac2" x1="12" y1="8" x2="12" y2="12" />,
+    <line key="ac3" x1="12" y1="16" x2="12.01" y2="16" />,
+  ],
+  analytics: [
+    <path key="an1" d="M3 3v18h18" />,
+    <path key="an2" d="m7 15 4-4 3 3 6-7" />,
+  ],
   archive: [
     <polyline key="a1" points="21 8 21 21 3 21 3 8" />,
     <rect key="a2" x="1" y="3" width="22" height="5" />,
     <line key="a3" x1="10" y1="12" x2="14" y2="12" />,
   ],
+  arrowRight: [
+    <line key="ar1" x1="5" y1="12" x2="19" y2="12" />,
+    <polyline key="ar2" points="13 6 19 12 13 18" />,
+  ],
   attendance: [
-    <polyline key="at1" points="9 11 12 14 22 4" />,
-    <path key="at2" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />,
+    <rect key="at1" x="5" y="3" width="14" height="18" rx="2" />,
+    <path key="at2" d="M9 3.5a3 3 0 0 1 6 0" />,
+    <polyline key="at3" points="9 12.5 11.2 14.7 15.5 10" />,
+  ],
+  audit: [
+    <path key="au1" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+    <path key="au2" d="m9 12 2 2 4-4" />,
   ],
   bank: [
     <path key="bk1" d="M3 10h18" />,
@@ -46,6 +64,10 @@ const ICONS = {
   ],
   check: [
     <path key="ch1" d="M20 6 9 17l-5-5" />,
+  ],
+  checkCircle: [
+    <circle key="cc1" cx="12" cy="12" r="9" />,
+    <path key="cc2" d="m9 12 2 2 4-4" />,
   ],
   chevronDown: [
     <path key="cvd1" d="m6 9 6 6 6-6" />,
@@ -192,8 +214,111 @@ const ICONS = {
     <path key="mb4" d="M16 3.1a4 4 0 0 1 0 7.8" />,
   ],
   ministry: [
-    <circle key="mi1" cx="12" cy="12" r="3" />,
-    <path key="mi2" d="M12 1v4M12 19v4M4.2 4.2 7 7M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8 7 17M17 7l2.8-2.8" />,
+    <path key="mi1" d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z" />,
+    <path key="mi2" d="M12 8v5M9.5 10.5h5" />,
+  ],
+  cellgroups: [
+    <path key="cg1" d="M3 10.5 12 3l9 7.5V20a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 20z" />,
+    <circle key="cg2" cx="12" cy="12" r="2.2" />,
+    <path key="cg3" d="M8.5 18.5a3.5 3.5 0 0 1 7 0" />,
+  ],
+  chat: [
+    <path key="ct1" d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 1 1 18 0z" />,
+    <line key="ct2" x1="8.5" y1="11" x2="15.5" y2="11" />,
+    <line key="ct3" x1="8.5" y1="14.5" x2="13" y2="14.5" />,
+  ],
+  events: [
+    <rect key="ev1" x="3" y="4" width="18" height="17" rx="2" />,
+    <line key="ev2" x1="16" y1="2" x2="16" y2="6" />,
+    <line key="ev3" x1="8" y1="2" x2="8" y2="6" />,
+    <line key="ev4" x1="3" y1="10" x2="21" y2="10" />,
+    <circle key="ev5" cx="12" cy="15.5" r="1.5" />,
+  ],
+  filter: [
+    <polygon key="fl1" points="3 5 21 5 14 13 14 19 10 21 10 13 3 5" />,
+  ],
+  groups: [
+    <circle key="gp1" cx="12" cy="6" r="2.5" />,
+    <circle key="gp2" cx="6" cy="17" r="2.5" />,
+    <circle key="gp3" cx="18" cy="17" r="2.5" />,
+    <path key="gp4" d="M12 8.5v3.5m0 0-4.5 3M12 12l4.5 3" />,
+  ],
+  listOrdered: [
+    <line key="lo1" x1="9" y1="6" x2="20" y2="6" />,
+    <line key="lo2" x1="9" y1="12" x2="20" y2="12" />,
+    <line key="lo3" x1="9" y1="18" x2="20" y2="18" />,
+    <circle key="lo4" cx="5" cy="6" r="1" />,
+    <circle key="lo5" cx="5" cy="12" r="1" />,
+    <circle key="lo6" cx="5" cy="18" r="1" />,
+  ],
+  megaphone: [
+    <path key="mg1" d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z" />,
+    <path key="mg2" d="M11 8.5c4.5-1.5 8-3.5 9-4v15c-1-.5-4.5-2.5-9-4" />,
+  ],
+  more: [
+    <line key="mo1" x1="4" y1="6" x2="20" y2="6" />,
+    <line key="mo2" x1="4" y1="12" x2="20" y2="12" />,
+    <line key="mo3" x1="4" y1="18" x2="20" y2="18" />,
+  ],
+  myTeams: [
+    <circle key="mt1" cx="12" cy="12" r="9" />,
+    <polygon key="mt2" points="16.2 7.8 14.1 14.1 7.8 16.2 9.9 9.9 16.2 7.8" />,
+  ],
+  outreach: [
+    <path key="ot1" d="M22 2 11 13" />,
+    <polygon key="ot2" points="22 2 15 22 11 13 2 9 22 2" />,
+  ],
+  plus: [
+    <line key="ps1" x1="12" y1="5" x2="12" y2="19" />,
+    <line key="ps2" x1="5" y1="12" x2="19" y2="12" />,
+  ],
+  printer: [
+    <polyline key="pr1" points="6 9 6 2 18 2 18 9" />,
+    <path key="pr2" d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />,
+    <rect key="pr3" x="6" y="14" width="12" height="8" />,
+  ],
+  qr: [
+    <rect key="qr1" x="3" y="3" width="7" height="7" rx="1" />,
+    <rect key="qr2" x="14" y="3" width="7" height="7" rx="1" />,
+    <rect key="qr3" x="3" y="14" width="7" height="7" rx="1" />,
+    <path key="qr4" d="M14 14h3v3h-3zM19 14h2v2M14 19h2v2M19 19h2v2" />,
+  ],
+  repeat: [
+    <polyline key="rp1" points="17 2 21 6 17 10" />,
+    <path key="rp2" d="M3 11V9a4 4 0 0 1 4-4h14" />,
+    <polyline key="rp3" points="7 22 3 18 7 14" />,
+    <path key="rp4" d="M21 13v2a4 4 0 0 1-4 4H3" />,
+  ],
+  schedule: [
+    <rect key="sc1" x="3" y="4" width="16" height="15" rx="2" />,
+    <line key="sc2" x1="8" y1="2" x2="8" y2="6" />,
+    <line key="sc3" x1="14" y1="2" x2="14" y2="6" />,
+    <circle key="sc4" cx="17.5" cy="17.5" r="4" />,
+    <path key="sc5" d="M17.5 15.8v1.9l1.2.8" />,
+  ],
+  services: [
+    <path key="sv1" d="M12 3v5M9.5 5.5h5" />,
+    <path key="sv2" d="M5 21V11l7-4 7 4v10" />,
+    <path key="sv3" d="M9.5 21v-5.5a2.5 2.5 0 0 1 5 0V21" />,
+  ],
+  teamReport: [
+    <line key="tr1" x1="18" y1="20" x2="18" y2="10" />,
+    <line key="tr2" x1="12" y1="20" x2="12" y2="4" />,
+    <line key="tr3" x1="6" y1="20" x2="6" y2="14" />,
+  ],
+  transfer: [
+    <polyline key="tf1" points="17 3 21 7 17 11" />,
+    <line key="tf2" x1="3" y1="7" x2="21" y2="7" />,
+    <polyline key="tf3" points="7 13 3 17 7 21" />,
+    <line key="tf4" x1="21" y1="17" x2="3" y2="17" />,
+  ],
+  wallet: [
+    <rect key="wl1" x="2" y="5" width="20" height="14" rx="2" />,
+    <path key="wl2" d="M16 12h6" />,
+    <circle key="wl3" cx="16.5" cy="12" r="1" />,
+  ],
+  wrench: [
+    <path key="wr1" d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.3 2.3-2.5-2.5z" />,
   ],
   moon: [
     <path key="mn1" d="M20 15.5A8.5 8.5 0 0 1 8.5 4 7 7 0 1 0 20 15.5z" />,
@@ -211,6 +336,19 @@ const ICONS = {
   ],
   play: [
     <path key="pl1" d="m8 5 11 7-11 7z" />,
+  ],
+  power: [
+    <path key="pw1" d="M12 2v10" />,
+    <path key="pw2" d="M18.4 6.6a9 9 0 1 1-12.77.04" />,
+  ],
+  rotateCcw: [
+    <path key="rc1" d="M3 12a9 9 0 1 0 3-6.7L3 8" />,
+    <path key="rc2" d="M3 3v5h5" />,
+  ],
+  userMinus: [
+    <path key="um1" d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />,
+    <circle key="um2" cx="8.5" cy="7" r="4" />,
+    <line key="um3" x1="23" y1="11" x2="17" y2="11" />,
   ],
   receipt: [
     <path key="r1" d="M6 2h12v20l-3-2-3 2-3-2-3 2z" />,
