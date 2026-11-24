@@ -10,6 +10,7 @@ import { fullName, ageLabel, dateWithAge, fmtDate } from '../../utils/member';
 import { MinistryApplicationQueue } from './MinistryApplications';
 import SubstituteReviewQueue from './SubstituteReviewQueue';
 import MemberSubstituteRequests from '../../components/ministry/MemberSubstituteRequests';
+import SearchableMemberPicker from '../../components/common/SearchableMemberPicker';
 
 function ministryPageTitle(name = '') {
   const value = String(name || '').trim();
@@ -20,13 +21,14 @@ function ministryPageTitle(name = '') {
   export default function MinistryPage() {
   const { user, hasPermission } = useAuth();
   const { confirm } = useConfirmation();
-  const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const isMember = user?.roleName === 'Member';
   const isAdmin = user?.roleName === 'System Admin';
   const canReviewSubstituteRequests = Boolean(hasPermission('ministry', 'update'));
 
   // Ministry Leaders see their roster and application review queue without system-wide tabs.
   const isMinistryLeader = user?.roleName === 'Ministry Leader' && !!user?.leadsMinistryId;
+  const canManageOwnMinistry = isMinistryLeader || canReviewSubstituteRequests;
 
   const [ministryName, setMinistryName] = useState(user?.leadsMinistryName || 'Ministry');
 
@@ -61,6 +63,7 @@ function ministryPageTitle(name = '') {
 
   const defaultTab = isMember ? 'substitutes' : 'assignments';
   const [tab, setTab] = useState(defaultTab);
+  const [leaderTab, setLeaderTab] = useState('roster');
 
   return (
     <div className="mcc-module mcc-module-ministry-page" style={{ ...S.page, padding: 0 }}>
@@ -76,6 +79,12 @@ function ministryPageTitle(name = '') {
                 : 'Manage ministry roles and service assignments'}
           </p>
         </div>
+        {isMinistryLeader && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button type="button" style={S.cancelBtn} onClick={() => navigate('/ministry/schedules')}>Manage schedule</button>
+            <button type="button" style={S.addBtn} onClick={() => navigate('/events')}>Events &amp; invitations</button>
+          </div>
+        )}
       </div>
 
       {/* Ministry leaders get their scoped roster and application queue below. */}
@@ -93,7 +102,24 @@ function ministryPageTitle(name = '') {
         </div>
       )}
 
-      {isMinistryLeader && <><ScopedRosterTab /><MinistryApplicationQueue />{canReviewSubstituteRequests && <SubstituteReviewQueue />}</>}
+      {isMinistryLeader && (
+        <>
+          <div style={S.tabs} role="tablist" aria-label="Ministry workspace">
+            {[
+              { key: 'roster', label: 'Roster' },
+              { key: 'applications', label: 'Applications' },
+              { key: 'substitutes', label: 'Substitute review' },
+            ].map((item) => (
+              <button key={item.key} type="button" role="tab" aria-selected={leaderTab === item.key} style={{ ...S.tab, ...(leaderTab === item.key ? S.tabActive : {}) }} onClick={() => setLeaderTab(item.key)}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+          {leaderTab === 'roster' && <ScopedRosterTab />}
+          {leaderTab === 'applications' && <MinistryApplicationQueue />}
+          {leaderTab === 'substitutes' && <SubstituteReviewQueue canReview={canManageOwnMinistry} />}
+        </>
+      )}
       {!isMinistryLeader && tab === 'assignments' && <AssignmentsTab />}
       {!isMinistryLeader && tab === 'roles'       && <RolesTab />}
       {!isMinistryLeader && tab === 'substitutes' && <MemberSubstituteRequests />}
@@ -128,6 +154,7 @@ function ScopedRosterTab() {
   const [addLoading, setAddLoading] = useState(false);
   const [addingId, setAddingId] = useState(null);
   const [actionErr, setActionErr] = useState('');
+  const [actionNotice, setActionNotice] = useState('');
   const [selectedId, setSelectedId] = useState(null);
 
   const normalizeRows = (rows = []) => rows
@@ -185,8 +212,10 @@ function ScopedRosterTab() {
   const handleAdd = async (member) => {
     setAddingId(member.id);
     setActionErr('');
+    setActionNotice('');
     try {
       await axiosInstance.post('/ministry/members', { member_id: member.id });
+      setActionNotice(`${fullName(member)} added to the ministry roster.`);
       setAddSearch('');
       setAddResults([]);
       setSelectedId(member.id);
@@ -206,8 +235,10 @@ function ScopedRosterTab() {
       tone: 'warning',
     }))) return;
     setActionErr('');
+    setActionNotice('');
     try {
       await axiosInstance.patch(`/ministry/members/${member.id}/archive`);
+      setActionNotice(`${fullName(member)} removed from the active roster.`);
       await load();
     } catch (err) {
       setActionErr(err.response?.data?.message || 'Failed to unassign member.');
@@ -277,6 +308,7 @@ function ScopedRosterTab() {
           </div>
         )}
         {actionErr && <div style={{ marginTop: 10, color: '#dc2626', fontSize: 13 }}>{actionErr}</div>}
+        {actionNotice && <div role="status" style={{ marginTop: 10, color: '#166534', fontSize: 13 }}>{actionNotice}</div>}
       </div>
 
       <div style={{ ...S.toolbar, justifyContent: 'space-between' }}>
@@ -914,7 +946,7 @@ function AssignmentsTab() {
               {formErr && <div style={S.formErr}><MonoIcon name="warning" size={14} /> {formErr}</div>}
               {modal === 'add' && (<>
                 <div style={S.fieldGroup}><label style={S.label}>Service <span style={{ color:'#ef4444' }}>*</span></label><select value={form.service_id} onChange={e => { setForm({ ...form, service_id: e.target.value }); setFormErr(''); }} style={S.select}><option value="">— Select a service —</option>{services.map(s => <option key={s.id} value={s.id}>{s.title} ({fmtDate(s.service_date)})</option>)}</select></div>
-                <div style={S.fieldGroup}><label style={S.label}>Member <span style={{ color:'#ef4444' }}>*</span></label><select value={form.member_id} onChange={e => { setForm({ ...form, member_id: e.target.value }); setFormErr(''); }} style={S.select}><option value="">— Select a member —</option>{members.map(m => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}</select></div>
+                <div style={S.fieldGroup}><label style={S.label}>Member <span style={{ color:'#ef4444' }}>*</span></label><SearchableMemberPicker members={members} value={form.member_id} onChange={(member_id) => { setForm((current) => ({ ...current, member_id })); setFormErr(''); }} placeholder="Search member by name…" ariaLabel="Search and choose an assignment member" style={{ width: '100%' }} /></div>
               </>)}
               <div style={S.fieldGroup}><label style={S.label}>Ministry Role <span style={{ color:'#ef4444' }}>*</span></label><select value={form.ministry_role_id} onChange={e => { setForm({ ...form, ministry_role_id: e.target.value }); setFormErr(''); }} style={S.select}><option value="">— Select a role —</option>{roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
               {modal === 'edit' && (<div style={{ display:'flex', gap:'20px', marginBottom:'4px' }}><label style={S.checkLabel}><input type="checkbox" checked={!!form.confirmed} onChange={e => setForm({ ...form, confirmed: e.target.checked ? 1 : 0 })} style={{ marginRight:'8px', accentColor:'#005599' }} />Confirmed</label><label style={S.checkLabel}><input type="checkbox" checked={!!form.substitute_requested} onChange={e => setForm({ ...form, substitute_requested: e.target.checked ? 1 : 0 })} style={{ marginRight:'8px', accentColor:'#f59e0b' }} />Substitute Requested</label></div>)}

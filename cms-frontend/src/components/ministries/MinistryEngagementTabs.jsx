@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { displayMemberName } from '../../utils/displayIdentity';
+import SearchableMemberPicker from '../common/SearchableMemberPicker';
 
 const CARE_STAGES = [
   { id: 'needs_followup', label: 'Needs Follow-up' },
@@ -207,10 +208,7 @@ export default function MinistryEngagementTabs({ ministryId, members = [], canMa
             <form onSubmit={sendDirectMessage} style={S.box}>
               <div style={S.subTitle}>Send Direct Caring Message to Member</div>
               <div style={S.row}>
-                <select value={msgForm.member_id} onChange={(e) => setMsgForm({ ...msgForm, member_id: e.target.value })} style={S.input} required>
-                  <option value="">Select member…</option>
-                  {members.map((m) => <option key={m.id} value={m.id}>{displayMemberName(m)}</option>)}
-                </select>
+                <SearchableMemberPicker members={members} value={msgForm.member_id} onChange={(member_id) => setMsgForm((current) => ({ ...current, member_id }))} placeholder="Search a ministry member…" ariaLabel="Choose a member for a direct message" style={S.input} />
                 <input value={msgForm.subject} onChange={(e) => setMsgForm({ ...msgForm, subject: e.target.value })} placeholder="Subject (optional)" style={S.input} />
                 <input value={msgForm.body} onChange={(e) => setMsgForm({ ...msgForm, body: e.target.value })} placeholder="Message…" style={{ ...S.input, flex: '2 1 220px' }} required />
                 <button type="submit" style={S.primaryBtn}>Send</button>
@@ -251,10 +249,7 @@ export default function MinistryEngagementTabs({ ministryId, members = [], canMa
             {canManage && (
               <form onSubmit={logVisitation} style={S.box}>
                 <div style={S.row}>
-                  <select value={visitForm.member_id} onChange={(e) => setVisitForm({ ...visitForm, member_id: e.target.value })} style={S.input} required>
-                    <option value="">Select member…</option>
-                    {members.map((m) => <option key={m.id} value={m.id}>{displayMemberName(m)}</option>)}
-                  </select>
+                  <SearchableMemberPicker members={members} value={visitForm.member_id} onChange={(member_id) => setVisitForm((current) => ({ ...current, member_id }))} placeholder="Search a ministry member…" ariaLabel="Choose a member for pastoral care" style={S.input} />
                   <select value={visitForm.visit_type} onChange={(e) => setVisitForm({ ...visitForm, visit_type: e.target.value })} style={S.input}>
                     <option value="follow_up">Follow-up Call/Chat</option>
                     <option value="home_visit">Home Visit</option>

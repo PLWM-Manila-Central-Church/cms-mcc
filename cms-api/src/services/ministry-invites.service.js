@@ -4,14 +4,25 @@ const auditLog     = require("../helpers/auditLog.helper");
 const logger       = require("../helpers/logger");
 const notifService = require("./notifications.service");
 const AppError     = require("../helpers/AppError");
+const { Op, UniqueConstraintError } = require("sequelize");
 const {
   MinistryEventInvite,
   MinistryRole,
   Event,
   Member,
   User,
-  MinistryMembership,
 } = require("../models");
+
+exports.getInviteCandidates = async (eventId, ministryRoleId) => {
+  if (!await Event.findByPk(eventId)) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
+  if (!await MinistryRole.findOne({ where: { id: ministryRoleId, is_deleted: 0 } }))
+    throw AppError.notFound("RECORD_NOT_FOUND", "Ministry role not found");
+  return Member.findAll({
+    where: { status: "Active", is_deleted: 0 },
+    attributes: ["id", "first_name", "last_name"],
+    order: [["last_name", "ASC"], ["first_name", "ASC"], ["id", "ASC"]],
+  });
+};
 
 // ── Shared includes ──────────────────────────────────────────
 const inviteIncludes = [
@@ -72,23 +83,17 @@ exports.createInvites = async (
     throw AppError.badRequest("VALIDATION", "member_ids must be a non-empty array");
 
   const results = { created: [], skipped: [], errors: [] };
+  const activeMembers = await Member.findAll({
+    where: { id: { [Op.in]: member_ids }, status: "Active", is_deleted: 0 },
+    attributes: ["id"],
+  });
+  const eligible = new Set(activeMembers.map(member => Number(member.id)));
 
   for (const memberId of member_ids) {
     try {
-      const member = await Member.findByPk(memberId);
-      if (!member) {
-        results.errors.push({ memberId, reason: "Member not found" });
+      if (!eligible.has(Number(memberId))) {
+        results.errors.push({ memberId, reason: "Member is unavailable or inactive" });
         continue;
-      }
-
-      if (forcedMinistryRoleId) {
-        const membership = await MinistryMembership.findOne({
-          where: { ministry_role_id, member_id: memberId },
-        });
-        if (!membership) {
-          results.errors.push({ memberId, reason: "Member is outside your ministry roster" });
-          continue;
-        }
       }
 
       // Skip if invite already exists for this event + ministry + member
@@ -114,14 +119,14 @@ exports.createInvites = async (
       // Notify the member's portal account (non-fatal)
       try {
         const userRecord = await User.findOne({
-          where:      { member_id: memberId, is_active: true },
+          where:      { member_id: memberId, is_active: true, is_deleted: 0 },
           attributes: ["id"],
         });
         if (userRecord) {
           await notifService.createNotification({
             user_id:        userRecord.id,
             type:           "ministry_invite",
-            message:        `You have been invited to participate in "${event.title}" as part of the ${role.name} ministry.`,
+            message:        `The ${role.name} ministry invited you to participate in "${event.title}".`,
             reference_id:   eventId,
             reference_type: "ministry_invite",
           });
@@ -130,7 +135,11 @@ exports.createInvites = async (
         logger.error(err, "Notification failed for member", memberId, ":")
       }
     } catch (err) {
-      results.errors.push({ memberId, reason: err.message });
+      if (err instanceof UniqueConstraintError) results.skipped.push(memberId);
+      else {
+        logger.error("Ministry invite creation failed", { eventId, ministry_role_id, memberId, error: err.name });
+        results.errors.push({ memberId, reason: "The invitation could not be saved" });
+      }
     }
   }
 

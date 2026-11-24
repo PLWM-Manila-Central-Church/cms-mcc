@@ -173,11 +173,15 @@ exports.assignMemberPosition = async (groupId, payload, user) => {
   const positionId = payload.position_id ? Number(payload.position_id) : null;
   if (!memberId) throw AppError.badRequest("VALIDATION_ERROR", "Member is required.");
 
-  // Ensure member is also listed in ministry_memberships (multi-group allowed)
-  await MinistryMembership.findOrCreate({
-    where: { ministry_role_id: Number(groupId), member_id: memberId },
-    defaults: { ministry_role_id: Number(groupId), member_id: memberId },
-  });
+  // Keep the roster membership in step with the serving position. Memberships
+  // are per ministry/member pair, so the same person may serve in other teams.
+  const membershipWhere = { ministry_role_id: Number(groupId), member_id: memberId };
+  const membership = await MinistryMembership.unscoped().findOne({ where: membershipWhere });
+  if (!membership) {
+    await MinistryMembership.create({ ...membershipWhere, added_by: user.userId });
+  } else if (Number(membership.is_deleted) === 1) {
+    await membership.update({ is_deleted: 0, deleted_at: null, deleted_by: null, added_by: user.userId });
+  }
 
   const [assignment, created] = await GroupMemberPosition.findOrCreate({
     where: { group_id: Number(groupId), member_id: memberId, position_id: positionId, is_deleted: 0 },
@@ -212,6 +216,16 @@ exports.createTask = async (groupId, payload, user) => {
   assertGroupScope(groupId, user);
   const title = String(payload.title || "").trim();
   if (!title) throw AppError.badRequest("VALIDATION_ERROR", "Task title is required.");
+  if (payload.assigned_member_id) {
+    const memberId = Number(payload.assigned_member_id);
+    const [membership, position] = await Promise.all([
+      MinistryMembership.findOne({ where: { ministry_role_id: Number(groupId), member_id: memberId }, attributes: ["id"] }),
+      GroupMemberPosition.findOne({ where: { group_id: Number(groupId), member_id: memberId, is_deleted: 0, is_active: 1 }, attributes: ["id"] }),
+    ]);
+    if (!membership && !position) {
+      throw AppError.badRequest("MEMBER_NOT_IN_TEAM", "Choose someone who is already on this ministry roster.");
+    }
+  }
   const created = await GroupTask.create({
     group_id: Number(groupId),
     activity_id: payload.activity_id || null,

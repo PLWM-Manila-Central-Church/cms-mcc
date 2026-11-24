@@ -81,25 +81,29 @@ export default function EventDetailPage() {
 
   useEffect(() => { fetchEvent(); }, [fetchEvent]);
 
-  // Fetch invites + ministry roster when the user is a Ministry Leader
+  const canInviteMembers = user?.roleName === 'Ministry Leader' && Boolean(user.leadsMinistryId);
+
   useEffect(() => {
-    if (!user?.leadsMinistryId || !id) return;
+    if (!canInviteMembers || !id) return;
+    let current = true;
+    setSelectedIds(new Set());
+    setMinistryMembers([]);
+    setInvites([]);
+    setInviteError('');
     setInviteLoading(true);
     Promise.all([
       axiosInstance.get(`/events/${id}/invites`),
-      axiosInstance.get('/ministry/members'),
+      axiosInstance.get(`/events/${id}/invite-candidates`),
     ])
       .then(([invRes, memRes]) => {
+        if (!current) return;
         setInvites(invRes.data.data || []);
-        // Normalize: /ministry/members may return MinistryMembership rows (with .member nested)
-        // OR flat Member objects. Flatten to a consistent array of plain member objects.
-        const raw = memRes.data.data || [];
-        const normalized = raw.map(item => item.member ?? item).filter(m => m && m.id);
-        setMinistryMembers(normalized);
+        setMinistryMembers(memRes.data.data || []);
       })
-      .catch(() => setInviteError('Failed to load invite data.'))
-      .finally(() => setInviteLoading(false));
-  }, [id, user?.leadsMinistryId]);
+      .catch((err) => { if (current) setInviteError(apiErrorMessage(err, 'Failed to load invite data.')); })
+      .finally(() => { if (current) setInviteLoading(false); });
+    return () => { current = false; };
+  }, [id, canInviteMembers, user?.leadsMinistryId]);
 
   const isRegistered   = event?.EventRegistrations?.some(r => r.member_id === user?.memberId);
   const regCount       = Number(event?.registration_count ?? event?.EventRegistrations?.length ?? 0);
@@ -185,26 +189,41 @@ export default function EventDetailPage() {
     });
 
   const handleSendInvites = async () => {
-    if (selectedIds.size === 0) return;
+    if (!canInviteMembers || sendingInvites || selectedIds.size === 0) return;
     setSendingInvites(true); setInviteError(''); setInviteSuccess('');
+    let createdCount = 0;
+    let skippedCount = 0;
+    const failures = [];
     try {
-      const res = await axiosInstance.post(`/events/${id}/invites`, {
-        ministry_role_id:  user.leadsMinistryId,
-        member_ids:        [...selectedIds],
-        response_deadline: inviteDeadline || null,
-      });
-      const { created, skipped } = res.data.data;
-      setInviteSuccess(
-        `${created.length} invite${created.length !== 1 ? 's' : ''} sent` +
-        (skipped.length ? `, ${skipped.length} already invited` : '') + '.'
-      );
-      setSelectedIds(new Set());
-      // Refresh invite list
+      const selection = [...selectedIds];
+      const deadline = inviteDeadline ? new Date(inviteDeadline + ':00+08:00').toISOString() : null;
+      for (let start = 0; start < selection.length; start += 100) {
+        const res = await axiosInstance.post(`/events/${id}/invites`, {
+          member_ids: selection.slice(start, start + 100),
+          response_deadline: deadline,
+        });
+        const { created = [], skipped = [], errors = [] } = res.data.data;
+        createdCount += created.length;
+        skippedCount += skipped.length;
+        failures.push(...errors);
+        setSelectedIds((previous) => {
+          const pending = new Set(previous);
+          [...created, ...skipped].forEach((memberId) => pending.delete(Number(memberId)));
+          return pending;
+        });
+      }
       const invRes = await axiosInstance.get(`/events/${id}/invites`);
       setInvites(invRes.data.data || []);
+      if (failures.length) setInviteError(`${failures.length} invitations could not be sent. ${failures[0].reason}`);
     } catch (err) {
-      setInviteError(err.response?.data?.message || 'Failed to send invites.');
-    } finally { setSendingInvites(false); }
+      setInviteError(apiErrorMessage(err, 'Could not finish sending or refresh the invitation list.'));
+    } finally {
+      if (createdCount || skippedCount) setInviteSuccess(
+        `${createdCount} invite${createdCount !== 1 ? 's' : ''} sent` +
+        (skippedCount ? `, ${skippedCount} already invited` : '') + '.'
+      );
+      setSendingInvites(false);
+    }
   };
 
   const formatDate = (d) =>
@@ -251,8 +270,9 @@ export default function EventDetailPage() {
     if (!inviteSearchNorm) return true;
     return `${mem.first_name || ''} ${mem.last_name || ''} ${mem.email || ''}`.toLowerCase().includes(inviteSearchNorm);
   });
+  const invitesByMember = new Map(invites.map(inv => [Number(inv.member_id), inv]));
   const eligibleInviteIds = filteredMinistryMembers
-    .filter((mem) => !invites.some((inv) => inv.member_id === mem.id))
+    .filter((mem) => !invitesByMember.has(mem.id))
     .map((mem) => mem.id);
 
   const canManageEventReservation = canUpdateReservations
@@ -549,11 +569,11 @@ export default function EventDetailPage() {
         />
       </ModalDialog>
       {/* ── Ministry Invite Panel (Ministry Leaders only) ── */}
-      {user?.leadsMinistryId && (
+      {canInviteMembers && (
         <div style={{ ...s.regSection, marginTop: 24 }}>
           <h2 style={s.regTitle}><MonoIcon name="ministry" size={18} /> Ministry Invites</h2>
           <p style={{ fontSize: 13, color: 'var(--mcc-secondary, #52647a)', margin: '0 0 16px 0' }}>
-            Invite members of your ministry to participate in this event.
+            Invite active church members to this event on behalf of your ministry.
           </p>
 
           {inviteError   && <div style={s.errorBox}>{inviteError}</div>}
@@ -561,9 +581,9 @@ export default function EventDetailPage() {
 
           {/* Multi-select member list */}
           {inviteLoading ? (
-            <div style={{ padding: '16px', color: '#94a3b8', fontSize: 14 }}>Loading ministry members…</div>
+            <div style={{ padding: '16px', color: '#94a3b8', fontSize: 14 }}>Loading members…</div>
           ) : ministryMembers.length === 0 ? (
-            <div style={{ padding: '16px', color: '#94a3b8', fontSize: 14 }}>No members in your ministry roster yet.</div>
+            <div style={{ padding: '16px', color: '#94a3b8', fontSize: 14 }}>No active members available.</div>
           ) : (
             <>
               <div style={{ marginBottom: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -572,12 +592,13 @@ export default function EventDetailPage() {
                     type="search"
                     value={inviteSearch}
                     onChange={(e) => setInviteSearch(e.target.value)}
-                    placeholder="Filter ministry members..."
-                    aria-label="Filter ministry members"
+                    placeholder="Search members..."
+                    aria-label="Search members to invite"
                     style={{ padding: '6px 10px', fontSize: 13, border: '1px solid #cbd5e1', borderRadius: 7, minWidth: 200 }}
                   />
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Response Deadline</label>
+                  <label htmlFor="invite-deadline" style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Response deadline (Manila time)</label>
                   <input
+                    id="invite-deadline"
                     type="datetime-local"
                     value={inviteDeadline}
                     onChange={e => setInviteDeadline(e.target.value)}
@@ -589,6 +610,7 @@ export default function EventDetailPage() {
                   <button
                     type="button"
                     className="mcc-btn-secondary"
+                    disabled={sendingInvites}
                     style={{ padding: '6px 11px', fontSize: 12 }}
                     onClick={() => {
                       const allSelected = eligibleInviteIds.every((mid) => selectedIds.has(mid));
@@ -610,11 +632,10 @@ export default function EventDetailPage() {
                   <div style={{ padding: 16, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>No members match "{inviteSearch}".</div>
                 ) : filteredMinistryMembers.map((mem, i) => {
                   const checked = selectedIds.has(mem.id);
-                  const existing = invites.find(inv => inv.member_id === mem.id);
+                  const existing = invitesByMember.get(mem.id);
                   return (
-                    <div
+                    <label
                       key={mem.id}
-                      onClick={() => !existing && toggleMember(mem.id)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '10px 14px',
@@ -625,8 +646,8 @@ export default function EventDetailPage() {
                       }}
                     >
                       <input
-                        type="checkbox" checked={checked} readOnly
-                        disabled={!!existing}
+                        type="checkbox" checked={checked} onChange={() => toggleMember(mem.id)}
+                        disabled={!!existing || sendingInvites}
                         style={{ cursor: existing ? 'default' : 'pointer', flexShrink: 0 }}
                       />
                       <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#005599,#13B5EA)', color: 'var(--mcc-surface, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
@@ -650,7 +671,7 @@ export default function EventDetailPage() {
                            existing.response_status === 'not_attending' ? 'Not Attending' : 'Pending'}
                         </span>
                       )}
-                    </div>
+                    </label>
                   );
                 })}
               </div>

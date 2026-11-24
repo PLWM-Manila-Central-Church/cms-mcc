@@ -11,10 +11,10 @@ const personName = (member, fallback) => {
 const serviceName = (request) => request.assignment?.Service?.title
   || `Service #${request.assignment?.service_id || '—'}`;
 
-export default function SubstituteReviewQueue() {
+export default function SubstituteReviewQueue({ canReview: canReviewOverride }) {
   const { hasPermission } = useAuth();
   const { confirm } = useConfirmation();
-  const canReview = Boolean(hasPermission('ministry', 'update'));
+  const canReview = canReviewOverride ?? Boolean(hasPermission('ministry', 'update'));
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

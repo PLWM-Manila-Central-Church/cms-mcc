@@ -29,6 +29,8 @@ router.post(
   ctrl.createInvites,
 );
 
+router.get("/:eventId/invite-candidates", auth, authorize("events", "invite"), ctrl.getInviteCandidates);
+
 // PATCH /api/events/invites/:inviteId/respond
 // Member self-service — no permission needed beyond being authenticated
 // and having a linked member profile (guard enforced in controller).

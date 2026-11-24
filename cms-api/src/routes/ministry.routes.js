@@ -16,6 +16,13 @@ const authorizeMinistryScheduleOrSub = (req, res, next) => {
   return authorize("ministry", "update")(req, res, next);
 };
 
+// Roster writes are explicitly scoped again by the controller/service to the
+// leader's assigned ministry. Do not depend on a stale role_permissions row.
+const authorizeMinistryRosterWrite = (req, res, next) => {
+  if (req.user?.roleName === "Ministry Leader" && req.user?.leadsMinistryId) return next();
+  return authorize("scope_assignments", "manage")(req, res, next);
+};
+
 // ── Ministry Roles ───────────────────────────────────────────
 router.get("/roles",        auth, authorize("ministry", "read"),   ctrl.getAllRoles);
 router.get("/roles/:id",    auth, authorize("ministry", "read"),   ctrl.getRoleById);
@@ -41,8 +48,8 @@ router.patch("/assignments/:id/archive", auth, authorize("ministry", "delete"), 
 // /members/search MUST be before /members/:memberId to avoid Express matching it as a param
 router.get("/members/search",       auth, authorize("ministry", "read"),   ctrl.searchMembersForRoster);
 router.get("/members",              auth, authorize("ministry", "read"),   ctrl.getMyMinistryMembers);
-router.post("/members",             auth, authorize("scope_assignments", "manage"), ctrl.addMemberToMinistry);
-router.patch("/members/:memberId/archive", auth, authorize("scope_assignments", "manage"), ctrl.archiveMemberFromMinistry);
+router.post("/members",             auth, authorizeMinistryRosterWrite, ctrl.addMemberToMinistry);
+router.patch("/members/:memberId/archive", auth, authorizeMinistryRosterWrite, ctrl.archiveMemberFromMinistry);
 
 // ── Ministry Leader: Substitute Requests ─────────────────────
 router.get(

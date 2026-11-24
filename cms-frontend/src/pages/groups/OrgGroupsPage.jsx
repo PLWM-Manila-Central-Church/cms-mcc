@@ -6,15 +6,17 @@ import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../../components/common/MonoIcon';
 import { displayMemberName } from '../../utils/displayIdentity';
 import { sanitizeCode } from '../../utils/inputConstraints';
+import SearchableMemberPicker from '../../components/common/SearchableMemberPicker';
 
 const GROUP_CATEGORIES = ['Service Team', 'Department', 'Committee', 'Worship & Music', 'Technical & Media', 'Education'];
 
 export default function OrgGroupsPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const isMobile = useIsMobile();
 
   const canCreate = hasPermission('ministry', 'create');
-  const canUpdate = hasPermission('ministry', 'update');
+  const isScopedMinistryLeader = user?.roleName === 'Ministry Leader' && Boolean(user?.leadsMinistryId);
+  const canUpdate = hasPermission('ministry', 'update') || isScopedMinistryLeader;
 
   const [groups, setGroups] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -24,7 +26,6 @@ export default function OrgGroupsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [membersList, setMembersList] = useState([]);
 
   // Create group modal
   const [showCreate, setShowCreate] = useState(false);
@@ -80,15 +81,23 @@ export default function OrgGroupsPage() {
     loadDetail(selectedId);
   }, [selectedId, loadDetail]);
 
-  useEffect(() => {
-    if (!canUpdate) return;
-    axiosInstance.get('/members', { params: { page: 1, limit: 100 } })
-      .then((res) => {
-        const list = res.data?.data?.members || res.data?.data || [];
-        setMembersList(Array.isArray(list) ? list : []);
-      })
-      .catch(() => {});
-  }, [canUpdate]);
+  const searchAssignableMembers = useCallback(async (query) => {
+    if (isScopedMinistryLeader) {
+      const response = await axiosInstance.get('/ministry/members/search', { params: { q: query } });
+      return response.data?.data || [];
+    }
+    const response = await axiosInstance.get('/members/options', { params: { search: query, limit: 20, status: 'Active' } });
+    return response.data?.data || [];
+  }, [isScopedMinistryLeader]);
+
+  const teamMembers = useMemo(() => {
+    const rows = [
+      ...(detail?.member_positions || []).map((row) => row.member || row.Member),
+      ...(detail?.roster || []).map((row) => row.member || row.Member),
+    ];
+    return [...new Map(rows.filter((member) => member?.id).map((member) => [Number(member.id), member])).values()];
+  }, [detail]);
+  const teamMemberIds = useMemo(() => teamMembers.map((member) => Number(member.id)), [teamMembers]);
 
   const totals = useMemo(() => ({
     groups: groups.length,
@@ -215,7 +224,9 @@ export default function OrgGroupsPage() {
         <div>
           <h1 className="workspace-page-title" style={S.title}>Ministries</h1>
           <p style={S.subtitle}>
-            Service teams, departments, and committees (Choir, Ushers, Sound &amp; Media, Broadcast, Teachers, Event Committees). Members may serve in multiple teams.
+            {isScopedMinistryLeader
+              ? `Manage the roster, positions, tasks, and activities for ${user.leadsMinistryName || 'your assigned ministry'}.`
+              : 'Service teams, departments, and committees (Choir, Ushers, Sound &amp; Media, Broadcast, Teachers, Event Committees). Members may serve in multiple teams.'}
           </p>
         </div>
         <div style={S.headerActions}>
@@ -377,17 +388,15 @@ export default function OrgGroupsPage() {
                     <form onSubmit={handleAssignMember} style={S.inlineBoxForm}>
                       <div style={S.subTitle}>Assign Volunteer to Team</div>
                       <div style={S.inlineForm}>
-                        <select
+                        <SearchableMemberPicker
                           value={assignForm.member_id}
-                          onChange={(e) => setAssignForm({ ...assignForm, member_id: e.target.value })}
-                          style={S.input}
-                          aria-label="Select member"
-                        >
-                          <option value="">Select church member…</option>
-                          {membersList.map((m) => (
-                            <option key={m.id} value={m.id}>{displayMemberName(m)}</option>
-                          ))}
-                        </select>
+                          onChange={(member_id) => setAssignForm((current) => ({ ...current, member_id }))}
+                          searchMembers={searchAssignableMembers}
+                          excludeIds={teamMemberIds}
+                          placeholder="Search a church member…"
+                          ariaLabel="Search a member to add to this ministry roster"
+                          style={{ flex: '1 1 220px' }}
+                        />
                         <select
                           value={assignForm.position_id}
                           onChange={(e) => setAssignForm({ ...assignForm, position_id: e.target.value })}
@@ -455,17 +464,14 @@ export default function OrgGroupsPage() {
                           placeholder="Task title (e.g. Soundcheck wireless mics)"
                           style={S.input}
                         />
-                        <select
+                        <SearchableMemberPicker
+                          members={teamMembers}
                           value={taskForm.assigned_member_id}
-                          onChange={(e) => setTaskForm({ ...taskForm, assigned_member_id: e.target.value })}
-                          style={S.input}
-                          aria-label="Assign task to"
-                        >
-                          <option value="">Unassigned</option>
-                          {membersList.map((m) => (
-                            <option key={m.id} value={m.id}>{displayMemberName(m)}</option>
-                          ))}
-                        </select>
+                          onChange={(assigned_member_id) => setTaskForm((current) => ({ ...current, assigned_member_id }))}
+                          placeholder={teamMembers.length ? 'Search team members…' : 'Unassigned'}
+                          ariaLabel="Assign task to a ministry team member"
+                          style={{ flex: '1 1 220px' }}
+                        />
                         <input
                           type="date"
                           value={taskForm.due_date}

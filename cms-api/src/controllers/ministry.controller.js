@@ -104,7 +104,7 @@ exports.searchMembersForRoster = async (req, res, next) => {
   try {
     if (!req.user.leadsMinistryId)
       return res.status(403).json({ message: "You are not a Ministry Leader" });
-    const data = await ministryService.searchMembersForRoster(req.query.q || "");
+    const data = await ministryService.searchMembersForRoster(req.query.q || "", req.user.leadsMinistryId);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };

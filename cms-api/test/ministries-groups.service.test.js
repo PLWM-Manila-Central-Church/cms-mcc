@@ -14,7 +14,10 @@ jest.mock("../src/models", () => ({
   },
   MinistryMembership: {
     findAll: jest.fn(),
+    findOne: jest.fn(),
     findOrCreate: jest.fn(),
+    create: jest.fn(),
+    unscoped: jest.fn(),
   },
   GroupPosition: {
     findAll: jest.fn(),
@@ -43,7 +46,12 @@ const lifeMinistries = require("../src/services/lifeMinistries.service");
 const orgGroups = require("../src/services/orgGroups.service");
 
 describe("Phase 1 — Ministries vs. Organizational Groups services", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    models.MinistryMembership.unscoped.mockReturnValue(models.MinistryMembership);
+    models.MinistryMembership.findOne.mockResolvedValue(null);
+    models.MinistryMembership.create.mockResolvedValue({ id: 1 });
+  });
 
   test("listMinistries aggregates total/active/inactive counts and respects Group Leader scope", async () => {
     models.MinistryGroup.findAll.mockResolvedValue([
@@ -73,9 +81,11 @@ describe("Phase 1 — Ministries vs. Organizational Groups services", () => {
       { member_id: 22, position_id: 3 },
       { userId: 1, roleName: "System Admin" }
     );
-    expect(models.MinistryMembership.findOrCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { ministry_role_id: 4, member_id: 22 } })
-    );
+    expect(models.MinistryMembership.create).toHaveBeenCalledWith({
+      ministry_role_id: 4,
+      member_id: 22,
+      added_by: 1,
+    });
     expect(res.id).toBe(7);
   });
 

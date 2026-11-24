@@ -324,10 +324,11 @@ exports.resolveSubstitute = async (id, data, leadsMinistryId, userId) => {
 };
 
 // ── Ministry Roster — Search All Members ─────────────────────
-exports.searchMembersForRoster = async (search = "") => {
+exports.searchMembersForRoster = async (search = "", ministryRoleId) => {
   const { Op } = require("sequelize");
-  const where = { is_deleted: 0 };
+  const where = { is_deleted: 0, status: "Active" };
   const assigned = await MinistryMembership.findAll({
+    where: { ministry_role_id: Number(ministryRoleId) },
     attributes: ["member_id"],
     raw: true,
   });
@@ -385,11 +386,15 @@ exports.addMemberToMinistry = async (ministryRoleId, memberId, addedBy) => {
   const member = await Member.findByPk(memberId);
   if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
-  const existing = await MinistryMembership.unscoped().findOne({ where: { member_id: memberId } });
-  if (existing && Number(existing.is_deleted) === 0) throw AppError.conflict("DUPLICATE", "Member is already assigned to a ministry");
+  const existing = await MinistryMembership.unscoped().findOne({
+    where: { ministry_role_id: ministryRoleId, member_id: memberId },
+  });
+  if (existing && Number(existing.is_deleted) === 0) {
+    throw AppError.conflict("DUPLICATE", "Member is already assigned to this ministry");
+  }
 
   if (existing) {
-    await existing.update({ is_deleted: 0, deleted_at: null, deleted_by: null, ministry_role_id: ministryRoleId, added_by: addedBy });
+    await existing.update({ is_deleted: 0, deleted_at: null, deleted_by: null, added_by: addedBy });
     return existing;
   }
 

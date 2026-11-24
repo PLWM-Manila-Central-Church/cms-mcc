@@ -1,12 +1,25 @@
 "use strict";
 
 const invitesService = require("../services/ministry-invites.service");
+const canInvite = (user) => user?.roleName === "Ministry Leader" && Boolean(user.leadsMinistryId);
+
+exports.getInviteCandidates = async (req, res, next) => {
+  try {
+    if (!canInvite(req.user))
+      return res.status(403).json({ success: false, message: "Only assigned Ministry Leaders can invite members" });
+    const data = await invitesService.getInviteCandidates(req.params.eventId, req.user.leadsMinistryId);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
 
 // ── Get Invites for an Event ─────────────────────────────────
 // Ministry Leaders see only their ministry's invites.
 // System Admin / Pastor / Reg Team (no leadsMinistryId) see all.
 exports.getInvitesByEvent = async (req, res, next) => {
   try {
+    if (req.user.roleName === "Ministry Leader" && !req.user.leadsMinistryId) {
+      return res.status(403).json({ success: false, message: "No ministry is assigned to this account" });
+    }
     const leadsMinistryId = req.user.leadsMinistryId || null;
     const data = await invitesService.getInvitesByEvent(
       req.params.eventId,
@@ -20,7 +33,7 @@ exports.getInvitesByEvent = async (req, res, next) => {
 // Only a Ministry Leader may create invites (must have leadsMinistryId).
 exports.createInvites = async (req, res, next) => {
   try {
-    if (!req.user.leadsMinistryId)
+    if (!canInvite(req.user))
       return res.status(403).json({ success: false, message: "You are not a Ministry Leader" });
 
     const data = await invitesService.createInvites(
