@@ -173,8 +173,8 @@ const AppRoutes = () => {
       <Route path="/members/:id/edit" element={<ProtectedRoute module="members" action="update"><MainLayout><MembersRoute><MemberFormPage /></MembersRoute></MainLayout></ProtectedRoute>} />
 
       <Route path="/cell-groups" element={<ProtectedRoute module="cell_groups" action="read"><MainLayout><CellGroupsPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/ministries"  element={<ProtectedRoute module="members" action="read"><MainLayout><MinistriesHubPage /></MainLayout></ProtectedRoute>} />
-      <Route path="/groups"      element={<ProtectedRoute module="ministry" action="read"><MainLayout><OrgGroupsPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/groups"  element={<ProtectedRoute module="members" action="read"><MainLayout><MinistriesHubPage /></MainLayout></ProtectedRoute>} />
+      <Route path="/ministries"      element={<ProtectedRoute module="ministry" action="read"><MainLayout><OrgGroupsPage /></MainLayout></ProtectedRoute>} />
       <Route path="/ministry"    element={<ProtectedRoute module="ministry" action="read"><MainLayout><MinistryPage /></MainLayout></ProtectedRoute>} />
 
       <Route path="/unauthorized" element={<UnauthorizedPage />} />

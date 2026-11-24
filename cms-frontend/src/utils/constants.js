@@ -26,14 +26,14 @@ export const NAV_ITEMS = [
     permissions: { module: 'cell_groups', action: 'read' },
   },
   {
-    label: 'Ministries',
-    path: '/ministries',
+    label: 'Groups',
+    path: '/groups',
     icon: 'ministry',
     permissions: { module: 'members', action: 'read' },
   },
   {
-    label: 'Groups & Teams',
-    path: '/groups',
+    label: 'Ministries',
+    path: '/ministries',
     icon: 'groups',
     permissions: { module: 'ministry', action: 'read' },
   },

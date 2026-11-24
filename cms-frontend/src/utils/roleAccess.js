@@ -2,10 +2,10 @@ export const ROLE_ALLOWED_PATHS = {
   // Members use self-scoped APIs through the standalone portal only.
   Member: ['/portal'],
   'Finance Team': ['/dashboard', '/finance', '/archives', '/my-settings', '/reports/analytics'],
-  'Ministry Leader': ['/dashboard', '/groups', '/ministry', '/ministry/schedules', '/events', '/attendance', '/attendance/qr', '/reports/team-attendance', '/inventory', '/archives', '/my-settings'],
+  'Ministry Leader': ['/dashboard', '/ministries', '/ministry', '/ministry/schedules', '/events', '/attendance', '/attendance/qr', '/reports/team-attendance', '/inventory', '/archives', '/my-settings'],
   'Cell Group Leader': ['/dashboard', '/cell-groups', '/attendance', '/attendance/qr', '/reports/team-attendance', '/events', '/inventory', '/archives', '/my-settings'],
-  'Group Leader': ['/dashboard', '/ministries', '/members', '/attendance', '/attendance/qr', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
-  Leader: ['/dashboard', '/leader/teams', '/cell-groups', '/ministries', '/members', '/attendance', '/attendance/qr', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
+  'Group Leader': ['/dashboard', '/groups', '/members', '/attendance', '/attendance/qr', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
+  Leader: ['/dashboard', '/leader/teams', '/cell-groups', '/groups', '/members', '/attendance', '/attendance/qr', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
 };
 
 export const ROLE_TAB_SETS = {
@@ -80,7 +80,7 @@ export const isAllowedForRolePath = (roleName, pathname, leaderAssignments = [],
     const hasGroup = leaderAssignments.some((assignment) => ['group', 'member_group'].includes(assignment.scopeType || assignment.scope_type));
     const selectedType = leaderScopeKey === 'all' ? 'all' : String(leaderScopeKey || '').split(':')[0];
     if (pathname.startsWith('/cell-groups')) return selectedType === 'all' ? hasCell : selectedType === 'cell_group' && hasCell;
-    if (pathname.startsWith('/members') || pathname.startsWith('/ministries')) return selectedType === 'all'
+    if (pathname.startsWith('/members') || pathname.startsWith('/groups')) return selectedType === 'all'
       ? hasGroup
       : ['member_group', 'group'].includes(selectedType) && hasGroup;
     if (!hasCell && !hasGroup && pathname !== '/dashboard' && pathname !== '/my-settings' && pathname !== '/leader/teams') return false;
@@ -102,7 +102,7 @@ export const isVisibleNavItem = (item, user, hasPermission) => {
       : selectedType === 'cell_group';
     return Boolean(assigned && (!item.permissions || hasPermission(item.permissions.module, item.permissions.action)));
   }
-  if (user?.roleName === 'Leader' && (item.path === '/members' || item.path === '/ministries')) {
+  if (user?.roleName === 'Leader' && (item.path === '/members' || item.path === '/groups')) {
     const selectedType = user.activeLeaderScopeKey === 'all' ? 'all' : String(user.activeLeaderScopeKey || '').split(':')[0];
     const assigned = selectedType === 'all'
       ? user.leaderAssignments?.some((assignment) => ['group', 'member_group'].includes(assignment.scopeType || assignment.scope_type)) || false

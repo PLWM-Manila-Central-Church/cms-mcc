@@ -49,7 +49,7 @@ export default function OrgGroupsPage() {
         return rows[0]?.id ?? null;
       });
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to load serving groups.');
+      setError(err.response?.data?.message || 'Unable to load ministries.');
     } finally {
       setLoading(false);
     }
@@ -213,7 +213,7 @@ export default function OrgGroupsPage() {
     <div className="mcc-module mcc-module-org-groups" style={S.page}>
       <div style={S.header}>
         <div>
-          <h1 className="workspace-page-title" style={S.title}>Serving Groups &amp; Teams</h1>
+          <h1 className="workspace-page-title" style={S.title}>Ministries</h1>
           <p style={S.subtitle}>
             Service teams, departments, and committees (Choir, Ushers, Sound &amp; Media, Broadcast, Teachers, Event Committees). Members may serve in multiple teams.
           </p>
@@ -230,7 +230,7 @@ export default function OrgGroupsPage() {
           {canCreate && (
             <button type="button" onClick={() => setShowCreate(true)} style={S.primaryBtn}>
               <MonoIcon name="plus" size={15} />
-              <span>New Group / Team</span>
+              <span>New Ministry / Team</span>
             </button>
           )}
         </div>
@@ -238,7 +238,7 @@ export default function OrgGroupsPage() {
 
       {/* KPI Strip */}
       <div style={{ ...S.kpiGrid, gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))' }}>
-        <KpiCard label="Serving Groups" value={totals.groups} accent="#005599" />
+        <KpiCard label="Ministries" value={totals.groups} accent="#005599" />
         <KpiCard label="Team Volunteers" value={totals.volunteers} accent="#003d70" />
         <KpiCard label="Defined Positions" value={totals.positions} accent="#13b5ea" />
         <KpiCard label="Open Tasks" value={totals.openTasks} accent="#52647a" />
@@ -252,15 +252,15 @@ export default function OrgGroupsPage() {
         gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(260px, 310px) minmax(0, 1fr)',
       }}>
         {/* Left: Groups Directory */}
-        <section style={S.card} aria-label="Serving groups directory">
+        <section style={S.card} aria-label="Ministries directory">
           <div style={S.cardHead}>
-            <h2 style={S.cardTitle}>Teams &amp; Departments</h2>
+            <h2 style={S.cardTitle}>Ministry Teams</h2>
             <span style={S.countPill}>{groups.length}</span>
           </div>
           {loading ? (
             <p style={S.muted}>Loading groups…</p>
           ) : groups.length === 0 ? (
-            <p style={S.muted}>No serving groups available.</p>
+            <p style={S.muted}>No ministries available.</p>
           ) : (
             <div style={S.list}>
               {groups.map((g) => {
@@ -293,7 +293,7 @@ export default function OrgGroupsPage() {
           {detailLoading ? (
             <p style={S.muted}>Loading group workspace…</p>
           ) : !detail ? (
-            <p style={S.muted}>Select a serving group to manage positions, volunteers, activities, and tasks.</p>
+            <p style={S.muted}>Select a ministry to manage positions, volunteers, activities, and tasks.</p>
           ) : (
             <>
               <div style={S.detailHead}>
@@ -590,7 +590,7 @@ export default function OrgGroupsPage() {
         </section>
       </div>
 
-      {/* Create Group Modal */}
+      {/* Create Ministry Modal */}
       {showCreate && (
         <div style={S.modalBackdrop} role="dialog" aria-modal="true" aria-label="Create Serving Group">
           <form onSubmit={handleCreateGroup} style={S.modal}>
@@ -645,7 +645,7 @@ export default function OrgGroupsPage() {
             </label>
             <div style={S.modalActions}>
               <button type="button" onClick={() => setShowCreate(false)} style={S.ghostBtn}>Cancel</button>
-              <button type="submit" style={S.primaryBtn}>Create Group</button>
+              <button type="submit" style={S.primaryBtn}>Create Ministry</button>
             </div>
           </form>
         </div>

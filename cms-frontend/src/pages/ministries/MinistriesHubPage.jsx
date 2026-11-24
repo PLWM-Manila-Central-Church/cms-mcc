@@ -56,7 +56,7 @@ export default function MinistriesHubPage() {
         return rows[0]?.id ?? null;
       });
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to load ministries.');
+      setError(err.response?.data?.message || 'Unable to load groups.');
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export default function MinistriesHubPage() {
       const res = await axiosInstance.get(`/ministries/${id}`);
       setDetail(res.data?.data || null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to load ministry details.');
+      setError(err.response?.data?.message || 'Unable to load group details.');
       setDetail(null);
     } finally {
       setDetailLoading(false);
@@ -147,18 +147,18 @@ export default function MinistriesHubPage() {
       if (modalMode === 'create') {
         const res = await axiosInstance.post('/ministries', payload);
         const createdId = res.data?.data?.id || null;
-        setNotice(`Ministry "${payload.name}" created.`);
+        setNotice(`Group "${payload.name}" created.`);
         setModalMode(null);
         await loadMinistries(createdId);
       } else if (detail?.id) {
         await axiosInstance.put(`/ministries/${detail.id}`, payload);
-        setNotice(`Ministry "${payload.name}" updated.`);
+        setNotice(`Group "${payload.name}" updated.`);
         setModalMode(null);
         await loadMinistries(detail.id);
         await loadDetail(detail.id);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to save ministry.');
+      setError(err.response?.data?.message || 'Unable to save group.');
     } finally {
       setSaving(false);
     }
@@ -168,16 +168,16 @@ export default function MinistriesHubPage() {
     if (!detail?.id) return;
     const ok = await confirm({
       title: `Archive ${detail.name}?`,
-      message: 'Members remain intact in the church directory. The ministry will be archived from active lists.',
-      confirmText: 'Archive Ministry',
+      message: 'Members remain intact in the church directory. The group will be archived from active lists.',
+      confirmText: 'Archive Group',
     });
     if (!ok) return;
     try {
       await axiosInstance.post(`/ministries/${detail.id}/archive`);
-      setNotice(`Ministry "${detail.name}" archived.`);
+      setNotice(`Group "${detail.name}" archived.`);
       await loadMinistries();
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to archive ministry.');
+      setError(err.response?.data?.message || 'Unable to archive group.');
     }
   };
 
@@ -185,20 +185,20 @@ export default function MinistriesHubPage() {
     <div className="mcc-module mcc-module-ministries-hub" style={S.page}>
       <div style={S.header}>
         <div>
-          <h1 className="workspace-page-title" style={S.title}>Ministries</h1>
+          <h1 className="workspace-page-title" style={S.title}>Groups</h1>
           <p style={S.subtitle}>
-            Life-stage and fellowship ministries (High School, Young Adults, Men&apos;s, Women&apos;s, Elementary, Preschool, Toddlers).
+            Life-stage and fellowship groups (High School, Young Adults, Men&apos;s, Women&apos;s, Elementary, Preschool, Toddlers).
           </p>
         </div>
         <div style={S.headerActions}>
-          <Link to="/groups" style={S.secondaryLink}>
+          <Link to="/ministries" style={S.secondaryLink}>
             <MonoIcon name="groups" size={15} />
-            <span>Serving Groups</span>
+            <span>Ministries</span>
           </Link>
           {canCreate && (
             <button type="button" onClick={openCreate} style={S.primaryBtn}>
               <MonoIcon name="plus" size={15} />
-              <span>New Ministry</span>
+              <span>New Group</span>
             </button>
           )}
         </div>
@@ -206,7 +206,7 @@ export default function MinistriesHubPage() {
 
       {/* KPI Strip */}
       <div style={{ ...S.kpiGrid, gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))' }}>
-        <KpiCard label="Active Ministries" value={totals.ministries} accent="#005599" />
+        <KpiCard label="Active Groups" value={totals.ministries} accent="#005599" />
         <KpiCard label="Assigned Members" value={totals.totalMembers} accent="#003d70" />
         <KpiCard label="Active Members" value={totals.activeMembers} accent="#13b5ea" />
         <KpiCard label="Inactive Members" value={totals.inactiveMembers} accent="#52647a" />
@@ -221,16 +221,16 @@ export default function MinistriesHubPage() {
         gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(260px, 310px) minmax(0, 1fr)',
       }}>
         {/* Left: Ministry Directory */}
-        <section style={S.card} aria-label="Ministries directory">
+        <section style={S.card} aria-label="Groups directory">
           <div style={S.cardHead}>
-            <h2 style={S.cardTitle}>Life-Stage Ministries</h2>
+            <h2 style={S.cardTitle}>Life-Stage Groups</h2>
             <span style={S.countPill}>{ministries.length}</span>
           </div>
 
           {loading ? (
-            <p style={S.muted}>Loading ministries…</p>
+            <p style={S.muted}>Loading groups…</p>
           ) : ministries.length === 0 ? (
-            <p style={S.muted}>No ministries found in your scope.</p>
+            <p style={S.muted}>No groups found in your scope.</p>
           ) : (
             <div style={S.list}>
               {ministries.map((item) => {
@@ -267,11 +267,11 @@ export default function MinistriesHubPage() {
         </section>
 
         {/* Right: Ministry Roster & Overview */}
-        <section style={S.card} aria-label="Ministry detail">
+        <section style={S.card} aria-label="Group detail">
           {detailLoading ? (
-            <p style={S.muted}>Loading ministry details…</p>
+            <p style={S.muted}>Loading group details…</p>
           ) : !detail ? (
-            <p style={S.muted}>Select a ministry to review its roster and details.</p>
+            <p style={S.muted}>Select a group to review its roster and details.</p>
           ) : (
             <>
               <div style={S.detailHead}>
@@ -282,7 +282,7 @@ export default function MinistriesHubPage() {
                     <span style={S.statusTag}>{detail.status || 'Active'}</span>
                   </div>
                   <p style={S.detailDesc}>
-                    {detail.description || 'Fellowship and pastoral care ministry group.'}
+                    {detail.description || 'Fellowship and pastoral care group.'}
                   </p>
                   <div style={S.metaStrip}>
                     <span><strong>{detail.member_count || 0}</strong> members ({detail.active_member_count || 0} active)</span>
@@ -296,10 +296,10 @@ export default function MinistriesHubPage() {
                 </div>
                 <div className="mcc-icon-action-group">
                   {canUpdate && (
-                    <IconActionButton icon="edit" label="Edit" title="Edit ministry" tone="neutral" onClick={openEdit} />
+                    <IconActionButton icon="edit" label="Edit" title="Edit group" tone="neutral" onClick={openEdit} />
                   )}
                   {canArchive && (
-                    <IconActionButton icon="archive" label="Archive" title="Archive ministry" tone="danger" onClick={handleArchive} />
+                    <IconActionButton icon="archive" label="Archive" title="Archive group" tone="danger" onClick={handleArchive} />
                   )}
                 </div>
               </div>
@@ -407,23 +407,23 @@ export default function MinistriesHubPage() {
 
       {/* Create / Edit Modal */}
       {modalMode && (
-        <div style={S.modalBackdrop} role="dialog" aria-modal="true" aria-label={modalMode === 'create' ? 'New Ministry' : 'Edit Ministry'}>
+        <div style={S.modalBackdrop} role="dialog" aria-modal="true" aria-label={modalMode === 'create' ? 'New Group' : 'Edit Group'}>
           <form onSubmit={handleSave} style={S.modal}>
             <div style={S.modalHead}>
-              <h2 style={S.modalTitle}>{modalMode === 'create' ? 'New Ministry' : 'Edit Ministry'}</h2>
+              <h2 style={S.modalTitle}>{modalMode === 'create' ? 'New Group' : 'Edit Group'}</h2>
               <button type="button" onClick={() => setModalMode(null)} style={S.iconClose} aria-label="Close">
                 <MonoIcon name="close" size={16} />
               </button>
             </div>
             <div style={S.formGrid}>
               <label style={S.field}>
-                <span style={S.label}>Ministry Name *</span>
+                <span style={S.label}>Group Name *</span>
                 <input
                   required
                   maxLength={100}
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="e.g. Young Adults Ministry"
+                  placeholder="e.g. Young Adults"
                   style={S.input}
                 />
               </label>
@@ -475,7 +475,7 @@ export default function MinistriesHubPage() {
             <div style={S.modalActions}>
               <button type="button" onClick={() => setModalMode(null)} style={S.ghostBtn}>Cancel</button>
               <button type="submit" disabled={saving} style={S.primaryBtn}>
-                {saving ? 'Saving…' : modalMode === 'create' ? 'Create Ministry' : 'Save Changes'}
+                {saving ? 'Saving…' : modalMode === 'create' ? 'Create Group' : 'Save Changes'}
               </button>
             </div>
           </form>
