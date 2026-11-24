@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, test, vi } from 'vitest';
 import EventWorkspacePanel from './EventWorkspacePanel';
+import { ConfirmationProvider } from '../../context/ConfirmationContext';
 
 vi.mock('../../api/axiosInstance', () => ({
   default: {
@@ -27,7 +28,7 @@ vi.mock('../../hooks/useIsMobile', () => ({ default: () => false }));
 
 describe('EventWorkspacePanel', () => {
   test('renders financial reconciliation strip and switches across workspace tabs', async () => {
-    render(<EventWorkspacePanel eventId={1} />);
+    render(<ConfirmationProvider><EventWorkspacePanel eventId={1} /></ConfirmationProvider>);
     await waitFor(() => expect(screen.getByText('Opening Praise')).toBeInTheDocument());
     expect(screen.getByText('Logistics')).toBeInTheDocument();
 

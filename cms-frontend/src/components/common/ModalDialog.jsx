@@ -13,6 +13,7 @@ export default function ModalDialog({
   subtitle = '',
   maxWidth = 680,
   children,
+  footer,
 }) {
   const dialogRef = useRef(null);
   useDialogFocus(open, dialogRef, onClose);

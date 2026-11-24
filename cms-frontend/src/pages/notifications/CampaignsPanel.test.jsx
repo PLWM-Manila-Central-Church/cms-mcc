@@ -48,7 +48,7 @@ describe('CampaignsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'New notification' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Alex Sample' }));
     fireEvent.change(screen.getByLabelText(/Message/), { target: { value: 'Church reminder' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Preview audience & cost' }));
+    fireEvent.submit(screen.getByRole('button', { name: 'Review SMS' }).closest('form'));
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/outreach/campaigns/preview', expect.objectContaining({
       audience_type: 'selected_members', member_ids: [12], timing_mode: 'send_now',
     })));

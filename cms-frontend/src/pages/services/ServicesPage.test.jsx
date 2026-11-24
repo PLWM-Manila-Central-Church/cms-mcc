@@ -28,7 +28,7 @@ describe('calendar-derived service creation', () => {
 
     fireEvent.change(screen.getByLabelText('Title *'), { target: { value: 'Bible Retreat' } });
     fireEvent.change(screen.getByLabelText('Date *'), { target: { value: '2026-10-31' } });
-    fireEvent.change(screen.getByLabelText('Linked event (optional)'), { target: { value: '17' } });
+    fireEvent.change(screen.getByLabelText('Linked Event (optional)'), { target: { value: '17' } });
     expect(screen.getByLabelText('Time (optional)')).not.toBeRequired();
     expect(screen.getByLabelText('Capacity (optional)')).not.toBeRequired();
 

@@ -428,6 +428,11 @@ export default function OutreachPage() {
         ['Open follow-ups', (overview.followups.open || 0) + (overview.followups.assigned || 0)], ['Resolved', overview.followups.resolved || 0],
         ['Queued', overview.deliveries.queued || 0], ['Simulated', overview.deliveries.simulated || 0], ['Failed / review', (overview.deliveries.failed || 0) + (overview.deliveries.unknown || 0)],
       ].map(([label, value]) => <article className="outreach-metric" key={label}><span>{label}</span><strong>{value}</strong></article>)}</div>}
+      {caps.campaign_write && (!availability.campaigns_enabled || availability.campaigns_schema_ready === false) && (
+        <p className="outreach-warning" role="status">{availability.campaigns_schema_ready === false
+          ? 'SMS campaigns are unavailable until the database update finishes.'
+          : 'SMS campaigns are off. Enable custom notifications in Configuration to show the Campaigns tab.'}</p>
+      )}
       <div className="outreach-tabs" role="tablist" aria-label="Notification workspace sections">{tabs.map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value}
         id={'outreach-tab-' + value} aria-controls="outreach-panel" tabIndex={tab === value ? 0 : -1}
         onKeyDown={(event) => navigateTabs(event, value)} onClick={() => selectTab(value)}>{label}</button>)}</div>
