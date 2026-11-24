@@ -98,7 +98,9 @@ const preview = async (input, user, now = new Date()) => {
   result.monthly_remaining_php = Math.max(0, Math.round((Number(config.campaign_monthly_budget_php) - result.monthly_committed_php) * 100) / 100);
   return {
     ...result, mode,
-    sending_available: config.enabled !== false && (mode === "simulation" || mode === "live" && liveReady),
+    // Manual campaigns have their own switch; automatic reminder evaluation
+    // must not be a prerequisite for the registration team to send a campaign.
+    sending_available: mode === "simulation" || mode === "live" && liveReady,
     recipients: result.recipients.map((recipient) => ({
       member_id: recipient.member_id, name: recipient.name,
       phone_masked: recipient.phone_masked, is_minor: recipient.is_minor,

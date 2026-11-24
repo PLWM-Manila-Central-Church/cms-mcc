@@ -15,9 +15,10 @@ const runCycle = async () => {
   if (running) return { busy: true };
   running = (async () => {
     if (!await readiness()) return { ready: false };
-    const result = await evaluatePage({ cursor });
+    const config = await getConfiguration();
+    const result = config.enabled ? await evaluatePage({ cursor }) : { disabled: true };
     cursor = result.next_cursor || 0;
-    const campaignQueue = await queueDueCampaigns();
+    const campaignQueue = config.campaigns_enabled ? await queueDueCampaigns() : { queued: 0 };
     const delivery = await processQueue({ limit: 25 });
     const sending = await NotificationCampaign.findAll({ where: { status: "sending" }, attributes: ["id"], limit: 25 });
     for (const campaign of sending) await refreshCampaignStatus(campaign.id);

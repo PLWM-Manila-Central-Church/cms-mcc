@@ -18,7 +18,10 @@ const DEFAULTS = Object.freeze({
   campaign_quiet_end: 20,
 });
 const normalizePhone = (value) => {
-  const phone = String(value || "").replace(/[\s()-]/g, "");
+  let phone = String(value || "").replace(/[\s()-]/g, "");
+  // Some legacy member records store the ten-digit Philippine mobile number
+  // without the domestic trunk prefix (e.g. 9xxxxxxxxx). Treat it as +63.
+  if (/^9\d{9}$/.test(phone)) phone = "+63" + phone;
   const match = /^(?:\+?63|0)(9\d{9})$/.exec(phone);
   return match ? "+63" + match[1] : null;
 };

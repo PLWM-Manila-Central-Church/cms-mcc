@@ -14,7 +14,7 @@ const { OutreachPreference, OutreachSessionPolicy, AttendanceFollowUp, OutreachD
 const allowedRecipient = (phone) => process.env.SMS_ALLOW_ALL_OPTED_IN === "true"
   || (process.env.SMS_ALLOWED_RECIPIENTS || "").split(",").map(normalizePhone).filter(Boolean).includes(phone);
 const preflight = async (job, config, now = new Date(), transaction, retry = false) => {
-  if (!config.enabled) return { hold: true, reason: "WORKFLOW_DISABLED" };
+  if (job.kind !== "campaign" && !config.enabled) return { hold: true, reason: "WORKFLOW_DISABLED" };
   if (now >= new Date(job.expires_at)) return { reason: "MESSAGE_EXPIRED" };
   const member = await Member.findByPk(job.member_id, { transaction, ...(transaction && { lock: transaction.LOCK.UPDATE }) });
   if (!member || member.status !== "Active") return { reason: "MEMBER_INACTIVE" };
@@ -78,11 +78,11 @@ const preflight = async (job, config, now = new Date(), transaction, retry = fal
   if (job.channel === "sms" && config.mode === "live" && estimateSegments(message) > Math.max(1, Math.min(5, Number(process.env.SMS_MAX_SEGMENTS) || 1))) return { failed: true, reason: "SMS_SEGMENT_LIMIT" };
   return { eligible: true, member, session, message };
 };
-const claimNext = async (config, now, campaignId, inAppOnly) => sequelize.transaction(async (transaction) => {
+const claimNext = async (config, now, campaignId, inAppOnly, campaignOnly = false) => sequelize.transaction(async (transaction) => {
   const state = transportState();
   const smsProcessable = config.mode === "simulation" || config.mode === "live" && state.sms_delivery_enabled && state.provider_configured && state.recipient_restriction_configured;
   const row = await OutreachDelivery.findOne({
-    where: { status: "queued", scheduled_at: { [Op.lte]: now }, next_attempt_at: { [Op.lte]: now }, ...(campaignId ? { campaign_id: campaignId } : {}), ...(!smsProcessable || inAppOnly ? { channel: "in_app" } : {}) },
+    where: { status: "queued", scheduled_at: { [Op.lte]: now }, next_attempt_at: { [Op.lte]: now }, ...(campaignId ? { campaign_id: campaignId } : {}), ...(campaignOnly ? { kind: "campaign" } : {}), ...(!smsProcessable || inAppOnly ? { channel: "in_app" } : {}) },
     order: [["next_attempt_at", "ASC"], ["id", "ASC"]], transaction, lock: transaction.LOCK.UPDATE,
   });
   if (!row) return null;
@@ -168,10 +168,10 @@ const processClaim = async (claim, config, now) => {
     { where: { id: prepared.attemptId }, transaction });
   });
 };
-const reconcileProviderStatuses = async (config, now) => {
+const reconcileProviderStatuses = async (config, now, campaignOnly = false) => {
   const state = transportState();
   if (config.mode !== "live" || !state.sms_delivery_enabled || !state.provider_configured || !state.recipient_restriction_configured) return;
-  const jobs = await OutreachDelivery.findAll({ where: { channel: "sms", delivery_mode: "live", status: "sent", provider_message_id: { [Op.ne]: null },
+  const jobs = await OutreachDelivery.findAll({ where: { channel: "sms", delivery_mode: "live", status: "sent", provider_message_id: { [Op.ne]: null }, ...(campaignOnly ? { kind: "campaign" } : {}),
     [Op.or]: [{ provider_status_checked_at: null }, { provider_status_checked_at: { [Op.lt]: new Date(now.getTime() - 300000) } }] }, limit: 10 });
   for (const job of jobs) {
     if (!allowedRecipient(job.recipient_phone)) continue;
@@ -184,15 +184,16 @@ const reconcileProviderStatuses = async (config, now) => {
 };
 const processQueue = async ({ limit = 25, now = new Date(), campaignId, inAppOnly } = {}) => {
   const config = await getConfiguration();
-  if (!config.enabled) return { enabled: false, processed: 0 };
+  if (!config.enabled && !config.campaigns_enabled) return { enabled: false, processed: 0 };
+  const campaignOnly = !config.enabled;
   await recoverExpiredClaims(now);
   let processed = 0;
   for (; processed < Math.min(100, limit); processed++) {
-    const claim = await claimNext(config, now, campaignId, inAppOnly);
+    const claim = await claimNext(config, now, campaignId, inAppOnly, campaignOnly);
     if (!claim) break;
     await processClaim(claim, config, now);
   }
-  await reconcileProviderStatuses(config, now);
+  await reconcileProviderStatuses(config, now, campaignOnly);
   return { enabled: true, processed, mode: config.mode, live_sms_enabled: transportState().sms_delivery_enabled };
 };
 const retryDelivery = async (id, user) => sequelize.transaction(async (transaction) => {
