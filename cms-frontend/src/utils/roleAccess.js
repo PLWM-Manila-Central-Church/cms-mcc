@@ -66,6 +66,9 @@ export const DEFAULT_TABS = [
 ];
 
 export const isAllowedForRolePath = (roleName, pathname, leaderAssignments = [], leaderScopeKey = null) => {
+  if (pathname === '/bible-reading' || pathname.startsWith('/bible-reading/')) {
+    return roleName === 'Registration Team' || roleName === 'Pastor';
+  }
   if (pathname === '/outreach' || pathname.startsWith('/outreach/')) {
     if (!['System Admin', 'Pastor', 'Registration Team', 'Leader', 'Cell Group Leader', 'Group Leader', 'Ministry Leader'].includes(roleName)) return false;
     if (roleName === 'Leader') return leaderAssignments.some((assignment) => ['cell_group', 'member_group', 'group'].includes(assignment.scopeType || assignment.scope_type));
@@ -92,6 +95,7 @@ export const isAllowedForRolePath = (roleName, pathname, leaderAssignments = [],
 };
 
 export const isVisibleNavItem = (item, user, hasPermission) => {
+  if (item.path === '/bible-reading') return ['Registration Team', 'Pastor'].includes(user?.roleName);
   if (item.path === '/outreach') return isAllowedForRolePath(user?.roleName, item.path, user?.leaderAssignments, user?.activeLeaderScopeKey) && hasPermission('outreach', 'read');
   if (item.path === '/reports/team-attendance' && !['Leader', 'Cell Group Leader', 'Group Leader', 'Ministry Leader'].includes(user?.roleName)) return false;
   if (item.path === '/leader/teams') return user?.roleName === 'Leader';

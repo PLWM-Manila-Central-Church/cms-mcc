@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import IconActionButton from '../../components/common/IconActionButton';
 import { sanitizeScriptureRef } from '../../utils/inputConstraints';
+import { useAuth } from '../../context/AuthContext';
 
 const currentMonth = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }).slice(0, 7);
 const monthLabel = (month) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-PH', {
@@ -34,6 +35,8 @@ const S = {
 };
 
 export default function BibleReadingPage() {
+  const authState = useAuth();
+  const canManageVerses = !authState || authState.user?.roleName === 'Registration Team';
   const [month, setMonth] = useState(currentMonth);
   const [summary, setSummary] = useState(null);
   const [verses, setVerses] = useState([]);
@@ -47,10 +50,13 @@ export default function BibleReadingPage() {
   const [error, setError] = useState('');
   const summaryRequest = useRef(0);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState(null);
   const [form, setForm] = useState({ group_id: '', sunday_date: '', reference: '', verse_text: '' });
 
   const load = useCallback(async () => {
     const requestId = ++summaryRequest.current;
+    setRefreshing(true);
     setError('');
     try {
       const summaryResponse = await axiosInstance.get('/bible-reading/summary', { params: {
@@ -59,15 +65,32 @@ export default function BibleReadingPage() {
         ...(groupId ? { group_id: groupId } : {}),
         ...(cellGroupId ? { cell_group_id: cellGroupId } : {}),
       } });
-      if (requestId === summaryRequest.current) setSummary(summaryResponse.data.data);
+      if (requestId === summaryRequest.current) {
+        setSummary(summaryResponse.data.data);
+        setUpdatedAt(new Date());
+      }
     } catch (requestError) {
       if (requestId === summaryRequest.current) {
         setError(requestError.response?.data?.message || 'The reading monitor could not be loaded.');
       }
+    } finally {
+      if (requestId === summaryRequest.current) setRefreshing(false);
     }
   }, [month, search, groupId, cellGroupId]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    const timer = window.setInterval(refreshWhenVisible, 30000);
+    window.addEventListener('focus', refreshWhenVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refreshWhenVisible);
+    };
+  }, [load]);
 
   const loadSupporting = useCallback(async () => {
     try {
@@ -124,6 +147,7 @@ export default function BibleReadingPage() {
   };
 
   const saveVerse = async (event) => {
+    if (!canManageVerses) return;
     event.preventDefault();
     setSaving(true); setError('');
     try {
@@ -136,6 +160,7 @@ export default function BibleReadingPage() {
   };
 
   const removeVerse = async (id) => {
+    if (!canManageVerses) return;
     setError('');
     try {
       await axiosInstance.delete(`/bible-reading/verses/${id}`);
@@ -151,8 +176,12 @@ export default function BibleReadingPage() {
         <div>
           <h1 style={S.title}>Bible Reading</h1>
           <p style={S.sub}>Monthly reading progress and the memory verse each group carries on Sunday.</p>
+          {updatedAt && <p style={S.sub}>Updated {updatedAt.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })} · refreshes every 30 seconds</p>}
         </div>
         <div style={{ ...S.controls, flexWrap: 'wrap' }}>
+          <button type="button" style={S.button} onClick={load} disabled={refreshing}>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
           <button type="button" style={S.button} onClick={() => exportCsv('xlsx')}>Download Excel</button>
           <button type="button" style={S.button} onClick={() => exportCsv('csv')}>Download CSV</button>
           <button type="button" style={S.button} onClick={() => setMonth((value) => {
@@ -259,13 +288,13 @@ export default function BibleReadingPage() {
                   <span style={{ fontSize: 12, color: '#52647a' }}> · {dateLabel(verse.sunday_date)} · {verse.reference}</span>
                   <span style={{ display: 'block', fontSize: 12, color: '#475569', marginTop: 2 }}>{verse.verse_text}</span>
                 </span>
-                <IconActionButton icon="archive" label="Remove" title="Remove memory verse" tone="danger" onClick={() => removeVerse(verse.id)} />
+                {canManageVerses && <IconActionButton icon="archive" label="Remove" title="Remove memory verse" tone="danger" onClick={() => removeVerse(verse.id)} />}
               </li>
             ))}
           </ul>
         )}
 
-        <form onSubmit={saveVerse} style={S.row}>
+        {canManageVerses && <form onSubmit={saveVerse} style={S.row}>
           <label style={S.field}>Group
             <select aria-label="Group" style={S.input} required value={form.group_id} onChange={(event) => setForm({ ...form, group_id: event.target.value })}>
               <option value="">Select group</option>
@@ -282,7 +311,7 @@ export default function BibleReadingPage() {
             <textarea aria-label="Verse text" maxLength={1000} required rows={2} style={{ ...S.input, resize: 'vertical' }} value={form.verse_text} onChange={(event) => setForm({ ...form, verse_text: event.target.value })} />
           </label>
           <button type="submit" style={S.primary} disabled={saving}>{saving ? 'Saving…' : 'Assign verse'}</button>
-        </form>
+        </form>}
       </section>
     </section>
   );

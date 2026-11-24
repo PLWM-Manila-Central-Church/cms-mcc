@@ -98,7 +98,7 @@ exports.getSummary = async (month, options = {}) => {
   if (!MONTH.test(String(month || ""))) {
     throw AppError.badRequest("VALIDATION_ERROR", "month must be formatted YYYY-MM");
   }
-  const memberWhere = { is_deleted: 0 };
+  const memberWhere = { is_deleted: 0, status: "Active" };
   if (options.group_id) memberWhere.group_id = Number(options.group_id);
   if (options.cell_group_id) memberWhere.cell_group_id = Number(options.cell_group_id);
   const members = (

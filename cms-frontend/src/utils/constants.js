@@ -91,8 +91,7 @@ export const NAV_ITEMS = [
     label: 'Bible Reading',
     path: '/bible-reading',
     icon: 'book',
-    permissions: { module: 'attendance', action: 'read' },
-    roles: ['System Admin', 'Pastor', 'Registration Team'],
+    roles: ['Pastor', 'Registration Team'],
   },
   {
     label: 'Services',
