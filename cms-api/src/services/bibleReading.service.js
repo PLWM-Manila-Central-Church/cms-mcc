@@ -2,8 +2,6 @@
 
 const { Op } = require("sequelize");
 const {
-  MONTH_PATTERN,
-  readingDateOnly,
   BibleReadingProgress,
   GroupMemoryVerse,
   Member,
@@ -12,6 +10,8 @@ const {
 } = require("../models");
 const AppError = require("../helpers/AppError");
 const {
+  MONTH_PATTERN,
+  readingDateOnly,
   getMonthDays,
   getMonthTarget,
   getTodayReading,
