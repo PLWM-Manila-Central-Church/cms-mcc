@@ -55,9 +55,11 @@ exports.bulkRegisterSchema = Joi.object({
 exports.getEventsQuerySchema = Joi.object({
   page:        Joi.number().integer().min(1).default(1),
   limit:       Joi.number().integer().min(1).max(100).default(15),
-  status:      Joi.string().valid("Draft", "Upcoming", "Ongoing", "Completed", "Cancelled").optional(),
+  status:      Joi.string().valid("Draft", "Upcoming", "Ongoing", "Completed", "Cancelled").allow("").optional(),
   search:      Joi.string().max(200).allow("").optional(),
-  category_id: Joi.number().integer().positive().optional(),
-  start_from:  Joi.date().iso().optional(),
-  start_to:    Joi.date().iso().optional(),
+  category_id: Joi.number().integer().positive().allow("").optional(),
+  start_from:  Joi.date().iso().allow("").optional(),
+  start_to:    Joi.date().iso().allow("").optional(),
+  timeframe:   Joi.string().valid("upcoming", "past", "this_month", "this_year", "").optional(),
+  sort:        Joi.string().valid("date_asc", "date_desc", "upcoming_first", "title_asc").optional(),
 });

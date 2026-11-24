@@ -236,7 +236,14 @@ export default function PastorAttendanceReport() {
 
   const setPreset = (days) => {
     const today = manilaDate();
-    setDraft((current) => ({ ...current, from: days ? daysBefore(today, days - 1) : today, to: today, session_id: '', page: 1 }));
+    const next = { ...draft, from: days ? daysBefore(today, days - 1) : today, to: today, session_id: '', page: 1 };
+    setDraft(next);
+    const params = new URLSearchParams(searchParams);
+    params.set('from', next.from);
+    params.set('to', next.to);
+    params.delete('session_id');
+    params.set('page', '1');
+    setSearchParams(params);
   };
 
   const changePage = (page) => {
@@ -279,7 +286,13 @@ export default function PastorAttendanceReport() {
       // Let the browser start consuming the Blob URL before revoking it.
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'The attendance export could not be generated.');
+      let message = 'The attendance export could not be generated.';
+      try {
+        const body = requestError.response?.data;
+        const text = body instanceof Blob ? await body.text() : null;
+        message = (text && JSON.parse(text).message) || body?.message || message;
+      } catch { /* keep default message */ }
+      setError(message);
     } finally { setExporting(false); }
   };
 
@@ -290,10 +303,6 @@ export default function PastorAttendanceReport() {
   ));
   const activityOptions = (report?.activity_options || [])
     .filter((activity) => draft.activity_type === 'all' || activity.type === draft.activity_type);
-  const maxTrendVisits = Math.max(
-    1,
-    ...(report?.trends || []).map((point) => point.service_visits + point.event_visits),
-  );
 
   return (
     <div className="mcc-module mcc-module-pastor-attendance-report" style={styles.page}>
@@ -384,25 +393,7 @@ export default function PastorAttendanceReport() {
             <p style={styles.muted}>Each date separates Service and Event visits from distinct people.</p>
             {report.trends.length === 0 ? <div style={styles.empty}>No attendance records exist for this period.</div> : (
               <>
-                <div style={{ ...styles.list, marginBottom: 16 }} role="list" aria-label="Daily Service and Event attendance visits">
-                  {report.trends.map((point) => {
-                    const serviceWidth = Math.max(0, Math.round((point.service_visits / maxTrendVisits) * 100));
-                    const eventWidth = Math.max(0, Math.round((point.event_visits / maxTrendVisits) * 100));
-                    return (
-                      <div key={`bar-${point.date}`} style={{ display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', alignItems: 'center', gap: 8 }} role="listitem">
-                        <time style={{ ...styles.muted, fontSize: 11 }}>{point.date}</time>
-                        <div aria-label={`${point.date}: ${point.service_visits} Service visits and ${point.event_visits} Event visits`} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          <div style={{ height: 6, width: `${serviceWidth}%`, minWidth: point.service_visits ? 3 : 0, borderRadius: 999, background: '#005599' }} />
-                          <div style={{ height: 6, width: `${eventWidth}%`, minWidth: point.event_visits ? 3 : 0, borderRadius: 999, background: '#7c3aed' }} />
-                        </div>
-                        <span style={{ ...styles.muted, fontSize: 11, gridColumn: '2 / 3', textAlign: 'left' }}>
-                          Service {formatNumber(point.service_visits)} visits / {formatNumber(point.service_unique_members)} unique · Event {formatNumber(point.event_visits)} / {formatNumber(point.event_unique_members)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div style={styles.tableWrap}>
+                <div style={{ ...styles.tableWrap, maxHeight: 360, overflowY: 'auto' }}>
                   <table style={{ ...styles.table, minWidth: 650 }}>
                     <thead><tr>
                       <th style={styles.th}>Date</th><th style={styles.th}>Service visits</th><th style={styles.th}>Service unique</th>

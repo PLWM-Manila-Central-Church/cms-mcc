@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import useIsMobile from '../../hooks/useIsMobile';
 import MonoIcon from '../common/MonoIcon';
 import { displayMemberName } from '../../utils/displayIdentity';
+import { localDateInputValue } from '../../utils/localDateInput';
 import {
   blockInvalidDecimalKeys,
   blockInvalidIntegerKeys,
@@ -17,13 +19,16 @@ const php = (v) => `₱${Number(v || 0).toLocaleString('en-PH', { minimumFractio
 
 export default function EventWorkspacePanel({ eventId }) {
   const { hasPermission } = useAuth();
+  const { prompt, confirm } = useConfirmation();
   const isMobile = useIsMobile();
   const canEditEvent = hasPermission('events', 'update');
+  const canReadFinance = hasPermission('finance', 'read');
   const canApproveFinance = hasPermission('finance', 'update');
 
   const [tab, setTab] = useState('program');
   const [ws, setWs] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -32,7 +37,7 @@ export default function EventWorkspacePanel({ eventId }) {
   const [commForm, setCommForm] = useState({ name: '', responsibilities: '' });
   const [budgetForm, setBudgetForm] = useState({ title: 'Event Budget Proposal', category_name: 'Food & Hospitality', description: '', quantity: '1', unit_cost: '' });
   const [advForm, setAdvForm] = useState({ recipient_name: '', amount_released: '', notes: '' });
-  const [liqForm, setLiqForm] = useState({ cash_advance_id: '', vendor: '', description: '', receipt_number: '', amount: '', expense_date: new Date().toISOString().slice(0, 10) });
+  const [liqForm, setLiqForm] = useState({ cash_advance_id: '', vendor: '', description: '', receipt_number: '', amount: '', expense_date: localDateInputValue() });
 
   const loadWorkspace = useCallback(async () => {
     if (!eventId) return;
@@ -52,7 +57,8 @@ export default function EventWorkspacePanel({ eventId }) {
 
   const addProgram = async (e) => {
     e.preventDefault();
-    if (!progForm.title.trim()) return;
+    if (!progForm.title.trim() || saving) return;
+    setSaving(true); setError(''); setNotice('');
     try {
       await axiosInstance.post(`/events/${eventId}/program`, progForm);
       setProgForm({ start_time: '', end_time: '', title: '', lead_person: '' });
@@ -60,12 +66,15 @@ export default function EventWorkspacePanel({ eventId }) {
       await loadWorkspace();
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to add program item.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const addCommittee = async (e) => {
     e.preventDefault();
-    if (!commForm.name.trim()) return;
+    if (!commForm.name.trim() || saving) return;
+    setSaving(true); setError(''); setNotice('');
     try {
       await axiosInstance.post(`/events/${eventId}/committees`, commForm);
       setCommForm({ name: '', responsibilities: '' });
@@ -73,14 +82,17 @@ export default function EventWorkspacePanel({ eventId }) {
       await loadWorkspace();
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to add committee.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const addBudget = async (e) => {
     e.preventDefault();
-    if (!Number(budgetForm.unit_cost)) return;
+    if (!Number(budgetForm.unit_cost) || saving) return;
     const qty = Number(budgetForm.quantity || 1);
     const est = qty * Number(budgetForm.unit_cost);
+    setSaving(true); setError(''); setNotice('');
     try {
       await axiosInstance.post(`/events/${eventId}/budgets`, {
         title: budgetForm.title.trim() || 'Event Budget',
@@ -99,23 +111,44 @@ export default function EventWorkspacePanel({ eventId }) {
       await loadWorkspace();
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to create budget proposal.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const budgetAction = async (budgetId, action) => {
+    if (saving) return;
+    let reason = null;
+    if (action === 'reject') {
+      const value = await prompt({
+        title: 'Reject budget proposal?',
+        message: 'Provide a short reason so the event coordinator knows what to revise.',
+        label: 'Rejection reason',
+        placeholder: 'e.g. Please itemize catering quotes',
+        confirmLabel: 'Reject proposal',
+        tone: 'danger',
+        required: true,
+      });
+      if (value === null) return;
+      reason = value.trim() || 'Revision required';
+    }
+    setSaving(true); setError(''); setNotice('');
     try {
-      const body = action === 'reject' ? { reason: window.prompt('Rejection reason:') || 'Revision required' } : {};
+      const body = action === 'reject' ? { reason } : {};
       await axiosInstance.post(`/events/${eventId}/budgets/${budgetId}/${action}`, body);
       setNotice(`Budget ${action}ed.`);
       await loadWorkspace();
     } catch (err) {
       setError(err.response?.data?.message || 'Budget action failed.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const addCashAdvance = async (e) => {
     e.preventDefault();
-    if (!advForm.recipient_name.trim() || !Number(advForm.amount_released)) return;
+    if (!advForm.recipient_name.trim() || !Number(advForm.amount_released) || saving) return;
+    setSaving(true); setError(''); setNotice('');
     try {
       await axiosInstance.post(`/events/${eventId}/cash-advances`, {
         recipient_name: advForm.recipient_name.trim(),
@@ -127,23 +160,38 @@ export default function EventWorkspacePanel({ eventId }) {
       await loadWorkspace();
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to request cash advance.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const releaseAdvance = async (advId) => {
+    if (saving) return;
+    const ref = await prompt({
+      title: 'Release cash advance',
+      message: 'Optionally enter a voucher or reference number for audit tracking.',
+      label: 'Release reference / voucher #',
+      placeholder: 'Optional reference #',
+      confirmLabel: 'Release cash',
+      required: false,
+    });
+    if (ref === null) return;
+    setSaving(true); setError(''); setNotice('');
     try {
-      const ref = window.prompt('Release reference / voucher # (optional):', '') || '';
-      await axiosInstance.post(`/events/${eventId}/cash-advances/${advId}/release`, { reference_number: ref || null });
+      await axiosInstance.post(`/events/${eventId}/cash-advances/${advId}/release`, { reference_number: ref.trim() || null });
       setNotice('Cash advance released and tracked for liquidation.');
       await loadWorkspace();
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to release cash advance.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const addLiquidation = async (e) => {
     e.preventDefault();
-    if (!liqForm.description.trim() || !Number(liqForm.amount)) return;
+    if (!liqForm.description.trim() || !Number(liqForm.amount) || saving) return;
+    setSaving(true); setError(''); setNotice('');
     try {
       await axiosInstance.post(`/events/${eventId}/liquidations`, {
         cash_advance_id: liqForm.cash_advance_id ? Number(liqForm.cash_advance_id) : null,
@@ -156,43 +204,62 @@ export default function EventWorkspacePanel({ eventId }) {
           expense_date: liqForm.expense_date,
         }],
       });
-      setLiqForm({ cash_advance_id: '', vendor: '', description: '', receipt_number: '', amount: '', expense_date: new Date().toISOString().slice(0, 10) });
+      setLiqForm({ cash_advance_id: '', vendor: '', description: '', receipt_number: '', amount: '', expense_date: localDateInputValue() });
       setNotice('Liquidation submitted for Finance verification & posting.');
       await loadWorkspace();
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to submit liquidation.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const verifyPostLiquidation = async (liqId) => {
+    if (saving) return;
+    const ok = await confirm({
+      title: 'Verify and post liquidation to Finance?',
+      message: 'This records the verified receipt amounts as actual church expenses once. It cannot be posted twice.',
+      confirmLabel: 'Verify & Post',
+      tone: 'primary',
+    });
+    if (!ok) return;
+    setSaving(true); setError(''); setNotice('');
     try {
       await axiosInstance.post(`/events/${eventId}/liquidations/${liqId}/verify-and-post`, {});
       setNotice('Liquidation verified and posted to Finance Expenses (zero double-counting).');
       await loadWorkspace();
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to post liquidation.');
+    } finally {
+      setSaving(false);
     }
   };
 
   if (loading && !ws) return <section style={S.card}><p style={S.muted}>Loading Event Workspace…</p></section>;
   if (!ws) return null;
 
+  const showFinanceTabs = canReadFinance && !ws.finance_redacted;
   const fin = ws.financial_summary || {};
   const tabs = [
     { id: 'program', label: `Program & Committees (${(ws.program?.length || 0) + (ws.committees?.length || 0)})` },
-    { id: 'budget', label: `Budget & Advances (${(ws.budgets?.length || 0) + (ws.cash_advances?.length || 0)})` },
-    { id: 'liquidation', label: `Liquidation & Posting (${ws.liquidations?.length || 0})` },
+    ...(showFinanceTabs ? [
+      { id: 'budget', label: `Budget & Advances (${(ws.budgets?.length || 0) + (ws.cash_advances?.length || 0)})` },
+      { id: 'liquidation', label: `Liquidation & Posting (${ws.liquidations?.length || 0})` },
+    ] : []),
     { id: 'resources', label: `Resources (${ws.inventory_requests?.length || 0})` },
-    { id: 'report', label: 'Completion Checklist & Report' },
+    { id: 'report', label: 'Completion Checklist' },
   ];
+  const activeTab = tabs.some((t) => t.id === tab) ? tab : 'program';
 
   return (
     <section style={S.card} aria-label="Event planning and finance workspace">
       <div style={S.head}>
         <div>
-          <h2 style={S.title}>Event Planning, Finance &amp; Resource Workspace</h2>
+          <h2 style={S.title}>Event Planning{showFinanceTabs ? ', Finance' : ''} &amp; Resource Workspace</h2>
           <p style={S.subtitle}>
-            Hybrid Finance integration: budgets and released cash advances are tracked immediately; verified liquidations post actual expenses once to Church Finance.
+            {showFinanceTabs
+              ? 'Manage the run-sheet, committees, budgets, advances, liquidations, and linked equipment in one place.'
+              : 'Manage the event run-sheet, committees, linked equipment requests, and completion checklist.'}
           </p>
         </div>
         <button type="button" onClick={() => window.print()} style={S.ghostBtn}>
@@ -201,13 +268,15 @@ export default function EventWorkspacePanel({ eventId }) {
       </div>
 
       {/* Financial Reconciliation Strip */}
-      <div style={{ ...S.kpiGrid, gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(5, minmax(0, 1fr))' }}>
-        <MiniStat label="Approved Budget" value={php(fin.approved_budget)} accent="#005599" />
-        <MiniStat label="Cash Advanced" value={php(fin.cash_advanced)} accent="#13b5ea" />
-        <MiniStat label="Posted Expenses" value={php(fin.actual_posted_expenses)} accent="#003d70" />
-        <MiniStat label="Budget Variance" value={php(fin.variance)} accent="#52647a" />
-        <MiniStat label="Returned / Reimbursed" value={`${php(fin.returned_cash)} / ${php(fin.reimbursement_due)}`} accent="#5c9dc4" />
-      </div>
+      {showFinanceTabs && (
+        <div style={{ ...S.kpiGrid, gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(5, minmax(0, 1fr))' }}>
+          <MiniStat label="Approved Budget" value={php(fin.approved_budget)} accent="#005599" />
+          <MiniStat label="Cash Advanced" value={php(fin.cash_advanced)} accent="#13b5ea" />
+          <MiniStat label="Posted Expenses" value={php(fin.actual_posted_expenses)} accent="#003d70" />
+          <MiniStat label="Budget Variance" value={php(fin.variance)} accent="#52647a" />
+          <MiniStat label="Returned / Reimbursed" value={`${php(fin.returned_cash)} / ${php(fin.reimbursement_due)}`} accent="#5c9dc4" />
+        </div>
+      )}
 
       {error && <div style={S.errorBox} role="alert">{error}</div>}
       {notice && <div style={S.noticeBox}>{notice}</div>}
@@ -218,16 +287,16 @@ export default function EventWorkspacePanel({ eventId }) {
             key={t.id}
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
+            aria-selected={activeTab === t.id}
             onClick={() => setTab(t.id)}
-            style={{ ...S.tabBtn, ...(tab === t.id ? S.tabBtnActive : {}) }}
+            style={{ ...S.tabBtn, ...(activeTab === t.id ? S.tabBtnActive : {}) }}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      {tab === 'program' && (
+      {activeTab === 'program' && (
         <div style={{ ...S.twoCol, gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))' }}>
           <div>
             <h3 style={S.subTitle}>Program Run-Sheet</h3>
@@ -237,23 +306,25 @@ export default function EventWorkspacePanel({ eventId }) {
                   <input value={progForm.title} maxLength={120} onChange={(e) => setProgForm({ ...progForm, title: e.target.value })} placeholder="Segment title (e.g. Opening Prayer)" style={S.input} required />
                   <input type="time" value={progForm.start_time} onChange={(e) => setProgForm({ ...progForm, start_time: e.target.value })} style={{ ...S.input, maxWidth: 120 }} />
                   <input value={progForm.lead_person} maxLength={80} onChange={(e) => setProgForm({ ...progForm, lead_person: sanitizePersonName(e.target.value, 80) })} placeholder="In-charge" style={S.input} />
-                  <button type="submit" style={S.primaryBtn}>Add</button>
+                  <button type="submit" disabled={saving} style={{ ...S.primaryBtn, opacity: saving ? 0.65 : 1 }}>Add</button>
                 </div>
               </form>
             )}
             {(ws.program || []).length === 0 ? <p style={S.muted}>No program segments drafted yet.</p> : (
-              <table style={S.table}>
-                <thead><tr><th style={S.th}>Time</th><th style={S.th}>Segment</th><th style={S.th}>Lead</th></tr></thead>
-                <tbody>
-                  {ws.program.map((p) => (
-                    <tr key={p.id} style={S.tr}>
-                      <td style={S.td}>{p.start_time || '—'}</td>
-                      <td style={S.td}><strong>{p.title}</strong></td>
-                      <td style={S.td}>{p.lead_person || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="mcc-table-scroll">
+                <table style={S.table}>
+                  <thead><tr><th style={S.th}>Time</th><th style={S.th}>Segment</th><th style={S.th}>Lead</th></tr></thead>
+                  <tbody>
+                    {ws.program.map((p) => (
+                      <tr key={p.id} style={S.tr}>
+                        <td style={S.td}>{p.start_time || '—'}</td>
+                        <td style={S.td}><strong>{p.title}</strong></td>
+                        <td style={S.td}>{p.lead_person || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
@@ -262,31 +333,33 @@ export default function EventWorkspacePanel({ eventId }) {
             {canEditEvent && (
               <form onSubmit={addCommittee} style={S.inlineBox}>
                 <div style={S.row}>
-                  <input value={commForm.name} onChange={(e) => setCommForm({ ...commForm, name: e.target.value })} placeholder="Committee (e.g. Food & Logistics)" style={S.input} required />
-                  <input value={commForm.responsibilities} onChange={(e) => setCommForm({ ...commForm, responsibilities: e.target.value })} placeholder="Responsibilities" style={S.input} />
-                  <button type="submit" style={S.primaryBtn}>Add</button>
+                  <input value={commForm.name} maxLength={100} onChange={(e) => setCommForm({ ...commForm, name: e.target.value })} placeholder="Committee (e.g. Food & Logistics)" style={S.input} required />
+                  <input value={commForm.responsibilities} maxLength={250} onChange={(e) => setCommForm({ ...commForm, responsibilities: e.target.value })} placeholder="Responsibilities" style={S.input} />
+                  <button type="submit" disabled={saving} style={{ ...S.primaryBtn, opacity: saving ? 0.65 : 1 }}>Add</button>
                 </div>
               </form>
             )}
             {(ws.committees || []).length === 0 ? <p style={S.muted}>No committees added yet.</p> : (
-              <table style={S.table}>
-                <thead><tr><th style={S.th}>Committee</th><th style={S.th}>Chair</th><th style={S.th}>Scope</th></tr></thead>
-                <tbody>
-                  {ws.committees.map((c) => (
-                    <tr key={c.id} style={S.tr}>
-                      <td style={S.td}><strong>{c.name}</strong></td>
-                      <td style={S.td}>{c.chair ? displayMemberName(c.chair) : '—'}</td>
-                      <td style={S.td}>{c.responsibilities || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="mcc-table-scroll">
+                <table style={S.table}>
+                  <thead><tr><th style={S.th}>Committee</th><th style={S.th}>Chair</th><th style={S.th}>Scope</th></tr></thead>
+                  <tbody>
+                    {ws.committees.map((c) => (
+                      <tr key={c.id} style={S.tr}>
+                        <td style={S.td}><strong>{c.name}</strong></td>
+                        <td style={S.td}>{c.chair ? displayMemberName(c.chair) : '—'}</td>
+                        <td style={S.td}>{c.responsibilities || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
       )}
 
-      {tab === 'budget' && (
+      {activeTab === 'budget' && showFinanceTabs && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <h3 style={S.subTitle}>Budget Proposals</h3>
@@ -297,31 +370,33 @@ export default function EventWorkspacePanel({ eventId }) {
                   <input value={budgetForm.category_name} maxLength={80} onChange={(e) => setBudgetForm({ ...budgetForm, category_name: e.target.value })} placeholder="Line item category" style={S.input} />
                   <input type="number" min="1" value={budgetForm.quantity} onKeyDown={blockInvalidIntegerKeys} onChange={(e) => setBudgetForm({ ...budgetForm, quantity: sanitizeWholeNumber(e.target.value, { maxLength: 6 }) })} placeholder="Qty" style={{ ...S.input, maxWidth: 80 }} />
                   <input type="number" step="0.01" min="0.01" value={budgetForm.unit_cost} onKeyDown={blockInvalidDecimalKeys} onChange={(e) => setBudgetForm({ ...budgetForm, unit_cost: sanitizeCurrency(e.target.value) })} placeholder="Unit cost (PHP)" style={{ ...S.input, maxWidth: 140 }} required />
-                  <button type="submit" style={S.primaryBtn}>Submit Budget</button>
+                  <button type="submit" disabled={saving} style={{ ...S.primaryBtn, opacity: saving ? 0.65 : 1 }}>Submit Budget</button>
                 </div>
               </form>
             )}
-            <table style={S.table}>
-              <thead><tr><th style={S.th}>Proposal</th><th style={S.th}>Requested</th><th style={S.th}>Approved</th><th style={S.th}>Status</th><th style={S.th}>Action</th></tr></thead>
-              <tbody>
-                {(ws.budgets || []).length === 0 ? <tr><td colSpan={5} style={S.emptyCell}>No budget proposals submitted yet.</td></tr> : ws.budgets.map((b) => (
-                  <tr key={b.id} style={S.tr}>
-                    <td style={S.td}><strong>{b.title}</strong></td>
-                    <td style={S.td}>{php(b.total_requested)}</td>
-                    <td style={S.td}>{b.total_approved != null ? php(b.total_approved) : '—'}</td>
-                    <td style={S.td}><span style={S.pill}>{b.status}</span></td>
-                    <td style={S.td}>
-                      {canApproveFinance && b.status === 'submitted' && (
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button type="button" onClick={() => budgetAction(b.id, 'approve')} style={S.smallBtn}>Approve</button>
-                          <button type="button" onClick={() => budgetAction(b.id, 'reject')} style={S.smallGhostBtn}>Reject</button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="mcc-table-scroll">
+              <table style={S.table}>
+                <thead><tr><th style={S.th}>Proposal</th><th style={S.th}>Requested</th><th style={S.th}>Approved</th><th style={S.th}>Status</th><th style={S.th}>Action</th></tr></thead>
+                <tbody>
+                  {(ws.budgets || []).length === 0 ? <tr><td colSpan={5} style={S.emptyCell}>No budget proposals submitted yet.</td></tr> : ws.budgets.map((b) => (
+                    <tr key={b.id} style={S.tr}>
+                      <td style={S.td}><strong>{b.title}</strong></td>
+                      <td style={S.td}>{php(b.total_requested)}</td>
+                      <td style={S.td}>{b.total_approved != null ? php(b.total_approved) : '—'}</td>
+                      <td style={S.td}><span style={S.pill}>{b.status}</span></td>
+                      <td style={S.td}>
+                        {canApproveFinance && b.status === 'submitted' && (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button type="button" disabled={saving} onClick={() => budgetAction(b.id, 'approve')} style={S.smallBtn}>Approve</button>
+                            <button type="button" disabled={saving} onClick={() => budgetAction(b.id, 'reject')} style={S.smallGhostBtn}>Reject</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div>
@@ -332,33 +407,35 @@ export default function EventWorkspacePanel({ eventId }) {
                   <input value={advForm.recipient_name} maxLength={80} onChange={(e) => setAdvForm({ ...advForm, recipient_name: sanitizePersonName(e.target.value, 80) })} placeholder="Recipient coordinator name" style={S.input} required />
                   <input type="number" step="0.01" min="0.01" value={advForm.amount_released} onKeyDown={blockInvalidDecimalKeys} onChange={(e) => setAdvForm({ ...advForm, amount_released: sanitizeCurrency(e.target.value) })} placeholder="Advance amount (PHP)" style={{ ...S.input, maxWidth: 160 }} required />
                   <input value={advForm.notes} maxLength={200} onChange={(e) => setAdvForm({ ...advForm, notes: e.target.value })} placeholder="Purpose / notes" style={S.input} />
-                  <button type="submit" style={S.primaryBtn}>Request Advance</button>
+                  <button type="submit" disabled={saving} style={{ ...S.primaryBtn, opacity: saving ? 0.65 : 1 }}>Request Advance</button>
                 </div>
               </form>
             )}
-            <table style={S.table}>
-              <thead><tr><th style={S.th}>Recipient</th><th style={S.th}>Amount</th><th style={S.th}>Release Date</th><th style={S.th}>Status</th><th style={S.th}>Action</th></tr></thead>
-              <tbody>
-                {(ws.cash_advances || []).length === 0 ? <tr><td colSpan={5} style={S.emptyCell}>No cash advances requested.</td></tr> : ws.cash_advances.map((a) => (
-                  <tr key={a.id} style={S.tr}>
-                    <td style={S.td}><strong>{a.recipient_name}</strong></td>
-                    <td style={S.td}>{php(a.amount_released)}</td>
-                    <td style={S.td}>{a.release_date || '—'}</td>
-                    <td style={S.td}><span style={S.pill}>{a.status}</span></td>
-                    <td style={S.td}>
-                      {canApproveFinance && ['requested', 'approved'].includes(a.status) && (
-                        <button type="button" onClick={() => releaseAdvance(a.id)} style={S.smallBtn}>Release Cash</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="mcc-table-scroll">
+              <table style={S.table}>
+                <thead><tr><th style={S.th}>Recipient</th><th style={S.th}>Amount</th><th style={S.th}>Release Date</th><th style={S.th}>Status</th><th style={S.th}>Action</th></tr></thead>
+                <tbody>
+                  {(ws.cash_advances || []).length === 0 ? <tr><td colSpan={5} style={S.emptyCell}>No cash advances requested.</td></tr> : ws.cash_advances.map((a) => (
+                    <tr key={a.id} style={S.tr}>
+                      <td style={S.td}><strong>{a.recipient_name}</strong></td>
+                      <td style={S.td}>{php(a.amount_released)}</td>
+                      <td style={S.td}>{a.release_date || '—'}</td>
+                      <td style={S.td}><span style={S.pill}>{a.status}</span></td>
+                      <td style={S.td}>
+                        {canApproveFinance && ['requested', 'approved'].includes(a.status) && (
+                          <button type="button" disabled={saving} onClick={() => releaseAdvance(a.id)} style={S.smallBtn}>Release Cash</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
-      {tab === 'liquidation' && (
+      {activeTab === 'liquidation' && showFinanceTabs && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {canEditEvent && (
             <form onSubmit={addLiquidation} style={S.inlineBox}>
@@ -374,66 +451,70 @@ export default function EventWorkspacePanel({ eventId }) {
                 <input value={liqForm.description} maxLength={250} onChange={(e) => setLiqForm({ ...liqForm, description: e.target.value })} placeholder="Expense item description *" style={S.input} required />
                 <input value={liqForm.receipt_number} maxLength={50} onChange={(e) => setLiqForm({ ...liqForm, receipt_number: sanitizeReference(e.target.value, 50) })} placeholder="OR / Receipt #" style={{ ...S.input, maxWidth: 130 }} />
                 <input type="number" step="0.01" min="0.01" value={liqForm.amount} onKeyDown={blockInvalidDecimalKeys} onChange={(e) => setLiqForm({ ...liqForm, amount: sanitizeCurrency(e.target.value) })} placeholder="Amount *" style={{ ...S.input, maxWidth: 130 }} required />
-                <button type="submit" style={S.primaryBtn}>Submit Liquidation</button>
+                <button type="submit" disabled={saving} style={{ ...S.primaryBtn, opacity: saving ? 0.65 : 1 }}>Submit Liquidation</button>
               </div>
             </form>
           )}
-          <table style={S.table}>
-            <thead>
-              <tr>
-                <th style={S.th}>Liquidation #</th>
-                <th style={S.th}>Advanced</th>
-                <th style={S.th}>Actual Spent</th>
-                <th style={S.th}>Returned / Reimbursed</th>
-                <th style={S.th}>Status</th>
-                <th style={S.th}>Finance Posting</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(ws.liquidations || []).length === 0 ? <tr><td colSpan={6} style={S.emptyCell}>No liquidations submitted yet.</td></tr> : ws.liquidations.map((l) => (
-                <tr key={l.id} style={S.tr}>
-                  <td style={S.td}><strong>LIQ-{l.id}</strong> ({l.items?.length || 0} receipt lines)</td>
-                  <td style={S.td}>{php(l.total_advanced)}</td>
-                  <td style={S.td}><strong>{php(l.total_spent)}</strong></td>
-                  <td style={S.td}>Return {php(l.amount_returned)} · Reimburse {php(l.amount_reimbursed)}</td>
-                  <td style={S.td}><span style={S.pill}>{l.status}</span></td>
-                  <td style={S.td}>
-                    {canApproveFinance && l.status !== 'posted' ? (
-                      <button type="button" onClick={() => verifyPostLiquidation(l.id)} style={S.smallBtn}>Verify &amp; Post to Finance</button>
-                    ) : (
-                      <span style={S.muted}>{l.status === 'posted' ? 'Posted once to Finance' : 'Awaiting Finance'}</span>
-                    )}
-                  </td>
+          <div className="mcc-table-scroll">
+            <table style={S.table}>
+              <thead>
+                <tr>
+                  <th style={S.th}>Liquidation #</th>
+                  <th style={S.th}>Advanced</th>
+                  <th style={S.th}>Actual Spent</th>
+                  <th style={S.th}>Returned / Reimbursed</th>
+                  <th style={S.th}>Status</th>
+                  <th style={S.th}>Finance Posting</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(ws.liquidations || []).length === 0 ? <tr><td colSpan={6} style={S.emptyCell}>No liquidations submitted yet.</td></tr> : ws.liquidations.map((l) => (
+                  <tr key={l.id} style={S.tr}>
+                    <td style={S.td}><strong>LIQ-{l.id}</strong> ({l.items?.length || 0} receipt lines)</td>
+                    <td style={S.td}>{php(l.total_advanced)}</td>
+                    <td style={S.td}><strong>{php(l.total_spent)}</strong></td>
+                    <td style={S.td}>Return {php(l.amount_returned)} · Reimburse {php(l.amount_reimbursed)}</td>
+                    <td style={S.td}><span style={S.pill}>{l.status}</span></td>
+                    <td style={S.td}>
+                      {canApproveFinance && l.status !== 'posted' ? (
+                        <button type="button" disabled={saving} onClick={() => verifyPostLiquidation(l.id)} style={S.smallBtn}>Verify &amp; Post to Finance</button>
+                      ) : (
+                        <span style={S.muted}>{l.status === 'posted' ? 'Posted once to Finance' : 'Awaiting Finance'}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {tab === 'resources' && (
+      {activeTab === 'resources' && (
         <div>
           <h3 style={S.subTitle}>Inventory &amp; Equipment Requests for this Event</h3>
           {(ws.inventory_requests || []).length === 0 ? (
             <p style={S.muted}>No inventory requests linked to this event yet. Create requests from the Inventory module and link this event.</p>
           ) : (
-            <table style={S.table}>
-              <thead><tr><th style={S.th}>Item</th><th style={S.th}>Requested Qty</th><th style={S.th}>Status</th></tr></thead>
-              <tbody>
-                {ws.inventory_requests.map((r) => (
-                  <tr key={r.id} style={S.tr}>
-                    <td style={S.td}><strong>{r.item?.name || `Item #${r.item_id}`}</strong></td>
-                    <td style={S.td}>{r.quantity} {r.item?.unit || ''}</td>
-                    <td style={S.td}><span style={S.pill}>{r.status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="mcc-table-scroll">
+              <table style={S.table}>
+                <thead><tr><th style={S.th}>Item</th><th style={S.th}>Requested Qty</th><th style={S.th}>Status</th></tr></thead>
+                <tbody>
+                  {ws.inventory_requests.map((r) => (
+                    <tr key={r.id} style={S.tr}>
+                      <td style={S.td}><strong>{r.item?.name || `Item #${r.item_id}`}</strong></td>
+                      <td style={S.td}>{r.quantity} {r.item?.unit || ''}</td>
+                      <td style={S.td}><span style={S.pill}>{r.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
 
-      {tab === 'report' && (
+      {activeTab === 'report' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <h3 style={S.subTitle}>Event Completion Checklist</h3>
           <div style={{ display: 'grid', gap: 8 }}>

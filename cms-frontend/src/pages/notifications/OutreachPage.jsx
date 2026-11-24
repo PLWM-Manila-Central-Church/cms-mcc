@@ -312,7 +312,7 @@ function Configuration({ availability, onUpdated }) {
   const save = async (event) => {
     event.preventDefault(); setError(''); setNotice(''); setBusy(true);
     try {
-      const response = await api.put('/outreach/configuration', { ...form, reminder_days: days.split(',').map((value) => Number(value.trim())) });
+      const response = await api.put('/outreach/configuration', { ...form, reminder_days: days.split(',').map((value) => value.trim()).filter(Boolean).map(Number).filter((value) => Number.isInteger(value) && value >= 0) });
       setForm(response.data.data); setNotice('Notification configuration saved.'); onUpdated();
     } catch (requestError) { setError(errorText(requestError)); } finally { setBusy(false); }
   };

@@ -246,13 +246,52 @@ const validateLeaderAssignment = async (role, data, existingUser = null) => {
   };
 };
 
-// ── Get All Users ────────────────────────────────────────────
-exports.getAllUsers = async () => {
+// ── Get All Users (supports optional pagination, search, role, status filters) ──
+exports.getAllUsers = async (query = {}) => {
+  const { Op } = require("sequelize");
+  const where = { is_deleted: 0 };
+  if (query.role_id) where.role_id = Number(query.role_id);
+  if (query.is_active !== undefined && query.is_active !== "") {
+    where.is_active = query.is_active === "1" || query.is_active === "true" || query.is_active === 1 || query.is_active === true ? 1 : 0;
+  }
+  const q = String(query.search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    where[Op.or] = [
+      { email: { [Op.like]: like } },
+      { "$member.first_name$": { [Op.like]: like } },
+      { "$member.last_name$": { [Op.like]: like } },
+      { "$role.role_name$": { [Op.like]: like } },
+    ];
+  }
+
+  if (query.page !== undefined) {
+    const pageNum = Math.max(1, parseInt(query.page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(query.limit, 10) || 20));
+    const { count, rows } = await User.findAndCountAll({
+      where,
+      attributes: { exclude: ["password_hash"] },
+      include: userIncludes,
+      order: [["created_at", "DESC"]],
+      limit: limitNum,
+      offset: (pageNum - 1) * limitNum,
+      distinct: true,
+      subQuery: false,
+    });
+    return {
+      users: rows,
+      total: count,
+      page: pageNum,
+      total_pages: Math.max(1, Math.ceil(count / limitNum)),
+    };
+  }
+
   return await User.findAll({
-    where: { is_deleted: 0 },
+    where,
     attributes: { exclude: ["password_hash"] },
     include: userIncludes,
     order: [["created_at", "DESC"]],
+    subQuery: false,
   });
 };
 

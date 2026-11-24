@@ -38,12 +38,24 @@ router.put("/categories/:id",    auth, authorize("finance", "update"), validate(
 // Expense records are intentionally account-free. Legacy account links remain
 // in stored history only and are not required for new categories or expenses.
 router.get("/funds", auth, authorize("finance", "read"), ctrl.getAllFunds);
+router.get("/funds/balances", auth, authorize("finance", "read"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.listFundsWithBalances();
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
 router.get("/funds/:id", auth, authorize("finance", "read"), ctrl.getFundById);
 router.post("/funds", auth, authorize("finance", "create"), validate(createFundSchema), ctrl.createFund);
 router.put("/funds/:id", auth, authorize("finance", "update"), validate(updateFundSchema), ctrl.updateFund);
 router.patch("/funds/:id/archive", auth, authorize("finance", "archive"), ctrl.archiveFund);
 
 router.get("/accounts", auth, authorize("finance", "read"), ctrl.getAllAccounts);
+router.get("/accounts/balances", auth, authorize("finance", "read"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.listAccountsWithBalances();
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
 router.get("/accounts/:id", auth, authorize("finance", "read"), ctrl.getAccountById);
 router.post("/accounts", auth, authorize("finance", "create"), validate(createAccountSchema), ctrl.createAccount);
 router.put("/accounts/:id", auth, authorize("finance", "update"), validate(updateAccountSchema), ctrl.updateAccount);
@@ -57,6 +69,18 @@ router.patch("/expense-categories/:id/archive", auth, authorize("finance", "arch
 
 router.get("/balance", auth, authorize("finance", "read"), validateQuery(getRecordsQuerySchema), ctrl.getBalance);
 router.get("/expenses/summary", auth, authorize("finance", "read"), validateQuery(getRecordsQuerySchema), ctrl.getExpenseSummary);
+router.get("/expenses/workflow", auth, authorize("finance", "read"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.listWorkflowExpenses(req.query);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.post("/expenses/workflow", auth, authorize("finance", "create"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.createExpenseRequest(req.body, req.user);
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+});
 router.get("/expenses", auth, authorize("finance", "read"), validateQuery(getRecordsQuerySchema), ctrl.getAllExpenses);
 router.get("/expenses/:id", auth, authorize("finance", "read"), ctrl.getExpenseById);
 router.post("/expenses", auth, authorize("finance", "create"), validate(createExpenseSchema), ctrl.createExpense);
@@ -76,24 +100,10 @@ router.post("/attachments/upload", auth, authorize("finance", "create"), require
 router.get("/attachments/:id/download", auth, authorizeAttachmentDownload, ctrl.downloadAttachment);
 router.patch("/attachments/:id/archive", auth, authorize("finance", "archive"), ctrl.archiveAttachment);
 
-// ── Phase 3 Finance Upgrade (Overview, Balances, Transfers, Approvals, Reports, Ledger) ──
+// ── Phase 3 Finance Upgrade (Overview, Transfers, Approvals, Reports, Ledger) ──
 router.get("/overview", auth, authorize("finance", "read"), async (req, res, next) => {
   try {
     const data = await upgradeSvc.getFinanceOverview(req.query);
-    res.json({ success: true, data });
-  } catch (err) { next(err); }
-});
-
-router.get("/funds/balances", auth, authorize("finance", "read"), async (req, res, next) => {
-  try {
-    const data = await upgradeSvc.listFundsWithBalances();
-    res.json({ success: true, data });
-  } catch (err) { next(err); }
-});
-
-router.get("/accounts/balances", auth, authorize("finance", "read"), async (req, res, next) => {
-  try {
-    const data = await upgradeSvc.listAccountsWithBalances();
     res.json({ success: true, data });
   } catch (err) { next(err); }
 });
@@ -116,20 +126,6 @@ router.post("/transfers/:id/archive", auth, authorize("finance", "archive"), asy
   try {
     const data = await upgradeSvc.archiveTransfer(req.params.id, req.user);
     res.json({ success: true, data });
-  } catch (err) { next(err); }
-});
-
-router.get("/expenses/workflow", auth, authorize("finance", "read"), async (req, res, next) => {
-  try {
-    const data = await upgradeSvc.listWorkflowExpenses(req.query);
-    res.json({ success: true, data });
-  } catch (err) { next(err); }
-});
-
-router.post("/expenses/workflow", auth, authorize("finance", "create"), async (req, res, next) => {
-  try {
-    const data = await upgradeSvc.createExpenseRequest(req.body, req.user);
-    res.status(201).json({ success: true, data });
   } catch (err) { next(err); }
 });
 

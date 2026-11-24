@@ -6,7 +6,13 @@ const currentMonth = () => new Date().toLocaleDateString("en-CA", { timeZone: "A
 
 exports.getSummary = async (req, res, next) => {
   try {
-    const data = await bibleReadingService.getSummary(req.query.month || currentMonth());
+    const data = await bibleReadingService.getSummary(req.query.month || currentMonth(), {
+      page: req.query.page,
+      limit: req.query.limit,
+      search: req.query.search,
+      status: req.query.status,
+      group_id: req.query.group_id,
+    });
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };

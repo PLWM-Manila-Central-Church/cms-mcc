@@ -48,7 +48,7 @@ const recordIncludes = [
 ];
 
 // ── Get All Financial Records (paginated) ────────────────────
-exports.getAllRecords = async ({ page = 1, limit = 20, category_id, payment_method, date_from, date_to } = {}) => {
+exports.getAllRecords = async ({ page = 1, limit = 20, category_id, payment_method, date_from, date_to, search } = {}) => {
   const { Op } = require("sequelize");
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where = { is_deleted: 0 };
@@ -60,11 +60,23 @@ exports.getAllRecords = async ({ page = 1, limit = 20, category_id, payment_meth
     if (date_from) where.transaction_date[Op.gte] = date_from;
     if (date_to)   where.transaction_date[Op.lte] = date_to;
   }
+  const q = String(search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    where[Op.or] = [
+      { receipt_number: { [Op.like]: like } },
+      { transaction_number: { [Op.like]: like } },
+      { notes: { [Op.like]: like } },
+      { "$Member.first_name$": { [Op.like]: like } },
+      { "$Member.last_name$": { [Op.like]: like } },
+      { "$category.name$": { [Op.like]: like } },
+    ];
+  }
 
   const { count, rows } = await FinancialRecord.findAndCountAll({
     where,
     include: recordIncludes,
-    order: [["transaction_date", "DESC"]],
+    order: [["transaction_date", "DESC"], ["id", "DESC"]],
     limit: parseInt(limit),
     offset,
     distinct: true,
@@ -381,12 +393,19 @@ exports.getFundById = async (id) => {
 };
 
 exports.createFund = async (data, userId) => {
-  const { name, description } = data;
+  const { name, fund_code, is_restricted, opening_balance, description } = data;
   const existing = await Fund.findOne({ where: { name } });
   if (existing) throw AppError.conflict("DUPLICATE", "Fund name already exists");
 
   const fund = await sequelize.transaction(async (t) => {
-    const f = await Fund.create({ name, description }, { transaction: t });
+    const f = await Fund.create({
+      name,
+      fund_code: fund_code ? String(fund_code).trim().toUpperCase() : null,
+      is_restricted: is_restricted ? 1 : 0,
+      opening_balance: opening_balance !== undefined && opening_balance !== "" ? Number(opening_balance) || 0 : 0,
+      description: description || null,
+      is_active: 1,
+    }, { transaction: t });
     await auditLog.log({ userId, action: "CREATE_FUND", targetTable: "funds", targetId: f.id }, { transaction: t });
     return f;
   });
@@ -395,7 +414,7 @@ exports.createFund = async (data, userId) => {
 
 exports.updateFund = async (id, data, userId) => {
   const fund = await exports.getFundById(id);
-  const { name, description } = data;
+  const { name, fund_code, is_restricted, opening_balance, is_active, description } = data;
 
   if (name && name !== fund.name) {
     const existing = await Fund.findOne({ where: { name } });
@@ -405,7 +424,11 @@ exports.updateFund = async (id, data, userId) => {
   await sequelize.transaction(async (t) => {
     await fund.update({
       ...(name && { name }),
-      ...(description !== undefined && { description }),
+      ...(fund_code !== undefined && { fund_code: fund_code ? String(fund_code).trim().toUpperCase() : null }),
+      ...(is_restricted !== undefined && { is_restricted: is_restricted ? 1 : 0 }),
+      ...(opening_balance !== undefined && { opening_balance: Number(opening_balance) || 0 }),
+      ...(is_active !== undefined && { is_active: is_active ? 1 : 0 }),
+      ...(description !== undefined && { description: description || null }),
     }, { transaction: t });
 
     await auditLog.log({ userId, action: "UPDATE_FUND", targetTable: "funds", targetId: id }, { transaction: t });
@@ -444,15 +467,26 @@ exports.getAccountById = async (id) => {
 };
 
 exports.createAccount = async (data, userId) => {
-  const { name, fund_id, description } = data;
-  const fund = await Fund.findByPk(fund_id);
-  if (!fund) throw AppError.notFound("RECORD_NOT_FOUND", "Fund not found");
+  const { name, fund_id, account_type, account_number_masked, opening_balance, description } = data;
+  const resolvedFundId = fund_id !== undefined && fund_id !== null && fund_id !== "" ? Number(fund_id) : null;
+  if (resolvedFundId) {
+    const fund = await Fund.findByPk(resolvedFundId);
+    if (!fund) throw AppError.notFound("RECORD_NOT_FOUND", "Fund not found");
+  }
 
   const existing = await Account.findOne({ where: { name } });
   if (existing) throw AppError.conflict("DUPLICATE", "Account name already exists");
 
   const account = await sequelize.transaction(async (t) => {
-    const a = await Account.create({ name, fund_id, description }, { transaction: t });
+    const a = await Account.create({
+      name,
+      fund_id: resolvedFundId,
+      account_type: account_type || "cash",
+      account_number_masked: account_number_masked ? String(account_number_masked).trim() : null,
+      opening_balance: opening_balance !== undefined && opening_balance !== "" ? Number(opening_balance) || 0 : 0,
+      description: description || null,
+      is_active: 1,
+    }, { transaction: t });
     await auditLog.log({ userId, action: "CREATE_ACCOUNT", targetTable: "accounts", targetId: a.id }, { transaction: t });
     return a;
   });
@@ -461,9 +495,9 @@ exports.createAccount = async (data, userId) => {
 
 exports.updateAccount = async (id, data, userId) => {
   const account = await exports.getAccountById(id);
-  const { name, fund_id, description } = data;
+  const { name, fund_id, account_type, account_number_masked, opening_balance, is_active, description } = data;
 
-  if (fund_id) {
+  if (fund_id !== undefined && fund_id !== null && fund_id !== "") {
     const fund = await Fund.findByPk(fund_id);
     if (!fund) throw AppError.notFound("RECORD_NOT_FOUND", "Fund not found");
   }
@@ -476,8 +510,12 @@ exports.updateAccount = async (id, data, userId) => {
   await sequelize.transaction(async (t) => {
     await account.update({
       ...(name && { name }),
-      ...(fund_id && { fund_id }),
-      ...(description !== undefined && { description }),
+      ...(fund_id !== undefined && { fund_id: fund_id ? Number(fund_id) : null }),
+      ...(account_type !== undefined && { account_type }),
+      ...(account_number_masked !== undefined && { account_number_masked: account_number_masked ? String(account_number_masked).trim() : null }),
+      ...(opening_balance !== undefined && { opening_balance: Number(opening_balance) || 0 }),
+      ...(is_active !== undefined && { is_active: is_active ? 1 : 0 }),
+      ...(description !== undefined && { description: description || null }),
     }, { transaction: t });
 
     await auditLog.log({ userId, action: "UPDATE_ACCOUNT", targetTable: "accounts", targetId: id }, { transaction: t });
@@ -568,7 +606,7 @@ exports.getAllPaymentMethods = async () => {
 };
 
 // ── 5. EXPENSES SERVICES ──────────────────────────────────────
-exports.getAllExpenses = async ({ page = 1, limit = 20, category_id, payment_method_id, date_from, date_to } = {}) => {
+exports.getAllExpenses = async ({ page = 1, limit = 20, category_id, payment_method_id, date_from, date_to, search } = {}) => {
   const { Op } = require("sequelize");
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where = {};
@@ -580,6 +618,17 @@ exports.getAllExpenses = async ({ page = 1, limit = 20, category_id, payment_met
     if (date_from) where.date[Op.gte] = date_from;
     if (date_to)   where.date[Op.lte] = date_to;
   }
+  const q = String(search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    where[Op.or] = [
+      { description: { [Op.like]: like } },
+      { payee: { [Op.like]: like } },
+      { transaction_number: { [Op.like]: like } },
+      { payment_reference: { [Op.like]: like } },
+      { "$category.category_name$": { [Op.like]: like } },
+    ];
+  }
 
   const { count, rows } = await Expense.findAndCountAll({
     where,
@@ -589,7 +638,7 @@ exports.getAllExpenses = async ({ page = 1, limit = 20, category_id, payment_met
       { model: User, as: "creator", attributes: ["id", "email"] },
       { model: Attachment, as: "attachments", attributes: ["id", "file_name", "uploaded_at"], separate: true },
     ],
-    order: [["date", "DESC"]],
+    order: [["date", "DESC"], ["id", "DESC"]],
     limit: parseInt(limit),
     offset,
     distinct: true,

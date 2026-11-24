@@ -15,6 +15,10 @@ const dateOnly = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).custom((value, help
 }).allow("");
 module.exports = {
   collection: Joi.object(collection),
+  campaigns: Joi.object({
+    ...collection,
+    status: Joi.string().valid("draft", "pending_approval", "approved", "scheduled", "sending", "completed", "rejected", "cancelled", "failed").allow("").default(""),
+  }),
   cases: Joi.object({ ...collection, status: Joi.string().valid("open", "assigned", "resolved", "cancelled").allow("") }),
   deliveries: Joi.object({ ...collection, channel: Joi.string().valid("sms", "in_app").allow(""),
     status: Joi.string().valid("queued", "processing", "simulated", "sent", "delivered", "failed", "unknown", "cancelled", "skipped").allow(""),
@@ -36,16 +40,22 @@ module.exports = {
     campaign_quiet_end: Joi.number().integer().min(1).max(23),
   }).min(1),
   campaignPreview: Joi.object({
-    audience_type: Joi.string().valid("event", "ministry", "cell_group", "all_members").required(),
+    scheduled_at: Joi.date().iso(),
+    audience_type: Joi.string().valid("event", "ministry", "cell_group", "all_members", "selected_members").required(),
     event_id: id.allow(null), ministry_id: id.allow(null), cell_group_id: id.allow(null),
+    member_ids: Joi.when("audience_type", { is: "selected_members", then: Joi.array().items(id).min(1).max(1000).required(), otherwise: Joi.forbidden() }),
+    timing_mode: Joi.string().valid("send_now", "scheduled").default("scheduled"),
     message: template.required(),
   }),
   campaign: Joi.object({
     title: Joi.string().trim().min(3).max(150).required(),
-    audience_type: Joi.string().valid("event", "ministry", "cell_group", "all_members").required(),
+    audience_type: Joi.string().valid("event", "ministry", "cell_group", "all_members", "selected_members").required(),
     event_id: id.allow(null), ministry_id: id.allow(null), cell_group_id: id.allow(null),
+    member_ids: Joi.when("audience_type", { is: "selected_members", then: Joi.array().items(id).min(1).max(1000).required(), otherwise: Joi.forbidden() }),
+    timing_mode: Joi.string().valid("send_now", "scheduled").default("scheduled"),
     message: template.required(),
-    scheduled_at: Joi.date().iso().greater("now").required(),
+    scheduled_at: Joi.when("timing_mode", { is: "send_now", then: Joi.forbidden(), otherwise: Joi.date().iso().greater("now").required() }),
+    submission_key: Joi.string().guid().optional(),
     window_end: Joi.date().iso().greater(Joi.ref("scheduled_at")).allow(null),
     budget_cap_php: Joi.number().min(0).max(1000000).allow(null),
     acknowledge_cost: Joi.boolean().default(false),

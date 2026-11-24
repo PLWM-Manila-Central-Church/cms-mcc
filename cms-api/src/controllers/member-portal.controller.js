@@ -36,7 +36,7 @@ exports.getMyAttendance = async (req, res, next) => {
   try {
     if (!req.user.memberId)
       return res.status(400).json({ message: "No member profile linked to this account" });
-    const data = await portalService.getMyAttendance(req.user.memberId);
+    const data = await portalService.getMyAttendance(req.user.memberId, req.query);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 };

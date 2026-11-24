@@ -100,7 +100,10 @@ const OutreachDeliveryAttempt = define("OutreachDeliveryAttempt", "outreach_deli
 });
 const NotificationCampaign = define("NotificationCampaign", "notification_campaigns", {
   title: { type: D.STRING(150), allowNull: false },
-  audience_type: { type: D.ENUM("event", "ministry", "cell_group", "all_members"), allowNull: false },
+  member_ids: { type: D.JSON, allowNull: true },
+  timing_mode: { type: D.STRING(12), allowNull: false, defaultValue: "scheduled" },
+  submission_key: { type: D.STRING(36), allowNull: true },
+  audience_type: { type: D.ENUM("event", "ministry", "cell_group", "all_members", "selected_members"), allowNull: false },
   event_id: ref(true),
   ministry_id: ref(true),
   cell_group_id: ref(true),

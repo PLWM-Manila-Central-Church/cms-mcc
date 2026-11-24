@@ -51,6 +51,43 @@ exports.getAllAttendance = async (user = {}) => {
   });
 };
 
+// ── Single-query paginated member attendance history (replaces N+1 loop) ──
+exports.getMemberAttendanceHistory = async (memberId, { page = 1, limit = 20 } = {}, user = {}) => {
+  const numericMemberId = Number(memberId);
+  if (!Number.isSafeInteger(numericMemberId) || numericMemberId <= 0) {
+    throw AppError.badRequest("VALIDATION", "Valid member ID is required");
+  }
+  await ensureMemberInScope(numericMemberId, user);
+  const AttendanceModel = await getAttendanceModel();
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+  const where = {
+    member_id: numericMemberId,
+    ...(AttendanceModel !== Attendance && { voided_at: null }),
+  };
+  const { count, rows } = await AttendanceModel.findAndCountAll({
+    where,
+    include: [{ model: Service, attributes: ["id", "title", "service_date", "service_time", "status"], required: false }],
+    order: [["checked_in_at", "DESC"], ["id", "DESC"]],
+    limit: limitNum,
+    offset: (pageNum - 1) * limitNum,
+  });
+  return {
+    records: rows.map((r) => ({
+      id: r.id,
+      service_id: r.service_id,
+      service_title: r.Service?.title || "Service",
+      service_date: r.Service?.service_date || null,
+      service_time: r.Service?.service_time || null,
+      check_in_method: r.check_in_method,
+      checked_in_at: r.checked_in_at,
+    })),
+    total: count,
+    page: pageNum,
+    total_pages: Math.max(1, Math.ceil(count / limitNum)),
+  };
+};
+
 // ── Get Attendance By ID ─────────────────────────────────────
 exports.getAttendanceById = async (id, user = {}, options = {}) => {
   const AttendanceModel = await getAttendanceModel();

@@ -272,8 +272,15 @@ const getRoleSummary = async ({
         ? (names.length ? names.join(" + ") : "All assigned teams")
         : (names[0] || (scope?.type === "cell_group"
           ? leadsCellGroupName || "Assigned cell group"
-          : leadsGroupName || "Assigned ministry"));
-      return { scopeName, membersInScope, pendingRequests, assignedTeamCount: assignments.length };
+          : (assignments.length ? (leadsGroupName || "Assigned ministry") : "No team assigned")));
+      let eligibleCandidates = 0;
+      if (scope?.type === "group" && scope.id) {
+        const isYa = /young adults|ya/i.test(scopeName || "");
+        eligibleCandidates = isYa
+          ? await Member.count({ where: youngAdultCandidateWhere() })
+          : await Member.count({ where: { group_id: null } });
+      }
+      return { scopeName, membersInScope, eligibleCandidates, pendingRequests, assignedTeamCount: assignments.length };
     }
     default:
       return { scopeName: roleName || "Dashboard" };

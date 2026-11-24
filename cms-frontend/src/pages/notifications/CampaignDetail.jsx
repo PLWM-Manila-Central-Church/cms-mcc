@@ -5,9 +5,9 @@ import useDialogFocus from '../../components/attendance/useQrDialogFocus';
 
 const errorText = (error) => apiErrorMessage(error, 'The notification could not be loaded.');
 const money = (value) => `₱${Number(value || 0).toFixed(2)}`;
-const label = (value) => String(value || '').replaceAll('_', ' ');
+const label = (value) => value === 'sent' ? 'Accepted by Mocean' : String(value || '').replaceAll('_', ' ');
 const when = (value) => value ? new Date(value).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled';
-const audienceLabel = (type) => type === 'all_members' ? 'All members' : type === 'event' ? 'Event attendees' : type === 'ministry' ? 'Ministry members' : 'Cell group';
+const audienceLabel = (type) => type === 'all_members' ? 'All members' : type === 'event' ? 'Event attendees' : type === 'ministry' ? 'Ministry members' : campaign.audience_type === 'selected_members' ? 'Selected members' : 'Cell group';
 
 export default function CampaignDetail({ campaignId, user, caps, onClose, onUpdated }) {
   const { dialogRef, closeButtonRef } = useDialogFocus(true, onClose);
@@ -41,9 +41,8 @@ export default function CampaignDetail({ campaignId, user, caps, onClose, onUpda
     finally { setBusy(false); }
   };
 
-  const canApprove = caps.approve && campaign?.status === 'pending_approval' && Number(campaign.created_by) !== Number(user?.userId);
-  const canCancel = campaign && !['completed', 'cancelled', 'rejected'].includes(campaign.status)
-    && (Number(campaign.created_by) === Number(user?.userId) || ['System Admin', 'Pastor'].includes(user?.roleName));
+  const canApprove = caps.approve && campaign?.status === 'pending_approval' && Number(campaign.created_by) !== Number(user?.userId ?? user?.id);
+  const canCancel = caps.campaign_write && campaign && !['completed', 'cancelled', 'rejected'].includes(campaign.status);
 
   return <div className="outreach-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Notification detail" className="outreach-dialog campaign-detail">
@@ -64,7 +63,7 @@ export default function CampaignDetail({ campaignId, user, caps, onClose, onUpda
         {campaign.approval_required && <p className="outreach-muted">Approval required · {campaign.approved_by ? 'approved' : 'waiting for a second person'}{campaign.rejection_reason ? ` · ${campaign.rejection_reason}` : ''}</p>}
         {campaign.status === 'pending_approval' && (caps.approve
           ? <label>Approval or rejection note<textarea value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} placeholder="Optional for approval; required to reject" /></label>
-          : <p className="outreach-warning">A Pastor or System Admin must review this notification.</p>)}
+          : <p className="outreach-warning">Another Registration Team user must review this notification.</p>)}
         <div className="outreach-actions">
           {canApprove && <><button type="button" className="outreach-primary" disabled={busy} onClick={() => act('approve')}>Approve</button>
             <button type="button" disabled={busy || reason.trim().length < 5} onClick={() => act('reject')}>Reject</button></>}
@@ -73,7 +72,7 @@ export default function CampaignDetail({ campaignId, user, caps, onClose, onUpda
         <section><h3>Recipients</h3>
           {!deliveries.length ? <p className="outreach-muted">Deliveries appear here after the notification is queued.</p> :
             <div className="outreach-table-wrap"><table className="outreach-table"><thead><tr><th>Member</th><th>Phone</th><th>Status</th></tr></thead>
-              <tbody>{deliveries.map((row) => <tr key={row.id}><td>{row.member_id}</td><td>{row.recipient_phone ? row.recipient_phone.replace(/(\\+63\\d{2})\\d{3}(\\d{4})/, '$1***$2') : '—'}</td><td>{label(row.status)}</td></tr>)}</tbody>
+              <tbody>{deliveries.map((row) => <tr key={row.id}><td>{row.member_name || 'Member #' + row.member_id}</td><td>{row.recipient_phone || '—'}</td><td>{label(row.status)}</td></tr>)}</tbody>
             </table></div>}
         </section>
       </>}

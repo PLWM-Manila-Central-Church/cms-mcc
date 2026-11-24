@@ -114,6 +114,7 @@ exports.getRecordsQuerySchema = Joi.object({
   payment_method_id: Joi.number().integer().positive().optional(),
   date_from:         Joi.date().iso().optional(),
   date_to:           Joi.date().iso().optional(),
+  search:            Joi.string().trim().max(120).allow("").optional(),
 });
 
 exports.searchGivingMembersQuerySchema = Joi.object({

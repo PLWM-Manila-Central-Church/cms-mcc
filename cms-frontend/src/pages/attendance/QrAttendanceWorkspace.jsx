@@ -1,11 +1,15 @@
 import { displayMemberName } from '../../utils/displayIdentity';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import QrScannerDialog from '../../components/attendance/QrScannerDialog';
 import '../../components/attendance/qrAttendance.css';
+
+const newRequestId = () => (typeof crypto !== 'undefined' && crypto.randomUUID
+  ? crypto.randomUUID()
+  : 'req-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12));
 
 const apiError = (error, fallback) => error.response?.data?.message || error.response?.data?.error?.message || fallback;
 const getCheckInWindowState = (session, now) => {
@@ -46,7 +50,6 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
   const canConfigure = hasPermission('qr_attendance', 'configure_session');
   const canCheckIn = hasPermission('qr_attendance', 'check_in');
   const canRecordBatch = hasPermission('qr_attendance', 'record_batch');
-  const canSubmitBatch = hasPermission('qr_attendance', 'submit_batch');
   const canReviewBatch = hasPermission('qr_attendance', 'review_batch');
   const canCorrect = hasPermission('qr_attendance', 'correct');
   const canFinalize = hasPermission('qr_attendance', 'finalize');
@@ -376,7 +379,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
     setBusy(true); setError(''); setNotice('');
     try {
       const response = await axiosInstance.post(`/qr-attendance/sessions/${session.id}/batches`, {
-        client_request_id: crypto.randomUUID(),
+        client_request_id: newRequestId(),
       });
       const batch = response.data.data.batch;
       const detail = await axiosInstance.get(`/qr-attendance/batches/${batch.id}`);
@@ -612,7 +615,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
             <h1>{title}</h1>
             <p>Select the correct activity session before scanning. Attendance is kept separately for each Service or Event.</p>
           </div>
-          <a className="qr-secondary-button" href="/attendance">Back to Attendance</a>
+          <Link className="qr-secondary-button" to="/attendance">Back to Attendance</Link>
         </div>
         {error && <div className="qr-inline-error" role="alert">{error}</div>}
         {notice && <div className="qr-success-box" role="status">{notice}</div>}

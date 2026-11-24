@@ -3,7 +3,16 @@
 const router = require("express").Router();
 const auth = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
+const permissionCache = require("../helpers/permissionCache.helper");
 const svc = require("../services/eventWorkspace.service");
+
+const canReadFinance = async (user) => {
+  if (!user) return false;
+  if (user.roleName === "System Admin") return true;
+  if (!user.roleId) return false;
+  const perms = await permissionCache.get(user.roleId);
+  return perms.has("finance:read");
+};
 
 router.get("/workspace-summary", auth, authorize("events", "read"), async (req, res, next) => {
   try {
@@ -15,13 +24,37 @@ router.get("/workspace-summary", auth, authorize("events", "read"), async (req, 
 router.get("/:id/workspace", auth, authorize("events", "read"), async (req, res, next) => {
   try {
     const data = await svc.getEventWorkspace(req.params.id);
-    res.json({ success: true, data });
+    if (!(await canReadFinance(req.user))) {
+      return res.json({
+        success: true,
+        data: {
+          ...data,
+          budgets: [],
+          cash_advances: [],
+          liquidations: [],
+          finance_redacted: true,
+        },
+      });
+    }
+    res.json({ success: true, data: { ...data, finance_redacted: false } });
   } catch (err) { next(err); }
 });
 
 router.get("/:id/completion-report", auth, authorize("events", "read"), async (req, res, next) => {
   try {
     const data = await svc.getCompletionReport(req.params.id);
+    if (!(await canReadFinance(req.user)) && data && typeof data === "object") {
+      return res.json({
+        success: true,
+        data: {
+          ...data,
+          budget_approved: null,
+          cash_advanced: null,
+          total_spent: null,
+          finance_redacted: true,
+        },
+      });
+    }
     res.json({ success: true, data });
   } catch (err) { next(err); }
 });

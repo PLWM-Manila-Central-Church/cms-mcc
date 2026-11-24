@@ -36,7 +36,7 @@ const campaignReadiness = async () => {
     const tables = new Set((await qi.showAllTables()).map((table) => typeof table === "string" ? table : Object.values(table)[0]));
     if (!tables.has("notification_campaigns") || !tables.has("outreach_deliveries") || !tables.has("outreach_preferences")) throw new Error("missing table");
     const campaignColumns = await qi.describeTable("notification_campaigns");
-    if (["id", "status", "scheduled_at", "created_by"].some((field) => !campaignColumns[field])) throw new Error("missing campaign column");
+    if (["id", "status", "scheduled_at", "created_by", "timing_mode", "member_ids", "submission_key"].some((field) => !campaignColumns[field])) throw new Error("missing campaign column");
     const deliveryColumns = await qi.describeTable("outreach_deliveries");
     if (!deliveryColumns.campaign_id) throw new Error("missing campaign link");
     const preferenceColumns = await qi.describeTable("outreach_preferences");

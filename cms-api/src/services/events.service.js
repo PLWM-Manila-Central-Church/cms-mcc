@@ -124,30 +124,83 @@ const registrationListInclude = async (user = {}) => {
 };
 
 exports.getAllEvents = async ({
-  page = 1, limit = 15, status, search, category_id, start_from, start_to,
+  page = 1, limit = 15, status, search, category_id, start_from, start_to, timeframe, sort,
 } = {}, user = {}) => {
-  const offset = (parseInt(page) - 1) * parseInt(limit);
-  const where  = { is_deleted: 0 };
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 15));
+  const offset = (pageNum - 1) * limitNum;
+  const baseWhere = { is_deleted: 0 };
 
-  if (status)      where.status      = status;
-  if (category_id) where.category_id = category_id;
-  if (search)      where.title       = { [Op.like]: `%${search}%` };
-  if (start_from || start_to) {
-    where.start_date = {};
-    if (start_from) where.start_date[Op.gte] = start_from;
-    if (start_to)   where.start_date[Op.lte] = start_to;
+  if (category_id) baseWhere.category_id = category_id;
+  const q = String(search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    baseWhere[Op.or] = [
+      { title: { [Op.like]: like } },
+      { location: { [Op.like]: like } },
+      { description: { [Op.like]: like } },
+    ];
   }
 
-  const { count, rows } = await Event.findAndCountAll({
-    where,
-    include: [
-      ...eventIncludes,
-    ],
-    order: [["start_date", "ASC"]],
-    limit: parseInt(limit),
-    offset,
-    distinct: true,
-  });
+  let effectiveFrom = start_from || null;
+  let effectiveTo = start_to || null;
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
+  if (timeframe === "upcoming" && !effectiveFrom) effectiveFrom = today;
+  if (timeframe === "past" && !effectiveTo) effectiveTo = today;
+  if (timeframe === "this_month") {
+    const ym = today.slice(0, 7);
+    if (!effectiveFrom) effectiveFrom = `${ym}-01`;
+    if (!effectiveTo) effectiveTo = `${ym}-31`;
+  }
+  if (timeframe === "this_year") {
+    const yr = today.slice(0, 4);
+    if (!effectiveFrom) effectiveFrom = `${yr}-01-01`;
+    if (!effectiveTo) effectiveTo = `${yr}-12-31`;
+  }
+  if (effectiveFrom || effectiveTo) {
+    baseWhere.start_date = {};
+    if (effectiveFrom) baseWhere.start_date[Op.gte] = effectiveFrom;
+    if (effectiveTo)   baseWhere.start_date[Op.lte] = effectiveTo;
+  }
+
+  const where = { ...baseWhere };
+  if (status) where.status = status;
+
+  let order = [["start_date", "ASC"]];
+  if (sort === "date_desc") order = [["start_date", "DESC"], ["id", "DESC"]];
+  else if (sort === "title_asc") order = [["title", "ASC"], ["start_date", "DESC"]];
+  else if (sort === "upcoming_first") {
+    order = [
+      [sequelize.literal("CASE status WHEN 'Ongoing' THEN 0 WHEN 'Upcoming' THEN 1 WHEN 'Completed' THEN 2 ELSE 3 END"), "ASC"],
+      ["start_date", "DESC"],
+      ["id", "DESC"],
+    ];
+  }
+
+  const [{ count, rows }, statusRows] = await Promise.all([
+    Event.findAndCountAll({
+      where,
+      include: [...eventIncludes],
+      order,
+      limit: limitNum,
+      offset,
+      distinct: true,
+    }),
+    Event.findAll({
+      where: baseWhere,
+      attributes: ["status", [sequelize.fn("COUNT", sequelize.col("id")), "cnt"]],
+      group: ["status"],
+      raw: true,
+    }).catch(() => []),
+  ]);
+
+  const status_counts = { All: 0, Upcoming: 0, Ongoing: 0, Completed: 0, Cancelled: 0 };
+  for (const r of statusRows) {
+    const key = normalizeStatus(r.status);
+    const cnt = Number(r.cnt || 0);
+    status_counts.All += cnt;
+    if (key in status_counts) status_counts[key] += cnt;
+  }
 
   const counts = await getRegistrationCounts(rows.map((row) => Number(row.id)), user);
   return {
@@ -159,7 +212,8 @@ exports.getAllEvents = async ({
       EventRegistrations: [],
     })),
     total:       count,
-    total_pages: Math.ceil(count / parseInt(limit)),
+    total_pages: Math.max(1, Math.ceil(count / limitNum)),
+    status_counts,
   };
 };
 
@@ -454,15 +508,58 @@ exports.deleteCategory = async (id) => {
 };
 
 // ── Get Event Registrations ──────────────────────────────────
-exports.getEventRegistrations = async (eventId, user = {}) => {
+exports.getEventRegistrations = async (eventId, user = {}, query = {}) => {
   const event = await Event.findOne({ where: { id: eventId } });
   if (!event) throw AppError.notFound("RECORD_NOT_FOUND", "Event not found");
   const memberScopeWhere = await getMemberScopeWhere(user);
+  const regWhere = { event_id: eventId };
+  if (query.seat === "assigned") regWhere.seat_number = { [Op.ne]: null };
+  if (query.seat === "unassigned") regWhere.seat_number = null;
+  if (query.parking === "reserved") regWhere.parking_slot = { [Op.ne]: null };
+
+  const q = String(query.search || "").trim();
+  const memberWhereParts = [];
+  if (memberScopeWhere) memberWhereParts.push(memberScopeWhere);
+  if (q) {
+    const like = `%${q}%`;
+    memberWhereParts.push({
+      [Op.or]: [
+        { first_name: { [Op.like]: like } },
+        { last_name: { [Op.like]: like } },
+        { email: { [Op.like]: like } },
+        { barcode: { [Op.like]: like } },
+      ],
+    });
+  }
+  const combinedMemberWhere = memberWhereParts.length > 1
+    ? { [Op.and]: memberWhereParts }
+    : (memberWhereParts[0] || null);
+  const include = registrationIncludes.map((inc) => (combinedMemberWhere
+    ? { ...inc, where: combinedMemberWhere, required: true }
+    : inc));
+
+  if (query.page !== undefined) {
+    const pageNum = Math.max(1, parseInt(query.page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(query.limit, 10) || 25));
+    const { count, rows } = await EventRegistration.findAndCountAll({
+      where: regWhere,
+      include,
+      order: [["registered_at", "ASC"]],
+      limit: limitNum,
+      offset: (pageNum - 1) * limitNum,
+      distinct: true,
+    });
+    return {
+      registrations: rows,
+      total: count,
+      page: pageNum,
+      total_pages: Math.max(1, Math.ceil(count / limitNum)),
+    };
+  }
+
   return await EventRegistration.findAll({
-    where: { event_id: eventId },
-    include: registrationIncludes.map((include) => memberScopeWhere
-      ? { ...include, where: memberScopeWhere, required: true }
-      : include),
+    where: regWhere,
+    include,
     order: [["registered_at", "ASC"]],
   });
 };

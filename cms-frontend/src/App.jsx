@@ -30,6 +30,7 @@ function GlobalPrefsApplicator() {
 
       const fontFamily = prefs.fontFamily || 'DM Sans';
       const zoom       = prefs.resolution || 1;
+      const fontSize   = Number(prefs.fontSize);
 
       // Inject font link if needed
       const fontId = 'plwm-global-font';
@@ -55,6 +56,11 @@ function GlobalPrefsApplicator() {
 
       // Apply to body so all CMS pages inherit it
       document.body.style.fontFamily = `'${fontFamily}', 'Inter', system-ui, sans-serif`;
+      if (Number.isFinite(fontSize) && fontSize >= 12 && fontSize <= 22) {
+        document.body.style.fontSize = `${fontSize}px`;
+      } else {
+        document.body.style.fontSize = '';
+      }
 
       // Apply zoom/scale (CSS zoom is the cleanest cross-browser approach)
       document.body.style.zoom = String(zoom);

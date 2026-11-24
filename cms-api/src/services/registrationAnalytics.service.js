@@ -48,7 +48,13 @@ exports.getOverview = async (rangeInput) => {
     })
     : [];
 
-  const rows = events.map((event) => decorateEvent(event, registrations));
+  const regsByEvent = new Map();
+  for (const r of registrations) {
+    const key = Number(r.event_id);
+    if (!regsByEvent.has(key)) regsByEvent.set(key, []);
+    regsByEvent.get(key).push(r);
+  }
+  const rows = events.map((event) => decorateEvent(event, regsByEvent.get(Number(event.id)) || []));
   const capacity = sumBy(rows, (row) => row.capacity);
   const registered = sumBy(rows, (row) => row.registered);
 
@@ -61,7 +67,6 @@ exports.getOverview = async (rangeInput) => {
     where: { service_date: { [Op.between]: [range.from, range.to] } },
     attributes: ["id", "title", "service_date", "service_time", "capacity"],
     order: [["service_date", "DESC"]],
-    limit: 12,
   });
   const attendance = services.length
     ? await Attendance.findAll({
@@ -69,9 +74,14 @@ exports.getOverview = async (rangeInput) => {
       attributes: ["service_id"],
     })
     : [];
+  const attCounts = new Map();
+  for (const a of attendance) {
+    const key = Number(a.service_id);
+    attCounts.set(key, (attCounts.get(key) || 0) + 1);
+  }
 
   const serviceRows = services.map((service) => {
-    const present = attendance.filter((row) => Number(row.service_id) === Number(service.id)).length;
+    const present = attCounts.get(Number(service.id)) || 0;
     return {
       id: service.id,
       title: service.title,

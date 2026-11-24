@@ -2,10 +2,10 @@ export const ROLE_ALLOWED_PATHS = {
   // Members use self-scoped APIs through the standalone portal only.
   Member: ['/portal'],
   'Finance Team': ['/dashboard', '/finance', '/archives', '/my-settings', '/reports/analytics'],
-  'Ministry Leader': ['/dashboard', '/groups', '/ministry', '/ministry/schedules', '/events', '/attendance', '/reports/team-attendance', '/inventory', '/archives', '/my-settings'],
-  'Cell Group Leader': ['/dashboard', '/cell-groups', '/attendance', '/reports/team-attendance', '/events', '/inventory', '/archives', '/my-settings'],
-  'Group Leader': ['/dashboard', '/ministries', '/members', '/attendance', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
-  Leader: ['/dashboard', '/leader/teams', '/cell-groups', '/ministries', '/members', '/attendance', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
+  'Ministry Leader': ['/dashboard', '/groups', '/ministry', '/ministry/schedules', '/events', '/attendance', '/attendance/qr', '/reports/team-attendance', '/inventory', '/archives', '/my-settings'],
+  'Cell Group Leader': ['/dashboard', '/cell-groups', '/attendance', '/attendance/qr', '/reports/team-attendance', '/events', '/inventory', '/archives', '/my-settings'],
+  'Group Leader': ['/dashboard', '/ministries', '/members', '/attendance', '/attendance/qr', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
+  Leader: ['/dashboard', '/leader/teams', '/cell-groups', '/ministries', '/members', '/attendance', '/attendance/qr', '/reports/team-attendance', '/events', '/services', '/inventory', '/archives', '/my-settings'],
 };
 
 export const ROLE_TAB_SETS = {
@@ -112,7 +112,7 @@ export const isVisibleNavItem = (item, user, hasPermission) => {
   const rolePaths = ROLE_ALLOWED_PATHS[user?.roleName];
   if (rolePaths) {
     if (!rolePaths.includes(item.path)) return false;
-    if (user?.roleName === 'Leader' && item.permissions) {
+    if (item.permissions) {
       return hasPermission(item.permissions.module, item.permissions.action);
     }
     return true;

@@ -6,7 +6,7 @@ const { Member, EventRegistration, MinistryMembership } = require("../../models"
 const { OutreachPreference, OutreachDelivery } = require("./models");
 const { normalizePhone, maskedPhone, estimateSegments, renderCampaignMessage } = require("./policy");
 
-const EXCLUDED_KEYS = ["inactive", "no_phone", "no_consent", "opted_out", "preference_disabled", "minor_without_guardian", "duplicate", "frequency_cap"];
+const EXCLUDED_KEYS = ["inactive", "no_phone", "no_consent", "opted_out", "preference_disabled", "minor_without_guardian", "duplicate", "frequency_cap", "recipient_restricted", "not_found"];
 
 const emptyExcluded = () => EXCLUDED_KEYS.reduce((result, key) => ({ ...result, [key]: 0 }), {});
 
@@ -20,7 +20,11 @@ const ageAt = (birthdate, now = new Date()) => {
   return age;
 };
 
-const resolveMembers = async ({ audience_type, event_id, ministry_id, cell_group_id }) => {
+const resolveMembers = async ({ audience_type, event_id, ministry_id, cell_group_id, member_ids }) => {
+  if (audience_type === "selected_members") {
+    const ids = [...new Set(member_ids || [])];
+    return { members: await Member.findAll({ where: { id: { [Op.in]: ids } }, order: [["id", "ASC"]] }), warning: null };
+  }
   if (audience_type === "event") {
     if (!event_id) throw AppError.badRequest("EVENT_REQUIRED", "Choose an event for this notification");
     const registrations = await EventRegistration.findAll({ where: { event_id }, attributes: ["member_id"] });
@@ -88,6 +92,8 @@ const resolveAudience = async (input, config, now = new Date()) => {
     : [];
   const preferenceByMember = new Map(preferences.map((preference) => [Number(preference.member_id), preference]));
   const excluded = emptyExcluded();
+  if (input.audience_type === "selected_members") excluded.not_found = new Set(input.member_ids || []).size - members.length;
+  const allowedPhones = new Set((process.env.SMS_ALLOWED_RECIPIENTS || "").split(",").map(normalizePhone).filter(Boolean));
   const candidates = [];
   for (const member of members) {
     if (member.status !== "Active" || Number(member.is_deleted)) { excluded.inactive++; continue; }
@@ -109,6 +115,9 @@ const resolveAudience = async (input, config, now = new Date()) => {
       ? (!preference.sms_enabled || !preference.consent_at || !preference.guardian_consent_at)
       : (!preference.sms_enabled || !preference.consent_at || normalizePhone(preference.consent_phone) !== normalizePhone(member.phone));
     if (consentMissing) { excluded.no_consent++; continue; }
+    if (config.mode === "live" && process.env.SMS_ALLOW_ALL_OPTED_IN !== "true" && !allowedPhones.has(phone)) {
+      excluded.recipient_restricted++; continue;
+    }
     candidates.push({
       member_id: Number(member.id), first_name: member.first_name, last_name: member.last_name,
       name: recipientName, phone, phone_masked: maskedPhone(phone), is_minor: minor,

@@ -354,9 +354,15 @@ api.defaults.adapter=async config=>{
   const path=new URL(config.url,'http://review.local').pathname;
   const method=String(config.method||'get').toLowerCase();
   const body=typeof config.data==='string'?JSON.parse(config.data||'{}'):(config.data||{});
-  const canCampaign=['System Admin','Pastor','Registration Team','Ministry Leader','Cell Leader','Group Leader','Combined Leader','Leader'].includes(selectedRole);
-  const canBroadcast=['System Admin','Pastor'].includes(selectedRole);
-  if(path==='/outreach/availability') return {data:{success:true,data:{schema_ready:true,campaigns_schema_ready:true,enabled:true,mode:'simulation',campaigns_enabled:true,sms_delivery_enabled:false,provider_configured:true,recipient_restriction_configured:true,scheduler_enabled:true,capabilities:{configure:selectedRole==='System Admin',manage:['System Admin','Registration Team'].includes(selectedRole),global:['System Admin','Pastor','Registration Team'].includes(selectedRole),resolve:true,process:['System Admin','Registration Team'].includes(selectedRole),campaigns:canCampaign,broadcast:canBroadcast,approve:canBroadcast}}},status:200,headers:{},config};
+  const canCampaign = ['Registration Team', 'Pastor'].includes(selectedRole);
+  const canBroadcast = selectedRole === 'Registration Team';
+  if (path === '/outreach/campaigns/member-options') {
+    const search = new URL(config.url, 'http://review.local').searchParams.get('search')?.toLowerCase() || '';
+    const items = members.map(member => ({ id: member.id, label: [member.first_name, member.last_name].join(' ') }))
+      .filter(member => member.label.toLowerCase().includes(search));
+    return { data: { success: true, data: { items, total: items.length, total_pages: 1 } }, status: 200, headers: {}, config };
+  }
+  if(path==='/outreach/availability') return {data:{success:true,data:{schema_ready:true,campaigns_schema_ready:true,enabled:true,mode:'simulation',campaigns_enabled:true,sms_delivery_enabled:false,provider_configured:true,recipient_restriction_configured:true,scheduler_enabled:true,capabilities:{configure:canBroadcast,manage:['System Admin','Registration Team'].includes(selectedRole),global:['System Admin','Pastor','Registration Team'].includes(selectedRole),resolve:true,process:['System Admin','Registration Team'].includes(selectedRole),campaigns:canCampaign,campaign_write:canBroadcast,broadcast:canBroadcast,approve:canBroadcast}}},status:200,headers:{},config};
   if(path==='/outreach/configuration') return {data:{success:true,data:{enabled:true,mode:'simulation',reminder_days:[3,1],reminder_hour:9,daily_sms_cap:30,reminder_template:'Hi {{first_name}}, reminder: {{activity}} on {{date}} at {{time}}. {{venue}} PLWM-MCC',followup_template:'Hi {{first_name}}, PLWM-MCC is checking in. Please contact your leader.',campaigns_enabled:true,campaign_unit_cost_php:0.463,campaign_monthly_budget_php:500,campaign_weekly_member_cap:2,campaign_monthly_member_cap:6,campaign_approval_recipient_threshold:50,campaign_approval_cost_threshold:50,campaign_quiet_start:8,campaign_quiet_end:20}},status:200,headers:{},config};
   if(path==='/outreach/overview') return {data:{success:true,data:{followups:{open:1,assigned:0,resolved:2},deliveries:{queued:0,simulated:1,failed:0,unknown:0}}},status:200,headers:{},config};
   if(['/outreach/follow-ups','/outreach/deliveries','/outreach/members','/outreach/sessions'].includes(path)) return {data:{success:true,data:{items:[],total:0,page:1,total_pages:0}},status:200,headers:{},config};

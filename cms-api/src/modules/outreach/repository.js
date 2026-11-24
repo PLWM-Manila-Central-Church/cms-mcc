@@ -243,6 +243,7 @@ const listDeliveries = async (query, user) => {
   const where = {};
   if (query.status) where.status = query.status;
   if (query.channel) where.channel = query.channel;
+  if (!["Registration Team", "Pastor"].includes(user.roleName)) where.campaign_id = null;
   if (query.follow_up_id) where.follow_up_id = query.follow_up_id;
   if (query.date_from || query.date_to) {
     where.created_at = {};

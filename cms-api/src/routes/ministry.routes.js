@@ -10,6 +10,12 @@ const {
   createAssignmentSchema, updateAssignmentSchema,
 } = require("../validators/ministry.validator");
 
+// Allow System Admin, roles with ministry:update, OR assigned Ministry Leaders (strictly scoped to leadsMinistryId in controller)
+const authorizeMinistryScheduleOrSub = (req, res, next) => {
+  if (req.user?.roleName === "Ministry Leader" && req.user?.leadsMinistryId) return next();
+  return authorize("ministry", "update")(req, res, next);
+};
+
 // ── Ministry Roles ───────────────────────────────────────────
 router.get("/roles",        auth, authorize("ministry", "read"),   ctrl.getAllRoles);
 router.get("/roles/:id",    auth, authorize("ministry", "read"),   ctrl.getRoleById);
@@ -18,10 +24,10 @@ router.put("/roles/:id",    auth, authorize("ministry", "update"), validate(upda
 router.patch("/roles/:id/archive", auth, authorize("ministry", "delete"), ctrl.archiveRole);
 
 // ── Ministry Schedules ─────────────────────────────────────
-router.get("/schedules",              auth, authorize("ministry", "read"),   ctrl.listSchedules);
-router.post("/schedules",             auth, authorize("ministry", "update"), ctrl.createSchedule);
-router.post("/schedules/:id/archive", auth, authorize("ministry", "update"), ctrl.deleteSchedule);
-router.patch("/schedules/:id/archive", auth, authorize("ministry", "update"), ctrl.deleteSchedule);
+router.get("/schedules",              auth, authorize("ministry", "read"),           ctrl.listSchedules);
+router.post("/schedules",             auth, authorizeMinistryScheduleOrSub,          ctrl.createSchedule);
+router.post("/schedules/:id/archive", auth, authorizeMinistryScheduleOrSub,          ctrl.deleteSchedule);
+router.patch("/schedules/:id/archive", auth, authorizeMinistryScheduleOrSub,         ctrl.deleteSchedule);
 
 // ── Ministry Assignments ─────────────────────────────────────
 router.get("/assignments",                     auth, authorize("ministry", "read"),   ctrl.getAllAssignments);
@@ -48,7 +54,7 @@ router.get(
 router.put(
   "/substitutes/:id/resolve",
   auth,
-  authorize("ministry", "update"),
+  authorizeMinistryScheduleOrSub,
   ctrl.resolveSubstitute,
 );
 

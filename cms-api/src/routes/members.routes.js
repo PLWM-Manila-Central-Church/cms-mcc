@@ -18,15 +18,24 @@ router.post("/scope/assign", auth, authorize("scope_assignments", "manage"), ctr
 
 router.get("/",    auth, authorize("members", "read"), validateQuery(getMembersQuerySchema), ctrl.getAllMembers);
 
-// Dropdown endpoints must be registered before GET /:id, otherwise
-// "dropdowns" is captured as the :id param and the route 404s.
+// Dropdown & option endpoints must be registered before GET /:id, otherwise
+// static paths are captured as the :id param and 404.
 router.get("/dropdowns/cell-groups", auth, authorize("members", "read"), ctrl.getCellGroupDropdowns);
 router.get("/dropdowns/groups",      auth, authorize("members", "read"), ctrl.getGroupDropdowns);
+router.get("/options",               auth, authorize("members", "read"), async (req, res, next) => {
+  try {
+    const membersService = require("../services/members.service");
+    const data = await membersService.listMemberOptions(req.query, req.user);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
 
 const engSvc = require("../services/ministryEngagement.service");
+const { ensureMemberInScope } = require("../helpers/scopedLeader.helper");
 
 router.get("/:id/engagement", auth, authorize("members", "read"), async (req, res, next) => {
   try {
+    await ensureMemberInScope(req.params.id, req.user);
     const data = await engSvc.getMemberEngagementProfile(req.params.id);
     res.json({ success: true, data });
   } catch (err) { next(err); }

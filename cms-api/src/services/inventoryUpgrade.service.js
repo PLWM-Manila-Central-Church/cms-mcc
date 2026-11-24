@@ -1,8 +1,10 @@
 "use strict";
 
+const { Op } = require("sequelize");
 const sequelize = require("../config/db");
 const AppError = require("../helpers/AppError");
 const auditLog = require("../helpers/auditLog.helper");
+const permissionCache = require("../helpers/permissionCache.helper");
 const {
   InventoryItem,
   InventoryTransaction,
@@ -15,6 +17,24 @@ const {
 
 const money = (v) => Math.round((Number(v) || 0) * 100) / 100;
 const safeFind = (M, opts) => (M?.findAll ? M.findAll(opts).catch(() => []) : Promise.resolve([]));
+
+// Lightweight full item picker for dropdowns (never truncated to 15-item page)
+exports.listItemOptions = async ({ search = "", limit = 500 } = {}) => {
+  const where = { is_deleted: 0 };
+  const q = String(search || "").trim();
+  if (q) {
+    where[Op.or] = [
+      { name: { [Op.like]: `%${q}%` } },
+      { item_code: { [Op.like]: `%${q}%` } },
+    ];
+  }
+  return safeFind(InventoryItem, {
+    where,
+    attributes: ["id", "name", "item_code", "unit", "quantity", "item_type", "status"],
+    order: [["name", "ASC"]],
+    limit: Math.min(500, Math.max(1, parseInt(limit, 10) || 500)),
+  });
+};
 
 const deriveStockStatus = (item, qty) => {
   if (item.status === "Under Repair") return "Under Repair";
@@ -48,6 +68,12 @@ exports.recordStockMovement = async (payload, user) => {
 
     let financeExpenseId = null;
     if (payload.create_finance_purchase_request && delta > 0 && Number(payload.unit_cost || 0) > 0) {
+      if (user?.roleName && user.roleName !== "System Admin") {
+        const canCreateFinance = user?.roleId && (await permissionCache.get(user.roleId)).has("finance:create");
+        if (!canCreateFinance) {
+          throw AppError.forbidden("Creating a finance purchase request requires finance:create permission.");
+        }
+      }
       const totalCost = money(delta * Number(payload.unit_cost));
       const cat = await ExpenseCategory.findOne({ transaction }).catch(() => null);
       const pm = await PaymentMethod.findOne({ transaction }).catch(() => null);
@@ -97,32 +123,97 @@ exports.recordStockMovement = async (payload, user) => {
   return result;
 };
 
-exports.listTransactions = async ({ item_id, limit = 80 } = {}) => {
+exports.listTransactions = async ({ item_id, search = "", page, limit = 25 } = {}) => {
   const where = item_id ? { item_id: Number(item_id) } : {};
+  const q = String(search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    where[Op.or] = [
+      { notes: { [Op.like]: like } },
+      { supplier: { [Op.like]: like } },
+      { transaction_type: { [Op.like]: like } },
+      { "$item.name$": { [Op.like]: like } },
+    ];
+  }
+  const include = [{ model: InventoryItem, as: "item", attributes: ["id", "name", "unit", "item_type"], required: false }];
+  if (page !== undefined) {
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+    const { count, rows } = await InventoryTransaction.findAndCountAll({
+      where,
+      include,
+      order: [["occurred_at", "DESC"], ["id", "DESC"]],
+      limit: limitNum,
+      offset: (pageNum - 1) * limitNum,
+      subQuery: false,
+      distinct: true,
+    }).catch(() => ({ count: 0, rows: [] }));
+    return { items: rows, total: count, page: pageNum, total_pages: Math.max(1, Math.ceil(count / limitNum)) };
+  }
   return safeFind(InventoryTransaction, {
     where,
-    include: [{ model: InventoryItem, as: "item", attributes: ["id", "name", "unit", "item_type"], required: false }],
+    include,
     order: [["occurred_at", "DESC"], ["id", "DESC"]],
     limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 80)),
+    subQuery: false,
   });
 };
 
 // ── Borrowing & Returns Reconciliation
-exports.listBorrowings = async () => {
+const decorateBorrowing = (r, today) => {
+  const plain = r.toJSON ? r.toJSON() : r;
+  const isOverdue = ["borrowed", "partially_returned"].includes(plain.status)
+    && plain.due_return_date
+    && String(plain.due_return_date) < today;
+  return { ...plain, is_overdue: Boolean(isOverdue), effective_status: isOverdue ? "overdue" : plain.status };
+};
+
+exports.listBorrowings = async ({ status = "", search = "", page, limit = 25 } = {}) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const where = { is_deleted: 0 };
+  if (status === "overdue") {
+    where.status = { [Op.in]: ["borrowed", "partially_returned"] };
+    where.due_return_date = { [Op.lt]: today };
+  } else if (status) {
+    where.status = status;
+  }
+  const q = String(search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    where[Op.or] = [
+      { borrower_name: { [Op.like]: like } },
+      { notes: { [Op.like]: like } },
+      { "$item.name$": { [Op.like]: like } },
+    ];
+  }
+  const include = [{ model: InventoryItem, as: "item", attributes: ["id", "name", "unit", "item_code"], required: false }];
+  if (page !== undefined) {
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+    const { count, rows } = await InventoryBorrowing.findAndCountAll({
+      where,
+      include,
+      order: [["borrowed_at", "DESC"], ["id", "DESC"]],
+      limit: limitNum,
+      offset: (pageNum - 1) * limitNum,
+      subQuery: false,
+      distinct: true,
+    }).catch(() => ({ count: 0, rows: [] }));
+    return {
+      items: rows.map((r) => decorateBorrowing(r, today)),
+      total: count,
+      page: pageNum,
+      total_pages: Math.max(1, Math.ceil(count / limitNum)),
+    };
+  }
   const rows = await safeFind(InventoryBorrowing, {
-    where: { is_deleted: 0 },
-    include: [{ model: InventoryItem, as: "item", attributes: ["id", "name", "unit", "item_code"], required: false }],
+    where,
+    include,
     order: [["borrowed_at", "DESC"], ["id", "DESC"]],
     limit: 100,
+    subQuery: false,
   });
-  const today = new Date().toISOString().slice(0, 10);
-  return rows.map((r) => {
-    const plain = r.toJSON ? r.toJSON() : r;
-    const isOverdue = ["borrowed", "partially_returned"].includes(plain.status)
-      && plain.due_return_date
-      && String(plain.due_return_date) < today;
-    return { ...plain, is_overdue: Boolean(isOverdue), effective_status: isOverdue ? "overdue" : plain.status };
-  });
+  return rows.map((r) => decorateBorrowing(r, today));
 };
 
 exports.createBorrowing = async (payload, user) => {
@@ -242,12 +333,39 @@ exports.returnBorrowing = async (borrowingId, payload, user) => {
 };
 
 // ── Maintenance & Repairs
-exports.listMaintenance = async () => {
+exports.listMaintenance = async ({ status = "", search = "", page, limit = 25 } = {}) => {
+  const where = { is_deleted: 0 };
+  if (status) where.status = status;
+  const q = String(search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    where[Op.or] = [
+      { vendor: { [Op.like]: like } },
+      { notes: { [Op.like]: like } },
+      { "$item.name$": { [Op.like]: like } },
+    ];
+  }
+  const include = [{ model: InventoryItem, as: "item", attributes: ["id", "name", "item_code"], required: false }];
+  if (page !== undefined) {
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+    const { count, rows } = await InventoryMaintenance.findAndCountAll({
+      where,
+      include,
+      order: [["maintenance_date", "DESC"], ["id", "DESC"]],
+      limit: limitNum,
+      offset: (pageNum - 1) * limitNum,
+      subQuery: false,
+      distinct: true,
+    }).catch(() => ({ count: 0, rows: [] }));
+    return { items: rows, total: count, page: pageNum, total_pages: Math.max(1, Math.ceil(count / limitNum)) };
+  }
   return safeFind(InventoryMaintenance, {
-    where: { is_deleted: 0 },
-    include: [{ model: InventoryItem, as: "item", attributes: ["id", "name", "item_code"], required: false }],
+    where,
+    include,
     order: [["maintenance_date", "DESC"], ["id", "DESC"]],
     limit: 100,
+    subQuery: false,
   });
 };
 
@@ -284,22 +402,28 @@ exports.completeMaintenance = async (maintId) => {
   return row;
 };
 
-// ── Extended 9 Inventory Reports Summary
+// ── Extended 9 Inventory Reports Summary (unbounded SQL aggregates — never distorted by 100-row limits)
 exports.getExtendedReports = async () => {
-  const [items, borrowings, maintLogs, recentTx] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const [items, activeBorrowCount, overdueBorrowCount, overdueBorrowRows, maintenanceCostRaw, recentTx] = await Promise.all([
     safeFind(InventoryItem, { where: { is_deleted: 0 } }),
-    exports.listBorrowings(),
-    exports.listMaintenance(),
-    exports.listTransactions({ limit: 30 }),
+    InventoryBorrowing?.count ? InventoryBorrowing.count({ where: { is_deleted: 0, status: { [Op.in]: ["borrowed", "partially_returned"] } } }).catch(() => 0) : 0,
+    InventoryBorrowing?.count ? InventoryBorrowing.count({ where: { is_deleted: 0, status: { [Op.in]: ["borrowed", "partially_returned"] }, due_return_date: { [Op.lt]: today } } }).catch(() => 0) : 0,
+    safeFind(InventoryBorrowing, {
+      where: { is_deleted: 0, status: { [Op.in]: ["borrowed", "partially_returned"] }, due_return_date: { [Op.lt]: today } },
+      include: [{ model: InventoryItem, as: "item", attributes: ["id", "name", "unit", "item_code"], required: false }],
+      order: [["due_return_date", "ASC"]],
+      limit: 15,
+    }),
+    InventoryMaintenance?.sum ? InventoryMaintenance.sum("cost", { where: { is_deleted: 0 } }).catch(() => 0) : 0,
+    exports.listTransactions({ limit: 15 }),
   ]);
 
   const assets = items.filter((i) => (i.item_type || "reusable_asset") === "reusable_asset");
   const consumables = items.filter((i) => i.item_type === "consumable");
   const totalValuation = money(items.reduce((s, i) => s + Number(i.quantity || 0) * money(i.unit_cost), 0));
   const lowStockItems = items.filter((i) => i.status === "Low Stock" || i.status === "Out of Stock");
-  const activeBorrowings = borrowings.filter((b) => ["borrowed", "partially_returned", "overdue"].includes(b.effective_status));
-  const overdueBorrowings = borrowings.filter((b) => b.is_overdue);
-  const maintenanceCost = money(maintLogs.reduce((s, m) => s + money(m.cost), 0));
+  const maintenanceCost = money(maintenanceCostRaw);
 
   const byLocationMap = new Map();
   for (const i of items) {
@@ -314,13 +438,13 @@ exports.getExtendedReports = async () => {
       consumables: consumables.length,
       total_valuation_php: totalValuation,
       low_or_out_of_stock: lowStockItems.length,
-      active_borrowings: activeBorrowings.length,
-      overdue_borrowings: overdueBorrowings.length,
+      active_borrowings: Number(activeBorrowCount || 0),
+      overdue_borrowings: Number(overdueBorrowCount || 0),
       under_repair: items.filter((i) => i.status === "Under Repair").length,
       total_maintenance_cost_php: maintenanceCost,
     },
     by_location: [...byLocationMap.entries()].map(([location, count]) => ({ location, count })),
-    overdue_list: overdueBorrowings.slice(0, 15),
-    recent_movements: recentTx.slice(0, 15),
+    overdue_list: overdueBorrowRows.map((r) => decorateBorrowing(r, today)),
+    recent_movements: Array.isArray(recentTx) ? recentTx.slice(0, 15) : (recentTx.items || []).slice(0, 15),
   };
 };

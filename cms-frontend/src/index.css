@@ -131,21 +131,21 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 }
 
 /* ── CMS page common ─────────────────────────────────────────── */
-.cms-page { padding: 0; max-width: 1120px; }
+.cms-page { padding: 0; max-width: 1440px; width: 100%; margin-inline: auto; }
 .cms-page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
   gap: 12px;
   flex-wrap: wrap;
 }
-.cms-page-title   { font-size: 22px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.3px; }
-.cms-page-sub     { font-size: 14px; color: #64748b; margin: 3px 0 0; }
+.cms-page-title   { font-size: 24px; font-weight: 700; color: #0f172a; margin: 0; letter-spacing: -0.025em; }
+.cms-page-sub     { font-size: 13.5px; color: #64748b; margin: 3px 0 0; }
 .cms-add-btn {
-  background: linear-gradient(135deg, #005599, #13B5EA);
+  background: var(--mcc-brand, #005599);
   color: #fff; border: none; border-radius: 9px;
-  padding: 10px 20px; font-size: 14px; font-weight: 600;
+  padding: 9px 18px; font-size: 13.5px; font-weight: 600;
   cursor: pointer; white-space: nowrap; font-family: inherit;
   flex-shrink: 0;
 }

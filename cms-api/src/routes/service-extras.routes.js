@@ -35,6 +35,10 @@ router.get("/substitutes/replacements", auth, authorizeMemberSubstituteSelfServi
 router.get("/substitutes",                auth, authorize("ministry", "read"),   ctrl.getAllSubstituteRequests);
 router.get("/substitutes/:id",            auth, authorize("ministry", "read"),   ctrl.getSubstituteRequestById);
 router.post("/substitutes",               auth, authorizeMemberSubstituteSelfService, validate(createSubstituteRequestSchema), ctrl.createSubstituteRequest);
-router.put("/substitutes/:id/resolve",    auth, authorize("ministry", "update"), ctrl.resolveSubstituteRequest);
+const authorizeSubstituteResolve = (req, res, next) => {
+  if (req.user?.roleName === "Ministry Leader" && req.user?.leadsMinistryId) return next();
+  return authorize("ministry", "update")(req, res, next);
+};
+router.put("/substitutes/:id/resolve",    auth, authorizeSubstituteResolve, ctrl.resolveSubstituteRequest);
 
 module.exports = router;

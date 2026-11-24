@@ -16,6 +16,8 @@ const memberBody = {
   address:            Joi.string().max(500).allow(null, "").optional(),
   cell_group_id:      Joi.number().integer().positive().allow(null).optional(),
   group_id:           Joi.number().integer().positive().allow(null).optional(),
+  referred_by:        Joi.number().integer().positive().allow(null).optional(),
+  ministry_role_id:   Joi.number().integer().positive().allow(null).optional(),
   status:             Joi.string().valid(...MEMBER_STATUSES).optional(),
   notes:              Joi.string().max(2000).allow(null, "").optional(),
 };
@@ -25,7 +27,7 @@ exports.createMemberSchema = Joi.object(memberBody);
 exports.updateMemberSchema = Joi.object({
   ...memberBody,
   first_name: Joi.string().max(100).optional(),
-  last_name:  Joi.string().max(100).optional(),
+  last_name:  Joi.string().max(100).allow(null, "").optional(),
 }).min(1);
 
 exports.createEmergencyContactSchema = Joi.object({
@@ -64,12 +66,14 @@ exports.createInviteSchema = Joi.object({
 
 // ── Query parameter schemas for GET endpoints ──────────────────
 exports.getMembersQuerySchema = Joi.object({
-  page:         Joi.number().integer().min(1).default(1),
-  limit:        Joi.number().integer().min(1).max(100).default(20),
-  search:       Joi.string().max(200).allow("").optional(),
-  status:       Joi.string().valid(...MEMBER_STATUSES).optional(),
-  cell_group_id: Joi.number().integer().positive().optional(),
-  group_id:     Joi.number().integer().positive().optional(),
+  page:          Joi.number().integer().min(1).default(1),
+  limit:         Joi.number().integer().min(1).max(100).default(20),
+  search:        Joi.string().max(200).allow("").optional(),
+  status:        Joi.string().valid(...MEMBER_STATUSES).allow("").optional(),
+  cell_group_id: Joi.number().integer().positive().allow("").optional(),
+  group_id:      Joi.number().integer().positive().allow("").optional(),
+  sort_by:       Joi.string().valid("last_name", "first_name", "status", "created_at", "join_date", "birthdate").optional(),
+  sort_dir:      Joi.string().valid("asc", "desc", "ASC", "DESC").optional(),
 });
 
 exports.linkMemberAccountSchema = Joi.object({

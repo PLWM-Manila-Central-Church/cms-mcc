@@ -11,6 +11,15 @@ exports.getAllAttendance = async (req, res, next) => {
   }
 };
 
+exports.getMemberHistory = async (req, res, next) => {
+  try {
+    const result = await attendanceService.getMemberAttendanceHistory(req.params.memberId, req.query, req.user);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getAttendanceById = async (req, res, next) => {
   try {
     const result = await attendanceService.getAttendanceById(req.params.id, req.user);

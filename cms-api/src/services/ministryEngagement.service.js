@@ -24,16 +24,12 @@ const round1 = (v) => Math.round((Number(v) || 0) * 10) / 10;
 
 // ── Full Ministry Engagement Workspace + 7 Ministry Reports
 exports.getMinistryEngagement = async (ministryGroupId) => {
-  const [activities, responses, checkins, announcements, messages, feedback, visitations, members] = await Promise.all([
+  const [activities, announcements, messages, feedback, visitations, members] = await Promise.all([
     safeFind(MinistryActivity, {
       where: { ministry_group_id: ministryGroupId, is_deleted: 0 },
       order: [["activity_date", "DESC"], ["id", "DESC"]],
       limit: 50,
     }),
-    safeFind(MinistryAttendanceResponse, {
-      include: [{ model: Member, as: "member", attributes: ["id", "first_name", "last_name"], required: false }],
-    }),
-    safeFind(MinistryActivityAttendance, {}),
     safeFind(MinistryAnnouncement, {
       where: { ministry_group_id: ministryGroupId, is_deleted: 0 },
       order: [["is_pinned", "DESC"], ["created_at", "DESC"]],
@@ -66,9 +62,18 @@ exports.getMinistryEngagement = async (ministryGroupId) => {
     safeFind(Member, { where: { group_id: ministryGroupId }, attributes: ["id", "status"] }),
   ]);
 
-  const actIds = new Set(activities.map((a) => a.id));
-  const scopedResponses = responses.filter((r) => actIds.has(r.activity_id));
-  const scopedCheckins = checkins.filter((c) => actIds.has(c.activity_id));
+  const actIdList = activities.map((a) => Number(a.id)).filter(Boolean);
+  const [scopedResponses, scopedCheckins] = actIdList.length
+    ? await Promise.all([
+        safeFind(MinistryAttendanceResponse, {
+          where: { activity_id: { [Op.in]: actIdList } },
+          include: [{ model: Member, as: "member", attributes: ["id", "first_name", "last_name"], required: false }],
+        }),
+        safeFind(MinistryActivityAttendance, {
+          where: { activity_id: { [Op.in]: actIdList } },
+        }),
+      ])
+    : [[], []];
 
   const enrichedActivities = activities.map((act) => {
     const plain = act.toJSON ? act.toJSON() : act;
@@ -207,9 +212,12 @@ exports.sendMessage = async (payload, user) => {
   return created;
 };
 
-exports.respondToFeedback = async (feedbackId, payload, user) => {
+exports.respondToFeedback = async (feedbackId, payload, user, expectedMinistryId = null) => {
   const row = await MemberFeedback.findOne({ where: { id: feedbackId, is_deleted: 0 } });
   if (!row) throw AppError.notFound("RECORD_NOT_FOUND", "Prayer request or feedback not found");
+  if (expectedMinistryId && row.ministry_group_id && Number(row.ministry_group_id) !== Number(expectedMinistryId)) {
+    throw AppError.forbidden("Feedback record belongs to a different ministry");
+  }
   const status = ["open", "acknowledged", "prayed_for", "resolved"].includes(payload.status) ? payload.status : "prayed_for";
   await row.update({
     status,
@@ -240,11 +248,14 @@ exports.createVisitation = async (payload, user) => {
   return created;
 };
 
-exports.updateVisitationStage = async (visitId, careStage) => {
+exports.updateVisitationStage = async (visitId, careStage, expectedMinistryId = null) => {
   const allowedStages = ["needs_followup", "contacted", "in_progress", "visitation_scheduled", "completed"];
   if (!allowedStages.includes(careStage)) throw AppError.badRequest("VALIDATION_ERROR", "Invalid pastoral care stage.");
   const row = await PastoralVisitation.findOne({ where: { id: visitId, is_deleted: 0 } });
   if (!row) throw AppError.notFound("RECORD_NOT_FOUND", "Visitation log not found");
+  if (expectedMinistryId && row.ministry_group_id && Number(row.ministry_group_id) !== Number(expectedMinistryId)) {
+    throw AppError.forbidden("Visitation record belongs to a different ministry");
+  }
   await row.update({ care_stage: careStage });
   return row;
 };
@@ -353,6 +364,21 @@ exports.submitPortalRsvp = async (activityId, payload, user) => {
   const response = payload.response;
   if (!["yes", "no", "maybe"].includes(response)) {
     throw AppError.badRequest("VALIDATION_ERROR", "RSVP must be 'yes', 'no', or 'maybe'.");
+  }
+  const [activity, member] = await Promise.all([
+    MinistryActivity?.findOne ? MinistryActivity.findOne({ where: { id: Number(activityId), is_deleted: 0 } }) : null,
+    Member?.findByPk ? Member.findByPk(user.memberId, { attributes: ["id", "group_id"] }) : null,
+  ]);
+  if (activity) {
+    if (activity.status === "cancelled") {
+      throw AppError.badRequest("VALIDATION_ERROR", "Cannot RSVP to a cancelled activity.");
+    }
+    if (activity.rsvp_deadline && new Date() > new Date(activity.rsvp_deadline)) {
+      throw AppError.badRequest("VALIDATION_ERROR", "The RSVP deadline for this activity has passed.");
+    }
+    if (member && activity.ministry_group_id && Number(member.group_id) !== Number(activity.ministry_group_id)) {
+      throw AppError.forbidden("This activity belongs to a different ministry.");
+    }
   }
   const [row] = await MinistryAttendanceResponse.findOrCreate({
     where: { activity_id: Number(activityId), member_id: Number(user.memberId) },

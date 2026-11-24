@@ -20,8 +20,10 @@ exports.createAssignmentSchema = Joi.object({
 });
 
 exports.updateAssignmentSchema = Joi.object({
-  member_id:        Joi.number().integer().positive().optional(),
-  ministry_role_id: Joi.number().integer().positive().optional(),
-  service_id:       Joi.number().integer().positive().required(),
-  notes:            Joi.string().max(500).allow(null, "").optional(),
+  member_id:            Joi.number().integer().positive().optional(),
+  ministry_role_id:     Joi.number().integer().positive().optional(),
+  service_id:           Joi.number().integer().positive().optional(),
+  confirmed:            Joi.boolean().optional(),
+  substitute_requested: Joi.boolean().optional(),
+  notes:                Joi.string().max(500).allow(null, "").optional(),
 }).min(1);

@@ -4,6 +4,8 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import MonoIcon from '../../components/common/MonoIcon';
+import CollectionToolbar from '../../components/common/CollectionToolbar';
+import CompactPagination from '../../components/common/CompactPagination';
 
 const STATUS_META = {
   draft:     { bg: '#f1f5f9', color: '#475569', label: 'Draft' },
@@ -31,6 +33,10 @@ export default function AttendancePage() {
   const [, setSummary]     = useState(null);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
+  const [actionError, setActionError] = useState('');
+  const [sheetSearch, setSheetSearch] = useState('');
+  const [sheetPage, setSheetPage]     = useState(1);
+  const [sheetLimit, setSheetLimit]   = useState(25);
   const [scopeMembers, setScopeMembers] = useState([]);
   const [scopeMembersLoading, setScopeMembersLoading] = useState(false);
   const [scopeMemberPage, setScopeMemberPage] = useState(1);
@@ -171,9 +177,10 @@ export default function AttendancePage() {
       await axiosInstance.patch(`/services/${serviceId}/attendance/${memberId}/archive`, {
         reason: 'Legacy check-in corrected by staff',
       });
+      setActionError('');
       fetchAttendance();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to archive check-in.');
+      setActionError(err.response?.data?.message || 'Failed to archive check-in.');
     }
   };
 
@@ -216,6 +223,14 @@ export default function AttendancePage() {
   if (error)   return <div style={styles.errorBox}>{error}</div>;
 
   const meta = STATUS_META[service?.status] || STATUS_META.draft;
+
+  const sheetNeedle = sheetSearch.trim().toLowerCase();
+  const filteredRecords = sheetNeedle
+    ? records.filter((r) => `${r.Member?.first_name || ''} ${r.Member?.last_name || ''} ${r.Member?.barcode || ''}`.toLowerCase().includes(sheetNeedle))
+    : records;
+  const sheetTotalPages = Math.max(1, Math.ceil(filteredRecords.length / sheetLimit));
+  const safeSheetPage = Math.min(sheetPage, sheetTotalPages);
+  const pagedRecords = filteredRecords.slice((safeSheetPage - 1) * sheetLimit, safeSheetPage * sheetLimit);
 
   return (
     <div className="mcc-module mcc-module-attendance-page" style={styles.page}>
@@ -296,7 +311,7 @@ export default function AttendancePage() {
                     <input
                       type="checkbox"
                       checked={checked}
-                      disabled={checkingIn === member.id}
+                      disabled={checkingIn === member.id || (checked ? !canUndo : !canRecord)}
                       onChange={() => handleCellGroupToggle(member, checked)}
                       style={styles.checkbox}
                     />
@@ -398,8 +413,18 @@ export default function AttendancePage() {
         <span style={styles.listCount}>{activeCheckIns} checked in</span>
       </div>
 
+      {actionError && <div role="alert" style={styles.errorBox}>{actionError}</div>}
+
+      {records.length > 8 && (
+        <CollectionToolbar
+          searchValue={sheetSearch}
+          onSearchChange={(v) => { setSheetSearch(v); setSheetPage(1); }}
+          searchPlaceholder="Search attendee name or barcode..."
+        />
+      )}
+
       <div style={styles.tableWrap}>
-        <div style={styles.tableScroll}><table style={styles.table}>
+        <div className="mcc-table-scroll"><table style={styles.table}>
           <thead>
             <tr style={styles.thead}>
               <th style={styles.th}>#</th>
@@ -411,15 +436,15 @@ export default function AttendancePage() {
             </tr>
           </thead>
           <tbody>
-            {records.length === 0 ? (
-              <tr><td colSpan={canUndo && isPublished ? 6 : 5} style={styles.centerCell}>No check-ins yet.</td></tr>
-            ) : records.map((r, i) => (
+            {filteredRecords.length === 0 ? (
+              <tr><td colSpan={canUndo && isPublished ? 6 : 5} style={styles.centerCell}>{records.length === 0 ? 'No check-ins yet.' : 'No attendees match your search.'}</td></tr>
+            ) : pagedRecords.map((r, i) => (
               <tr key={r.id}
                 style={{ ...styles.row, background: r.is_pre_reg ? '#faf5ff' : (i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc') }}
                 onMouseEnter={e => e.currentTarget.style.background = r.is_pre_reg ? '#f3e8ff' : '#e8f4fd'}
                 onMouseLeave={e => e.currentTarget.style.background = r.is_pre_reg ? '#faf5ff' : (i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc')}
               >
-                <td style={{ ...styles.td, color: '#94a3b8', fontWeight: '600' }}>{i + 1}</td>
+                <td style={{ ...styles.td, color: '#94a3b8', fontWeight: '600' }}>{(safeSheetPage - 1) * sheetLimit + i + 1}</td>
                 <td style={styles.td}>
                   <div style={styles.memberCell}>
                     <div style={{ ...styles.avatar, background: r.is_pre_reg ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'linear-gradient(135deg,#005599,#13B5EA)' }}>
@@ -468,18 +493,16 @@ export default function AttendancePage() {
           </tbody>
         </table></div>
       </div>
-      <style>{`
-        /* ── Responsive tables ── */
-        table { width: 100%; border-collapse: collapse; }
-        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        @media (max-width: 768px) {
-          table td, table th { font-size: 12px !important; padding: 8px 10px !important; white-space: nowrap; }
-        }
-        @media (max-width: 480px) {
-          table td, table th { font-size: 11px !important; padding: 6px 8px !important; }
-        }
-
-      `}</style>
+      <CompactPagination
+        page={safeSheetPage}
+        totalPages={sheetTotalPages}
+        total={filteredRecords.length}
+        limit={sheetLimit}
+        pageSizes={[25, 50, 100]}
+        onPageChange={setSheetPage}
+        onLimitChange={(n) => { setSheetLimit(n); setSheetPage(1); }}
+        itemLabel="attendees"
+      />
     </div>
   );
 }

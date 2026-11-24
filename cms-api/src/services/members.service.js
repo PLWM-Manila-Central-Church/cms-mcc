@@ -118,7 +118,7 @@ const assertGroupEligibility = (member, group) => {
 };
 
 // ── Get All Members (paginated) ──────────────────────────────
-exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_group_id, group_id } = {}, user = {}) => {
+exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_group_id, group_id, sort_by, sort_dir } = {}, user = {}) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where  = { is_deleted: 0 };
 
@@ -145,12 +145,18 @@ exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_grou
     ];
   }
 
+  const allowedSortCols = new Set(["last_name", "first_name", "status", "created_at", "join_date", "birthdate"]);
+  const dir = String(sort_dir || "ASC").toUpperCase() === "DESC" ? "DESC" : "ASC";
+  const order = sort_by && allowedSortCols.has(sort_by)
+    ? [[sort_by, dir], ["last_name", "ASC"], ["id", "ASC"]]
+    : [["last_name", "ASC"], ["first_name", "ASC"], ["id", "ASC"]];
+
   const { count, rows } = await Member.findAndCountAll({
     where,
     include: memberIncludes,
     // Stable primary-key tiebreaking prevents overlapping/skipped rows when
     // duplicate names land on adjacent pagination boundaries.
-    order: [["last_name", "ASC"], ["first_name", "ASC"], ["id", "ASC"]],
+    order,
     limit: parseInt(limit),
     offset,
     distinct: true,
@@ -161,6 +167,30 @@ exports.getAllMembers = async ({ page = 1, limit = 20, search, status, cell_grou
     total:       count,
     total_pages: Math.ceil(count / parseInt(limit)),
   };
+};
+
+// Lightweight scoped member picker (replaces fetchAllPages / 100-row caps in dropdowns)
+exports.listMemberOptions = async ({ search = "", limit = 50, status } = {}, user = {}) => {
+  const where = { is_deleted: 0 };
+  await applyMemberScope(where, user);
+  if (status) where.status = status;
+  const q = String(search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    where[Op.or] = [
+      { first_name: { [Op.like]: like } },
+      { last_name: { [Op.like]: like } },
+      { email: { [Op.like]: like } },
+      { barcode: { [Op.like]: like } },
+    ];
+  }
+  const capped = Math.min(200, Math.max(1, parseInt(limit, 10) || 50));
+  return Member.findAll({
+    where,
+    attributes: ["id", "first_name", "last_name", "status", "email", "barcode"],
+    order: [["last_name", "ASC"], ["first_name", "ASC"]],
+    limit: capped,
+  });
 };
 
 // ── Get Member By ID ─────────────────────────────────────────
@@ -174,6 +204,12 @@ exports.getMemberById = async (id, user = {}) => {
     ],
   });
   if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+  if (member.referred_by) {
+    const referrer = await Member.findByPk(member.referred_by, { attributes: ["id", "first_name", "last_name"] }).catch(() => null);
+    if (referrer) {
+      member.setDataValue("referredByMember", referrer.toJSON ? referrer.toJSON() : referrer);
+    }
+  }
   return member;
 };
 

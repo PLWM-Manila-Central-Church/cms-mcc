@@ -4,6 +4,10 @@ import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import MonoIcon from '../../components/common/MonoIcon';
+import IconActionButton from '../../components/common/IconActionButton';
+import CollectionToolbar from '../../components/common/CollectionToolbar';
+import CompactPagination from '../../components/common/CompactPagination';
+import ModalDialog from '../../components/common/ModalDialog';
 import { normalizeEventStatus } from '../../utils/eventStatus';
 import { eventImageSrc } from '../../utils/eventImage';
 import { apiErrorMessage } from '../../utils/apiErrorMessage';
@@ -42,7 +46,13 @@ export default function EventDetailPage() {
 
   const [removingId, setRemovingId] = useState(null);
   const [removeMsg, setRemoveMsg]   = useState('');
+  const [actionError, setActionError] = useState('');
+  const [regSearch, setRegSearch]   = useState('');
+  const [regSeatFilter, setRegSeatFilter] = useState('');
+  const [regPage, setRegPage]       = useState(1);
+  const [regLimit, setRegLimit]     = useState(20);
   const [editingReservationMemberId, setEditingReservationMemberId] = useState(null);
+  const [editingReservationName, setEditingReservationName] = useState('');
   const [reservationForm, setReservationForm] = useState({ seat_number: '', parking_slot: '' });
   const [reservationSaving, setReservationSaving] = useState(false);
   const [reservationError, setReservationError] = useState('');
@@ -54,6 +64,7 @@ export default function EventDetailPage() {
   const [inviteError,     setInviteError]     = useState('');
   const [inviteSuccess,   setInviteSuccess]   = useState('');
   const [ministryMembers, setMinistryMembers] = useState([]);
+  const [inviteSearch,    setInviteSearch]    = useState('');
   const [selectedIds,     setSelectedIds]     = useState(new Set());
   const [inviteDeadline,  setInviteDeadline]  = useState('');
   const [sendingInvites,  setSendingInvites]  = useState(false);
@@ -121,18 +132,22 @@ export default function EventDetailPage() {
       confirmLabel: 'Cancel registration',
       tone: 'warning',
     }))) return;
-    setRemovingId(memberId); setRemoveMsg('');
+    setRemovingId(memberId); setRemoveMsg(''); setActionError('');
     try {
       await axiosInstance.post(`/events/${id}/registrations/${memberId}/cancel`);
       setRemoveMsg(`Registration for ${name} has been cancelled.`);
       fetchEvent();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to cancel registration.');
+      setActionError(apiErrorMessage(err, 'Failed to cancel registration.'));
     } finally { setRemovingId(null); }
   };
 
   const openReservationEditor = (registration) => {
     setEditingReservationMemberId(Number(registration.member_id));
+    const fullName = registration.member
+      ? `${registration.member.first_name || ''} ${registration.member.last_name || ''}`.trim()
+      : `Member #${registration.member_id}`;
+    setEditingReservationName(fullName);
     setReservationForm({
       seat_number: registration.seat_number ?? '',
       parking_slot: registration.parking_slot ?? '',
@@ -153,6 +168,7 @@ export default function EventDetailPage() {
       });
       setReservationMessage('Event seat and parking reservation updated.');
       setEditingReservationMemberId(null);
+      setEditingReservationName('');
       await fetchEvent();
     } catch (requestError) {
       setReservationError(apiErrorMessage(requestError, 'Failed to update the event reservation.'));
@@ -210,7 +226,35 @@ export default function EventDetailPage() {
   const status = normalizeEventStatus(event.status);
   const meta = STATUS_META[status] || STATUS_META.Upcoming;
   const registrations = event.EventRegistrations || [];
-  const visibleRegistrations = registrations;
+  const regSearchNorm = regSearch.trim().toLowerCase();
+  const filteredRegistrations = registrations.filter((r) => {
+    if (regSeatFilter === 'assigned' && r.seat_number == null && r.parking_slot == null) return false;
+    if (regSeatFilter === 'unassigned' && (r.seat_number != null || r.parking_slot != null)) return false;
+    if (!regSearchNorm) return true;
+    const hay = [
+      r.member?.first_name,
+      r.member?.last_name,
+      r.member?.email,
+      r.member?.phone,
+      r.member?.barcode,
+      r.seat_number != null ? `seat ${r.seat_number}` : '',
+      r.parking_slot != null ? `parking ${r.parking_slot}` : '',
+    ].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(regSearchNorm);
+  });
+  const regTotalPages = Math.max(1, Math.ceil(filteredRegistrations.length / regLimit));
+  const safeRegPage = Math.min(regPage, regTotalPages);
+  const visibleRegistrations = filteredRegistrations.slice((safeRegPage - 1) * regLimit, safeRegPage * regLimit);
+
+  const inviteSearchNorm = inviteSearch.trim().toLowerCase();
+  const filteredMinistryMembers = ministryMembers.filter((mem) => {
+    if (!inviteSearchNorm) return true;
+    return `${mem.first_name || ''} ${mem.last_name || ''} ${mem.email || ''}`.toLowerCase().includes(inviteSearchNorm);
+  });
+  const eligibleInviteIds = filteredMinistryMembers
+    .filter((mem) => !invites.some((inv) => inv.member_id === mem.id))
+    .map((mem) => mem.id);
+
   const canManageEventReservation = canUpdateReservations
     && ['Upcoming', 'Ongoing'].includes(eventStatus)
     && (Number(event.capacity) > 0 || Number(event.total_parking_slots) > 0);
@@ -271,7 +315,7 @@ export default function EventDetailPage() {
           </div>
           {event.registration_deadline && (
             <div style={s.detailItem}>
-              <span style={s.detailIcon}>⏰</span>
+              <span style={s.detailIcon}><MonoIcon name="clock" size={18} /></span>
               <div>
                 <div style={s.detailLabel}>Registration Deadline</div>
                 <div style={{ ...s.detailValue, color: deadlinePassed ? '#dc2626' : 'var(--mcc-ink, #0f172a)' }}>
@@ -348,121 +392,162 @@ export default function EventDetailPage() {
       {/* Registrations list */}
       {canViewRegistrations && (
         <div style={s.regSection}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
             <h2 style={{ ...s.regTitle, margin: 0 }}>
-              Registrations ({isScopedRegistrationViewer ? `${visibleRegistrations.length} shown of ${regCount}` : regCount})
+              Registrations ({isScopedRegistrationViewer ? `${registrations.length} shown of ${regCount}` : regCount})
             </h2>
           </div>
 
           {removeMsg && <div style={s.successBox}>{removeMsg}</div>}
+          {actionError && <div role="alert" style={s.errorBox}>{actionError}</div>}
           {reservationMessage && <div style={s.successBox}>{reservationMessage}</div>}
-          {reservationError && <div role="alert" style={s.errorBox}>{reservationError}</div>}
+          {reservationError && !editingReservationMemberId && <div role="alert" style={s.errorBox}>{reservationError}</div>}
 
-          {visibleRegistrations.length === 0 ? (
-            <div style={s.emptyReg}>No registrations yet.</div>
-          ) : (
-            <div style={s.tableWrap}>
-              <div style={s.tableScroll}><table style={s.table}>
-                <thead>
-                  <tr style={s.thead}>
-                    <th style={s.th}>#</th>
-                    <th style={s.th}>Member</th>
-                    <th style={s.th}>Email</th>
-                    <th style={s.th}>Phone</th>
-                    <th style={s.th}>Barcode</th>
-                    <th style={s.th}>Seat</th>
-                    <th style={s.th}>Parking</th>
-                    <th style={s.th}>Registered At</th>
-                    {hasRegistrationActions && <th style={s.th}>Action</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleRegistrations.map((r, i) => (
-                    <tr key={r.id} style={{ ...s.row, background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc' }}>
-                      <td style={{ ...s.td, color: '#94a3b8' }}>{i + 1}</td>
-                      <td style={s.td}>
-                        <div style={s.memberCell}>
-                          <div style={s.avatar}>
-                            {r.member?.first_name?.[0]}{r.member?.last_name?.[0]}
-                          </div>
-                          <span style={{ fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' }}>
-                            {r.member?.last_name}, {r.member?.first_name}
-                          </span>
-                        </div>
-                      </td>
-                      <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)' }}>{r.member?.email || '—'}</td>
-                      <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)' }}>{r.member?.phone || '—'}</td>
-                      <td style={{ ...s.td, fontFamily: 'monospace', fontSize: '12px', color: 'var(--mcc-secondary, #52647a)' }}>
-                        {r.member?.barcode || '—'}
-                      </td>
-                      <td style={s.td}>{r.seat_number ?? '—'}</td>
-                      <td style={s.td}>{r.parking_slot ?? '—'}</td>
-                      <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)' }}>
-                        {r.registered_at
-                          ? new Date(r.registered_at).toLocaleDateString('en-PH', {
-                              month: 'short', day: 'numeric', year: 'numeric',
-                            })
-                          : '—'}
-                      </td>
-                    {hasRegistrationActions && (
-                        <td style={s.td}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 150 }}>
-                            {canManageEventReservation && (
-                              <button
-                                type="button"
-                                onClick={() => openReservationEditor(r)}
-                                disabled={reservationSaving}
-                                style={{ ...s.removeBtn, background: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8' }}
-                              >
-                                Manage seat/parking
-                              </button>
-                            )}
-                            {canManageRegistrations && <button
-                              onClick={() => handleRemoveReg(
-                                r.member_id,
-                                `${r.member?.first_name} ${r.member?.last_name}`
-                              )}
-                              disabled={removingId === r.member_id}
-                              style={{
-                                ...s.removeBtn,
-                                opacity: removingId === r.member_id ? 0.6 : 1,
-                                cursor: removingId === r.member_id ? 'not-allowed' : 'pointer',
-                              }}
-                            >
-                              {removingId === r.member_id ? '...' : 'Cancel registration'}
-                            </button>}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table></div>
-            </div>
+          {registrations.length > 0 && (
+            <CollectionToolbar
+              searchValue={regSearch}
+              onSearchChange={(val) => { setRegSearch(val); setRegPage(1); }}
+              searchPlaceholder="Search registrant name, email, phone, barcode..."
+              filters={(Number(event.capacity) > 0 || Number(event.total_parking_slots) > 0) ? [{
+                key: 'seat',
+                label: 'Filter by reservation assignment',
+                value: regSeatFilter,
+                onChange: (v) => { setRegSeatFilter(v); setRegPage(1); },
+                options: [
+                  { value: '', label: 'All registrants' },
+                  { value: 'assigned', label: 'Seat/parking assigned' },
+                  { value: 'unassigned', label: 'Unassigned' },
+                ],
+              }] : []}
+            />
           )}
-          {editingReservationMemberId && canManageEventReservation && (
-            <div style={{ ...s.regSection, marginTop: 16 }}>
-              <h3 style={{ ...s.regTitle, margin: '0 0 8px' }}>Change seat and parking assignment</h3>
-              <p style={{ ...s.muted, margin: 0 }}>Leave either field blank to clear that reservation.</p>
-              <EventReservationFields
-                capacity={event.capacity}
-                totalParkingSlots={event.total_parking_slots}
-                seatNumber={reservationForm.seat_number}
-                parkingSlot={reservationForm.parking_slot}
-                onSeatNumberChange={(value) => { setReservationError(''); setReservationForm((current) => ({ ...current, seat_number: value })); }}
-                onParkingSlotChange={(value) => { setReservationError(''); setReservationForm((current) => ({ ...current, parking_slot: value })); }}
-                disabled={reservationSaving}
-              />
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button type="button" style={s.cancelBtn} disabled={reservationSaving} onClick={() => setEditingReservationMemberId(null)}>Cancel</button>
-                <button type="button" style={s.registerBtn} disabled={reservationSaving} onClick={saveRegistrationReservation}>
-                  {reservationSaving ? 'Saving…' : 'Save reservation'}
-                </button>
-              </div>
+
+          {filteredRegistrations.length === 0 ? (
+            <div style={s.emptyReg}>
+              {registrations.length === 0 ? 'No registrations yet.' : 'No registrations match the current search or filter.'}
             </div>
+          ) : (
+            <>
+              <div style={s.tableWrap}>
+                <div className="mcc-table-scroll"><table style={s.table}>
+                  <thead>
+                    <tr style={s.thead}>
+                      <th style={s.th}>#</th>
+                      <th style={s.th}>Member</th>
+                      <th style={s.th}>Email</th>
+                      <th style={s.th}>Phone</th>
+                      <th style={s.th}>Barcode</th>
+                      <th style={s.th}>Seat</th>
+                      <th style={s.th}>Parking</th>
+                      <th style={s.th}>Registered At</th>
+                      {hasRegistrationActions && <th style={{ ...s.th, textAlign: 'right' }}>Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleRegistrations.map((r, i) => {
+                      const rowNum = (safeRegPage - 1) * regLimit + i + 1;
+                      return (
+                        <tr key={r.id} style={{ ...s.row, background: i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc' }}>
+                          <td style={{ ...s.td, color: '#94a3b8' }}>{rowNum}</td>
+                          <td style={s.td}>
+                            <div style={s.memberCell}>
+                              <div style={s.avatar}>
+                                {r.member?.first_name?.[0]}{r.member?.last_name?.[0]}
+                              </div>
+                              <span style={{ fontWeight: '600', color: 'var(--mcc-ink, #0f172a)' }}>
+                                {r.member?.last_name}, {r.member?.first_name}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)' }}>{r.member?.email || '—'}</td>
+                          <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)' }}>{r.member?.phone || '—'}</td>
+                          <td style={{ ...s.td, fontFamily: 'monospace', fontSize: '12px', color: 'var(--mcc-secondary, #52647a)' }}>
+                            {r.member?.barcode || '—'}
+                          </td>
+                          <td style={s.td}>{r.seat_number ?? '—'}</td>
+                          <td style={s.td}>{r.parking_slot ?? '—'}</td>
+                          <td style={{ ...s.td, color: 'var(--mcc-secondary, #52647a)' }}>
+                            {r.registered_at
+                              ? new Date(r.registered_at).toLocaleDateString('en-PH', {
+                                  month: 'short', day: 'numeric', year: 'numeric',
+                                })
+                              : '—'}
+                          </td>
+                          {hasRegistrationActions && (
+                            <td style={{ ...s.td, textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', gap: 6, justifyContent: 'flex-end' }}>
+                                {canManageEventReservation && (
+                                  <IconActionButton
+                                    icon="edit"
+                                    label="Manage seat and parking"
+                                    title="Manage seat/parking"
+                                    tone="primary"
+                                    disabled={reservationSaving}
+                                    onClick={() => openReservationEditor(r)}
+                                  />
+                                )}
+                                {canManageRegistrations && (
+                                  <IconActionButton
+                                    icon="close"
+                                    label="Cancel registration"
+                                    title="Cancel registration"
+                                    tone="danger"
+                                    disabled={removingId === r.member_id}
+                                    onClick={() => handleRemoveReg(
+                                      r.member_id,
+                                      `${r.member?.first_name} ${r.member?.last_name}`
+                                    )}
+                                  />
+                                )}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table></div>
+              </div>
+              <CompactPagination
+                page={safeRegPage}
+                totalPages={regTotalPages}
+                total={filteredRegistrations.length}
+                limit={regLimit}
+                pageSizes={[20, 50, 100]}
+                onPageChange={setRegPage}
+                onLimitChange={(next) => { setRegLimit(next); setRegPage(1); }}
+              />
+            </>
           )}
         </div>
       )}
+
+      <ModalDialog
+        open={Boolean(editingReservationMemberId && canManageEventReservation)}
+        onClose={() => { if (!reservationSaving) { setEditingReservationMemberId(null); setEditingReservationName(''); } }}
+        title="Manage Seat & Parking Assignment"
+        subtitle={editingReservationName ? `Updating reservation for ${editingReservationName}. Leave either field blank to clear.` : 'Leave either field blank to clear that reservation.'}
+        maxWidth={520}
+        footer={(
+          <>
+            <button type="button" className="mcc-btn-secondary" disabled={reservationSaving} onClick={() => { setEditingReservationMemberId(null); setEditingReservationName(''); }}>Cancel</button>
+            <button type="button" className="mcc-btn-primary" disabled={reservationSaving} onClick={saveRegistrationReservation}>
+              {reservationSaving ? 'Saving…' : 'Save Reservation'}
+            </button>
+          </>
+        )}
+      >
+        {reservationError && <div role="alert" style={s.errorBox}>{reservationError}</div>}
+        <EventReservationFields
+          capacity={event.capacity}
+          totalParkingSlots={event.total_parking_slots}
+          seatNumber={reservationForm.seat_number}
+          parkingSlot={reservationForm.parking_slot}
+          onSeatNumberChange={(value) => { setReservationError(''); setReservationForm((current) => ({ ...current, seat_number: value })); }}
+          onParkingSlotChange={(value) => { setReservationError(''); setReservationForm((current) => ({ ...current, parking_slot: value })); }}
+          disabled={reservationSaving}
+        />
+      </ModalDialog>
       {/* ── Ministry Invite Panel (Ministry Leaders only) ── */}
       {user?.leadsMinistryId && (
         <div style={{ ...s.regSection, marginTop: 24 }}>
@@ -481,21 +566,50 @@ export default function EventDetailPage() {
             <div style={{ padding: '16px', color: '#94a3b8', fontSize: 14 }}>No members in your ministry roster yet.</div>
           ) : (
             <>
-              <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Response Deadline</label>
-                <input
-                  type="datetime-local"
-                  value={inviteDeadline}
-                  onChange={e => setInviteDeadline(e.target.value)}
-                  style={{ padding: '6px 10px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 7, outline: 'none', fontFamily: 'inherit' }}
-                />
-                <span style={{ fontSize: 12, color: '#94a3b8' }}>(optional)</span>
+              <div style={{ marginBottom: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input
+                    type="search"
+                    value={inviteSearch}
+                    onChange={(e) => setInviteSearch(e.target.value)}
+                    placeholder="Filter ministry members..."
+                    aria-label="Filter ministry members"
+                    style={{ padding: '6px 10px', fontSize: 13, border: '1px solid #cbd5e1', borderRadius: 7, minWidth: 200 }}
+                  />
+                  <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Response Deadline</label>
+                  <input
+                    type="datetime-local"
+                    value={inviteDeadline}
+                    onChange={e => setInviteDeadline(e.target.value)}
+                    style={{ padding: '6px 10px', fontSize: 13, border: '1px solid #cbd5e1', borderRadius: 7, outline: 'none', fontFamily: 'inherit' }}
+                  />
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>(optional)</span>
+                </div>
+                {eligibleInviteIds.length > 0 && (
+                  <button
+                    type="button"
+                    className="mcc-btn-secondary"
+                    style={{ padding: '6px 11px', fontSize: 12 }}
+                    onClick={() => {
+                      const allSelected = eligibleInviteIds.every((mid) => selectedIds.has(mid));
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        if (allSelected) eligibleInviteIds.forEach((mid) => next.delete(mid));
+                        else eligibleInviteIds.forEach((mid) => next.add(mid));
+                        return next;
+                      });
+                    }}
+                  >
+                    {eligibleInviteIds.every((mid) => selectedIds.has(mid)) ? 'Unselect visible' : `Select all eligible (${eligibleInviteIds.length})`}
+                  </button>
+                )}
               </div>
 
-              <div style={{ border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 8, overflow: 'hidden', marginBottom: 12 }}>
-                {ministryMembers.map((mem, i) => {
+              <div style={{ border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 8, overflowY: 'auto', maxHeight: 340, marginBottom: 12 }}>
+                {filteredMinistryMembers.length === 0 ? (
+                  <div style={{ padding: 16, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>No members match "{inviteSearch}".</div>
+                ) : filteredMinistryMembers.map((mem, i) => {
                   const checked = selectedIds.has(mem.id);
-                  // Check if already invited
                   const existing = invites.find(inv => inv.member_id === mem.id);
                   return (
                     <div
@@ -505,7 +619,7 @@ export default function EventDetailPage() {
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '10px 14px',
                         background: checked ? '#e8f4fd' : i % 2 === 0 ? 'var(--mcc-surface, #fff)' : '#f8fafc',
-                        borderBottom: i < ministryMembers.length - 1 ? '1px solid #f1f5f9' : 'none',
+                        borderBottom: i < filteredMinistryMembers.length - 1 ? '1px solid #f1f5f9' : 'none',
                         cursor: existing ? 'default' : 'pointer',
                         opacity: existing ? 0.6 : 1,
                       }}
@@ -577,41 +691,36 @@ export default function EventDetailPage() {
 }
 
 const s = {
-  page:         { fontFamily: "'Segoe UI', sans-serif" },
+  page:         {},
   loading:      { padding: '48px', textAlign: 'center', color: '#94a3b8' },
-  backBtn:      { background: 'none', border: 'none', color: '#0066b3', fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: '0 0 20px 0', display: 'block' },
-  headerCard:   { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: 'clamp(16px,4vw,32px)', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+  backBtn:      { background: 'none', border: 'none', color: '#0066b3', fontSize: '14px', cursor: 'pointer', fontWeight: '500', padding: '0 0 16px 0', display: 'block' },
+  headerCard:   { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 14px)', padding: 'clamp(16px,3.5vw,28px)', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' },
   headerTop:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
   badge:        { padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', marginRight: '8px' },
-  categoryTag:  { fontSize: '13px', color: '#94a3b8', fontWeight: '500' },
+  categoryTag:  { fontSize: '13px', color: '#64748b', fontWeight: '500' },
   eventTitle:   { fontSize: '26px', fontWeight: '800', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 12px 0' },
   eventDesc:    { fontSize: '15px', color: '#475569', lineHeight: '1.6', margin: '0 0 20px 0' },
   detailsRow:   { display: 'flex', gap: '24px', flexWrap: 'wrap' },
   detailItem:   { display: 'flex', gap: '10px', alignItems: 'flex-start' },
-  detailIcon:   { fontSize: '18px', marginTop: '2px' },
-  detailLabel:  { fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600' },
+  detailIcon:   { fontSize: '18px', marginTop: '2px', color: '#005599' },
+  detailLabel:  { fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600' },
   detailValue:  { fontSize: '14px', color: 'var(--mcc-ink, #0f172a)', fontWeight: '500', marginTop: '2px' },
   regRow:       { display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' },
-  regConfirmed: { fontSize: '14px', color: '#16a34a', fontWeight: '600' },
-  registerBtn:  { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '10px', padding: '12px 24px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' },
-  cancelRegBtn: { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
+  regConfirmed: { fontSize: '14px', color: '#16a34a', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: 6 },
+  registerBtn:  { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '9px', padding: '10px 18px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+  cancelRegBtn: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   closedBox:    { background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: '8px', padding: '10px 16px', fontSize: '14px', display: 'inline-block' },
   successBox:   { background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', borderRadius: '8px', padding: '10px 16px', fontSize: '14px', marginBottom: '12px' },
   errorBox:     { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '12px' },
-  regSection:   { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
-  regTitle:     { fontSize: '16px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 16px 0' },
-  filterTabs:   { display: 'inline-flex', background: '#f1f5f9', borderRadius: '10px', padding: 4, gap: 4 },
-  filterTab:    { border: 'none', background: 'transparent', color: 'var(--mcc-secondary, #52647a)', borderRadius: '8px', padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
-  filterTabActive: { background: 'var(--mcc-surface, #fff)', color: '#005599', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' },
-  emptyReg:     { padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
-  tableWrap:    { borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--mcc-border, #e2e8f0)' },
-  tableScroll:  { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
+  regSection:   { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 14px)', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' },
+  regTitle:     { fontSize: '16px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 14px 0', display: 'inline-flex', alignItems: 'center', gap: 8 },
+  emptyReg:     { padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '14px' },
+  tableWrap:    { borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--mcc-border, #e2e8f0)' },
   table:        { width: '100%', borderCollapse: 'collapse' },
   thead:        { background: '#f8fafc' },
-  th:           { padding: '10px 14px', fontSize: '11px', fontWeight: '700', color: 'var(--mcc-secondary, #52647a)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--mcc-border, #e2e8f0)' },
+  th:           { padding: '10px 12px', fontSize: '11px', fontWeight: '700', color: 'var(--mcc-secondary, #52647a)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--mcc-border, #e2e8f0)', whiteSpace: 'nowrap' },
   row:          {},
-  td:           { padding: '12px 14px', fontSize: '14px', color: '#374151', borderBottom: '1px solid #f1f5f9' },
+  td:           { padding: '10px 12px', fontSize: '13.5px', color: '#374151', borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' },
   memberCell:   { display: 'flex', alignItems: 'center', gap: '10px' },
-  avatar:       { width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
-  removeBtn:    { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', fontWeight: '600' },
+  avatar:       { width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 },
 };

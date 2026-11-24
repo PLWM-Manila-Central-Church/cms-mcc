@@ -93,12 +93,14 @@ exports.getMemoryVerse = async (memberId) => {
   return { today: manilaToday(), group: await groupNameFor(member?.group_id), ...memory };
 };
 
-exports.getSummary = async (month) => {
+exports.getSummary = async (month, options = {}) => {
   if (!MONTH.test(String(month || ""))) {
     throw AppError.badRequest("VALIDATION_ERROR", "month must be formatted YYYY-MM");
   }
+  const memberWhere = { is_deleted: 0 };
+  if (options.group_id) memberWhere.group_id = Number(options.group_id);
   const members = (
-    await Member.findAll({ where: { is_deleted: 0 }, attributes: ["id", "first_name", "last_name"] })
+    await Member.findAll({ where: memberWhere, attributes: ["id", "first_name", "last_name", "group_id"] })
   ).map(plain);
   const progress = (
     await BibleReadingProgress.findAll({
@@ -107,14 +109,42 @@ exports.getSummary = async (month) => {
     })
   ).map(plain);
 
-  const rows = summarizeMonth({ members, progress, month });
+  let rows = summarizeMonth({ members, progress, month });
+  const totalMembers = rows.length;
   const finished = rows.filter((row) => row.finished).length;
+
+  const q = String(options.search || "").trim().toLowerCase();
+  if (q) {
+    rows = rows.filter((row) => String(row.name || "").toLowerCase().includes(q));
+  }
+  if (options.status === "finished") {
+    rows = rows.filter((row) => row.finished);
+  } else if (options.status === "in_progress") {
+    rows = rows.filter((row) => !row.finished);
+  }
+
+  rows.sort((left, right) => right.completed - left.completed || left.name.localeCompare(right.name));
+  const filteredTotal = rows.length;
+
+  let page = 1;
+  let totalPages = 1;
+  let pagedRows = rows;
+  if (options.page !== undefined) {
+    page = Math.max(1, parseInt(options.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(options.limit, 10) || 25));
+    totalPages = Math.max(1, Math.ceil(filteredTotal / limit));
+    const offset = (page - 1) * limit;
+    pagedRows = rows.slice(offset, offset + limit);
+  }
 
   return {
     month,
     target: getMonthTarget(month),
-    members: rows.sort((left, right) => right.completed - left.completed || left.name.localeCompare(right.name)),
-    total: rows.length,
+    members: pagedRows,
+    total: totalMembers,
+    filtered_total: filteredTotal,
+    page,
+    total_pages: totalPages,
     finished,
   };
 };

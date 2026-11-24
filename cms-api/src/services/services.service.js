@@ -25,11 +25,32 @@ const ensureStatusTransition = (current, next) => {
 };
 
 // ── Get All Services (paginated) ─────────────────────────────
-exports.getAllServices = async ({ page = 1, limit = 15, status } = {}, user = {}) => {
-  const offset = (parseInt(page) - 1) * parseInt(limit);
+exports.getAllServices = async ({ page = 1, limit = 15, status, search, gathering_type, date_from, date_to, sort } = {}, user = {}) => {
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 15));
+  const offset = (pageNum - 1) * limitNum;
   const where  = { is_deleted: 0 };
   const hideChurchwideAttendance = isScopedLeader(user);
   if (status) where.status = status;
+  if (gathering_type) where.gathering_type = gathering_type;
+  const q = String(search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    where[Op.or] = [
+      { title: { [Op.like]: like } },
+      { venue: { [Op.like]: like } },
+      { presiding_minister: { [Op.like]: like } },
+    ];
+  }
+  if (date_from || date_to) {
+    where.service_date = {};
+    if (date_from) where.service_date[Op.gte] = date_from;
+    if (date_to)   where.service_date[Op.lte] = date_to;
+  }
+
+  let order = [["service_date", "DESC"], ["service_time", "DESC"]];
+  if (sort === "date_asc") order = [["service_date", "ASC"], ["service_time", "ASC"]];
+  else if (sort === "title_asc") order = [["title", "ASC"], ["service_date", "DESC"]];
 
   const { count, rows } = await Service.findAndCountAll({
     where,
@@ -37,8 +58,8 @@ exports.getAllServices = async ({ page = 1, limit = 15, status } = {}, user = {}
       { model: Event, as: "event", attributes: ["id", "title", "start_date", "end_date"], required: false },
       ...(!hideChurchwideAttendance ? [{ model: ServiceAttendanceSummary, as: "summary", required: false }] : []),
     ],
-    order: [["service_date", "DESC"], ["service_time", "DESC"]],
-    limit: parseInt(limit),
+    order,
+    limit: limitNum,
     offset,
     distinct: true,
   });
@@ -91,8 +112,12 @@ exports.getServiceById = async (id) => {
 exports.createService = async (data, createdBy) => {
   const {
     title,
+    gathering_type,
     service_date,
     service_time,
+    end_time,
+    venue,
+    presiding_minister,
     capacity,
     total_parking_slots,
     response_deadline,
@@ -112,8 +137,12 @@ exports.createService = async (data, createdBy) => {
 
   const service = await Service.create({
     title,
+    ...(gathering_type ? { gathering_type } : {}),
     service_date,
     service_time: service_time || null,
+    ...(end_time !== undefined ? { end_time: end_time || null } : {}),
+    ...(venue !== undefined ? { venue: venue || null } : {}),
+    ...(presiding_minister !== undefined ? { presiding_minister: presiding_minister || null } : {}),
     capacity: capacity ?? null,
     total_parking_slots: total_parking_slots ?? null,
     event_id: event_id || null,

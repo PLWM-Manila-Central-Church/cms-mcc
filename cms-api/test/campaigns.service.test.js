@@ -1,30 +1,27 @@
 "use strict";
 
 const mockState = {};
-jest.mock("../src/config/db", () => ({ transaction: jest.fn(async (callback) => callback({})), getQueryInterface: jest.fn() }));
+jest.mock("../src/config/db", () => ({ transaction: jest.fn(async (callback) => callback({ LOCK: { UPDATE: "UPDATE" } })), getQueryInterface: jest.fn() }));
 jest.mock("../src/models", () => ({
   Event: { findByPk: jest.fn() },
   User: {},
 }));
 jest.mock("../src/modules/outreach/models", () => ({
   NotificationCampaign: {
-    create: jest.fn(), findByPk: jest.fn(), findAll: jest.fn(), findAndCountAll: jest.fn(),
+    update: jest.fn().mockResolvedValue([1]), create: jest.fn(), findByPk: jest.fn(), findAll: jest.fn(), findAndCountAll: jest.fn(),
   },
   OutreachDelivery: { findOrCreate: jest.fn(), findAll: jest.fn(), update: jest.fn() },
 }));
-jest.mock("../src/modules/outreach/configuration", () => ({ getConfiguration: jest.fn() }));
+jest.mock("../src/modules/outreach/configuration", () => ({ getConfiguration: jest.fn(), transportState: jest.fn(() => ({})) }));
 jest.mock("../src/modules/outreach/audience", () => ({ previewCampaign: jest.fn() }));
-jest.mock("../src/modules/outreach/permissions", () => ({
-  CAMPAIGN_ROLES: ["System Admin", "Pastor", "Ministry Leader", "Registration Team"],
-  canBroadcast: (user) => ["System Admin", "Pastor"].includes(user.roleName),
-  canApprove: (user) => ["System Admin", "Pastor"].includes(user.roleName),
-}));
 jest.mock("../src/modules/outreach/repository", () => ({ audit: jest.fn() }));
 
 const { NotificationCampaign, OutreachDelivery } = require("../src/modules/outreach/models");
 const { Event } = require("../src/models");
 const { getConfiguration } = require("../src/modules/outreach/configuration");
 const { previewCampaign } = require("../src/modules/outreach/audience");
+jest.mock("../src/modules/outreach/dispatcher", () => ({ processQueue: jest.fn().mockResolvedValue({ processed: 1 }) }));
+const { processQueue } = require("../src/modules/outreach/dispatcher");
 const campaigns = require("../src/modules/outreach/campaigns.service");
 
 const config = {
@@ -33,7 +30,7 @@ const config = {
   campaign_approval_recipient_threshold: 50, campaign_approval_cost_threshold: 50,
   campaign_quiet_start: 0, campaign_quiet_end: 24,
 };
-const admin = { userId: 1, roleName: "System Admin" };
+const registrar = { userId: 1, roleName: "Registration Team" };
 const pastor = { userId: 2, roleName: "Pastor" };
 const preview = {
   recipient_count: 2, segment_count: 1, estimated_cost_php: 0.93, monthly_remaining_php: 99,
@@ -69,7 +66,7 @@ test("create stores an event campaign with cost and no approval when under thres
     title: "Event reminder", audience_type: "event", event_id: 1,
     message: "Hi {{first_name}}, join us. PLWM-MCC",
     scheduled_at: "2099-10-16T01:00:00+08:00",
-  }, admin);
+  }, registrar);
   expect(previewCampaign).toHaveBeenCalled();
   expect(NotificationCampaign.create).toHaveBeenCalledWith(expect.objectContaining({
     title: "Event reminder", audience_type: "event", recipient_count: 2,
@@ -80,7 +77,7 @@ test("create stores an event campaign with cost and no approval when under thres
 
 test("submit moves a required approval campaign to pending_approval", async () => {
   previewCampaign.mockResolvedValue({ ...preview, recipient_count: 200 });
-  const result = await campaigns.submit(5, admin);
+  const result = await campaigns.submit(5, registrar);
   expect(result.status).toBe("pending_approval");
   expect(result.approval_required).toBe(true);
 });
@@ -88,20 +85,20 @@ test("submit moves a required approval campaign to pending_approval", async () =
 test("approve rejects the creator approving their own campaign", async () => {
   mockState.campaign.status = "pending_approval";
   mockState.campaign.created_by = 1;
-  await expect(campaigns.approve(5, admin)).rejects.toMatchObject({ status: 403 });
+  await expect(campaigns.approve(5, registrar)).rejects.toMatchObject({ status: 403 });
 });
 
 test("a different approver can approve a pending campaign", async () => {
   mockState.campaign.status = "pending_approval";
   mockState.campaign.created_by = 1;
-  const result = await campaigns.approve(5, pastor, "Looks good");
+  const result = await campaigns.approve(5, { ...registrar, userId: 2 }, "Looks good");
   expect(result.status).toBe("approved");
   expect(result.approved_by).toBe(2);
 });
 
 test("cancel cancels queued deliveries and closes the campaign", async () => {
   mockState.campaign.status = "scheduled";
-  await campaigns.cancel(5, admin, "Event moved");
+  await campaigns.cancel(5, registrar, "Event moved");
   expect(OutreachDelivery.update).toHaveBeenCalledWith(
     expect.objectContaining({ status: "cancelled" }),
     expect.objectContaining({ where: expect.objectContaining({ campaign_id: 5 }) }),
@@ -110,6 +107,7 @@ test("cancel cancels queued deliveries and closes the campaign", async () => {
 });
 
 test("queueCampaign creates one delivery per recipient with campaign idempotency", async () => {
+  mockState.campaign.status = "approved";
   previewCampaign.mockResolvedValue({
     ...preview,
     recipients: [
@@ -125,4 +123,23 @@ test("queueCampaign creates one delivery per recipient with campaign idempotency
     where: expect.objectContaining({ idempotency_key: expect.any(String) }),
     defaults: expect.objectContaining({ campaign_id: 5, kind: "campaign", channel: "sms" }),
   }));
+});
+
+
+test("Pastor and System Admin cannot compose SMS", async () => {
+  for (const user of [pastor, { userId: 3, roleName: "System Admin" }]) {
+    await expect(campaigns.preview({ audience_type: "selected_members", member_ids: [1], message: "Hello" }, user))
+      .rejects.toMatchObject({ status: 403 });
+  }
+});
+
+test("Send now requests a processing pass scoped to the confirmed campaign", async () => {
+  mockState.campaign.timing_mode = "send_now";
+  mockState.campaign.audience_type = "selected_members";
+  mockState.campaign.member_ids = [42];
+  OutreachDelivery.findAll.mockResolvedValue([]);
+  await campaigns.submit(5, registrar);
+  await new Promise(setImmediate);
+  expect(previewCampaign).toHaveBeenCalledWith(expect.objectContaining({ member_ids: [42] }), config, expect.any(Date));
+  expect(processQueue).toHaveBeenCalledWith({ campaignId: 5 });
 });

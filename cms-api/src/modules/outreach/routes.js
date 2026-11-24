@@ -47,25 +47,26 @@ router.get("/availability", handle(async (req) => {
   const ready = await readiness();
   const config = ready ? await getConfiguration() : DEFAULTS;
   return { schema_ready: ready, campaigns_schema_ready: ready && await campaignReadiness(), enabled: config.enabled, mode: config.mode, campaigns_enabled: config.campaigns_enabled, ...transportState(),
-    capabilities: { configure: req.user.roleName === "System Admin", manage: STAFF_ROLES.includes(req.user.roleName),
+    capabilities: { configure: canBroadcast(req.user), manage: STAFF_ROLES.includes(req.user.roleName),
       global: GLOBAL_ROLES.includes(req.user.roleName), resolve: READ_ROLES.includes(req.user.roleName),
-      process: STAFF_ROLES.includes(req.user.roleName), campaigns: CAMPAIGN_ROLES.includes(req.user.roleName),
+      process: STAFF_ROLES.includes(req.user.roleName), campaigns: CAMPAIGN_ROLES.includes(req.user.roleName), campaign_write: canBroadcast(req.user),
       broadcast: canBroadcast(req.user), approve: canApprove(req.user) } };
 }));
 router.get("/me/preferences", requireSchema, handle((req) => repository.getPreference(req.user.memberId, req.user, { self: true })));
 router.put("/me/preferences", requireSchema, validate(schemas.preference), handle((req) => repository.setPreference(req.user.memberId, req.body, req.user, { self: true })));
 router.use(requireRole(READ_ROLES), authorize("outreach", "read"), requireSchema);
-router.get("/campaigns", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.collection, "query"), handle((req) => campaigns.list(req.query, req.user)));
-router.post("/campaigns/preview", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.campaignPreview), handle((req) => campaigns.preview(req.body, req.user)));
-router.post("/campaigns", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.campaign), handle((req) => campaigns.create(req.body, req.user)));
+router.get("/campaigns", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.campaigns, "query"), handle((req) => campaigns.list(req.query, req.user)));
+router.get("/campaigns/member-options", requireRole(["Registration Team"]), requireCampaignSchema, validate(schemas.collection, "query"), handle((req) => campaigns.memberOptions(req.query)));
+router.post("/campaigns/preview", requireRole(["Registration Team"]), requireCampaignSchema, validate(schemas.campaignPreview), handle((req) => campaigns.preview(req.body, req.user)));
+router.post("/campaigns", requireRole(["Registration Team"]), requireCampaignSchema, validate(schemas.campaign), handle((req) => campaigns.create(req.body, req.user)));
 router.get("/campaigns/:campaignId", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, handle((req) => campaigns.get(req.params.campaignId, req.user)));
 router.get("/campaigns/:campaignId/deliveries", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.collection, "query"), handle((req) => campaigns.deliveries(req.params.campaignId, req.query)));
-router.post("/campaigns/:campaignId/submit", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.empty), handle((req) => campaigns.submit(req.params.campaignId, req.user)));
-router.post("/campaigns/:campaignId/approve", requireRole(["System Admin", "Pastor"]), requireCampaignSchema, validate(schemas.campaignNote), handle((req) => campaigns.approve(req.params.campaignId, req.user, req.body.note)));
-router.post("/campaigns/:campaignId/reject", requireRole(["System Admin", "Pastor"]), requireCampaignSchema, validate(schemas.campaignReason), handle((req) => campaigns.reject(req.params.campaignId, req.user, req.body.reason)));
-router.post("/campaigns/:campaignId/cancel", requireRole(CAMPAIGN_ROLES), requireCampaignSchema, validate(schemas.campaignNote), handle((req) => campaigns.cancel(req.params.campaignId, req.user, req.body.note)));
-router.get("/configuration", requireRole(["System Admin"]), handle(getConfiguration));
-router.put("/configuration", requireRole(["System Admin"]), authorize("outreach", "configure"), validate(schemas.configuration), handle((req) => saveConfiguration(req.body, req.user)));
+router.post("/campaigns/:campaignId/submit", requireRole(["Registration Team"]), requireCampaignSchema, validate(schemas.empty), handle((req) => campaigns.submit(req.params.campaignId, req.user)));
+router.post("/campaigns/:campaignId/approve", requireRole(["Registration Team"]), requireCampaignSchema, validate(schemas.campaignNote), handle((req) => campaigns.approve(req.params.campaignId, req.user, req.body.note)));
+router.post("/campaigns/:campaignId/reject", requireRole(["Registration Team"]), requireCampaignSchema, validate(schemas.campaignReason), handle((req) => campaigns.reject(req.params.campaignId, req.user, req.body.reason)));
+router.post("/campaigns/:campaignId/cancel", requireRole(["Registration Team"]), requireCampaignSchema, validate(schemas.campaignNote), handle((req) => campaigns.cancel(req.params.campaignId, req.user, req.body.note)));
+router.get("/configuration", requireRole(["Registration Team"]), handle(getConfiguration));
+router.put("/configuration", requireRole(["Registration Team"]), validate(schemas.configuration), handle((req) => saveConfiguration(req.body, req.user)));
 router.get("/overview", handle((req) => repository.overview(req.user)));
 router.get("/sessions", validate(schemas.collection, "query"), handle((req) => repository.listSessions(req.query, req.user)));
 router.put("/sessions/:id/policy", requireRole(STAFF_ROLES), authorize("outreach", "manage"), validate(schemas.policy), handle((req) => repository.setSessionPolicy(req.params.id, req.body, req.user)));
@@ -98,5 +99,5 @@ router.post("/follow-ups/:id/resolve", authorize("outreach", "resolve"), validat
 router.get("/deliveries", validate(schemas.deliveries, "query"), handle((req) => repository.listDeliveries(req.query, req.user)));
 router.post("/deliveries/:id/retry", requireRole(STAFF_ROLES), authorize("outreach", "process"), validate(schemas.empty), handle((req) => retryDelivery(req.params.id, req.user)));
 router.post("/evaluate", requireRole(STAFF_ROLES), authorize("outreach", "process"), validate(schemas.evaluate), handle((req) => evaluatePage(req.body)));
-router.post("/process", requireRole(STAFF_ROLES), authorize("outreach", "process"), validate(schemas.process), handle((req) => processQueue(req.body)));
+router.post("/process", requireRole(STAFF_ROLES), authorize("outreach", "process"), validate(schemas.process), handle((req) => processQueue({ ...req.body, inAppOnly: req.user.roleName !== "Registration Team" })));
 module.exports = router;

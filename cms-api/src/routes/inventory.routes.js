@@ -15,7 +15,28 @@ const {
   getItemsQuerySchema, getRequestsQuerySchema, getUsageQuerySchema,
 } = require("../validators/inventory.validator");
 
+const { getScope } = require("../helpers/scopedLeader.helper");
+
+const guardInventoryRequestCreate = (req, res, next) => {
+  if (req.user?.roleName === "Pastor") {
+    return res.status(403).json({ success: false, message: "Pastor has read-only access to inventory." });
+  }
+  if (req.user?.roleName === "Leader") {
+    const scope = getScope(req.user);
+    if (!scope || scope.type === "all") {
+      return res.status(403).json({ success: false, message: "Select a single assigned team before submitting an inventory request." });
+    }
+  }
+  return next();
+};
+
 // ── Items ────────────────────────────────────────────────────
+router.get("/items/options", auth, authorize("inventory", "read"), async (req, res, next) => {
+  try {
+    const data = await invUpgrade.listItemOptions(req.query);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
 router.get("/items",        auth, authorize("inventory", "read"), validateQuery(getItemsQuerySchema), ctrl.getAllItems);
 router.get("/reports", auth, authorize("inventory", "read"), ctrl.getInventoryReport);
 router.get("/reports/export.csv", auth, authorize("inventory", "read"), ctrl.exportInventoryReport);
@@ -36,7 +57,7 @@ router.get("/requests/mine", auth, authorize("inventory", "read"), ctrl.getMyReq
 router.get("/requests/all",  auth, authorize("inventory", "read"), validateQuery(getRequestsQuerySchema), ctrl.getAllRequestsPaginated);
 router.get("/requests",      auth, authorize("inventory", "read"), ctrl.getAllRequests);
 router.get("/requests/:id",  auth, authorize("inventory", "read"), ctrl.getRequestById);
-router.post("/requests",                   auth, authorize("inventory", "read"),   validate(createRequestSchema), ctrl.createRequest);
+router.post("/requests",                   auth, authorize("inventory", "read"), guardInventoryRequestCreate, validate(createRequestSchema), ctrl.createRequest);
 router.put("/requests/:id/review",         auth, authorize("inventory", "update"), validate(reviewRequestSchema), ctrl.reviewRequest);
 router.patch("/requests/:id/review",       auth, authorize("inventory", "update"), validate(reviewRequestSchema), ctrl.reviewRequest);
 
@@ -55,7 +76,7 @@ router.post("/transactions", auth, authorize("inventory", "update"), async (req,
 });
 router.get("/borrowings", auth, authorize("inventory", "read"), async (req, res, next) => {
   try {
-    const data = await invUpgrade.listBorrowings();
+    const data = await invUpgrade.listBorrowings(req.query);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 });
@@ -73,7 +94,7 @@ router.post("/borrowings/:id/return", auth, authorize("inventory", "update"), as
 });
 router.get("/maintenance", auth, authorize("inventory", "read"), async (req, res, next) => {
   try {
-    const data = await invUpgrade.listMaintenance();
+    const data = await invUpgrade.listMaintenance(req.query);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 });

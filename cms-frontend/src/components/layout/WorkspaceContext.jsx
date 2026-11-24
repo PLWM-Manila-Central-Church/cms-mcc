@@ -17,8 +17,8 @@ export default function WorkspaceContext() {
           <span aria-hidden="true">/</span>
           <span>{module.label}</span>
         </div>
-        <details className="workspace-help">
-          <summary>About this page</summary>
+        <details className="workspace-help" style={{ marginTop: 0 }}>
+          <summary style={{ fontSize: 11.5, padding: '1px 6px', borderRadius: 6, background: '#f1f5f9' }}>About</summary>
           <p>{module.description}</p>
           <span className="workspace-scope-note">{workspace.note}</span>
         </details>

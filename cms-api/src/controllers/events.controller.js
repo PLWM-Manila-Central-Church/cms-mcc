@@ -153,7 +153,7 @@ exports.deleteCategory = async (req, res, next) => {
 // ── Event Registrations ──────────────────────────────────────
 exports.getEventRegistrations = async (req, res, next) => {
   try {
-    const result = await eventsService.getEventRegistrations(req.params.id, req.user);
+    const result = await eventsService.getEventRegistrations(req.params.id, req.user, req.query);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };

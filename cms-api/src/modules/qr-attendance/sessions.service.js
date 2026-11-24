@@ -447,7 +447,7 @@ const listSessions = async ({ target_type, target_id, status, limit = 50, page =
       { model: Service, as: "service", attributes: ["id", "title", "service_date", "service_time", "status"], required: false },
       { model: Event, as: "event", attributes: ["id", "title", "start_date", "end_date", "start_time", "status"], required: false },
     ],
-    order: [["starts_at", "ASC"], ["id", "ASC"]],
+    order: [["starts_at", "DESC"], ["id", "DESC"]],
     limit: pageSize,
     offset: (pageNumber - 1) * pageSize,
   });

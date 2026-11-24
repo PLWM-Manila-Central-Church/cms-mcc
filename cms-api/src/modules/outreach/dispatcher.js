@@ -13,18 +13,19 @@ const { OutreachPreference, OutreachSessionPolicy, AttendanceFollowUp, OutreachD
 
 const allowedRecipient = (phone) => process.env.SMS_ALLOW_ALL_OPTED_IN === "true"
   || (process.env.SMS_ALLOWED_RECIPIENTS || "").split(",").map(normalizePhone).filter(Boolean).includes(phone);
-const preflight = async (job, config, now = new Date(), transaction) => {
+const preflight = async (job, config, now = new Date(), transaction, retry = false) => {
   if (!config.enabled) return { hold: true, reason: "WORKFLOW_DISABLED" };
   if (now >= new Date(job.expires_at)) return { reason: "MESSAGE_EXPIRED" };
   const member = await Member.findByPk(job.member_id, { transaction, ...(transaction && { lock: transaction.LOCK.UPDATE }) });
   if (!member || member.status !== "Active") return { reason: "MEMBER_INACTIVE" };
   const preference = await OutreachPreference.findOne({ where: { member_id: member.id }, transaction });
   if (job.kind === "campaign") {
+    if (!require("./campaigns.service").withinSendWindow(now, config)) return { hold: true, reason: "OUTSIDE_SEND_WINDOW" };
     if (!config.campaigns_enabled) return { hold: true, reason: "CAMPAIGNS_DISABLED" };
     if (!preference || preference.campaign_notifications === false) return { reason: "CAMPAIGN_PREFERENCE_DISABLED" };
     const { NotificationCampaign } = require("./models");
     const campaign = await NotificationCampaign.findByPk(job.campaign_id, { transaction });
-    if (!campaign || !["approved", "scheduled", "sending"].includes(String(campaign.status))) return { reason: "CAMPAIGN_NOT_ACTIVE" };
+    if (!campaign || !["approved", "scheduled", "sending", ...(retry ? ["failed"] : [])].includes(String(campaign.status))) return { reason: "CAMPAIGN_NOT_ACTIVE" };
     if (campaign.window_end && now > new Date(campaign.window_end)) return { reason: "CAMPAIGN_EXPIRED" };
     if (campaign.event_id) {
       const event = await Event.findByPk(campaign.event_id, { attributes: ["id", "status"], transaction });
@@ -77,11 +78,11 @@ const preflight = async (job, config, now = new Date(), transaction) => {
   if (job.channel === "sms" && config.mode === "live" && estimateSegments(message) > Math.max(1, Math.min(5, Number(process.env.SMS_MAX_SEGMENTS) || 1))) return { failed: true, reason: "SMS_SEGMENT_LIMIT" };
   return { eligible: true, member, session, message };
 };
-const claimNext = async (config, now) => sequelize.transaction(async (transaction) => {
+const claimNext = async (config, now, campaignId, inAppOnly) => sequelize.transaction(async (transaction) => {
   const state = transportState();
   const smsProcessable = config.mode === "simulation" || config.mode === "live" && state.sms_delivery_enabled && state.provider_configured && state.recipient_restriction_configured;
   const row = await OutreachDelivery.findOne({
-    where: { status: "queued", scheduled_at: { [Op.lte]: now }, next_attempt_at: { [Op.lte]: now }, ...(!smsProcessable ? { channel: "in_app" } : {}) },
+    where: { status: "queued", scheduled_at: { [Op.lte]: now }, next_attempt_at: { [Op.lte]: now }, ...(campaignId ? { campaign_id: campaignId } : {}), ...(!smsProcessable || inAppOnly ? { channel: "in_app" } : {}) },
     order: [["next_attempt_at", "ASC"], ["id", "ASC"]], transaction, lock: transaction.LOCK.UPDATE,
   });
   if (!row) return null;
@@ -181,13 +182,13 @@ const reconcileProviderStatuses = async (config, now) => {
     } catch { await job.update({ provider_status_checked_at: now, last_error_code: "PROVIDER_STATUS_UNAVAILABLE" }); }
   }
 };
-const processQueue = async ({ limit = 25, now = new Date() } = {}) => {
+const processQueue = async ({ limit = 25, now = new Date(), campaignId, inAppOnly } = {}) => {
   const config = await getConfiguration();
   if (!config.enabled) return { enabled: false, processed: 0 };
   await recoverExpiredClaims(now);
   let processed = 0;
   for (; processed < Math.min(100, limit); processed++) {
-    const claim = await claimNext(config, now);
+    const claim = await claimNext(config, now, campaignId, inAppOnly);
     if (!claim) break;
     await processClaim(claim, config, now);
   }
@@ -198,8 +199,13 @@ const retryDelivery = async (id, user) => sequelize.transaction(async (transacti
   const job = await OutreachDelivery.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
   if (!job) throw AppError.notFound("DELIVERY_NOT_FOUND", "Delivery was not found");
   if (job.status !== "failed") throw AppError.conflict("DELIVERY_NOT_RETRYABLE", "Only a definitive failure can be retried. Unknown results need provider review.");
-  const check = await preflight(job, await getConfiguration(), new Date(), transaction);
+  if (job.channel === "sms" && user?.roleName !== "Registration Team") throw AppError.forbidden("Only Registration Team can retry SMS");
+  const check = await preflight(job, await getConfiguration(), new Date(), transaction, true);
   if (!check.eligible && !check.hold) throw AppError.conflict("DELIVERY_NOT_ELIGIBLE", "This message is no longer eligible: " + check.reason);
+  if (job.campaign_id) {
+    const { NotificationCampaign } = require("./models");
+    await NotificationCampaign.update({ status: "sending" }, { where: { id: job.campaign_id, status: "failed" }, transaction });
+  }
   await job.update({ status: "queued", next_attempt_at: new Date(), lease_until: null, claim_token: null, provider_message_id: null, last_error_code: null }, { transaction });
   await audit(user, "OUTREACH_DELIVERY_RETRIED", "outreach_deliveries", job.id, { channel: job.channel }, transaction);
   return { id: job.id, status: "queued" };

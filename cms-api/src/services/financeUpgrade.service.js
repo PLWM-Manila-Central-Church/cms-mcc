@@ -140,15 +140,49 @@ exports.listAccountsWithBalances = async () => {
 };
 
 // ── Transfers (Excluded from Income & Expense totals)
-exports.listTransfers = async ({ limit = 50 } = {}) => {
-  const capped = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
+exports.listTransfers = async ({ page, limit = 25, search, date_from, date_to } = {}) => {
+  const capped = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+  const where = { is_deleted: 0 };
+  if (date_from || date_to) {
+    where.transfer_date = {};
+    if (date_from) where.transfer_date[Op.gte] = date_from;
+    if (date_to) where.transfer_date[Op.lte] = date_to;
+  }
+  const q = String(search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    where[Op.or] = [
+      { transaction_number: { [Op.like]: like } },
+      { reference_number: { [Op.like]: like } },
+      { remarks: { [Op.like]: like } },
+    ];
+  }
+  const include = [
+    { model: Account, as: "fromAccount", attributes: ["id", "name", "account_type"], required: false },
+    { model: Account, as: "toAccount", attributes: ["id", "name", "account_type"], required: false },
+    { model: Fund, as: "fromFund", attributes: ["id", "name"], required: false },
+    { model: Fund, as: "toFund", attributes: ["id", "name"], required: false },
+  ];
+  if (page !== undefined) {
+    const currentPage = Math.max(1, parseInt(page, 10) || 1);
+    const { count, rows } = await FinanceTransfer.findAndCountAll({
+      where,
+      include,
+      order: [["transfer_date", "DESC"], ["id", "DESC"]],
+      limit: capped,
+      offset: (currentPage - 1) * capped,
+      distinct: true,
+    }).catch(() => ({ count: 0, rows: [] }));
+    return {
+      items: rows,
+      total: count,
+      page: currentPage,
+      total_pages: Math.max(1, Math.ceil(count / capped)),
+    };
+  }
   return safeFindAll(FinanceTransfer, {
-    include: [
-      { model: Account, as: "fromAccount", attributes: ["id", "name", "account_type"], required: false },
-      { model: Account, as: "toAccount", attributes: ["id", "name", "account_type"], required: false },
-      { model: Fund, as: "fromFund", attributes: ["id", "name"], required: false },
-      { model: Fund, as: "toFund", attributes: ["id", "name"], required: false },
-    ],
+    where,
+    include,
     order: [["transfer_date", "DESC"], ["id", "DESC"]],
     limit: capped,
   });
@@ -195,22 +229,92 @@ exports.archiveTransfer = async (id, user) => {
 };
 
 // ── Expense Approval Workflow (Draft -> Pending Approval -> Approved -> Paid; Rejected / Cancelled)
-exports.listWorkflowExpenses = async ({ status, limit = 50 } = {}) => {
-  const where = { is_deleted: 0 };
+exports.listWorkflowExpenses = async ({ status, search, category_id, fund_id, date_from, date_to, page, limit = 25 } = {}) => {
+  const baseWhere = { is_deleted: 0 };
+  if (category_id) baseWhere.category_id = Number(category_id);
+  if (fund_id) baseWhere.fund_id = Number(fund_id);
+  if (date_from || date_to) {
+    baseWhere.date = {};
+    if (date_from) baseWhere.date[Op.gte] = date_from;
+    if (date_to) baseWhere.date[Op.lte] = date_to;
+  }
+  const q = String(search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    baseWhere[Op.or] = [
+      { transaction_number: { [Op.like]: like } },
+      { payee: { [Op.like]: like } },
+      { description: { [Op.like]: like } },
+      { remarks: { [Op.like]: like } },
+    ];
+  }
+  const where = { ...baseWhere };
   if (status && status !== "all") where.status = status;
+
+  const include = [
+    { model: ExpenseCategory, as: "category", attributes: ["id", "category_name"], required: false },
+    { model: PaymentMethod, as: "paymentMethod", attributes: ["id", "method_name"], required: false },
+    { model: Fund, as: "fund", attributes: ["id", "name"], required: false },
+    { model: Account, as: "account", attributes: ["id", "name"], required: false },
+    { model: Event, as: "event", attributes: ["id", "title"], required: false },
+    { model: MinistryGroup, as: "ministryGroup", attributes: ["id", "name"], required: false },
+    { model: User, as: "requester", attributes: ["id", "email"], required: false },
+    { model: User, as: "approver", attributes: ["id", "email"], required: false },
+    { model: User, as: "payer", attributes: ["id", "email"], required: false },
+  ];
+  const capped = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+
+  if (page !== undefined) {
+    const currentPage = Math.max(1, parseInt(page, 10) || 1);
+    const [{ count, rows }, statusRows] = await Promise.all([
+      Expense.findAndCountAll({
+        where,
+        include,
+        order: [["date", "DESC"], ["id", "DESC"]],
+        limit: capped,
+        offset: (currentPage - 1) * capped,
+        distinct: true,
+      }).catch(() => ({ count: 0, rows: [] })),
+      safeFindAll(Expense, {
+        attributes: ["status", [fn("COUNT", col("id")), "cnt"], [fn("SUM", col("amount")), "total"]],
+        where: baseWhere,
+        group: ["status"],
+        raw: true,
+      }),
+    ]);
+    const summary = {
+      all: 0,
+      draft: 0,
+      pending_approval: 0,
+      pending_approval_total: 0,
+      approved: 0,
+      approved_total: 0,
+      paid: 0,
+      paid_total: 0,
+      rejected: 0,
+      cancelled: 0,
+    };
+    for (const r of statusRows) {
+      const cnt = Number(r.cnt || 0);
+      const tot = money(r.total);
+      summary.all += cnt;
+      if (r.status in summary) summary[r.status] = cnt;
+      if (r.status === "pending_approval") summary.pending_approval_total = tot;
+      if (r.status === "approved") summary.approved_total = tot;
+      if (r.status === "paid") summary.paid_total = tot;
+    }
+    return {
+      items: rows,
+      total: count,
+      page: currentPage,
+      total_pages: Math.max(1, Math.ceil(count / capped)),
+      summary,
+    };
+  }
+
   return safeFindAll(Expense, {
     where,
-    include: [
-      { model: ExpenseCategory, as: "category", attributes: ["id", "category_name"], required: false },
-      { model: PaymentMethod, as: "paymentMethod", attributes: ["id", "method_name"], required: false },
-      { model: Fund, as: "fund", attributes: ["id", "name"], required: false },
-      { model: Account, as: "account", attributes: ["id", "name"], required: false },
-      { model: Event, as: "event", attributes: ["id", "title"], required: false },
-      { model: MinistryGroup, as: "ministryGroup", attributes: ["id", "name"], required: false },
-      { model: User, as: "requester", attributes: ["id", "email"], required: false },
-      { model: User, as: "approver", attributes: ["id", "email"], required: false },
-      { model: User, as: "payer", attributes: ["id", "email"], required: false },
-    ],
+    include,
     order: [["date", "DESC"], ["id", "DESC"]],
     limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 50)),
   });
@@ -373,7 +477,7 @@ exports.getFinanceOverview = async ({ date_from, date_to } = {}) => {
 };
 
 // ── 5 Expense Report Views (monthly_category, detail, annual, by_ministry, by_event)
-exports.getExpenseReport = async ({ report_type = "monthly_category", date_from, date_to, year } = {}) => {
+exports.getExpenseReport = async ({ report_type = "monthly_category", date_from, date_to, year, page = 1, limit = 25, search } = {}) => {
   const today = new Date().toISOString().slice(0, 10);
   const yr = year || today.slice(0, 4);
   const from = date_from || `${yr}-01-01`;
@@ -442,21 +546,46 @@ exports.getExpenseReport = async ({ report_type = "monthly_category", date_from,
     return { report_type, from, to, grand_total: grandTotal, rows: rows.map((r) => ({ ...r, count: Number(r.count), total: money(r.total) })) };
   }
 
-  // Default: 'detail'
-  const rows = await safeFindAll(Expense, {
-    where: { is_deleted: 0, status: "paid", date: { [Op.between]: [from, to] } },
-    include: [
-      { model: ExpenseCategory, as: "category", attributes: ["id", "category_name"], required: false },
-      { model: Fund, as: "fund", attributes: ["id", "name"], required: false },
-      { model: Account, as: "account", attributes: ["id", "name"], required: false },
-      { model: Event, as: "event", attributes: ["id", "title"], required: false },
-      { model: MinistryGroup, as: "ministryGroup", attributes: ["id", "name"], required: false },
-    ],
-    order: [["date", "DESC"], ["id", "DESC"]],
-    limit: 200,
-  });
-  const grandTotal = money(rows.reduce((s, r) => s + money(r.amount), 0));
-  return { report_type: "detail", from, to, grand_total: grandTotal, rows };
+  // Default: 'detail' (true SQL grand total + server pagination)
+  const detailWhere = { is_deleted: 0, status: "paid", date: { [Op.between]: [from, to] } };
+  const q = String(search || "").trim();
+  if (q) {
+    const like = `%${q}%`;
+    detailWhere[Op.or] = [
+      { transaction_number: { [Op.like]: like } },
+      { payee: { [Op.like]: like } },
+      { description: { [Op.like]: like } },
+    ];
+  }
+  const currentPage = Math.max(1, parseInt(page, 10) || 1);
+  const capped = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+  const [{ count, rows }, grandTotalRaw] = await Promise.all([
+    Expense.findAndCountAll({
+      where: detailWhere,
+      include: [
+        { model: ExpenseCategory, as: "category", attributes: ["id", "category_name"], required: false },
+        { model: Fund, as: "fund", attributes: ["id", "name"], required: false },
+        { model: Account, as: "account", attributes: ["id", "name"], required: false },
+        { model: Event, as: "event", attributes: ["id", "title"], required: false },
+        { model: MinistryGroup, as: "ministryGroup", attributes: ["id", "name"], required: false },
+      ],
+      order: [["date", "DESC"], ["id", "DESC"]],
+      limit: capped,
+      offset: (currentPage - 1) * capped,
+      distinct: true,
+    }).catch(() => ({ count: 0, rows: [] })),
+    Expense.sum("amount", { where: detailWhere }).catch(() => 0),
+  ]);
+  return {
+    report_type: "detail",
+    from,
+    to,
+    grand_total: money(grandTotalRaw),
+    total: count,
+    page: currentPage,
+    total_pages: Math.max(1, Math.ceil(count / capped)),
+    rows,
+  };
 };
 
 // ── Consolidated Monthly Financial Statement: Ending = Beginning + Income - Paid Expenses
@@ -520,8 +649,10 @@ exports.getConsolidatedStatement = async ({ date_from, date_to } = {}) => {
 };
 
 // ── Unified Chronological Audit Ledger (Income + Paid Expenses + Transfers)
-exports.getLedger = async ({ date_from, date_to, type = "all", limit = 100 } = {}) => {
-  const capped = Math.min(100, Math.max(1, parseInt(limit, 10) || 100));
+exports.getLedger = async ({ date_from, date_to, type = "all", search = "", page, limit = 25 } = {}) => {
+  const capped = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+  const currentPage = page !== undefined ? Math.max(1, parseInt(page, 10) || 1) : 1;
+  const fetchLimit = Math.min(2000, currentPage * capped + 200);
   const dateWhere = (field) => (date_from || date_to ? {
     [field]: {
       ...(date_from ? { [Op.gte]: date_from } : {}),
@@ -535,27 +666,27 @@ exports.getLedger = async ({ date_from, date_to, type = "all", limit = 100 } = {
           where: { is_deleted: 0, ...dateWhere("transaction_date") },
           include: [{ model: FinancialCategory, as: "category", attributes: ["name"], required: false }],
           order: [["transaction_date", "DESC"], ["id", "DESC"]],
-          limit: capped,
+          limit: fetchLimit,
         })
       : Promise.resolve([]),
     type === "all" || type === "expense"
       ? safeFindAll(Expense, {
-          where: { is_deleted: 0, ...dateWhere("date") },
+          where: { is_deleted: 0, status: "paid", ...dateWhere("date") },
           include: [{ model: ExpenseCategory, as: "category", attributes: ["category_name"], required: false }],
           order: [["date", "DESC"], ["id", "DESC"]],
-          limit: capped,
+          limit: fetchLimit,
         })
       : Promise.resolve([]),
     type === "all" || type === "transfer"
       ? safeFindAll(FinanceTransfer, {
           where: { is_deleted: 0, ...dateWhere("transfer_date") },
           order: [["transfer_date", "DESC"], ["id", "DESC"]],
-          limit: capped,
+          limit: fetchLimit,
         })
       : Promise.resolve([]),
   ]);
 
-  const entries = [
+  let entries = [
     ...incomes.map((r) => ({
       entry_type: "income",
       id: r.id,
@@ -588,6 +719,24 @@ exports.getLedger = async ({ date_from, date_to, type = "all", limit = 100 } = {
     })),
   ];
 
-  entries.sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+  const q = String(search || "").trim().toLowerCase();
+  if (q) {
+    entries = entries.filter((e) =>
+      String(e.transaction_number || "").toLowerCase().includes(q)
+      || String(e.category || "").toLowerCase().includes(q)
+      || String(e.description || "").toLowerCase().includes(q)
+    );
+  }
+
+  entries.sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || b.id - a.id);
+  if (page !== undefined) {
+    const start = (currentPage - 1) * capped;
+    return {
+      items: entries.slice(start, start + capped),
+      total: entries.length,
+      page: currentPage,
+      total_pages: Math.max(1, Math.ceil(entries.length / capped)),
+    };
+  }
   return entries.slice(0, capped);
 };

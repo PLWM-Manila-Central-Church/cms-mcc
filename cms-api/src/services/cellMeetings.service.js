@@ -7,10 +7,24 @@ const { CellGroup, CellGroupMeeting, CellGroupMeetingAttendance, Member } = requ
 
 const safeFind = (M, opts) => (M?.findAll ? M.findAll(opts).catch(() => []) : Promise.resolve([]));
 
-exports.getCellGroupHealthAlerts = async () => {
+const { getScope, isScopedLeader } = require("../helpers/scopedLeader.helper");
+
+exports.getCellGroupHealthAlerts = async (user = {}) => {
   const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const cellWhere = { is_deleted: 0 };
+  if (isScopedLeader(user)) {
+    const scope = getScope(user);
+    if (scope?.type === "cell_group" && scope.id) {
+      cellWhere.id = Number(scope.id);
+    } else if (scope?.type === "all") {
+      const ids = (scope.assignments || []).filter((a) => a.type === "cell_group").map((a) => Number(a.id));
+      cellWhere.id = { [Op.in]: ids.length ? ids : [-1] };
+    } else {
+      cellWhere.id = -1;
+    }
+  }
   const [cells, recentMeetings] = await Promise.all([
-    safeFind(CellGroup, { where: { is_deleted: 0 }, order: [["name", "ASC"]] }),
+    safeFind(CellGroup, { where: cellWhere, order: [["name", "ASC"]] }),
     safeFind(CellGroupMeeting, {
       where: { is_deleted: 0, meeting_date: { [Op.gte]: cutoff } },
       attributes: ["cell_group_id"],
@@ -29,9 +43,26 @@ exports.getCellGroupHealthAlerts = async () => {
   };
 };
 
-exports.listMeetings = async (cellGroupId) => {
+exports.listMeetings = async (cellGroupId, query = {}) => {
+  const where = { cell_group_id: Number(cellGroupId), is_deleted: 0 };
+  if (query.date_from || query.date_to) {
+    where.meeting_date = {};
+    if (query.date_from) where.meeting_date[Op.gte] = query.date_from;
+    if (query.date_to) where.meeting_date[Op.lte] = query.date_to;
+  }
+  if (query.page !== undefined) {
+    const pageNum = Math.max(1, parseInt(query.page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(query.limit, 10) || 15));
+    const { count, rows } = await CellGroupMeeting.findAndCountAll({
+      where,
+      order: [["meeting_date", "DESC"], ["id", "DESC"]],
+      limit: limitNum,
+      offset: (pageNum - 1) * limitNum,
+    }).catch(() => ({ count: 0, rows: [] }));
+    return { items: rows, total: count, page: pageNum, total_pages: Math.max(1, Math.ceil(count / limitNum)) };
+  }
   return safeFind(CellGroupMeeting, {
-    where: { cell_group_id: Number(cellGroupId), is_deleted: 0 },
+    where,
     order: [["meeting_date", "DESC"], ["id", "DESC"]],
     limit: 50,
   });

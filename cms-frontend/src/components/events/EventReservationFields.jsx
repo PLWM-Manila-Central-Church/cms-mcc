@@ -40,7 +40,7 @@ export default function EventReservationFields({
       <legend style={{ color: '#475569', fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
         Optional seat and parking reservations
       </legend>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, maxWidth: 460 }}>
         {seatLimit > 0 && (
           <label style={labelStyle}>
             Seat number (1–{seatLimit})
@@ -52,7 +52,10 @@ export default function EventReservationFields({
               step="1"
               value={seatNumber ?? ''}
               onKeyDown={blockInvalidIntegerKeys}
-              onChange={(event) => onSeatNumberChange?.(sanitizeWholeNumber(event.target.value, { max: seatLimit }))}
+              onChange={(event) => {
+                const clean = sanitizeWholeNumber(event.target.value, { max: seatLimit });
+                onSeatNumberChange?.(clean === '0' ? '' : clean);
+              }}
               style={inputStyle}
             />
           </label>
@@ -68,7 +71,10 @@ export default function EventReservationFields({
               step="1"
               value={parkingSlot ?? ''}
               onKeyDown={blockInvalidIntegerKeys}
-              onChange={(event) => onParkingSlotChange?.(sanitizeWholeNumber(event.target.value, { max: parkingLimit }))}
+              onChange={(event) => {
+                const clean = sanitizeWholeNumber(event.target.value, { max: parkingLimit });
+                onParkingSlotChange?.(clean === '0' ? '' : clean);
+              }}
               style={inputStyle}
             />
           </label>

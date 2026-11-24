@@ -1,10 +1,12 @@
 "use strict";
 
 const memberExtrasService = require("../services/member-extras.service");
+const { ensureMemberInScope } = require("../helpers/scopedLeader.helper");
 
 // ── Emergency Contacts ───────────────────────────────────────
 exports.getEmergencyContacts = async (req, res, next) => {
   try {
+    await ensureMemberInScope(req.params.memberId, req.user);
     const data = await memberExtrasService.getEmergencyContacts(req.params.memberId);
     res.json({ success: true, data });
   } catch (err) {
@@ -14,6 +16,7 @@ exports.getEmergencyContacts = async (req, res, next) => {
 
 exports.createEmergencyContact = async (req, res, next) => {
   try {
+    await ensureMemberInScope(req.params.memberId, req.user);
     const data = await memberExtrasService.createEmergencyContact(req.params.memberId, req.body);
     res.status(201).json({ success: true, data });
   } catch (err) {
@@ -42,6 +45,7 @@ exports.archiveEmergencyContact = async (req, res, next) => {
 // ── Member Notes ─────────────────────────────────────────────
 exports.getMemberNotes = async (req, res, next) => {
   try {
+    await ensureMemberInScope(req.params.memberId, req.user);
     const data = await memberExtrasService.getMemberNotes(req.params.memberId);
     res.json({ success: true, data });
   } catch (err) {
@@ -51,6 +55,7 @@ exports.getMemberNotes = async (req, res, next) => {
 
 exports.createMemberNote = async (req, res, next) => {
   try {
+    await ensureMemberInScope(req.params.memberId, req.user);
     const data = await memberExtrasService.createMemberNote(req.params.memberId, req.body, req.user.userId);
     res.status(201).json({ success: true, data });
   } catch (err) {
@@ -70,6 +75,7 @@ exports.deleteMemberNote = async (req, res, next) => {
 // ── Member Status History ────────────────────────────────────
 exports.getMemberStatusHistory = async (req, res, next) => {
   try {
+    await ensureMemberInScope(req.params.memberId, req.user);
     const data = await memberExtrasService.getMemberStatusHistory(req.params.memberId);
     res.json({ success: true, data });
   } catch (err) {
@@ -79,6 +85,7 @@ exports.getMemberStatusHistory = async (req, res, next) => {
 
 exports.createMemberStatusHistory = async (req, res, next) => {
   try {
+    await ensureMemberInScope(req.params.memberId, req.user);
     const data = await memberExtrasService.createMemberStatusHistory(req.params.memberId, req.body, req.user.userId);
     res.status(201).json({ success: true, data });
   } catch (err) {

@@ -72,6 +72,7 @@ router.get("/pastor-report/members", auth, authorize("attendance", "read"), vali
 router.get("/pastor-report/members/:memberId/history", auth, authorize("attendance", "read"), validateQuery(pastorMemberHistoryQuerySchema), pastorAttendanceCtrl.getMemberHistory);
 router.get("/pastor-report/export.csv", auth, authorize("attendance", "read"), validateQuery(pastorAttendanceReportQuerySchema), pastorAttendanceCtrl.exportReport);
 router.get("/pastor-report", auth, authorize("attendance", "read"), validateQuery(pastorAttendanceReportQuerySchema), pastorAttendanceCtrl.getReport);
+router.get("/member/:memberId/history", auth, authorize("attendance", "read"), ctrl.getMemberHistory);
 router.get("/",    auth, authorize("attendance", "read"),   ctrl.getAllAttendance);
 router.get("/:id", auth, authorize("attendance", "read"),   ctrl.getAttendanceById);
 router.post("/",   auth, authorize("attendance", "create"), validate(createAttendanceSchema), ctrl.createAttendance);

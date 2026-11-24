@@ -4,10 +4,16 @@ const Joi = require("joi");
 
 const serviceStatuses = ["draft", "published", "cancelled", "completed"];
 
+const gatheringTypes = ["lords_day", "wednesday_service", "hs_ya_service", "bible_seminar", "prayer_meeting", "other"];
+
 exports.createServiceSchema = Joi.object({
   title:                Joi.string().max(150).required(),
+  gathering_type:       Joi.string().valid(...gatheringTypes).optional(),
   service_date:         Joi.date().iso().required(),
   service_time:         Joi.string().max(20).allow(null, "").optional(),
+  end_time:             Joi.string().max(20).allow(null, "").optional(),
+  venue:                Joi.string().max(200).allow(null, "").optional(),
+  presiding_minister:   Joi.string().max(150).allow(null, "").optional(),
   capacity:             Joi.number().integer().positive().allow(null).optional(),
   total_parking_slots:  Joi.number().integer().min(0).allow(null).optional(),
   event_id:             Joi.number().integer().positive().allow(null).optional(),
@@ -17,8 +23,12 @@ exports.createServiceSchema = Joi.object({
 
 exports.updateServiceSchema = Joi.object({
   title:                Joi.string().max(150).optional(),
+  gathering_type:       Joi.string().valid(...gatheringTypes).optional(),
   service_date:         Joi.date().iso().optional(),
   service_time:         Joi.string().max(20).allow(null, "").optional(),
+  end_time:             Joi.string().max(20).allow(null, "").optional(),
+  venue:                Joi.string().max(200).allow(null, "").optional(),
+  presiding_minister:   Joi.string().max(150).allow(null, "").optional(),
   capacity:             Joi.number().integer().positive().allow(null).optional(),
   total_parking_slots:  Joi.number().integer().min(0).allow(null).optional(),
   event_id:             Joi.number().integer().positive().allow(null).optional(),

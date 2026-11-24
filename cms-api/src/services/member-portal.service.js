@@ -1,7 +1,7 @@
 "use strict";
 
 const bcrypt   = require("bcrypt");
-const { Op }   = require("sequelize");
+const { Op, fn, col } = require("sequelize");
 const sequelize = require("../config/db");
 const logger   = require("../helpers/logger");
 const AppError = require("../helpers/AppError");
@@ -68,7 +68,7 @@ exports.getMyProfile = async (memberId) => {
 
   const plain = member.toJSON();
   plain.member_id_formatted = fmtMemberId(member.id);
-  plain.join_date            = userRecord?.createdAt || plain.created_at;
+  plain.join_date            = plain.join_date || userRecord?.createdAt || plain.created_at;
   plain.flesh_age            = calcAge(member.birthdate);
   plain.spiritual_age        = calcAge(member.spiritual_birthday);
   return plain;
@@ -122,7 +122,7 @@ exports.updateMyProfile = async (memberId, data) => {
 };
 
 // ── Get My Attendance ────────────────────────────────────────
-exports.getMyAttendance = async (memberId) => {
+exports.getMyAttendance = async (memberId, query = {}) => {
   const AttendanceModel = await getAttendanceModel();
   const records = await AttendanceModel.findAll({
     where: {
@@ -173,20 +173,38 @@ exports.getMyAttendance = async (memberId) => {
     ? Math.round((attended / totalServices) * 100)
     : 0;
 
+  const mapped = records.map((r) => ({
+    id:              r.id,
+    date:            r.Service?.service_date   || null,
+    service_title:   r.Service?.title          || "—",
+    check_in_time:   r.check_in_method === "pre-reg" ? null : (r.checked_in_at || null),
+    check_in_method: r.check_in_method         || null,
+    status:          r.voided_at
+      ? "Voided"
+      : r.check_in_method === "pre-reg"
+        ? "Pre-registered"
+        : "Present",
+    voided_at:       r.voided_at                || null,
+  }));
+
+  if (query.page !== undefined) {
+    const pageNum = Math.max(1, parseInt(query.page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(query.limit, 10) || 20));
+    const offset = (pageNum - 1) * limitNum;
+    return {
+      records: mapped.slice(offset, offset + limitNum),
+      total: mapped.length,
+      page: pageNum,
+      total_pages: Math.max(1, Math.ceil(mapped.length / limitNum)),
+      attendanceRate,
+      totalServices,
+      attended,
+    };
+  }
+
   return {
-    records: records.map((r) => ({
-      id:              r.id,
-      date:            r.Service?.service_date   || null,
-      service_title:   r.Service?.title          || "—",
-      check_in_time:   r.check_in_method === "pre-reg" ? null : (r.checked_in_at || null),
-      check_in_method: r.check_in_method         || null,
-      status:          r.voided_at
-        ? "Voided"
-        : r.check_in_method === "pre-reg"
-          ? "Pre-registered"
-          : "Present",
-      voided_at:       r.voided_at                || null,
-    })),
+    records: mapped,
+    total: mapped.length,
     attendanceRate,
     totalServices,
     attended,
@@ -237,30 +255,51 @@ exports.getMyFinance = async (memberId, { page = 1, limit = 20, date_from, date_
   };
 };
 
-// ── Get My Events (open events, with registration status) ─────
+// ── Get My Events (open events, with registration status via SQL aggregate counts) ─────
 exports.getMyEvents = async (memberId) => {
   const now    = new Date();
   const events = await Event.findAll({
     where: { status: { [Op.in]: ["Upcoming", "Ongoing"] } },
     include: [
-      { model: EventCategory,    as: "category",      attributes: ["id", "name"],           required: false },
-      { model: EventRegistration, attributes: ["id", "member_id", "registered_at", "seat_number", "parking_slot"], required: false },
+      { model: EventCategory, as: "category", attributes: ["id", "name"], required: false },
     ],
     order: [["start_date", "ASC"]],
   });
 
-  const myRegs = await EventRegistration.findAll({
-    where: { member_id: memberId },
-    attributes: ["event_id", "id", "registered_at", "seat_number", "parking_slot"],
-  });
+  const eventIds = events.map((e) => Number(e.id));
+  const [myRegs, aggRows] = await Promise.all([
+    EventRegistration.findAll({
+      where: { member_id: memberId },
+      attributes: ["event_id", "id", "registered_at", "seat_number", "parking_slot"],
+    }),
+    eventIds.length
+      ? EventRegistration.findAll({
+          where: { event_id: { [Op.in]: eventIds } },
+          attributes: [
+            "event_id",
+            [fn("COUNT", col("EventRegistration.id")), "registration_count"],
+            [fn("COUNT", col("EventRegistration.seat_number")), "seat_reserved_count"],
+            [fn("COUNT", col("EventRegistration.parking_slot")), "parking_reserved_count"],
+          ],
+          group: ["event_id"],
+          raw: true,
+        }).catch(() => [])
+      : [],
+  ]);
   const myRegMap = new Map(myRegs.map((r) => [r.event_id, r]));
+  const countMap = new Map(aggRows.map((r) => [Number(r.event_id), {
+    regCount: Number(r.registration_count || 0),
+    seatReservedCount: Number(r.seat_reserved_count || 0),
+    parkingReservedCount: Number(r.parking_reserved_count || 0),
+  }]));
 
   return events.map((e) => {
     const plain       = e.toJSON();
     const reg         = myRegMap.get(e.id);
-    const regCount    = (plain.EventRegistrations || []).length;
-    const seatReservedCount = (plain.EventRegistrations || []).filter((registration) => registration.seat_number != null).length;
-    const parkingReservedCount = (plain.EventRegistrations || []).filter((registration) => registration.parking_slot != null).length;
+    const agg         = countMap.get(Number(e.id)) || { regCount: 0, seatReservedCount: 0, parkingReservedCount: 0 };
+    const regCount    = agg.regCount;
+    const seatReservedCount = agg.seatReservedCount;
+    const parkingReservedCount = agg.parkingReservedCount;
     const deadlinePast = e.registration_deadline && now > new Date(e.registration_deadline);
     const atCapacity   = e.capacity && regCount >= e.capacity;
 

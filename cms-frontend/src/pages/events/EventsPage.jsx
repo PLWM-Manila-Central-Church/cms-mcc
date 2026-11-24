@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmation } from '../../context/ConfirmationContext';
 import MonoIcon from '../../components/common/MonoIcon';
 import IconActionButton from '../../components/common/IconActionButton';
+import ResponsiveTable from '../../components/common/ResponsiveTable';
+import CollectionToolbar from '../../components/common/CollectionToolbar';
+import CompactPagination from '../../components/common/CompactPagination';
+import ModalDialog from '../../components/common/ModalDialog';
 import { blockInvalidIntegerKeys, sanitizeWholeNumber } from '../../utils/inputConstraints';
 import { normalizeEventStatus } from '../../utils/eventStatus';
 import { eventImageSrc } from '../../utils/eventImage';
@@ -12,8 +16,8 @@ import { apiErrorMessage } from '../../utils/apiErrorMessage';
 import { toLocalDateTimeInput } from '../../utils/localDateTimeInput';
 
 const STATUS_META = {
-  Upcoming:  { bg: '#dcfce7', color: '#16a34a', label: 'Upcoming' },
-  Ongoing:   { bg: '#e8f4fd', color: '#0066b3', label: 'Ongoing' },
+  Upcoming:  { bg: '#dcfce7', color: '#15803d', label: 'Upcoming' },
+  Ongoing:   { bg: '#e8f4fd', color: '#005599', label: 'Ongoing' },
   Completed: { bg: '#f1f5f9', color: '#475569', label: 'Completed' },
   Cancelled: { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
 };
@@ -26,11 +30,12 @@ const STATUS_FLOW = {
 };
 
 const STATUS_ACTION_LABEL = { Ongoing: 'Start', Completed: 'Complete', Cancelled: 'Cancel' };
-const STATUS_ACTION_STYLE = {
-  Ongoing:   { background: '#e8f4fd', color: '#0066b3' },
-  Completed: { background: '#f1f5f9', color: '#475569' },
-  Cancelled: { background: '#fef2f2', color: '#dc2626' },
-};
+
+const blankForm = () => ({
+  category_id: '', title: '', description: '', start_date: '',
+  end_date: '', start_time: '', location: '', capacity: '', total_parking_slots: '',
+  registration_deadline: '', status: 'Upcoming',
+});
 
 export default function EventsPage() {
   const navigate = useNavigate();
@@ -44,13 +49,18 @@ export default function EventsPage() {
   const [events, setEvents]             = useState([]);
   const [total, setTotal]               = useState(0);
   const [totalPages, setTotalPages]     = useState(1);
+  const [statusCounts, setStatusCounts] = useState(null);
   const [page, setPage]                 = useState(1);
+  const [limit, setLimit]               = useState(20);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch]             = useState('');
-  const [searchInput, setSearchInput]   = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [timeframe, setTimeframe]       = useState('');
+  const [sort, setSort]                 = useState('upcoming_first');
+  const [groupByCategory, setGroupByCategory] = useState(false);
+  const [collapsedCategories, setCollapsedCategories] = useState({});
 
   const [categories, setCategories] = useState([]);
   const [showForm, setShowForm]     = useState(false);
@@ -58,16 +68,10 @@ export default function EventsPage() {
   const [imageFile, setImageFile]   = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [removeImage, setRemoveImage] = useState(false);
-  const [form, setForm] = useState({
-    category_id: '', title: '', description: '', start_date: '',
-    end_date: '', start_time: '', location: '', capacity: '', total_parking_slots: '',
-    registration_deadline: '', status: 'Upcoming',
-  });
+  const [form, setForm] = useState(blankForm);
   const [formError, setFormError]   = useState('');
   const [saving, setSaving]         = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(null);
-
-  const limit = 15;
 
   useEffect(() => {
     if (!imageFile) { setImagePreview(''); return undefined; }
@@ -76,20 +80,20 @@ export default function EventsPage() {
     return () => URL.revokeObjectURL(previewUrl);
   }, [imageFile]);
 
-  const fetchCategories = async () => {
-    try {
-      const res = await axiosInstance.get('/events/categories');
-      setCategories(Array.isArray(res.data.data) ? res.data.data : []);
-    } catch {}
-  };
+  useEffect(() => {
+    axiosInstance.get('/events/categories')
+      .then((res) => setCategories(Array.isArray(res.data.data) ? res.data.data : []))
+      .catch(() => setCategories([]));
+  }, []);
 
   const fetchEvents = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const params = new URLSearchParams({ page, limit });
+      const params = new URLSearchParams({ page, limit, sort });
       if (statusFilter)   params.append('status',      statusFilter);
       if (search)         params.append('search',      search);
       if (categoryFilter) params.append('category_id', categoryFilter);
+      if (timeframe)      params.append('timeframe',   timeframe);
       const res = await axiosInstance.get(`/events?${params}`);
       const d   = res.data.data;
       if (!d || !Array.isArray(d.events)) {
@@ -100,27 +104,22 @@ export default function EventsPage() {
       setEvents(d.events);
       setTotal(Number(d.total) || d.events.length);
       setTotalPages(Number(d.total_pages) || 1);
+      if (d.status_counts) setStatusCounts(d.status_counts);
     } catch { setEvents([]); setError('Failed to load events.'); }
     finally { setLoading(false); }
-  }, [page, statusFilter, search, categoryFilter]);
+  }, [page, limit, sort, statusFilter, search, categoryFilter, timeframe]);
 
-  useEffect(() => { fetchCategories(); }, []);
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
-  // Debounced search — only fires after user stops typing
-  useEffect(() => {
-    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 400);
-    return () => clearTimeout(t);
-  }, [searchInput]);
-
   const resetForm = () => {
-    setForm({
-      category_id: '', title: '', description: '', start_date: '',
-      end_date: '', start_time: '', location: '', capacity: '', total_parking_slots: '',
-      registration_deadline: '', status: 'Upcoming',
-    });
+    setForm(blankForm());
     setEditEvent(null); setFormError('');
     setImageFile(null); setRemoveImage(false);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setShowForm(true);
   };
 
   const openEdit = (ev) => {
@@ -139,8 +138,8 @@ export default function EventsPage() {
       registration_deadline: toLocalDateTimeInput(ev.registration_deadline),
       status: normalizeEventStatus(ev.status),
     });
+    setFormError('');
     setShowForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSubmit = async (e) => {
@@ -151,34 +150,46 @@ export default function EventsPage() {
       return;
     }
 
-    // Frontend date validation
     if (form.end_date && form.end_date < form.start_date) {
       setFormError('End date cannot be before start date.');
       setSaving(false); return;
     }
 
     try {
-      const payload = { ...form };
-      if (!payload.end_date)              delete payload.end_date;
-      if (!payload.start_time)            delete payload.start_time;
-      if (!payload.capacity)              delete payload.capacity;
-      payload.total_parking_slots = payload.total_parking_slots === '' ? null : Number(payload.total_parking_slots);
-      if (!payload.registration_deadline) delete payload.registration_deadline;
-      if (!payload.description)           delete payload.description;
-      if (!payload.location)              delete payload.location;
-      if (!payload.category_id)           delete payload.category_id;
+      const payload = {
+        title: form.title.trim(),
+        start_date: form.start_date,
+        status: form.status,
+        category_id: form.category_id ? Number(form.category_id) : null,
+        description: form.description.trim() || null,
+        end_date: form.end_date || null,
+        start_time: form.start_time || null,
+        location: form.location.trim() || null,
+        capacity: form.capacity === '' ? null : Number(form.capacity),
+        total_parking_slots: form.total_parking_slots === '' ? null : Number(form.total_parking_slots),
+        registration_deadline: form.registration_deadline || null,
+      };
+      if (!editEvent) {
+        // Strip null optional fields on initial create so strict validators stay happy
+        Object.keys(payload).forEach((k) => {
+          if (k !== 'total_parking_slots' && payload[k] === null) delete payload[k];
+        });
+      }
 
       const savedResponse = editEvent
         ? await axiosInstance.put(`/events/${editEvent.id}`, payload)
         : await axiosInstance.post('/events', payload);
       const savedEvent = savedResponse.data.data;
+
       if (imageFile) {
         const formData = new FormData();
         formData.append('image', imageFile);
         try {
           await axiosInstance.post(`/events/${savedEvent.id}/image`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
         } catch (imageError) {
-          setFormError(apiErrorMessage(imageError, 'Event details were saved, but the image could not be uploaded. Edit the event to retry.'));
+          // Preserve saved event reference so retrying updates rather than duplicating
+          setEditEvent(savedEvent);
+          setFormError(apiErrorMessage(imageError, 'Event details were saved, but the image could not be uploaded. Retry saving or close the dialog.'));
           fetchEvents();
           return;
         }
@@ -192,7 +203,7 @@ export default function EventsPage() {
   };
 
   const handleStatusChange = async (eventId, newStatus) => {
-    setStatusUpdating(eventId);
+    setStatusUpdating(eventId); setError('');
     try {
       await axiosInstance.patch(`/events/${eventId}/status`, { status: newStatus });
       fetchEvents();
@@ -220,371 +231,433 @@ export default function EventsPage() {
   const formatTime = (t) => {
     if (!t) return '';
     const [h, m] = t.split(':');
-    const hr = parseInt(h);
-    return ` · ${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+    const hr = parseInt(h, 10);
+    return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
   };
 
-  const filterOptions = isMember
-    ? [{ key: '', label: 'All' }, { key: 'Upcoming', label: 'Upcoming' }, { key: 'Ongoing', label: 'Ongoing' }, { key: 'Completed', label: 'Completed' }]
-    : [
-        { key: '', label: 'All' },
-        { key: 'Upcoming', label: 'Upcoming' },
-        { key: 'Ongoing', label: 'Ongoing' },
-        { key: 'Completed', label: 'Completed' },
-        { key: 'Cancelled', label: 'Cancelled' },
-      ];
+  const statusTabs = useMemo(() => {
+    const base = isMember
+      ? [{ key: '', label: 'All' }, { key: 'Upcoming', label: 'Upcoming' }, { key: 'Ongoing', label: 'Ongoing' }, { key: 'Completed', label: 'Completed' }]
+      : [
+          { key: '', label: 'All' },
+          { key: 'Upcoming', label: 'Upcoming' },
+          { key: 'Ongoing', label: 'Ongoing' },
+          { key: 'Completed', label: 'Completed' },
+          { key: 'Cancelled', label: 'Cancelled' },
+        ];
+    return base.map((item) => ({
+      ...item,
+      count: statusCounts ? statusCounts[item.key || 'All'] : undefined,
+    }));
+  }, [isMember, statusCounts]);
+
+  const groupedEvents = useMemo(() => {
+    if (!groupByCategory) return null;
+    const map = new Map();
+    for (const ev of events) {
+      const cat = ev.EventCategory?.name || 'Uncategorized';
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat).push(ev);
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [events, groupByCategory]);
+
+  const renderEventRow = (ev) => {
+    const status = normalizeEventStatus(ev.status);
+    const meta = STATUS_META[status] || STATUS_META.Upcoming;
+    const canEditRow = canUpdate && !isMember && !['Completed', 'Cancelled'].includes(status);
+    const nextStatuses = (canUpdate && !isMember) ? (STATUS_FLOW[status] ?? []) : [];
+    const regCount = Number(ev.registration_count ?? ev.EventRegistrations?.length ?? 0);
+    const cap = Number(ev.capacity) || 0;
+    const fillPct = cap > 0 ? Math.min(100, Math.round((regCount / cap) * 100)) : null;
+
+    return (
+      <tr key={ev.id} style={s.tr}>
+        <td data-label="Event" style={s.td}>
+          <div style={s.eventCell}>
+            {ev.image_url ? (
+              <img src={eventImageSrc(ev)} alt="" loading="lazy" style={s.thumb} />
+            ) : (
+              <div style={s.thumbFallback} aria-hidden="true">
+                <MonoIcon name="events" size={15} />
+              </div>
+            )}
+            <div style={{ minWidth: 0 }}>
+              <button
+                type="button"
+                onClick={() => navigate(`/events/${ev.id}`)}
+                style={s.titleLink}
+              >
+                {ev.title}
+              </button>
+              <div style={s.metaLine}>
+                <span style={s.catPill}>{ev.EventCategory?.name || 'General'}</span>
+                {ev.registration_deadline && (
+                  <span style={{ color: new Date() > new Date(ev.registration_deadline) ? '#dc2626' : '#64748b' }}>
+                    Reg. due {new Date(ev.registration_deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td data-label="Schedule" style={s.td}>
+          <div style={s.primaryText}>
+            {formatDate(ev.start_date)}
+            {ev.end_date && ev.end_date !== ev.start_date ? ` – ${formatDate(ev.end_date)}` : ''}
+          </div>
+          {ev.start_time && <div style={s.secondaryText}>{formatTime(ev.start_time)}</div>}
+        </td>
+        <td data-label="Location" style={s.td}>
+          <span style={s.secondaryText}>{ev.location || '—'}</span>
+        </td>
+        <td data-label="Registrations" style={s.td}>
+          <div style={s.regCell}>
+            <span style={s.primaryText}>
+              {regCount}{cap > 0 ? ` / ${cap}` : ''}
+            </span>
+            {fillPct !== null && (
+              <div style={s.barTrack} aria-hidden="true">
+                <div style={{ ...s.barFill, width: `${fillPct}%`, background: fillPct >= 95 ? '#dc2626' : '#005599' }} />
+              </div>
+            )}
+            {(Number(ev.seat_reserved_count) > 0 || Number(ev.parking_reserved_count) > 0) && (
+              <div style={s.microMeta}>
+                {Number(ev.seat_reserved_count) > 0 ? `${ev.seat_reserved_count} seats` : ''}
+                {Number(ev.seat_reserved_count) > 0 && Number(ev.parking_reserved_count) > 0 ? ' · ' : ''}
+                {Number(ev.parking_reserved_count) > 0 ? `${ev.parking_reserved_count} parking` : ''}
+              </div>
+            )}
+          </div>
+        </td>
+        <td data-label="Status" style={s.td}>
+          <span style={{ ...s.badge, background: meta.bg, color: meta.color }}>{meta.label}</span>
+        </td>
+        <td data-label="Actions" style={s.td}>
+          <div className="mcc-icon-action-group">
+            <IconActionButton icon="eye" label="View" title="Open event workspace" tone="primary" onClick={() => navigate(`/events/${ev.id}`)} />
+            {canEditRow && (
+              <IconActionButton icon="edit" label="Edit" title="Edit event" tone="neutral" onClick={() => openEdit(ev)} />
+            )}
+            {nextStatuses.map((ns) => {
+              const iconName = ns === 'Ongoing' ? 'play' : ns === 'Completed' ? 'check' : 'close';
+              const tone = ns === 'Ongoing' ? 'primary' : ns === 'Completed' ? 'success' : 'danger';
+              return (
+                <IconActionButton
+                  key={ns}
+                  icon={iconName}
+                  label={STATUS_ACTION_LABEL[ns]}
+                  title={`${STATUS_ACTION_LABEL[ns]} event`}
+                  tone={tone}
+                  disabled={statusUpdating === ev.id}
+                  onClick={() => handleStatusChange(ev.id, ns)}
+                />
+              );
+            })}
+            {canDelete && !isMember && ['Completed', 'Cancelled'].includes(status) && (
+              <IconActionButton icon="archive" label="Archive" title="Archive event" tone="danger" onClick={() => handleDelete(ev.id)} />
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <div className="mcc-module mcc-module-events-page" style={s.page}>
       <div style={s.pageHeader}>
         <div>
           <h1 className="workspace-page-title" style={s.title}>Events</h1>
-          <p style={s.subtitle}>{total} total events</p>
+          <p style={s.subtitle}>{total} {total === 1 ? 'event' : 'events'} matching filters</p>
         </div>
         {canCreate && !isMember && (
-          <button
-            onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }}
-            style={s.addBtn}
-          >
-            {showForm ? <><MonoIcon name="close" size={15} /> Cancel</> : '+ New Event'}
+          <button type="button" onClick={openCreate} className="mcc-btn-primary">
+            + New Event
           </button>
         )}
       </div>
 
-      {/* Create / Edit form */}
-      {showForm && !isMember && (canCreate || canUpdate) && (
-        <div style={s.formCard}>
-          <h3 style={s.formTitle}>{editEvent ? 'Edit Event' : 'Create New Event'}</h3>
-          {formError && <div style={s.errorBox}>{formError}</div>}
-          <form onSubmit={handleSubmit} style={s.form}>
-            <div style={s.formRow}>
-              <div style={s.field}>
-                <label style={s.label}>Category</label>
-                <select
-                  value={form.category_id}
-                  onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
-                  style={s.select}
-                >
-                  <option value="">— Select —</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div style={{ ...s.field, flex: 2 }}>
-                <label style={s.label}>Title *</label>
-                <input
-                  value={form.title}
-                  onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="Event title" required style={s.input}
-                />
-              </div>
-            </div>
+      <CollectionToolbar
+        searchValue={search}
+        onSearchChange={(val) => { setSearch(val); setPage(1); }}
+        searchPlaceholder="Search events by title, location, or notes..."
+        filters={[
+          {
+            key: 'category',
+            label: 'Category',
+            value: categoryFilter,
+            onChange: (val) => { setCategoryFilter(val); setPage(1); },
+            minWidth: 150,
+            options: [{ value: '', label: 'All categories' }, ...categories.map((c) => ({ value: String(c.id), label: c.name }))],
+          },
+          {
+            key: 'timeframe',
+            label: 'Timeframe',
+            value: timeframe,
+            onChange: (val) => { setTimeframe(val); setPage(1); },
+            minWidth: 135,
+            options: [
+              { value: '', label: 'All dates' },
+              { value: 'upcoming', label: 'Upcoming' },
+              { value: 'this_month', label: 'This month' },
+              { value: 'this_year', label: 'This year' },
+              { value: 'past', label: 'Past dates' },
+            ],
+          },
+          {
+            key: 'sort',
+            label: 'Sort order',
+            value: sort,
+            onChange: (val) => { setSort(val); setPage(1); },
+            minWidth: 155,
+            options: [
+              { value: 'upcoming_first', label: 'Active & Upcoming' },
+              { value: 'date_desc', label: 'Newest first' },
+              { value: 'date_asc', label: 'Oldest first' },
+              { value: 'title_asc', label: 'Title A–Z' },
+            ],
+          },
+        ]}
+        actions={
+          <button
+            type="button"
+            className="mcc-btn-secondary"
+            onClick={() => setGroupByCategory((g) => !g)}
+            aria-pressed={groupByCategory}
+            style={groupByCategory ? { background: '#e8f4fd', borderColor: '#bae6fd', color: '#005599' } : undefined}
+          >
+            <MonoIcon name="layers" size={14} /> {groupByCategory ? 'Grouped by Category' : 'Group by Category'}
+          </button>
+        }
+        tabs={statusTabs}
+        activeTab={statusFilter}
+        onTabChange={(val) => { setStatusFilter(val); setPage(1); }}
+      />
 
+      {error && <div style={s.errorBox} role="alert">{error}</div>}
+
+      <div style={s.tableWrap}>
+        <div className="mcc-table-scroll">
+          <ResponsiveTable style={s.table}>
+            <thead>
+              <tr style={s.thead}>
+                <th style={s.th}>Event</th>
+                <th style={s.th}>Schedule</th>
+                <th style={s.th}>Venue</th>
+                <th style={s.th}>Registrations</th>
+                <th style={s.th}>Status</th>
+                <th style={s.th}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={6} style={s.centerCell}>Loading events...</td></tr>
+              ) : events.length === 0 ? (
+                <tr><td colSpan={6} style={s.centerCell}>No events match the current filters.</td></tr>
+              ) : groupedEvents ? (
+                groupedEvents.map(([catName, catEvents]) => {
+                  const collapsed = !!collapsedCategories[catName];
+                  return (
+                    <FragmentGroup
+                      key={catName}
+                      categoryName={catName}
+                      count={catEvents.length}
+                      collapsed={collapsed}
+                      onToggle={() => setCollapsedCategories((prev) => ({ ...prev, [catName]: !prev[catName] }))}
+                    >
+                      {!collapsed && catEvents.map(renderEventRow)}
+                    </FragmentGroup>
+                  );
+                })
+              ) : (
+                events.map(renderEventRow)
+              )}
+            </tbody>
+          </ResponsiveTable>
+        </div>
+      </div>
+
+      <CompactPagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={(next) => { setLimit(next); setPage(1); }}
+        pageSizes={[15, 20, 35, 50]}
+        itemLabel="events"
+      />
+
+      <ModalDialog
+        open={showForm && !isMember && (canCreate || canUpdate)}
+        onClose={() => { setShowForm(false); resetForm(); }}
+        title={editEvent ? 'Edit Event' : 'Create New Event'}
+        subtitle="Configure schedule, venue, capacity, and registration deadline."
+        maxWidth={720}
+      >
+        {formError && <div style={s.errorBox} role="alert">{formError}</div>}
+        <form onSubmit={handleSubmit} style={s.form}>
+          <div style={s.formRow}>
             <div style={s.field}>
-              <label style={s.label}>Description</label>
-              <textarea
-                value={form.description}
-                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                rows={3} placeholder="Optional description"
-                style={{ ...s.input, resize: 'vertical', fontFamily: 'inherit' }}
+              <label style={s.label}>Category</label>
+              <select
+                value={form.category_id}
+                onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
+                style={s.select}
+              >
+                <option value="">— Select —</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div style={{ ...s.field, flex: 2 }}>
+              <label style={s.label}>Title *</label>
+              <input
+                value={form.title}
+                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="Event title" required style={s.input}
               />
             </div>
+          </div>
 
+          <div style={s.field}>
+            <label style={s.label}>Description</label>
+            <textarea
+              value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              rows={3} placeholder="Optional description"
+              style={{ ...s.input, resize: 'vertical', fontFamily: 'inherit' }}
+            />
+          </div>
+
+          <div style={s.field}>
+            <label htmlFor="event-photo-upload" style={s.label}>Event Photo</label>
+            <input id="event-photo-upload" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { setImageFile(e.target.files?.[0] || null); setRemoveImage(false); }} style={s.input} />
+            <small style={{ color: 'var(--mcc-secondary, #52647a)', fontSize: 12 }}>JPG, PNG, or WebP. Maximum 5 MB.</small>
+            {(imageFile || (editEvent?.image_url && !removeImage)) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 6 }}>
+                {(imageFile ? imagePreview : eventImageSrc(editEvent)) && <img src={imageFile ? imagePreview : eventImageSrc(editEvent)} alt="Event preview" style={{ width: 96, height: 60, objectFit: 'cover', borderRadius: 8 }} />}
+                {editEvent?.image_url && <button type="button" onClick={() => { setImageFile(null); setRemoveImage(true); }} className="mcc-btn-secondary">Archive current photo</button>}
+              </div>
+            )}
+          </div>
+
+          <div style={s.formRow}>
             <div style={s.field}>
-              <label htmlFor="event-photo-upload" style={s.label}>Event Photo</label>
-              <input id="event-photo-upload" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { setImageFile(e.target.files?.[0] || null); setRemoveImage(false); }} style={s.input} />
-              <small style={{ color: 'var(--mcc-secondary, #52647a)' }}>JPG, PNG, or WebP. Maximum 5 MB. Replaced or archived photos remain recoverable.</small>
-              {(imageFile || (editEvent?.image_url && !removeImage)) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  {(imageFile ? imagePreview : eventImageSrc(editEvent)) && <img src={imageFile ? imagePreview : eventImageSrc(editEvent)} alt="Event preview" style={{ width: 120, height: 72, objectFit: 'cover', borderRadius: 8 }} />}
-                  {editEvent?.image_url && <button type="button" onClick={() => { setImageFile(null); setRemoveImage(true); }} style={s.cancelBtn}>Archive current photo</button>}
-                </div>
-              )}
+              <label style={s.label}>Start Date *</label>
+              <input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} required style={s.input} />
             </div>
-
-            <div style={s.formRow}>
-              <div style={s.field}>
-                <label style={s.label}>Start Date *</label>
-                <input
-                  type="date" value={form.start_date}
-                  onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))}
-                  required style={s.input}
-                />
-              </div>
-              <div style={s.field}>
-                <label style={s.label}>End Date</label>
-                <input
-                  type="date" value={form.end_date}
-                  min={form.start_date || undefined}
-                  onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}
-                  style={s.input}
-                />
-              </div>
-              <div style={s.field}>
-                <label style={s.label}>Start Time</label>
-                <input
-                  type="time" value={form.start_time}
-                  onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))}
-                  style={s.input}
-                />
-              </div>
-              <div style={s.field}>
-                <label style={s.label}>Status</label>
-                <select
-                  value={form.status}
-                  onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                  style={s.select}
-                >
-                  <option value="Upcoming">Upcoming</option>
-                  <option value="Ongoing">Ongoing</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
+            <div style={s.field}>
+              <label style={s.label}>End Date</label>
+              <input type="date" value={form.end_date} min={form.start_date || undefined} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} style={s.input} />
             </div>
-
-            <div style={s.formRow}>
-              <div style={{ ...s.field, flex: 2 }}>
-                <label style={s.label}>Location</label>
-                <input
-                  value={form.location}
-                  maxLength={150}
-                  onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                  placeholder="Venue / address" style={s.input}
-                />
-              </div>
-              <div style={s.field}>
-                <label style={s.label}>Registration / seat capacity</label>
-                <input
-                  type="number" min="1" value={form.capacity}
-                  onKeyDown={blockInvalidIntegerKeys}
-                  onChange={e => setForm(f => ({ ...f, capacity: sanitizeWholeNumber(e.target.value, { maxLength: 6 }) }))}
-                  placeholder="Optional" style={s.input}
-                />
-              </div>
-              <div style={s.field}>
-                <label style={s.label}>Parking slots (optional)</label>
-                <input
-                  type="number" min="0" step="1" value={form.total_parking_slots}
-                  onKeyDown={blockInvalidIntegerKeys}
-                  onChange={e => setForm(f => ({ ...f, total_parking_slots: sanitizeWholeNumber(e.target.value, { maxLength: 5 }) }))}
-                  placeholder="Not specified" style={s.input}
-                />
-              </div>
-              <div style={s.field}>
-                <label style={s.label}>Reg. Deadline</label>
-                <input
-                  type="datetime-local" value={form.registration_deadline}
-                  onChange={e => setForm(f => ({ ...f, registration_deadline: e.target.value }))}
-                  style={s.input}
-                />
-              </div>
+            <div style={s.field}>
+              <label style={s.label}>Start Time</label>
+              <input type="time" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} style={s.input} />
             </div>
-
-            <div style={s.formActions}>
-              <button
-                type="button"
-                onClick={() => { setShowForm(false); resetForm(); }}
-                style={s.cancelBtn}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit" disabled={saving}
-                style={{ ...s.submitBtn, opacity: saving ? 0.7 : 1 }}
-              >
-                {saving ? 'Saving...' : editEvent ? 'Update Event' : 'Create Event'}
-              </button>
+            <div style={s.field}>
+              <label style={s.label}>Status</label>
+              <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} style={s.select}>
+                <option value="Upcoming">Upcoming</option>
+                <option value="Ongoing">Ongoing</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
             </div>
-          </form>
-        </div>
-      )}
+          </div>
 
-      {/* Search + filters */}
-      <div style={s.filtersBar}>
-        <input
-          value={searchInput}
-          onChange={e => setSearchInput(e.target.value)}
-          placeholder="Search events..."
-          style={s.searchInput}
-        />
-        <select
-          value={categoryFilter}
-          onChange={e => { setCategoryFilter(e.target.value); setPage(1); }}
-          style={{ ...s.select, minWidth: 140 }}
-        >
-          <option value="">All categories</option>
-          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
+          <div style={s.formRow}>
+            <div style={{ ...s.field, flex: 2 }}>
+              <label style={s.label}>Location</label>
+              <input value={form.location} maxLength={150} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Venue / address" style={s.input} />
+            </div>
+            <div style={s.field}>
+              <label style={s.label}>Registration / seat capacity</label>
+              <input
+                type="number" min="1" value={form.capacity}
+                onKeyDown={blockInvalidIntegerKeys}
+                onChange={e => setForm(f => ({ ...f, capacity: sanitizeWholeNumber(e.target.value, { maxLength: 6 }) }))}
+                placeholder="Optional" style={s.input}
+              />
+            </div>
+            <div style={s.field}>
+              <label style={s.label}>Parking slots (optional)</label>
+              <input
+                type="number" min="0" step="1" value={form.total_parking_slots}
+                onKeyDown={blockInvalidIntegerKeys}
+                onChange={e => setForm(f => ({ ...f, total_parking_slots: sanitizeWholeNumber(e.target.value, { maxLength: 5 }) }))}
+                placeholder="Not specified" style={s.input}
+              />
+            </div>
+            <div style={s.field}>
+              <label style={s.label}>Reg. Deadline</label>
+              <input type="datetime-local" value={form.registration_deadline} onChange={e => setForm(f => ({ ...f, registration_deadline: e.target.value }))} style={s.input} />
+            </div>
+          </div>
 
-      <div style={s.filterBar}>
-        {filterOptions.map(opt => (
-          <button
-            key={opt.key}
-            onClick={() => { setStatusFilter(opt.key); setPage(1); }}
-            style={{
-              ...s.filterChip,
-              background: statusFilter === opt.key ? '#005599' : '#f1f5f9',
-              color:      statusFilter === opt.key ? 'var(--mcc-surface, #fff)'    : '#475569',
-            }}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
-      {error && <div style={s.errorBox}>{error}</div>}
-
-      {loading ? (
-        <div style={s.centerCell}>Loading...</div>
-      ) : events.length === 0 ? (
-        <div style={s.centerCell}>No events found.</div>
-      ) : (
-        <div style={s.grid}>
-          {events.map(ev => {
-            const status       = normalizeEventStatus(ev.status);
-            const meta         = STATUS_META[status] || STATUS_META.Upcoming;
-            const nextStatuses = (canUpdate && !isMember) ? (STATUS_FLOW[status] ?? []) : [];
-            const regCount     = Number(ev.registration_count ?? ev.EventRegistrations?.length ?? 0);
-
-            return (
-              <div key={ev.id} style={s.card}>
-                {ev.image_url && <img src={eventImageSrc(ev)} alt={`${ev.title} event`} loading="lazy" style={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: '12px 12px 0 0', marginBottom: 12 }} />}
-                <div style={s.cardTop}>
-                  <span style={{ ...s.badge, background: meta.bg, color: meta.color }}>
-                    {meta.label}
-                  </span>
-                  <span style={s.category}>{ev.EventCategory?.name}</span>
-                </div>
-                <div style={s.cardTitle}>{ev.title}</div>
-                {ev.description && (
-                  <div style={s.cardDesc}>
-                    {ev.description.length > 100
-                      ? ev.description.slice(0, 100) + '…'
-                      : ev.description}
-                  </div>
-                )}
-                <div style={s.cardMeta}>
-                  <MonoIcon name="calendar" size={14} /> {formatDate(ev.start_date)}{formatTime(ev.start_time)}
-                  {ev.end_date && ev.end_date !== ev.start_date
-                    && ` – ${formatDate(ev.end_date)}`}
-                </div>
-                {ev.location && <div style={s.cardMeta}><MonoIcon name="location" size={14} /> {ev.location}</div>}
-                <div style={s.cardMeta}>
-                  <MonoIcon name="members" size={14} /> {regCount} registered{ev.capacity ? ` / ${ev.capacity}` : ''}
-                </div>
-                {Number(ev.capacity)>0&&<div style={s.cardMeta}>Seats assigned: {ev.seat_reserved_count||0} / {ev.capacity}</div>}
-                {Number(ev.total_parking_slots)>0&&<div style={s.cardMeta}>Parking reserved: {ev.parking_reserved_count||0} / {ev.total_parking_slots}</div>}
-                {ev.registration_deadline && (
-                  <div style={{
-                    ...s.cardMeta,
-                    color: new Date() > new Date(ev.registration_deadline)
-                      ? '#dc2626' : 'var(--mcc-secondary, #52647a)',
-                  }}>
-                    <MonoIcon name="clock" size={14} /> Deadline: {new Date(ev.registration_deadline).toLocaleDateString(
-                      'en-PH', { month: 'short', day: 'numeric', year: 'numeric' }
-                    )}
-                  </div>
-                )}
-
-                <div style={{ ...s.cardActions, justifyContent: 'space-between', alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/events/${ev.id}`)}
-                    style={{ ...s.viewBtn, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', minHeight: 34 }}
-                  >
-                    <MonoIcon name="eye" size={14} /> View
-                  </button>
-                  {!isMember && (canUpdate || canDelete) && (
-                    <div className="mcc-icon-action-group">
-                      {canUpdate && (
-                        <IconActionButton icon="edit" label="Edit" title="Edit event" tone="neutral" onClick={() => openEdit(ev)} />
-                      )}
-                      {nextStatuses.map(ns => {
-                        const iconName = ns === 'Ongoing' ? 'play' : ns === 'Completed' ? 'check' : 'close';
-                        const tone = ns === 'Ongoing' ? 'primary' : ns === 'Completed' ? 'success' : 'danger';
-                        return (
-                          <IconActionButton
-                            key={ns}
-                            icon={iconName}
-                            label={STATUS_ACTION_LABEL[ns]}
-                            title={`${STATUS_ACTION_LABEL[ns]} event`}
-                            tone={tone}
-                            disabled={statusUpdating === ev.id}
-                            onClick={() => handleStatusChange(ev.id, ns)}
-                          />
-                        );
-                      })}
-                      {canDelete && ['Completed', 'Cancelled'].includes(status) && (
-                        <IconActionButton icon="archive" label="Archive" title="Archive event" tone="danger" onClick={() => handleDelete(ev.id)} />
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {totalPages > 1 && (
-        <div style={s.pagination}>
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1} style={s.pageBtn}
-          >
-            ← Prev
-          </button>
-          <span style={s.pageInfo}>Page {page} of {totalPages}</span>
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages} style={s.pageBtn}
-          >
-            Next →
-          </button>
-        </div>
-      )}
+          <div style={s.formActions}>
+            <button type="button" onClick={() => { setShowForm(false); resetForm(); }} className="mcc-btn-secondary">Cancel</button>
+            <button type="submit" disabled={saving} className="mcc-btn-primary" style={{ opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Saving...' : editEvent ? 'Update Event' : 'Create Event'}
+            </button>
+          </div>
+        </form>
+      </ModalDialog>
     </div>
   );
 }
 
+function FragmentGroup({ categoryName, count, collapsed, onToggle, children }) {
+  return (
+    <>
+      <tr style={s.groupRow}>
+        <td colSpan={6} style={s.groupTd}>
+          <button type="button" onClick={onToggle} style={s.groupToggle}>
+            <MonoIcon name={collapsed ? 'chevronRight' : 'chevronDown'} size={14} />
+            <span>{categoryName}</span>
+            <span style={s.groupCount}>{count}</span>
+          </button>
+        </td>
+      </tr>
+      {children}
+    </>
+  );
+}
+
 const s = {
-  page:        { fontFamily: "'Inter', sans-serif" },
-  pageHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' },
-  title:       { fontSize: '24px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: 0 },
-  subtitle:    { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)', margin: '4px 0 0 0' },
-  addBtn:      { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
-  formCard:    { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
-  formTitle:   { fontSize: '16px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)', margin: '0 0 20px 0' },
-  form:        { display: 'flex', flexDirection: 'column', gap: '16px' },
-  formRow:     { display: 'flex', gap: '16px', flexWrap: 'wrap' },
-  field:       { display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '160px' },
-  label:       { fontSize: '13px', fontWeight: '600', color: '#374151' },
-  input:       { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', width: '100%', boxSizing: 'border-box' },
-  select:      { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', background: 'var(--mcc-surface, #fff)' },
-  formActions: { display: 'flex', gap: '12px', justifyContent: 'flex-end' },
-  cancelBtn:   { background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  submitBtn:   { background: 'linear-gradient(135deg, #005599, #13B5EA)', color: 'var(--mcc-surface, #fff)', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
-  filtersBar:  { display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' },
-  searchInput: { padding: '10px 12px', fontSize: '14px', border: '1.5px solid #d1d5db', borderRadius: '8px', outline: 'none', flex: 1, minWidth: '200px' },
-  filterBar:   { display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' },
-  filterChip:  { border: 'none', borderRadius: '20px', padding: '6px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
-  errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', marginBottom: '16px' },
-  centerCell:  { padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' },
-  grid:        { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' },
-  card:        { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 'var(--mcc-radius, 16px)', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '8px' },
-  cardTop:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  badge:       { padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' },
-  category:    { fontSize: '12px', color: '#94a3b8', fontWeight: '500' },
-  cardTitle:   { fontSize: '16px', fontWeight: '700', color: 'var(--mcc-ink, #0f172a)' },
-  cardDesc:    { fontSize: '13px', color: 'var(--mcc-secondary, #52647a)', lineHeight: '1.5' },
-  cardMeta:    { fontSize: '13px', color: 'var(--mcc-secondary, #52647a)' },
-  cardActions: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' },
-  viewBtn:     { background: '#e8f4fd', color: '#0066b3', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
-  editBtn:     { background: '#f8fafc', color: '#475569', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
-  statusBtn:   { border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
-  deleteBtn:   { background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
-  pagination:  { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px' },
-  pageBtn:     { background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', cursor: 'pointer' },
-  pageInfo:    { fontSize: '14px', color: 'var(--mcc-secondary, #52647a)' },
+  page:          { fontFamily: 'inherit' },
+  pageHeader:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' },
+  title:         { margin: 0, color: 'var(--mcc-ink, #0f172a)' },
+  subtitle:      { fontSize: 13.5, color: 'var(--mcc-secondary, #52647a)', margin: '3px 0 0' },
+  errorBox:      { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 9, padding: '10px 14px', fontSize: 13.5, marginBottom: 14 },
+  tableWrap:     { background: 'var(--mcc-surface, #fff)', borderRadius: 'var(--mcc-radius, 12px)', border: '1px solid var(--mcc-border, #e2e8f0)', overflow: 'hidden' },
+  table:         { width: '100%', borderCollapse: 'collapse' },
+  thead:         { background: '#f8fafc' },
+  th:            { textAlign: 'left', fontSize: 11.5, fontWeight: 700, color: '#52647a', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid #e2e8f0' },
+  tr:            { borderBottom: '1px solid #f1f5f9' },
+  td:            { verticalAlign: 'middle', fontSize: 13.5, color: '#334155' },
+  centerCell:    { padding: '44px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 14 },
+  eventCell:     { display: 'flex', alignItems: 'center', gap: 10, minWidth: 200 },
+  thumb:         { width: 38, height: 38, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: '1px solid #e2e8f0' },
+  thumbFallback: { width: 38, height: 38, borderRadius: 8, background: '#f1f5f9', color: '#005599', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  titleLink:     { background: 'none', border: 0, padding: 0, textAlign: 'left', fontSize: 14, fontWeight: 700, color: '#0f172a', cursor: 'pointer', display: 'block' },
+  metaLine:      { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 3, fontSize: 11.5 },
+  catPill:       { background: '#f1f5f9', color: '#475569', padding: '1px 7px', borderRadius: 6, fontSize: 11, fontWeight: 600 },
+  primaryText:   { fontWeight: 600, color: '#0f172a', fontSize: 13.5 },
+  secondaryText: { fontSize: 12.5, color: '#64748b' },
+  regCell:       { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 105 },
+  barTrack:      { width: 96, height: 5, borderRadius: 999, background: '#e2e8f0', overflow: 'hidden' },
+  barFill:       { height: '100%', borderRadius: 999, transition: 'width 0.2s' },
+  microMeta:     { fontSize: 11, color: '#64748b' },
+  badge:         { display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' },
+  groupRow:      { background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
+  groupTd:       { padding: '8px 14px' },
+  groupToggle:   { display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 0, padding: 0, fontSize: 12.5, fontWeight: 700, color: '#003d70', cursor: 'pointer' },
+  groupCount:    { background: '#e8f4fd', color: '#005599', padding: '1px 7px', borderRadius: 999, fontSize: 11, fontWeight: 700 },
+  form:          { display: 'flex', flexDirection: 'column', gap: 14 },
+  formRow:       { display: 'flex', gap: 12, flexWrap: 'wrap' },
+  field:         { display: 'flex', flexDirection: 'column', gap: 5, flex: 1, minWidth: 150 },
+  label:         { fontSize: 12.5, fontWeight: 600, color: '#374151' },
+  input:         { padding: '8px 11px', fontSize: 13.5, border: '1px solid #cbd5e1', borderRadius: 8, outline: 'none', width: '100%', boxSizing: 'border-box' },
+  select:        { padding: '8px 11px', fontSize: 13.5, border: '1px solid #cbd5e1', borderRadius: 8, outline: 'none', background: '#fff' },
+  formActions:   { display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 },
 };

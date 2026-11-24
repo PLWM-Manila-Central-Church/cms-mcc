@@ -19,11 +19,34 @@ const localInput = (date) => {
 export default function CampaignComposer({ user, caps, onClose, onCreated }) {
   const { dialogRef, closeButtonRef } = useDialogFocus(true, onClose);
   const [title, setTitle] = useState('Church update');
-  const [audienceType, setAudienceType] = useState(caps.broadcast ? 'all_members' : 'event');
+  const [audienceType, setAudienceType] = useState('selected_members');
+  const [timingMode, setTimingMode] = useState('send_now');
+  const [members, setMembers] = useState([]);
+  const [memberQuery, setMemberQuery] = useState('');
+  const [memberResults, setMemberResults] = useState([]);
+  const [memberPage, setMemberPage] = useState(1);
+  const [memberPages, setMemberPages] = useState(1);
+  const submissionKey = useRef(null);
+  const submitting = useRef(false);
+  const reviewHeading = useRef(null);
+  useEffect(() => {
+    if (audienceType !== 'selected_members') return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      api.get('/outreach/campaigns/member-options', {
+        params: { search: memberQuery, page: memberPage }, signal: controller.signal,
+      }).then(({ data }) => {
+        if (controller.signal.aborted) return;
+        setMemberResults(data.data.items);
+        setMemberPages(data.data.total_pages);
+      }).catch((failure) => { if (!controller.signal.aborted) setError(errorText(failure)); });
+    }, 200);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [audienceType, memberQuery, memberPage]);
   const [eventId, setEventId] = useState('');
   const [ministryId, setMinistryId] = useState('');
   const [cellGroupId, setCellGroupId] = useState('');
-  const [message, setMessage] = useState('Hi {{first_name}}, {{activity}} is on {{date}} at {{time}}. See you there! PLWM-MCC');
+  const [message, setMessage] = useState('');
   const [scheduledAt, setScheduledAt] = useState(() => {
     const date = new Date(Date.now() + 24 * 3600000);
     date.setHours(9, 0, 0, 0);
@@ -31,6 +54,7 @@ export default function CampaignComposer({ user, caps, onClose, onCreated }) {
   });
   const [budgetCap, setBudgetCap] = useState('');
   const [preview, setPreview] = useState(null);
+  useEffect(() => { if (preview) reviewHeading.current?.focus(); }, [preview]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -46,15 +70,15 @@ export default function CampaignComposer({ user, caps, onClose, onCreated }) {
       if (controller.signal.aborted) return;
       const eventRows = events.data.data?.events || events.data.data?.items || [];
       const ministryRows = Array.isArray(ministries.data.data) ? ministries.data.data : ministries.data.data?.items || [];
-      const cellRows = cellGroups.data.data?.cellGroups || cellGroups.data.data?.cellgroups || cellGroups.data.data?.items || [];
+      const cellRows = Array.isArray(cellGroups.data.data) ? cellGroups.data.data : cellGroups.data.data?.cellGroups || cellGroups.data.data?.cellgroups || cellGroups.data.data?.items || [];
       setOptions({ events: eventRows, ministries: ministryRows, cellGroups: cellRows });
     }).catch(() => {});
     return () => controller.abort();
   }, []);
 
   const audienceOptions = useMemo(() => {
-    const values = [{ value: 'event', label: 'Event attendees' }];
-    if (caps.broadcast) values.push({ value: 'all_members', label: 'All members' });
+    const values = [{ value: 'selected_members', label: 'Selected members' }, { value: 'event', label: 'Event attendees' }];
+    if (caps.broadcast) values.push({ value: 'all_members', label: 'All eligible members' });
     if (caps.broadcast || user?.roleName === 'Ministry Leader') values.push({ value: 'ministry', label: 'Ministry members' });
     if (caps.broadcast || String(user?.roleName || '').includes('Leader')) values.push({ value: 'cell_group', label: 'Cell group members' });
     return values;
@@ -65,14 +89,27 @@ export default function CampaignComposer({ user, caps, onClose, onCreated }) {
     event_id: audienceType === 'event' ? Number(eventId) || null : null,
     ministry_id: audienceType === 'ministry' ? Number(ministryId) || null : null,
     cell_group_id: audienceType === 'cell_group' ? Number(cellGroupId) || null : null,
-    scheduled_at: new Date(scheduledAt).toISOString(),
+    timing_mode: timingMode,
+    ...(audienceType === 'selected_members' ? { member_ids: members.map((member) => member.id) } : {}),
+    ...(timingMode === 'scheduled' && scheduledAt ? { scheduled_at: new Date(scheduledAt + ':00+08:00').toISOString() } : {}),
     budget_cap_php: budgetCap === '' ? null : Number(budgetCap),
   });
 
-  const runPreview = async () => {
+  const previewPayload = () => {
+    const { title, budget_cap_php, ...input } = payload();
+    return input;
+  };
+
+  const runPreview = async (event) => {
+    event.preventDefault();
+    if (audienceType === 'selected_members' && members.length === 0) {
+      setError('Choose at least one member.');
+      return;
+    }
     setError(''); setNotice(''); setBusy(true);
     try {
-      const response = await api.post('/outreach/campaigns/preview', payload());
+      const response = await api.post('/outreach/campaigns/preview', previewPayload());
+      submissionKey.current = crypto.randomUUID();
       setPreview(response.data.data);
     } catch (requestError) { setError(errorText(requestError)); }
     finally { setBusy(false); }
@@ -80,34 +117,52 @@ export default function CampaignComposer({ user, caps, onClose, onCreated }) {
 
   const submit = async (event) => {
     event.preventDefault();
-    if (!preview) { setError('Preview the audience and cost before continuing.'); return; }
-    if (!window.confirm(`Queue this notification for ${preview.recipient_count} recipients at an estimated ${money(preview.estimated_cost_php)}?`)) return;
+    if (busy || submitting.current) return;
+    if (!preview?.recipient_count || preview?.sending_available === false) { setError('Preview the audience and cost before continuing.'); return; }
+    submitting.current = true;
     setBusy(true); setError(''); setNotice('');
     try {
-      const created = await api.post('/outreach/campaigns', payload());
+      const created = await api.post('/outreach/campaigns', { ...payload(), submission_key: submissionKey.current });
       const campaign = created.data.data;
       const submitted = await api.post(`/outreach/campaigns/${campaign.id}/submit`);
       onCreated?.(submitted.data.data);
       setNotice(submitted.data.data.status === 'pending_approval'
-        ? 'Submitted for approval. A Pastor or System Admin must approve it.' : 'Notification approved and scheduled.');
+        ? 'Submitted for approval by another Registration Team user.'
+        : timingMode === 'send_now' ? 'Submitted for immediate processing.' : 'Notification approved and scheduled.');
       setTimeout(onClose, 900);
-    } catch (requestError) { setError(errorText(requestError)); }
+    } catch (requestError) { submitting.current = false; setError(errorText(requestError)); }
     finally { setBusy(false); }
   };
 
   const charCount = message.length;
-  const segments = charCount <= 160 ? 1 : Math.ceil(charCount / 153);
-  const unitCost = preview?.unit_cost_php || 0.463;
   return <div className="outreach-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
     <section ref={dialogRef} role="dialog" aria-modal="true" aria-label="New notification" className="outreach-dialog campaign-composer">
-      <header><h2>New notification</h2><button type="button" ref={closeButtonRef} onClick={onClose} disabled={busy} aria-label="Close dialog">Close</button></header>
-      <form onSubmit={submit}>
+      <header><h2 ref={reviewHeading} tabIndex={-1}>{preview ? 'Review SMS' : 'New notification'}</h2><button type="button" ref={closeButtonRef} onClick={onClose} disabled={busy} aria-label="Close dialog">Close</button></header>
+      <form onSubmit={preview ? submit : runPreview}>
         {error && <div className="outreach-error" role="alert">{error}</div>}
         {notice && <div className="outreach-success" role="status">{notice}</div>}
-        <label>Notification title<input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={150} required /></label>
+        {!preview && <>
         <label>Audience<select value={audienceType} onChange={(event) => { setAudienceType(event.target.value); setPreview(null); }}>
           {audienceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select></label>
+        {audienceType === 'selected_members' && <fieldset className="sms-recipients" disabled={busy}>
+          <legend>Recipients ({members.length} selected)</legend>
+          <label>Search members<input type="search" value={memberQuery} onChange={(event) => {
+            setMemberQuery(event.target.value); setMemberPage(1);
+          }} /></label>
+          <div className="sms-selection">{members.map((member) => <button type="button" key={member.id} onClick={() => {
+            setMembers((previous) => previous.filter((item) => item.id !== member.id)); setPreview(null);
+          }} aria-label={'Remove ' + member.label}>{member.label} ×</button>)}</div>
+          <div className="sms-results">{memberResults.filter((member) => !members.some((item) => item.id === member.id)).map((member) => (
+            <button type="button" key={member.id} onClick={() => {
+              setMembers((previous) => [...previous, member]); setPreview(null);
+            }}>Add {member.label}</button>
+          ))}</div>
+          {memberPages > 1 && <div>
+            <button type="button" disabled={memberPage <= 1} onClick={() => setMemberPage(memberPage - 1)}>Previous members</button>
+            <button type="button" disabled={memberPage >= memberPages} onClick={() => setMemberPage(memberPage + 1)}>Next members</button>
+          </div>}
+        </fieldset>}
         {audienceType === 'event' && <label>Event<select value={eventId} onChange={(event) => { setEventId(event.target.value); setPreview(null); }} required>
           <option value="">Choose an event</option>
           {options.events.map((event) => <option key={event.id} value={event.id}>{event.title} · {event.start_date || event.event_date || ''}</option>)}
@@ -121,30 +176,43 @@ export default function CampaignComposer({ user, caps, onClose, onCreated }) {
           {options.cellGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
         </select></label>}
         <label>Message<textarea value={message} onChange={(event) => { setMessage(event.target.value); setPreview(null); }} maxLength={480} minLength={10} required />
-          <small className="outreach-muted">{charCount} characters · about {segments} SMS segment{segments === 1 ? '' : 's'} · {money(segments * unitCost)} each</small>
+          <small className="outreach-muted">{charCount} / 480 characters · minimum 10</small>
         </label>
+        <div className="outreach-grid">
+          <label>Timing<select value={timingMode} onChange={(event) => { setTimingMode(event.target.value); setPreview(null); }}>
+            <option value="send_now">Send now</option><option value="scheduled">Schedule</option>
+          </select></label>
+          {timingMode === 'scheduled' && <label>Send at · Asia/Manila<input type="datetime-local" value={scheduledAt} onChange={(event) => { setScheduledAt(event.target.value); setPreview(null); }} required /></label>}
+        </div>
+        <details className="sms-options"><summary>More options</summary>
+          <label>Internal title<input value={title} onChange={(event) => setTitle(event.target.value)} minLength={3} maxLength={150} required /></label>
+          <label>Budget cap · optional<input type="number" min="0" step="0.01" value={budgetCap} onKeyDown={blockInvalidDecimalKeys} onChange={(event) => setBudgetCap(sanitizeCurrency(event.target.value))} placeholder="Auto" /></label>
         <div className="campaign-placeholders">
           {['{{first_name}}', '{{activity}}', '{{date}}', '{{time}}', '{{venue}}'].map((token) => (
-            <button key={token} type="button" onClick={() => setMessage((value) => value + ' ' + token)}>{token}</button>
+            <button key={token} type="button" onClick={() => setMessage((value) => (value + ' ' + token).trimStart().slice(0, 480))}>{token}</button>
           ))}
         </div>
-        <div className="outreach-grid">
-          <label>Send at · Asia/Manila<input type="datetime-local" value={scheduledAt} onChange={(event) => { setScheduledAt(event.target.value); setPreview(null); }} required /></label>
-          <label>Budget cap · optional<input type="number" min="0" step="0.01" value={budgetCap} onKeyDown={blockInvalidDecimalKeys} onChange={(event) => setBudgetCap(sanitizeCurrency(event.target.value))} placeholder="Auto" /></label>
-        </div>
-        <p className="outreach-muted">Sends only between 08:00 and 20:00 Asia/Manila. All-member messages need a second approver. Frequency caps and consent are checked again at send time.</p>
+        </details>
+        </>}
         {preview && <section className="campaign-preview" aria-label="Audience preview">
+          <p className="sms-review-message">{message}</p>
+          <p>{audienceOptions.find((option) => option.value === audienceType)?.label} · {timingMode === 'send_now' ? 'Send now' : scheduledAt.replace('T', ' ') + ' Manila time'}</p>
+          {audienceType === 'selected_members' && <p>{members.map((member) => member.label).join(', ')}</p>}
           <h3>{preview.recipient_count} eligible recipient{preview.recipient_count === 1 ? '' : 's'}</h3>
           <p>{preview.total_segments} SMS segment{preview.total_segments === 1 ? '' : 's'} · estimated <strong>{money(preview.estimated_cost_php)}</strong> · monthly remaining {money(preview.monthly_remaining_php)}</p>
           {preview.warning && <p className="outreach-warning">{preview.warning}</p>}
+          {preview.mode === 'simulation' && <p>Simulation mode. No SMS will be sent.</p>}
+          {preview.sending_available === false && <p role="alert">SMS processing is disabled or the provider is unavailable.</p>}
           <details><summary>Who is excluded</summary><ul>
             {Object.entries(preview.excluded || {}).filter(([, count]) => count > 0).map(([reason, count]) => <li key={reason}>{statusLabel(reason)}: {count}</li>)}
           </ul></details>
           {preview.approval_required && <p className="outreach-warning">This notification needs approval before it can send.</p>}
         </section>}
-        <div className="outreach-actions">
-          <button type="button" onClick={runPreview} disabled={busy}>{busy ? 'Checking…' : 'Preview audience & cost'}</button>
-          <button type="submit" className="outreach-primary" disabled={busy || !preview}>{busy ? 'Saving…' : 'Submit notification'}</button>
+        <div className="outreach-actions sms-footer">
+          {preview ? <>
+            <button type="button" disabled={busy} onClick={() => { setPreview(null); setError(''); }}>Back to edit</button>
+            <button type="submit" className="outreach-primary" disabled={busy || Boolean(notice) || !preview.recipient_count || preview.sending_available === false}>{busy ? 'Saving…' : preview.approval_required ? 'Submit for approval' : timingMode === 'send_now' ? 'Send SMS' : 'Schedule SMS'}</button>
+          </> : <button type="submit" className="outreach-primary" disabled={busy}>{busy ? 'Checking…' : 'Review SMS'}</button>}
         </div>
       </form>
     </section>
