@@ -23,198 +23,45 @@ function Reveal({ children, delay = 0 }) {
     return () => obs.disconnect();
   }, []);
   return (
-    <div ref={ref} style={{ opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(28px)', transition: `opacity 0.65s ease ${delay}s, transform 0.65s ease ${delay}s` }}>
+    <div className="public-reveal" ref={ref} style={{ opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(28px)', transition: `opacity 0.65s ease ${delay}s, transform 0.65s ease ${delay}s` }}>
       {children}
     </div>
   );
 }
 
 
-/* ── Looping hero video via YouTube IFrame API ─────────────── */
-function HeroVideo() {
-  const containerRef = useRef(null);
-  const playerRef    = useRef(null);
-  const intervalRef  = useRef(null);
-  const START_SEC    = 227; // 3:47 — loop start
-  const END_SEC      = 249; // 4:09 — loop end
-
-  useEffect(() => {
-    // Load the YT IFrame API script once
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src   = 'https://www.youtube.com/iframe_api';
-      document.head.appendChild(tag);
-    }
-
-    const init = () => {
-      if (playerRef.current) return; // already created
-      playerRef.current = new window.YT.Player(containerRef.current, {
-        videoId:    '4v-66wXlQCE',
-        playerVars: {
-          autoplay:       1,
-          mute:           1,
-          controls:       0,
-          showinfo:       0,
-          rel:            0,
-          disablekb:      1,
-          iv_load_policy: 3,
-          modestbranding: 1,
-          start:          START_SEC,
-          playsinline:    1,
-        },
-        events: {
-          onReady: (e) => {
-            e.target.mute();
-            e.target.playVideo();
-            // Poll every 500ms — seek back to START_SEC when we reach END_SEC
-            intervalRef.current = setInterval(() => {
-              try {
-                const t = e.target.getCurrentTime();
-                if (t >= END_SEC) {
-                  e.target.seekTo(START_SEC, true);
-                }
-              } catch (_) {}
-            }, 500);
-          },
-          onStateChange: (e) => {
-            // Fallback: if video somehow ends, restart from START_SEC
-            if (e.data === window.YT.PlayerState.ENDED) {
-              e.target.seekTo(START_SEC, true);
-              e.target.playVideo();
-            }
-          },
-        },
-      });
-    };
-
-    // If API already loaded, init immediately; otherwise wait for callback
-    if (window.YT && window.YT.Player) {
-      init();
-    } else {
-      const prev = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        if (prev) prev();
-        init();
-      };
-    }
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (playerRef.current) {
-        try { playerRef.current.destroy(); } catch (_) {}
-        playerRef.current = null;
-      }
-    };
-  }, []);
-
-  return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-      <div
-        ref={containerRef}
-        style={{
-          position: 'absolute', top: '50%', left: '50%',
-          width: '177.78vh', height: '100vh',
-          minWidth: '100%', minHeight: '56.25vw',
-          transform: 'translate(-50%, -50%)',
-          border: 'none',
-        }}
-      />
-    </div>
-  );
-}
-
 export default function HomePage() {
-  const [cgCount, setCgCount]         = useState(null);
-  const [liveEvents, setLiveEvents]   = useState([]);
-  const [isMobile, setIsMobile]       = useState(window.innerWidth < 768);
-
-  useEffect(() => {
-    const handle = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handle);
-    return () => window.removeEventListener('resize', handle);
-  }, []);
+  const [liveEvents, setLiveEvents] = useState([]);
 
   useEffect(() => {
     const apiPrefix = (process.env.REACT_APP_API_URL || '/api').replace(/\/+$/, '');
     fetch(`${apiPrefix}/public/stats`)
       .then(r => r.json())
       .then(d => {
-        setCgCount(d.data?.cellGroups ?? 17);
         setLiveEvents(d.data?.upcomingEvents ?? []);
       })
-      .catch(() => { setCgCount(17); setLiveEvents([]); });
+      .catch(() => setLiveEvents([]));
   }, []);
 
   return (
     <PublicLayout>
-      {/* ── HERO ── */}
-      <section style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', padding: '60px 24px 80px' }}>
-        {/* Video background (desktop only) — loops from start point via YT IFrame API */}
-        {!isMobile && <HeroVideo />}
-
-        {/* Overlay */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: isMobile ? C.navy : 'linear-gradient(to bottom, rgba(11,36,71,0.88) 0%, rgba(11,36,71,0.78) 40%, rgba(11,36,71,0.88) 100%)' }} />
-        <div style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'radial-gradient(ellipse 70% 55% at 55% 0%, rgba(21,101,192,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
-
-        {/* Grid texture */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none', opacity: 0.025, backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)', backgroundSize: '52px 52px' }} />
-
-        {/* Content */}
-        <div style={{ position: 'relative', zIndex: 3, maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(201,168,76,0.14)', border: '1px solid rgba(201,168,76,0.32)', color: C.gold, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.6px', textTransform: 'uppercase', padding: '6px 16px', borderRadius: 20, marginBottom: 24, animation: 'fadeUp 0.7s ease both' }}>
-            <span style={{ width: 6, height: 6, background: C.gold, borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-            Philippine Life Word Mission — Manila Central Church
-          </div>
-
-          <h1 style={{ fontFamily: "'Lora',serif", fontSize: 'clamp(2rem,5vw,3.4rem)', fontWeight: 700, color: '#fff', marginBottom: 8, animation: 'fadeUp 0.7s ease 0.1s both', lineHeight: 1.2 }}>
-            Welcome to Our <em style={{ color: C.gold, fontStyle: 'normal' }}>Church</em>
-          </h1>
-
-          <p style={{ fontFamily: "'Lora',serif", fontStyle: 'italic', fontSize: 'clamp(0.9rem,2vw,1.1rem)', color: 'rgba(255,255,255,0.82)', marginBottom: 16, animation: 'fadeUp 0.7s ease 0.15s both' }}>
-            Join us in Sermons, Fellowships, and Retreats
-          </p>
-
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', marginBottom: 32, fontStyle: 'italic', animation: 'fadeUp 0.7s ease 0.2s both' }}>
-            "I shall not die, but live, and declare the works of the LORD" — Psalm 118:17
-          </p>
-
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.88)', marginBottom: 40, maxWidth: 480, margin: '0 auto 40px', animation: 'fadeUp 0.7s ease 0.25s both', lineHeight: 1.7 }}>
-            A community rooted in faith, love, and mission — serving Manila and the Philippines for His glory.
-          </p>
-
-          {/* Cellgroups stat */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16, marginBottom: 40, border: '1px solid rgba(255,255,255,0.14)', borderRadius: 14, padding: '18px 36px', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(8px)', animation: 'fadeUp 0.7s ease 0.3s both' }}>
-            <div style={{ fontFamily: "'Lora',serif", fontSize: '2.6rem', fontWeight: 900, color: C.gold, lineHeight: 1, letterSpacing: '-1px' }}>
-              {cgCount !== null ? cgCount : '—'}
-            </div>
-            <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.18)' }} />
-            <div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>Active Cellgroups</div>
-              <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.40)', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase', marginTop: 3 }}>Across Metro Manila</div>
+      <section className="public-home-hero">
+        <div className="public-home-hero-inner">
+          <div className="public-home-intro">
+            <p className="public-home-affiliation">Philippine Life Word Mission</p>
+            <h1>Manila Central Church</h1>
+            <p>Join us for sermons, Bible study, and fellowship.</p>
+            <div className="public-home-actions">
+              <Link to="/introduction">Get to know our church</Link>
+              <Link to="/sermon/latest">Watch the latest sermon</Link>
             </div>
           </div>
-
-          {/* CTAs */}
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', animation: 'fadeUp 0.7s ease 0.35s both' }}>
-            <Link to="/introduction">
-              <button style={{ background: C.blue, color: '#fff', border: 'none', padding: '13px 26px', borderRadius: 8, fontSize: 14.5, fontWeight: 600, cursor: 'pointer', minWidth: 170, boxShadow: '0 4px 16px rgba(21,101,192,0.32)', fontFamily: 'inherit' }}>
-                Join our community
-              </button>
-            </Link>
-            <Link to="/sermon/latest">
-              <button style={{ background: 'transparent', color: '#fff', border: '2px solid rgba(255,255,255,0.5)', padding: '13px 26px', borderRadius: 8, fontSize: 14.5, fontWeight: 600, cursor: 'pointer', minWidth: 170, fontFamily: 'inherit' }}>
-                ▶ Watch Sermon
-              </button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Scroll cue */}
-        <div style={{ position: 'absolute', bottom: 28, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, zIndex: 5, opacity: 0.35 }}>
-          <span style={{ fontSize: 10, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#fff' }}>Scroll</span>
-          <div style={{ width: 18, height: 18, borderRight: '2px solid rgba(255,255,255,0.7)', borderBottom: '2px solid rgba(255,255,255,0.7)', transform: 'rotate(45deg)', animation: 'arrowBounce 1.8s ease infinite' }} />
+          <img src="/church.webp" alt="Manila Central Church" className="public-home-photo" />
         </div>
       </section>
+      <blockquote className="public-home-scripture">
+        “I shall not die, but live, and declare the works of the LORD” <cite>Psalm 118:17</cite>
+      </blockquote>
 
       {/* PLWM Banner */}
       <div style={{ background: C.navyMid, borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '18px 24px' }}>
@@ -228,7 +75,7 @@ export default function HomePage() {
       </div>
 
       {/* ── GATHERINGS ── */}
-      <section style={{ background: C.white, padding: '84px 24px' }}>
+      <section style={{ background: C.white, padding: 'var(--public-section-padding)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <Reveal>
             <div style={{ marginBottom: 48 }}>
@@ -269,7 +116,7 @@ export default function HomePage() {
       </section>
 
       {/* ── EVENTS ── */}
-      <section id="events" style={{ background: C.off, padding: '84px 24px' }}>
+      <section id="events" style={{ background: C.off, padding: 'var(--public-section-padding)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <Reveal>
             <div style={{ marginBottom: 16 }}>
@@ -322,7 +169,7 @@ export default function HomePage() {
       </section>
 
       {/* ── BIBLE SEMINAR PROMO ── */}
-      <section style={{ background: C.white, padding: '84px 24px' }}>
+      <section style={{ background: C.white, padding: 'var(--public-section-padding)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'center' }}>
             <Reveal>
@@ -398,7 +245,7 @@ export default function HomePage() {
       </section>
 
       {/* ── MISSION SECTION ── */}
-      <section style={{ background: C.off, padding: '84px 24px' }}>
+      <section style={{ background: C.off, padding: 'var(--public-section-padding)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'center' }}>
             <Reveal>
@@ -463,7 +310,7 @@ export default function HomePage() {
       </section>
 
       {/* ── CTA ── */}
-      <section style={{ background: C.navy, padding: '80px 24px', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ background: C.navy, padding: 'var(--public-section-padding)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 65% 75% at 100% 50%, rgba(21,101,192,0.22) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', zIndex: 2, maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontFamily: "'Lora',serif", fontSize: 'clamp(1.8rem,3.5vw,2.4rem)', fontWeight: 700, color: '#fff', marginBottom: 16 }}>

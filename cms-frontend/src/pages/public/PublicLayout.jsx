@@ -1,3 +1,4 @@
+import './publicCompact.css';
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LANGS, getLangCode, saveLangCode, applyGTLang, loadGTScript } from '../../utils/langUtils';
@@ -196,7 +197,7 @@ export default function PublicLayout({ children }) {
   const currentLangCode = LANGS.find(l => l.label === currentLang)?.code.toUpperCase() || 'EN';
 
   return (
-    <div style={{ fontFamily:"'Inter',system-ui,sans-serif", color:C.text, minHeight:'100vh', display:'flex', flexDirection:'column' }}>
+    <div className="public-shell" style={{ fontFamily:"'Inter',system-ui,sans-serif", color:C.text, minHeight:'100vh', display:'flex', flexDirection:'column' }}>
       {/* Hidden Google Translate widget */}
       <div id="google_translate_element" style={{ position:'fixed', bottom:-200, left:0, opacity:0, pointerEvents:'none', zIndex:-1 }} />
 
@@ -365,12 +366,12 @@ export default function PublicLayout({ children }) {
         </div>
       )}
 
-      <main style={{ flex:1 }}>{children}</main>
+      <main className="public-main" style={{ flex:1 }}>{children}</main>
 
       {/* ── Footer ── */}
-      <footer style={{ background:C.off, borderTop:`1px solid ${C.border}`, padding:'56px 24px 32px' }}>
+      <footer style={{ background:C.off, borderTop:`1px solid ${C.border}`, padding:'36px 24px 24px' }}>
         <div style={{ maxWidth:MAX_W, margin:'0 auto' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:40, marginBottom:40 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:24, marginBottom:24 }}>
             <div>
               <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:'1.25rem', fontWeight:700, color:C.text, marginBottom:8 }}>Manila Central Church</div>
               <div style={{ fontSize:14, color:C.muted, lineHeight:1.75, marginBottom:20, maxWidth:280 }}>Mother Church of Philippine Life Word Mission (PLWM). Serving Manila and the Philippines through the Word of God.</div>

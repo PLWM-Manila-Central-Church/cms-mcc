@@ -192,7 +192,7 @@ export default function MemberPortalSettings() {
         <h1 style={{color:'#fff',fontWeight:700,fontSize:20,margin:0}}>My settings</h1>
       </div>
 
-      <div style={{maxWidth:isMobile?'100%':600,margin:isMobile?0:'24px auto',padding:isMobile?'14px 12px 80px':'0 20px 60px'}}>
+      <div style={{maxWidth:isMobile?'100%':760,margin:isMobile?0:'18px auto',padding:isMobile?'14px 12px 80px':'0 20px 60px'}}>
 
         {/* ── Profile Photo ── */}
         <div style={card}>

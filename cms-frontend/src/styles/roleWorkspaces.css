@@ -65,13 +65,13 @@
 .mcc-workspace .qr-workspace h1 { font-size:var(--mcc-title-size); letter-spacing:-.03em; }
 .mcc-workspace .qr-primary-button { background:var(--mcc-brand); }
 .mcc-workspace .qr-stat-grid { gap:14px; }
-.member-welcome { margin:0 0 24px; padding:26px; border:1px solid var(--mcc-border); border-radius:18px; display:flex; justify-content:space-between; align-items:center; gap:20px; }
-.member-welcome h2 { margin:4px 0 8px; font-size:clamp(25px,3vw,34px); letter-spacing:-.035em; font-weight:650; }
+.member-welcome { margin:0 0 16px; padding:16px 20px; border:1px solid var(--mcc-border); border-radius:18px; display:flex; justify-content:space-between; align-items:center; gap:20px; }
+.member-welcome h2 { margin:4px 0 8px; font-size:clamp(22px,2.6vw,30px); letter-spacing:-.035em; font-weight:650; }
 .member-welcome p { margin:0; line-height:1.6; }
 .member-welcome-actions { display:flex; gap:10px; flex-wrap:wrap; }
 .member-welcome-actions button { border:1px solid #cbd5e1; border-radius:10px; padding:11px 16px; font-weight:600; background:transparent; color:inherit; }
 .member-welcome-actions button:first-child { background:#005599; border-color:#005599; color:#fff; }
-.member-tab-intro { display:flex; gap:14px; align-items:center; margin-bottom:22px; }
+.member-tab-intro { display:flex; gap:14px; align-items:center; margin-bottom:14px; }
 .member-tab-intro h2 { margin:0 0 4px; font-size:23px; font-weight:650; letter-spacing:-.02em; }
 .member-tab-intro p { margin:0; font-size:14px; line-height:1.6; }
 .design-review-toolbar { position:fixed; left:0; right:0; bottom:0; z-index:2500; min-height:54px; padding:9px 20px; display:flex; align-items:center; justify-content:center; gap:20px; flex-wrap:wrap; background:#fff; color:#003d70; border-top:2px solid #13b5ea; box-shadow:0 -4px 20px #003d7012; font-size:12px; }
@@ -121,3 +121,6 @@
 .mcc-workspace .workspace-context .workspace-help :is(p,span) { color:var(--mcc-secondary); }
 .mcc-workspace .workspace-context .workspace-breadcrumb,
 .mcc-workspace .workspace-context .workspace-breadcrumb a { color:var(--mcc-secondary); }
+
+.mcc-portal :is(button, a, input, select):focus-visible { outline: 3px solid #c9a84c; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .mcc-portal * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

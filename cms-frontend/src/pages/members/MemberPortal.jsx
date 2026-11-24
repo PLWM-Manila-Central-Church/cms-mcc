@@ -1068,11 +1068,16 @@ export default function MemberPortal() {
   },[serviceModal]);
 
   const onEventDetailsClick = useCallback((evt)=>{ setEventModal(evt); },[]);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+  const nextGathering = (Array.isArray(events) ? events : [])
+    .filter(event => String(event.start_date || event.event_date || '').slice(0, 10) >= today)
+    .sort((a, b) => String(a.start_date || a.event_date).localeCompare(String(b.start_date || b.event_date)))[0];
+
   const handleLogout = async () => { await logout(); navigate('/login'); };
 
   // ── Header ────────────────────────────────────────────────────
   const Header = () => (
-    <header className="mcc-portal-header" style={{background:BRAND,padding:isMobile?'10px 16px':'12px 24px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+    <header className="mcc-portal-header" style={{background:BRAND,padding:isMobile?'8px 12px':'8px max(20px, calc((100% - 1160px) / 2))',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
       <div style={{display:'flex',alignItems:'center',gap:isMobile?10:14}}>
         <img src="/logo.jpg" alt="PLWM-MCC" style={{width:isMobile?32:38,height:isMobile?32:38,borderRadius:'50%',objectFit:'contain',flexShrink:0}} />
         <div>
@@ -1103,9 +1108,9 @@ export default function MemberPortal() {
 
   // ── Tab Bar — top on desktop, bottom on mobile ────────────────
   const TopTabBar = () => (
-    <nav aria-label="Member navigation" style={{borderBottom:`1px solid ${c.border}`,background:c.surface,display:'flex',padding:'0 24px',overflowX:'auto'}}>
+    <nav aria-label="Member navigation" style={{borderBottom:`1px solid ${c.border}`,background:c.surface,display:'flex',padding:'0 max(20px, calc((100% - 1160px) / 2))',overflowX:'auto'}}>
       {t.tabs.map((tb,i)=>(
-        <button key={i} aria-pressed={tab===i} onClick={()=>setTab(i)} style={{padding:'13px 18px',fontSize:f.base,fontWeight:tab===i?700:500,color:tab===i?c.tabActive:c.t2,background:'none',border:'none',borderBottom:tab===i?`2.5px solid ${c.tabActive}`:'2.5px solid transparent',cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',transition:'color 0.15s'}}>
+        <button key={i} aria-pressed={tab===i} onClick={()=>setTab(i)} style={{padding:'10px 14px',fontSize:f.base,fontWeight:tab===i?700:500,color:tab===i?c.tabActive:c.t2,background:'none',border:'none',borderBottom:tab===i?`2.5px solid ${c.tabActive}`:'2.5px solid transparent',cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',transition:'color 0.15s'}}>
           {tb}
         </button>
       ))}
@@ -1167,14 +1172,17 @@ export default function MemberPortal() {
       </div>
 
       <main id="member-main" tabIndex={-1} style={{
-        maxWidth:isMobile?'100%':1240,
+        maxWidth:isMobile?'100%':1200,
         margin:'0 auto',
-        padding:isMobile?'14px 12px':'24px 20px',
+        padding:isMobile?'14px 12px':'18px 20px',
         paddingBottom:isMobile?`calc(80px + env(safe-area-inset-bottom,0px))`:'24px',
       }}>
         {tab===0 ? <section className="member-welcome" style={{background:c.surface,color:c.t1}} aria-label="Personal church workspace">
-          <div><span style={{fontSize:11,fontWeight:700,letterSpacing:'.12em',color:c.accentT}}>PLWM-MCC · {t.portal}</span><h2>{t.welcome}, {profile?.first_name||user?.email?.split('@')[0]||'Friend'}</h2><p style={{color:c.t2}}>Your QR, upcoming gatherings and personal church activity in one place.</p></div>
-          <div className="member-welcome-actions"><button type="button" onClick={()=>setTab(2)}>Attendance &amp; QR</button><button type="button" onClick={()=>setTab(1)}>{t.tabs[1]}</button></div>
+          <div>
+            <h2>{t.welcome}, {profile?.first_name||user?.email?.split('@')[0]||'Friend'}</h2>
+            {nextGathering && <p style={{color:c.t2}}>{nextGathering.title} · {fmtDate(String(nextGathering.start_date || nextGathering.event_date).slice(0, 10))}</p>}
+          </div>
+          <div className="member-welcome-actions"><button type="button" onClick={()=>setTab(1)}>{t.tabs[1]}</button><button type="button" onClick={()=>setTab(2)}>{t.tabs[2]}</button></div>
         </section> : <section className="member-tab-intro" style={{color:c.t1}} aria-label={`${t.tabs[tab]} overview`}>
           <span style={{display:'grid',placeItems:'center',width:44,height:44,borderRadius:12,background:c.accentL,color:c.accentT,flexShrink:0}}><MonoIcon name={TAB_ICON_NAMES[tab]} size={20}/></span>
           <div><h2>{t.tabs[tab]}</h2><p style={{color:c.t2}}>{['','Every upcoming gathering and church event in one calendar.','Show your QR and review your personal check-in history.','Your recorded giving, dates and supporting receipts.','Follow your ministry schedule, practices and cleaning duty.','Follow the reading plan and your group memory verse.'][tab]}</p></div>
