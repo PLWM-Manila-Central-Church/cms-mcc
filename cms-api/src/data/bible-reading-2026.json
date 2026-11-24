@@ -4,1099 +4,2215 @@
   "2026-01": {
    "2026-01-01": {
     "day": "Thu",
-    "ot": "Gen 1/2",
-    "nt": "Matt 1",
-    "ps": "Ps 1"
+    "ot": "Gen1/2",
+    "nt": "Matt1",
+    "ps": "Ps1"
    },
    "2026-01-02": {
     "day": "Fri",
-    "ot": "Gen 3/4",
-    "nt": "Matt 2",
-    "ps": "Ps 2"
+    "ot": "Gen3/4",
+    "nt": "Matt2",
+    "ps": "Ps2"
    },
    "2026-01-03": {
     "day": "Sat",
-    "ot": "Gen 5/6",
-    "nt": "Matt 3",
-    "ps": "Ps 3"
+    "ot": "Gen5/6",
+    "nt": "Matt3",
+    "ps": "Ps3"
    },
    "2026-01-04": {
     "day": "Sun",
-    "ot": "Gen 7/8",
-    "nt": "Matt 4",
-    "ps": "Ps 4"
+    "ot": "Gen7/8",
+    "nt": "Matt4",
+    "ps": "Ps4"
    },
    "2026-01-05": {
     "day": "Mon",
-    "ot": "Gen 9/10",
-    "nt": "Matt 5",
-    "ps": "Ps 5"
+    "ot": "Gen9/10",
+    "nt": "Matt5",
+    "ps": "Ps5"
    },
    "2026-01-06": {
     "day": "Tue",
-    "ot": "Gen 11/12",
-    "nt": "Matt 6",
-    "ps": "Ps 6"
+    "ot": "Gen11/12",
+    "nt": "Matt6",
+    "ps": "Ps6"
    },
    "2026-01-07": {
     "day": "Wed",
-    "ot": "Gen 13/14",
-    "nt": "Matt 7",
-    "ps": "Ps 7"
+    "ot": "Gen13/14",
+    "nt": "Matt7",
+    "ps": "Ps7"
    },
    "2026-01-08": {
     "day": "Thu",
-    "ot": "Gen 15/16",
-    "nt": "Matt 8",
-    "ps": "Ps 8"
+    "ot": "Gen15/16",
+    "nt": "Matt8",
+    "ps": "Ps8"
    },
    "2026-01-09": {
     "day": "Fri",
-    "ot": "Gen 17/18",
-    "nt": "Matt 9",
-    "ps": "Ps 9"
+    "ot": "Gen17/18",
+    "nt": "Matt9",
+    "ps": "Ps9"
    },
    "2026-01-10": {
     "day": "Sat",
-    "ot": "Gen 19/20",
-    "nt": "Matt 10",
-    "ps": "Ps 10"
+    "ot": "Gen19/20",
+    "nt": "Matt10",
+    "ps": "Ps10"
    },
    "2026-01-11": {
     "day": "Sun",
-    "ot": "Gen 21/22",
-    "nt": "Matt 11",
-    "ps": "Ps 11/12"
+    "ot": "Gen21/22",
+    "nt": "Matt11",
+    "ps": "Ps11/12"
    },
    "2026-01-12": {
     "day": "Mon",
-    "ot": "Gen 23/24",
-    "nt": "Matt 12",
-    "ps": "Ps 13/14"
+    "ot": "Gen23/24",
+    "nt": "Matt12",
+    "ps": "Ps13/14"
    },
    "2026-01-13": {
     "day": "Tue",
-    "ot": "Gen 25/26",
-    "nt": "Matt 13",
-    "ps": "Ps 15/16"
+    "ot": "Gen25/26",
+    "nt": "Matt13",
+    "ps": "Ps15/16"
    },
    "2026-01-14": {
     "day": "Wed",
-    "ot": "Gen 27/28",
-    "nt": "Matt 14",
-    "ps": "Ps 17"
+    "ot": "Gen27/28",
+    "nt": "Matt14",
+    "ps": "Ps17"
    },
    "2026-01-15": {
     "day": "Thu",
-    "ot": "Gen 29/30",
-    "nt": "Matt 15",
-    "ps": "Ps 18"
+    "ot": "Gen29/30",
+    "nt": "Matt15",
+    "ps": "Ps18"
    },
    "2026-01-16": {
     "day": "Fri",
-    "ot": "Gen 31/32",
-    "nt": "Matt 16",
-    "ps": "Ps 19"
+    "ot": "Gen31/32",
+    "nt": "Matt16",
+    "ps": "Ps19"
    },
    "2026-01-17": {
     "day": "Sat",
-    "ot": "Gen 33/34",
-    "nt": "Matt 17",
-    "ps": "Ps 20/21"
+    "ot": "Gen33/34",
+    "nt": "Matt17",
+    "ps": "Ps20/21"
    },
    "2026-01-18": {
     "day": "Sun",
-    "ot": "Gen 35/36",
-    "nt": "Matt 18",
-    "ps": "Ps 22"
+    "ot": "Gen35/36",
+    "nt": "Matt18",
+    "ps": "Ps22"
    },
    "2026-01-19": {
     "day": "Mon",
-    "ot": "Gen 37/38",
-    "nt": "Matt 19",
-    "ps": "Ps 23"
+    "ot": "Gen37/38",
+    "nt": "Matt19",
+    "ps": "Ps23"
    },
    "2026-01-20": {
     "day": "Tue",
-    "ot": "Gen 39/40",
-    "nt": "Matt 20",
-    "ps": "Ps 24"
+    "ot": "Gen39/40",
+    "nt": "Matt20",
+    "ps": "Ps24"
    },
    "2026-01-21": {
     "day": "Wed",
-    "ot": "Gen 41/42",
-    "nt": "Matt 21",
-    "ps": "Ps 25"
+    "ot": "Gen41/42",
+    "nt": "Matt21",
+    "ps": "Ps25"
    },
    "2026-01-22": {
     "day": "Thu",
-    "ot": "Gen 43/44",
-    "nt": "Matt 22",
-    "ps": "Ps 26/27"
+    "ot": "Gen43/44",
+    "nt": "Matt22",
+    "ps": "Ps26/27"
    },
    "2026-01-23": {
     "day": "Fri",
-    "ot": "Gen 45/46",
-    "nt": "Matt 23",
-    "ps": "Ps 28"
+    "ot": "Gen45/46",
+    "nt": "Matt23",
+    "ps": "Ps28"
    },
    "2026-01-24": {
     "day": "Sat",
-    "ot": "Gen 47/48",
-    "nt": "Matt 24",
-    "ps": "Ps 29"
+    "ot": "Gen47/48",
+    "nt": "Matt24",
+    "ps": "Ps29"
    },
    "2026-01-25": {
     "day": "Sun",
-    "ot": "Gen 49/50",
-    "nt": "Matt 25",
-    "ps": "Ps 30"
+    "ot": "Gen49/50",
+    "nt": "Matt25",
+    "ps": "Ps30"
    },
    "2026-01-26": {
     "day": "Mon",
-    "ot": "Ex 1/2",
-    "nt": "Matt 26",
-    "ps": "Ps 31"
+    "ot": "Ex1/2",
+    "nt": "Matt26",
+    "ps": "Ps31"
    },
    "2026-01-27": {
     "day": "Tue",
-    "ot": "Ex 3/4",
-    "nt": "Matt 27",
-    "ps": "Ps 32"
+    "ot": "Ex3/4",
+    "nt": "Matt27",
+    "ps": "Ps32"
    },
    "2026-01-28": {
     "day": "Wed",
-    "ot": "Ex 5/6",
-    "nt": "Matt 28",
-    "ps": "Ps 33"
+    "ot": "Ex5/6",
+    "nt": "Matt28",
+    "ps": "Ps33"
    },
    "2026-01-29": {
     "day": "Thu",
-    "ot": "Ex 7/8",
-    "nt": "Mark 1",
-    "ps": "Ps 34"
+    "ot": "Ex7/8",
+    "nt": "Mark1",
+    "ps": "Ps34"
    },
    "2026-01-30": {
     "day": "Fri",
-    "ot": "Ex 9/10",
-    "nt": "Mark 2",
-    "ps": "Ps 35"
+    "ot": "Ex9/10",
+    "nt": "Mark2",
+    "ps": "Ps35"
    },
    "2026-01-31": {
     "day": "Sat",
-    "ot": "Ex 11/12",
-    "nt": "Mark 3",
-    "ps": "Ps 36"
+    "ot": "Ex11/12",
+    "nt": "Mark3",
+    "ps": "Ps36"
    }
   },
   "2026-02": {
    "2026-02-01": {
     "day": "Sun",
-    "ot": "Ex 13/14",
-    "nt": "Mark 4",
-    "ps": "Ps 37"
+    "ot": "Ex13/14",
+    "nt": "Mark4",
+    "ps": "Ps37"
    },
    "2026-02-02": {
     "day": "Mon",
-    "ot": "Ex 15/16",
-    "nt": "Mark 5",
-    "ps": "Ps 38"
+    "ot": "Ex15/16",
+    "nt": "Mark5",
+    "ps": "Ps38"
    },
    "2026-02-03": {
     "day": "Tue",
-    "ot": "Ex 17/18",
-    "nt": "Mark 6",
-    "ps": "Ps 39"
+    "ot": "Ex17/18",
+    "nt": "Mark6",
+    "ps": "Ps39"
    },
    "2026-02-04": {
     "day": "Wed",
-    "ot": "Ex 19/20",
-    "nt": "Mark 7",
-    "ps": "Ps 40"
+    "ot": "Ex19/20",
+    "nt": "Mark7",
+    "ps": "Ps40"
    },
    "2026-02-05": {
     "day": "Thu",
-    "ot": "Ex 21/22",
-    "nt": "Mark 8",
-    "ps": "Ps 41"
+    "ot": "Ex21/22",
+    "nt": "Mark8",
+    "ps": "Ps41"
    },
    "2026-02-06": {
     "day": "Fri",
-    "ot": "Ex 23/24",
-    "nt": "Mark 9",
-    "ps": "Ps 42"
+    "ot": "Ex23/24",
+    "nt": "Mark9",
+    "ps": "Ps42"
    },
    "2026-02-07": {
     "day": "Sat",
-    "ot": "Ex 25/26",
-    "nt": "Mark 10",
-    "ps": "Ps 43"
+    "ot": "Ex25/26",
+    "nt": "Mark10",
+    "ps": "Ps43"
    },
    "2026-02-08": {
     "day": "Sun",
-    "ot": "Ex 27/28",
-    "nt": "Mark 11",
-    "ps": "Ps 44"
+    "ot": "Ex27/28",
+    "nt": "Mark11",
+    "ps": "Ps44"
    },
    "2026-02-09": {
     "day": "Mon",
-    "ot": "Ex 29/30",
-    "nt": "Mark 12",
-    "ps": "Ps 45"
+    "ot": "Ex29/30",
+    "nt": "Mark12",
+    "ps": "Ps45"
    },
    "2026-02-10": {
     "day": "Tue",
-    "ot": "Ex 31/32/34",
-    "nt": "Mark 13",
-    "ps": "Ps 46"
+    "ot": "Ex31/32",
+    "nt": "Mark13",
+    "ps": "Ps46"
    },
    "2026-02-11": {
     "day": "Wed",
-    "ot": "Ex 33/35/36",
-    "nt": "Mark 14",
-    "ps": "Ps 47"
+    "ot": "Ex33/34",
+    "nt": "Mark14",
+    "ps": "Ps47"
    },
    "2026-02-12": {
     "day": "Thu",
-    "ot": "Ex 37/38",
-    "nt": "Mark 15",
-    "ps": "Ps 48"
+    "ot": "Ex35/36",
+    "nt": "Mark15",
+    "ps": "Ps48"
    },
    "2026-02-13": {
     "day": "Fri",
-    "ot": "Ex 39/40",
-    "nt": "Mark 16",
-    "ps": "Ps 49"
+    "ot": "Ex37/38",
+    "nt": "Mark16",
+    "ps": "Ps49"
    },
    "2026-02-14": {
     "day": "Sat",
-    "ot": "Lev 1-3",
-    "nt": "Luke 1",
-    "ps": "Ps 50"
+    "ot": "Ex39/40",
+    "nt": "Luke1",
+    "ps": "Ps50"
    },
    "2026-02-15": {
     "day": "Sun",
-    "ot": "Lev 4/5",
-    "nt": "Luke 2",
-    "ps": "Ps 51"
+    "ot": "Lev1~3",
+    "nt": "Luke2",
+    "ps": "Ps51"
    },
    "2026-02-16": {
     "day": "Mon",
-    "ot": "Lev 6/7",
-    "nt": "Luke 3",
-    "ps": "Ps 52"
+    "ot": "Lev4/5",
+    "nt": "Luke3",
+    "ps": "Ps52"
    },
    "2026-02-17": {
     "day": "Tue",
-    "ot": "Lev 8/9",
-    "nt": "Luke 4",
-    "ps": "Ps 53"
+    "ot": "Lev6/7",
+    "nt": "Luke4",
+    "ps": "Ps53"
    },
    "2026-02-18": {
     "day": "Wed",
-    "ot": "Lev 10/11",
-    "nt": "Luke 5",
-    "ps": "Ps 54"
+    "ot": "Lev8/9",
+    "nt": "Luke5",
+    "ps": "Ps54"
    },
    "2026-02-19": {
     "day": "Thu",
-    "ot": "Lev 12/13",
-    "nt": "Luke 6",
-    "ps": "Ps 55"
+    "ot": "Lev10/11",
+    "nt": "Luke6",
+    "ps": "Ps55"
    },
    "2026-02-20": {
     "day": "Fri",
-    "ot": "Lev 14/15",
-    "nt": "Luke 7",
-    "ps": "Ps 56"
+    "ot": "Lev12/13",
+    "nt": "Luke7",
+    "ps": "Ps56"
    },
    "2026-02-21": {
     "day": "Sat",
-    "ot": "Lev 16/17",
-    "nt": "Luke 8",
-    "ps": "Ps 57"
+    "ot": "Lev14/15",
+    "nt": "Luke8",
+    "ps": "Ps57"
    },
    "2026-02-22": {
     "day": "Sun",
-    "ot": "Lev 18/19",
-    "nt": "Luke 9",
-    "ps": "Ps 58"
+    "ot": "Lev16/17",
+    "nt": "Luke9",
+    "ps": "Ps58"
    },
    "2026-02-23": {
     "day": "Mon",
-    "ot": "Lev 20/21",
-    "nt": "Luke 10",
-    "ps": "Ps 59"
+    "ot": "Lev18/19",
+    "nt": "Luke10",
+    "ps": "Ps59"
    },
    "2026-02-24": {
     "day": "Tue",
-    "ot": "Lev 22/23",
-    "nt": "Luke 11",
-    "ps": "Ps 60"
+    "ot": "Lev20/21",
+    "nt": "Luke11",
+    "ps": "Ps60"
    },
    "2026-02-25": {
     "day": "Wed",
-    "ot": "Lev 24/25",
-    "nt": "Luke 12",
-    "ps": "Ps 61"
+    "ot": "Lev22/23",
+    "nt": "Luke12",
+    "ps": "Ps61"
    },
    "2026-02-26": {
     "day": "Thu",
-    "ot": "Lev 26/27",
-    "nt": "Luke 13",
-    "ps": "Ps 62"
+    "ot": "Lev24/25",
+    "nt": "Luke13",
+    "ps": "Ps62"
    },
    "2026-02-27": {
     "day": "Fri",
-    "ot": "Num 1/2",
-    "nt": "Luke 14",
-    "ps": "Ps 63"
+    "ot": "Lev26/27",
+    "nt": "Luke14",
+    "ps": "Ps63"
    },
    "2026-02-28": {
     "day": "Sat",
-    "ot": "Num 1/3",
-    "nt": "Luke 15",
-    "ps": "Ps 64/65"
+    "ot": "Num1/2",
+    "nt": "Luke15",
+    "ps": "Ps64/65"
    }
   },
   "2026-03": {
    "2026-03-01": {
     "day": "Sun",
-    "ot": "Num 3/4",
-    "nt": "Luke 16",
-    "ps": "Ps 66"
+    "ot": "Num3/4",
+    "nt": "Luke16",
+    "ps": "Ps66"
    },
    "2026-03-02": {
     "day": "Mon",
-    "ot": "Num 5/6",
-    "nt": "Luke 17",
-    "ps": "Ps 67"
+    "ot": "Num5/6",
+    "nt": "Luke17",
+    "ps": "Ps67"
    },
    "2026-03-03": {
     "day": "Tue",
-    "ot": "Num 7/8",
-    "nt": "Luke 18",
-    "ps": "Ps 68"
+    "ot": "Num7/8",
+    "nt": "Luke18",
+    "ps": "Ps68"
    },
    "2026-03-04": {
     "day": "Wed",
-    "ot": "Num 9/10",
-    "nt": "Luke 19",
-    "ps": "Ps 69"
+    "ot": "Num9/10",
+    "nt": "Luke19",
+    "ps": "Ps69"
    },
    "2026-03-05": {
     "day": "Thu",
-    "ot": "Num 11/12",
-    "nt": "Luke 20/21",
-    "ps": "Ps 70"
+    "ot": "Num11/12",
+    "nt": "Luke20/21",
+    "ps": "Ps70"
    },
    "2026-03-06": {
     "day": "Fri",
-    "ot": "Num 13-15",
-    "nt": "Luke 22",
-    "ps": "Ps 71"
+    "ot": "Num13-15",
+    "nt": "Luke22",
+    "ps": "Ps71"
    },
    "2026-03-07": {
     "day": "Sat",
-    "ot": "Num 16-18",
-    "nt": "Luke 23",
-    "ps": "Ps 72"
+    "ot": "Num16-18",
+    "nt": "Luke23",
+    "ps": "Ps72"
    },
    "2026-03-08": {
     "day": "Sun",
-    "ot": "Num 19/20",
-    "nt": "Luke 24",
-    "ps": "Ps 73"
+    "ot": "Num19/20",
+    "nt": "Luke24",
+    "ps": "Ps73"
    },
    "2026-03-09": {
     "day": "Mon",
-    "ot": "Num 21/22",
-    "nt": "John 1",
-    "ps": "Ps 74"
+    "ot": "Num21/22",
+    "nt": "John1",
+    "ps": "Ps74"
    },
    "2026-03-10": {
     "day": "Tue",
-    "ot": "Num 23/24",
-    "nt": "John 2",
-    "ps": "Ps 75"
+    "ot": "Num23/24",
+    "nt": "John2",
+    "ps": "Ps75"
    },
    "2026-03-11": {
     "day": "Wed",
-    "ot": "Num 25/26",
-    "nt": "John 3",
-    "ps": "Ps 76"
+    "ot": "Num25/26",
+    "nt": "John3",
+    "ps": "Ps76"
    },
    "2026-03-12": {
     "day": "Thu",
-    "ot": "Num 27/28",
-    "nt": "John 4",
-    "ps": "Ps 77"
+    "ot": "Num27/28",
+    "nt": "John4",
+    "ps": "Ps77"
    },
    "2026-03-13": {
     "day": "Fri",
-    "ot": "Num 29/30",
-    "nt": "John 5",
-    "ps": "Ps 78:1-37"
+    "ot": "Num29/30",
+    "nt": "John5",
+    "ps": "Ps78:1~37"
    },
    "2026-03-14": {
     "day": "Sat",
-    "ot": "Num 31/32",
-    "nt": "John 6",
-    "ps": "Ps 78:38-72"
+    "ot": "Num31/32",
+    "nt": "John6",
+    "ps": "Ps78:38~72"
    },
    "2026-03-15": {
     "day": "Sun",
-    "ot": "Num 33/34",
-    "nt": "John 7",
-    "ps": "Ps 79"
+    "ot": "Num33/34",
+    "nt": "John7",
+    "ps": "Ps79"
    },
    "2026-03-16": {
     "day": "Mon",
-    "ot": "Num 35/36",
-    "nt": "John 8",
-    "ps": "Ps 80"
+    "ot": "Num35/36",
+    "nt": "John8",
+    "ps": "Ps80"
    },
    "2026-03-17": {
     "day": "Tue",
-    "ot": "Deut 1/2",
-    "nt": "John 9",
-    "ps": "Ps 81"
+    "ot": "Deut1/2",
+    "nt": "John9",
+    "ps": "Ps81"
    },
    "2026-03-18": {
     "day": "Wed",
-    "ot": "Deut 3/4",
-    "nt": "John 10",
-    "ps": "Ps 82"
+    "ot": "Deut3/4",
+    "nt": "John10",
+    "ps": "Ps82"
    },
    "2026-03-19": {
     "day": "Thu",
-    "ot": "Deut 5/6",
-    "nt": "John 11",
-    "ps": "Ps 83"
+    "ot": "Deut5/6",
+    "nt": "John11",
+    "ps": "Ps83"
    },
    "2026-03-20": {
     "day": "Fri",
-    "ot": "Deut 7/8",
-    "nt": "John 12",
-    "ps": "Ps 84"
+    "ot": "Deut7/8",
+    "nt": "John12",
+    "ps": "Ps84"
    },
    "2026-03-21": {
     "day": "Sat",
-    "ot": "Deut 9/10",
-    "nt": "John 13",
-    "ps": "Ps 85"
+    "ot": "Deut9/10",
+    "nt": "John13",
+    "ps": "Ps85"
    },
    "2026-03-22": {
     "day": "Sun",
-    "ot": "Deut 11/12",
-    "nt": "John 14",
-    "ps": "Ps 86"
+    "ot": "Deut11/12",
+    "nt": "John14",
+    "ps": "Ps86"
    },
    "2026-03-23": {
     "day": "Mon",
-    "ot": "Deut 13/14",
-    "nt": "John 15",
-    "ps": "Ps 87"
+    "ot": "Deut13/14",
+    "nt": "John15",
+    "ps": "Ps87"
    },
    "2026-03-24": {
     "day": "Tue",
-    "ot": "Deut 15-17",
-    "nt": "John 16",
-    "ps": "Ps 88"
+    "ot": "Deut15~17",
+    "nt": "John16",
+    "ps": "Ps88"
    },
    "2026-03-25": {
     "day": "Wed",
-    "ot": "Deut 18-20",
-    "nt": "John 17",
-    "ps": "Ps 89:1-18"
+    "ot": "Deut18~20",
+    "nt": "John17",
+    "ps": "Ps89:1~18"
    },
    "2026-03-26": {
     "day": "Thu",
-    "ot": "Deut 21/22",
-    "nt": "John 18",
-    "ps": "Ps 89:19-52"
+    "ot": "Deut21/22",
+    "nt": "John18",
+    "ps": "Ps89:19~52"
    },
    "2026-03-27": {
     "day": "Fri",
-    "ot": "Deut 23/24",
-    "nt": "John 19",
-    "ps": "Ps 90"
+    "ot": "Deut23/24",
+    "nt": "John19",
+    "ps": "Ps90"
    },
    "2026-03-28": {
     "day": "Sat",
-    "ot": "Deut 25-27",
-    "nt": "John 20",
-    "ps": "Ps 91"
+    "ot": "Deut25~27",
+    "nt": "John20",
+    "ps": "Ps91"
    },
    "2026-03-29": {
     "day": "Sun",
-    "ot": "Deut 28",
-    "nt": "John 21",
-    "ps": "Ps 92"
+    "ot": "Deut28",
+    "nt": "John21",
+    "ps": "Ps92"
    },
    "2026-03-30": {
     "day": "Mon",
-    "ot": "Deut 29/30",
-    "nt": "Acts 1/2",
-    "ps": "Ps 93"
+    "ot": "Deut29/30",
+    "nt": "Acts1/2",
+    "ps": "Ps93"
    },
    "2026-03-31": {
     "day": "Tue",
-    "ot": "Deut 31/32",
-    "nt": "Acts 3/4",
-    "ps": "Ps 94"
+    "ot": "Deut31/32",
+    "nt": "Acts3/4",
+    "ps": "Ps94"
    }
   },
   "2026-04": {
    "2026-04-01": {
     "day": "Wed",
-    "ot": "Deut 33/34",
-    "nt": "Acts 5/6",
-    "ps": "Ps 95"
+    "ot": "Deut33/34",
+    "nt": "Acts5/6",
+    "ps": "Ps95"
    },
    "2026-04-02": {
     "day": "Thu",
-    "ot": "Sat 1-3",
-    "nt": "Acts 7/8",
-    "ps": "Ps 96"
+    "ot": "Jos1~3",
+    "nt": "Acts7/8",
+    "ps": "Ps96"
    },
    "2026-04-03": {
     "day": "Fri",
-    "ot": "Sun 4/5",
-    "nt": "Acts 9/10",
-    "ps": "Ps 97"
+    "ot": "Jos4/5",
+    "nt": "Acts9/10",
+    "ps": "Ps97"
    },
    "2026-04-04": {
     "day": "Sat",
-    "ot": "Sun 6/7",
-    "nt": "Acts 11/12",
-    "ps": "Ps 98"
+    "ot": "Jos6/7",
+    "nt": "Acts11/12",
+    "ps": "Ps98"
    },
    "2026-04-05": {
     "day": "Sun",
-    "ot": "Sun 8/9",
-    "nt": "Acts 13/14",
-    "ps": "Ps 99"
+    "ot": "Jos8/9",
+    "nt": "Acts13/14",
+    "ps": "Ps99"
    },
    "2026-04-06": {
     "day": "Mon",
-    "ot": "Sun 10/11",
-    "nt": "Acts 15/16",
-    "ps": "Ps 100"
+    "ot": "Jos10/11",
+    "nt": "Acts15/16",
+    "ps": "Ps100"
    },
    "2026-04-07": {
     "day": "Tue",
-    "ot": "Sun 12/13",
-    "nt": "Acts 17/18",
-    "ps": "Ps 101"
+    "ot": "Jos12/13",
+    "nt": "Acts17/18",
+    "ps": "Ps101"
    },
    "2026-04-08": {
     "day": "Wed",
-    "ot": "Wed 14/15",
-    "nt": "Acts 19/20",
-    "ps": "Ps 102"
+    "ot": "Jos14/15",
+    "nt": "Acts19/20",
+    "ps": "Ps102"
    },
    "2026-04-09": {
     "day": "Thu",
-    "ot": "Wed 16-18",
-    "nt": "Acts 21/22",
-    "ps": "Ps 103"
+    "ot": "Jos16~18",
+    "nt": "Acts21/22",
+    "ps": "Ps103"
    },
    "2026-04-10": {
     "day": "Fri",
-    "ot": "Wed 19/20",
-    "nt": "Acts 23/24",
-    "ps": "Ps 104"
+    "ot": "Jos19/20",
+    "nt": "Acts23/24",
+    "ps": "Ps104"
    },
    "2026-04-11": {
     "day": "Sat",
-    "ot": "Wed 21/22",
-    "nt": "Acts 25/26",
-    "ps": "Ps 105"
+    "ot": "Jos21/22",
+    "nt": "Acts25/26",
+    "ps": "Ps105"
    },
    "2026-04-12": {
     "day": "Sun",
-    "ot": "Wed 23/24",
-    "nt": "Acts 27/28",
-    "ps": "Ps 106"
+    "ot": "Jos23/24",
+    "nt": "Acts27/28",
+    "ps": "Ps106"
    },
    "2026-04-13": {
     "day": "Mon",
-    "ot": "Judg 1/2",
-    "nt": "Rom 1/2",
-    "ps": "Ps 107"
+    "ot": "Judg1/2",
+    "nt": "Rom1/2",
+    "ps": "Ps107"
    },
    "2026-04-14": {
     "day": "Tue",
-    "ot": "Judg 3/4",
-    "nt": "Rom 3-5",
-    "ps": "Ps 108"
+    "ot": "Judg3/4",
+    "nt": "Rom3~5",
+    "ps": "Ps108"
    },
    "2026-04-15": {
     "day": "Wed",
-    "ot": "Judg 5/6",
-    "nt": "Rom 6/7",
-    "ps": "Ps 109"
+    "ot": "Judg5/6",
+    "nt": "Rom6/7",
+    "ps": "Ps109"
    },
    "2026-04-16": {
     "day": "Thu",
-    "ot": "Judg 7/8",
-    "nt": "Rom 8/9",
-    "ps": "Ps 110"
+    "ot": "Judg7/8",
+    "nt": "Rom8/9",
+    "ps": "Ps110"
    },
    "2026-04-17": {
     "day": "Fri",
-    "ot": "Judg 9/10",
-    "nt": "Rom 10/11",
-    "ps": "Ps 111"
+    "ot": "Judg9/10",
+    "nt": "Rom10/11",
+    "ps": "Ps111"
    },
    "2026-04-18": {
     "day": "Sat",
-    "ot": "Judg 11/12",
-    "nt": "Rom 12-14",
-    "ps": "Ps 112"
+    "ot": "Judg11/12",
+    "nt": "Rom12~14",
+    "ps": "Ps112"
    },
    "2026-04-19": {
     "day": "Sun",
-    "ot": "Judg 13/14",
-    "nt": "Rom 15/16",
-    "ps": "Ps 113"
+    "ot": "Judg13/14",
+    "nt": "Rom15/16",
+    "ps": "Ps113"
    },
    "2026-04-20": {
     "day": "Mon",
-    "ot": "Judg 15/16",
-    "nt": "1 Cor 1/2",
-    "ps": "Ps 114"
+    "ot": "Judg15/16",
+    "nt": "1Cor1/2",
+    "ps": "Ps114"
    },
    "2026-04-21": {
     "day": "Tue",
-    "ot": "Judg 17/18",
-    "nt": "1 Cor 3/4",
-    "ps": "Ps 115"
+    "ot": "Judg17/18",
+    "nt": "1Cor3/4",
+    "ps": "Ps115"
    },
    "2026-04-22": {
     "day": "Wed",
-    "ot": "Judg 19/20/21/Ruth 1",
-    "nt": "1 Cor 5/6",
-    "ps": "Ps 116/117"
+    "ot": "Judg19/20",
+    "nt": "1Cor5/6",
+    "ps": "Ps116/117"
    },
    "2026-04-23": {
     "day": "Thu",
-    "ot": "Ruth 2-4",
-    "nt": "1 Cor 7/8",
-    "ps": "Ps 118"
+    "ot": "Judg21/Ruth1",
+    "nt": "1Cor7/8",
+    "ps": "Ps118"
    },
    "2026-04-24": {
     "day": "Fri",
-    "ot": "1 Sam 1/2",
-    "nt": "1 Cor 9/10",
-    "ps": "Ps 119:1-24"
+    "ot": "Ruth2~4",
+    "nt": "1Cor9/10",
+    "ps": "Ps119:1~24"
    },
    "2026-04-25": {
     "day": "Sat",
-    "ot": "1 Sam 3",
-    "nt": "1 Cor 11/12",
-    "ps": "Ps 119:25-48"
+    "ot": "1Sam1/2",
+    "nt": "1Cor11/12",
+    "ps": "Ps119:25~48"
    },
    "2026-04-26": {
     "day": "Sun",
-    "ot": "1 Sam 4/5",
-    "nt": "1 Cor 13/14",
-    "ps": "Ps 119:49-72"
+    "ot": "1Sam3/4",
+    "nt": "1Cor13/14",
+    "ps": "Ps119:49~72"
    },
    "2026-04-27": {
     "day": "Mon",
-    "ot": "1 Sam 5-7",
-    "nt": "1 Cor 15/16",
-    "ps": "Ps 119:73-96"
+    "ot": "1Sam5~7",
+    "nt": "1Cor15/16",
+    "ps": "Ps119:73~96"
    },
    "2026-04-28": {
     "day": "Tue",
-    "ot": "1 Sam 8/9/10",
-    "nt": "2 Cor 1/2",
-    "ps": "Ps 119:97-120"
+    "ot": "1Sam8/9",
+    "nt": "2Cor1/2",
+    "ps": "Ps119:97~120"
    },
    "2026-04-29": {
     "day": "Wed",
-    "ot": "1 Sam 10/11",
-    "nt": "2 Cor 3/4",
-    "ps": "Ps 119:121-144"
+    "ot": "1Sam10/11",
+    "nt": "2Cor3/4",
+    "ps": "Ps119:121~144"
    },
    "2026-04-30": {
     "day": "Thu",
-    "ot": "1 Sam 12/13",
-    "nt": "2 Cor 5/6",
-    "ps": "Ps 119:145-176"
+    "ot": "1Sam12/13",
+    "nt": "2Cor5/6",
+    "ps": "Ps119:145~176"
    }
   },
   "2026-05": {
    "2026-05-01": {
     "day": "Fri",
-    "ot": "1 Sam 14/15",
-    "nt": "2 Cor 8",
-    "ps": "Ps 120"
+    "ot": "1Sam14/15",
+    "nt": "2Cor7/8",
+    "ps": "Ps120"
    },
    "2026-05-02": {
     "day": "Sat",
-    "ot": "1 Sam 16/17",
-    "nt": "2 Cor 9/10",
-    "ps": "Ps 121"
+    "ot": "1Sam16/17",
+    "nt": "2Cor9/10",
+    "ps": "Ps121"
    },
    "2026-05-03": {
     "day": "Sun",
-    "ot": "1 Sam 18/19",
-    "nt": "2 Cor 11/12",
-    "ps": "Ps 122"
+    "ot": "1Sam18/19",
+    "nt": "2Cor11/12",
+    "ps": "Ps122"
    },
    "2026-05-04": {
     "day": "Mon",
-    "ot": "1 Sam 20/21",
-    "nt": "2 Cor 13/Gal 1",
-    "ps": "Ps 123"
+    "ot": "1Sam20/21",
+    "nt": "2Cor13/Gal1",
+    "ps": "Ps123"
    },
    "2026-05-05": {
     "day": "Tue",
-    "ot": "1 Sam 22/23",
-    "nt": "Gal 2/3",
-    "ps": "Ps 124"
+    "ot": "1Sam22/23",
+    "nt": "Gal2/3",
+    "ps": "Ps124"
    },
    "2026-05-06": {
     "day": "Wed",
-    "ot": "1 Sam 24/25",
-    "nt": "Gal 4/5",
-    "ps": "Ps 125"
+    "ot": "1Sam24/25",
+    "nt": "Gal4/5",
+    "ps": "Ps125"
    },
    "2026-05-07": {
     "day": "Thu",
-    "ot": "1 Sam 26-28",
-    "nt": "Gal 6/Eph 1",
-    "ps": "Ps 126"
+    "ot": "1Sam26~28",
+    "nt": "Gal6/Eph1",
+    "ps": "Ps126"
    },
    "2026-05-08": {
     "day": "Fri",
-    "ot": "1 Sam 29/30",
-    "nt": "Eph 2/3",
-    "ps": "Ps 127"
+    "ot": "1Sam29/30",
+    "nt": "Eph2/3",
+    "ps": "Ps127"
    },
    "2026-05-09": {
     "day": "Sat",
-    "ot": "1 Sam 31/2 Sam 1",
-    "nt": "Eph 4/5",
-    "ps": "Ps 128"
+    "ot": "1Sam31/2Sam1",
+    "nt": "Eph4/5",
+    "ps": "Ps128"
    },
    "2026-05-10": {
     "day": "Sun",
-    "ot": "2 Sam 2/3",
-    "nt": "Eph 6",
-    "ps": "Ps 129"
+    "ot": "2Sam2/3",
+    "nt": "Eph6",
+    "ps": "Ps129"
    },
    "2026-05-11": {
     "day": "Mon",
-    "ot": "2 Sam 4/5",
-    "nt": "Phil 1/2",
-    "ps": "Ps 130"
+    "ot": "2Sam4/5",
+    "nt": "Phil1/2",
+    "ps": "Ps130"
    },
    "2026-05-12": {
     "day": "Tue",
-    "ot": "2 Sam 6/7",
-    "nt": "Phil 3/4",
-    "ps": "Ps 131"
+    "ot": "2Sam6/7",
+    "nt": "Phil3/4",
+    "ps": "Ps131"
    },
    "2026-05-13": {
     "day": "Wed",
-    "ot": "2 Sam 8/9",
-    "nt": "Col 1",
-    "ps": "Ps 132"
+    "ot": "2Sam8/9",
+    "nt": "Col1",
+    "ps": "Ps132"
    },
    "2026-05-14": {
     "day": "Thu",
-    "ot": "2 Sam 10/11",
-    "nt": "Col 2/3",
-    "ps": "Ps 133/134"
+    "ot": "2Sam10/11",
+    "nt": "Col2/3",
+    "ps": "Ps133/134"
    },
    "2026-05-15": {
     "day": "Fri",
-    "ot": "2 Sam 12/13",
-    "nt": "Col 4",
-    "ps": "Ps 135"
+    "ot": "2Sam12/13",
+    "nt": "Col4",
+    "ps": "Ps135"
    },
    "2026-05-16": {
     "day": "Sat",
-    "ot": "2 Sam 14/15",
-    "nt": "1 Thess 1/2",
-    "ps": "Ps 136"
+    "ot": "2Sam14/15",
+    "nt": "1Thess1/2",
+    "ps": "Ps136"
    },
    "2026-05-17": {
     "day": "Sun",
-    "ot": "2 Sam 16/17",
-    "nt": "1 Thess 3/4",
-    "ps": "Ps 137"
+    "ot": "2Sam16/17",
+    "nt": "1Thess3/4",
+    "ps": "Ps137"
    },
    "2026-05-18": {
     "day": "Mon",
-    "ot": "2 Sam 18/19",
-    "nt": "1 Thess 5",
-    "ps": "Ps 138"
+    "ot": "2Sam18/19",
+    "nt": "1Thess5",
+    "ps": "Ps138"
    },
    "2026-05-19": {
     "day": "Tue",
-    "ot": "2 Sam 20/21",
-    "nt": "2 Thess 1/2",
-    "ps": "Ps 139"
+    "ot": "2Sam20/21",
+    "nt": "2Thess1/2",
+    "ps": "Ps139"
    },
    "2026-05-20": {
     "day": "Wed",
-    "ot": "2 Sam 22/23",
-    "nt": "2 Thess 3",
-    "ps": "Ps 140"
+    "ot": "2Sam22/23",
+    "nt": "2Thess3",
+    "ps": "Ps140"
    },
    "2026-05-21": {
     "day": "Thu",
-    "ot": "2 Sam 24/1 Kings 1",
-    "nt": "1 Tim 1/2",
-    "ps": "Ps 141"
+    "ot": "2Sam24/1Kin1",
+    "nt": "1Tim1/2",
+    "ps": "Ps141"
    },
    "2026-05-22": {
     "day": "Fri",
-    "ot": "1 Kings 2/3",
-    "nt": "1 Tim 3/5",
-    "ps": "Ps 142"
+    "ot": "1Kin2/3",
+    "nt": "1Tim3/4",
+    "ps": "Ps142"
    },
    "2026-05-23": {
     "day": "Sat",
-    "ot": "1 Kings 4/5",
-    "nt": "1 Tim 5/6",
-    "ps": "Ps 143"
+    "ot": "1Kin4/5",
+    "nt": "1Tim5/6",
+    "ps": "Ps143"
    },
    "2026-05-24": {
     "day": "Sun",
-    "ot": "1 Kings 6/7",
-    "nt": "2 Tim 1/2",
-    "ps": "Ps 144"
+    "ot": "1Kin6/7",
+    "nt": "2Tim1/2",
+    "ps": "Ps144"
    },
    "2026-05-25": {
     "day": "Mon",
-    "ot": "1 Kings 8/9",
-    "nt": "2 Tim 3/4",
-    "ps": "Ps 145"
+    "ot": "1Kin8/9",
+    "nt": "2Tim3/4",
+    "ps": "Ps145"
    },
    "2026-05-26": {
     "day": "Tue",
-    "ot": "1 Kings 10/11",
-    "nt": "Titus 1-3",
-    "ps": "Ps 146"
+    "ot": "1Kin10/11",
+    "nt": "Titus1~3",
+    "ps": "Ps146"
    },
    "2026-05-27": {
     "day": "Wed",
-    "ot": "1 Kings 12/13",
-    "nt": "Philem 1/Heb1",
-    "ps": "Ps 147"
+    "ot": "1Kin12/13",
+    "nt": "Philem1/Heb1",
+    "ps": "Ps147"
    },
    "2026-05-28": {
     "day": "Thu",
-    "ot": "1 Kings 14/15",
-    "nt": "Heb 2/3",
-    "ps": "Ps 148"
+    "ot": "1Kin14/15",
+    "nt": "Heb2/3",
+    "ps": "Ps148"
    },
    "2026-05-29": {
     "day": "Fri",
-    "ot": "1 Kings 16/17",
-    "nt": "Heb 4/5",
-    "ps": "Ps 149/150"
+    "ot": "1Kin16/17",
+    "nt": "Heb4/5",
+    "ps": "Ps149/150"
    },
    "2026-05-30": {
     "day": "Sat",
-    "ot": "1 Kings 18/19",
-    "nt": "Heb 6/7",
-    "ps": "Prov 1"
+    "ot": "1Kin18/19",
+    "nt": "Heb6/7",
+    "ps": "Prov1"
    },
    "2026-05-31": {
     "day": "Sun",
-    "ot": "1 Kings 20/21",
-    "nt": "Heb 8/9",
-    "ps": "Prov 2"
+    "ot": "1Kin20/21",
+    "nt": "Heb8/9",
+    "ps": "Prov2"
    }
   },
   "2026-06": {
    "2026-06-01": {
     "day": "Mon",
-    "ot": "1 kings/2 Kings 2",
-    "nt": "Heb 10/11",
-    "ps": "Prov 3"
+    "ot": "1Kin22/2Kin1",
+    "nt": "Heb10/11",
+    "ps": "Prov3"
    },
    "2026-06-02": {
     "day": "Tue",
-    "ot": "2 Kings 2/3",
-    "nt": "Heb 12/13",
-    "ps": "Prov 4"
+    "ot": "2Kin2/3",
+    "nt": "Heb12/13",
+    "ps": "Prov4"
    },
    "2026-06-03": {
     "day": "Wed",
-    "ot": "2 Kings 4/5",
-    "nt": "James 1/2",
-    "ps": "Prov 5"
+    "ot": "2Kin4/5",
+    "nt": "James1/2",
+    "ps": "Prov5"
    },
    "2026-06-04": {
     "day": "Thu",
-    "ot": "2 Kings 6/7",
-    "nt": "James 3/4",
-    "ps": "Prov 6"
+    "ot": "2Kin6/7",
+    "nt": "James3/4",
+    "ps": "Prov6"
    },
    "2026-06-05": {
     "day": "Fri",
-    "ot": "2 Kings 8/9",
-    "nt": "James 5",
-    "ps": "Prov 7"
+    "ot": "2Kin8/9",
+    "nt": "James5",
+    "ps": "Prov7"
    },
    "2026-06-06": {
     "day": "Sat",
-    "ot": "2 Kings 10/11",
-    "nt": "1 Pet 1",
-    "ps": "Prov 8"
+    "ot": "2Kin10/11",
+    "nt": "1Pet1",
+    "ps": "Prov8"
    },
    "2026-06-07": {
     "day": "Sun",
-    "ot": "2 Kings 12/13",
-    "nt": "1 Pet 2",
-    "ps": "Prov 9"
+    "ot": "2Kin12/13",
+    "nt": "1Pet2",
+    "ps": "Prov9"
    },
    "2026-06-08": {
     "day": "Mon",
-    "ot": "2 Kings 14/15",
-    "nt": "1 Pet 3",
-    "ps": "Prov 10"
+    "ot": "2Kin14/15",
+    "nt": "1Pet3",
+    "ps": "Prov10"
    },
    "2026-06-09": {
     "day": "Tue",
-    "ot": "2 Kings 16/17",
-    "nt": "1 Pet 4",
-    "ps": "Prov 11"
+    "ot": "2Kin16/17",
+    "nt": "1Pet4",
+    "ps": "Prov11"
    },
    "2026-06-10": {
     "day": "Wed",
-    "ot": "2 Kings 18/19",
-    "nt": "1 Pet 5",
-    "ps": "Prov 12"
+    "ot": "2Kin18/19",
+    "nt": "1Pet5",
+    "ps": "Prov12"
    },
    "2026-06-11": {
     "day": "Thu",
-    "ot": "2 Kings 20/21",
-    "nt": "2 Pet 1",
-    "ps": "Prov 13"
+    "ot": "2Kin20/21",
+    "nt": "2Pet1",
+    "ps": "Prov13"
    },
    "2026-06-12": {
     "day": "Fri",
-    "ot": "2 Kings 22/23",
-    "nt": "2 Pet 2/3",
-    "ps": "Prov 14"
+    "ot": "2Kin22/23",
+    "nt": "2Pet2/3",
+    "ps": "Prov14"
    },
    "2026-06-13": {
     "day": "Sat",
-    "ot": "2 Kings 24/25",
-    "nt": "1 John 1/2",
-    "ps": "Prov 15"
+    "ot": "2Kin24/25",
+    "nt": "1John1/2",
+    "ps": "Prov15"
    },
    "2026-06-14": {
     "day": "Sun",
-    "ot": "1 Chr 1/2",
-    "nt": "1 John 3",
-    "ps": "Prov 16"
+    "ot": "1Chr1/2",
+    "nt": "1John3",
+    "ps": "Prov16"
    },
    "2026-06-15": {
     "day": "Mon",
-    "ot": "1 Chr 3/4",
-    "nt": "1 John 4",
-    "ps": "Prov 17"
+    "ot": "1Chr3/4",
+    "nt": "1John4",
+    "ps": "Prov17"
    },
    "2026-06-16": {
     "day": "Tue",
-    "ot": "1 Chr 5/6",
-    "nt": "1 John 5",
-    "ps": "Prov 18"
+    "ot": "1Chr5/6",
+    "nt": "1John5",
+    "ps": "Prov18"
    },
    "2026-06-17": {
     "day": "Wed",
-    "ot": "1 Chr 7/8",
-    "nt": "2 John/3 John 1",
-    "ps": "Prov 19"
+    "ot": "1Chr7/8",
+    "nt": "2John1/3John1",
+    "ps": "Prov19"
    },
    "2026-06-18": {
     "day": "Thu",
-    "ot": "1 Chr 9/10",
-    "nt": "Jude/Rev 1",
-    "ps": "Prov 20"
+    "ot": "1Chr9/10",
+    "nt": "Jude1",
+    "ps": "Prov20"
    },
    "2026-06-19": {
     "day": "Fri",
-    "ot": "1 Chr 11/12",
-    "nt": "Rev 2/3",
-    "ps": "Prov 21"
+    "ot": "1Chr11/12",
+    "nt": "Rev1/2",
+    "ps": "Prov21"
    },
    "2026-06-20": {
     "day": "Sat",
-    "ot": "1 Chr 13/14",
-    "nt": "Rev 4",
-    "ps": "Prov 22"
+    "ot": "1Chr13/14",
+    "nt": "Rev3/4",
+    "ps": "Prov22"
    },
    "2026-06-21": {
     "day": "Sun",
-    "ot": "1 Chr 15/16",
-    "nt": "Rev 5/6",
-    "ps": "Prov 23"
+    "ot": "1Chr15/16",
+    "nt": "Rev5/6",
+    "ps": "Prov23"
    },
    "2026-06-22": {
     "day": "Mon",
-    "ot": "1 Chr 17/18",
-    "nt": "Rev 7/8",
-    "ps": "Prov 24"
+    "ot": "1Chr17/18",
+    "nt": "Rev7/8",
+    "ps": "Prov24"
    },
    "2026-06-23": {
     "day": "Tue",
-    "ot": "1 Chr 19/20",
-    "nt": "Rev 9/10",
-    "ps": "Prov 25"
+    "ot": "1Chr19/20",
+    "nt": "Rev9/10",
+    "ps": "Prov25"
    },
    "2026-06-24": {
     "day": "Wed",
-    "ot": "1 Chr 21/22",
-    "nt": "Rev 11/12",
-    "ps": "Prov 26"
+    "ot": "1Chr21/22",
+    "nt": "Rev11/12",
+    "ps": "Prov26"
    },
    "2026-06-25": {
     "day": "Thu",
-    "ot": "1 Chr 23/24",
-    "nt": "Rev 13/14",
-    "ps": "Prov 27"
+    "ot": "1Chr23/24",
+    "nt": "Rev13/14",
+    "ps": "Prov27"
    },
    "2026-06-26": {
     "day": "Fri",
-    "ot": "1 Chr 25/26",
-    "nt": "Rev 15/16",
-    "ps": "Prov 28"
+    "ot": "1Chr25/26",
+    "nt": "Rev15/16",
+    "ps": "Prov28"
    },
    "2026-06-27": {
     "day": "Sat",
-    "ot": "1 Chr 27/28",
-    "nt": "Rev 17/18",
-    "ps": "Prov 29"
+    "ot": "1Chr27/28",
+    "nt": "Rev17/18",
+    "ps": "Prov29"
    },
    "2026-06-28": {
     "day": "Sun",
-    "ot": "1 Chr 29/2 Chr 1",
-    "nt": "Rev 19/20",
-    "ps": "Prov 30"
+    "ot": "1Chr29/2Chr1",
+    "nt": "Rev19/20",
+    "ps": "Prov30"
    },
    "2026-06-29": {
     "day": "Mon",
-    "ot": "2 Chr 2/3",
-    "nt": "Rev 21/22",
-    "ps": "Prov 31"
+    "ot": "2Chr2/3",
+    "nt": "Rev21/22",
+    "ps": "Prov31"
    },
    "2026-06-30": {
     "day": "Tue",
-    "ot": "2 Chr 4/5",
-    "nt": "Matt 1",
-    "ps": "Ps 1"
+    "ot": "2Chr4/5",
+    "nt": "Matt1",
+    "ps": "Ps1"
+   }
+  },
+  "2026-07": {
+   "2026-07-01": {
+    "day": "Wed",
+    "ot": "2Chr6/7",
+    "nt": "Matt2",
+    "ps": "Ps2"
+   },
+   "2026-07-02": {
+    "day": "Thu",
+    "ot": "2Chr8/9",
+    "nt": "Matt3",
+    "ps": "Ps3"
+   },
+   "2026-07-03": {
+    "day": "Fri",
+    "ot": "2Chr10/11",
+    "nt": "Matt4",
+    "ps": "Ps4"
+   },
+   "2026-07-04": {
+    "day": "Sat",
+    "ot": "2Chr12/13",
+    "nt": "Matt5",
+    "ps": "Ps5"
+   },
+   "2026-07-05": {
+    "day": "Sun",
+    "ot": "2Chr14/15",
+    "nt": "Matt6",
+    "ps": "Ps6"
+   },
+   "2026-07-06": {
+    "day": "Mon",
+    "ot": "2Chr16/17",
+    "nt": "Matt7",
+    "ps": "Ps7"
+   },
+   "2026-07-07": {
+    "day": "Tue",
+    "ot": "2Chr18/19",
+    "nt": "Matt8",
+    "ps": "Ps8"
+   },
+   "2026-07-08": {
+    "day": "Wed",
+    "ot": "2Chr20/21",
+    "nt": "Matt9",
+    "ps": "Ps9"
+   },
+   "2026-07-09": {
+    "day": "Thu",
+    "ot": "2Chr22/23",
+    "nt": "Matt10",
+    "ps": "Ps10"
+   },
+   "2026-07-10": {
+    "day": "Fri",
+    "ot": "2Chr24/25",
+    "nt": "Matt11",
+    "ps": "Ps11/12"
+   },
+   "2026-07-11": {
+    "day": "Sat",
+    "ot": "2Chr26/27",
+    "nt": "Matt12",
+    "ps": "Ps13/14"
+   },
+   "2026-07-12": {
+    "day": "Sun",
+    "ot": "2Chr28/29",
+    "nt": "Matt13",
+    "ps": "Ps15"
+   },
+   "2026-07-13": {
+    "day": "Mon",
+    "ot": "2Chr30/31",
+    "nt": "Matt14",
+    "ps": "Ps16"
+   },
+   "2026-07-14": {
+    "day": "Tue",
+    "ot": "2Chr32/33",
+    "nt": "Matt15",
+    "ps": "Ps17"
+   },
+   "2026-07-15": {
+    "day": "Wed",
+    "ot": "2Chr34/35",
+    "nt": "Matt16",
+    "ps": "Ps18"
+   },
+   "2026-07-16": {
+    "day": "Thu",
+    "ot": "2Chr36/Ezra1",
+    "nt": "Matt17",
+    "ps": "Ps19"
+   },
+   "2026-07-17": {
+    "day": "Fri",
+    "ot": "Ezra2/3",
+    "nt": "Matt18",
+    "ps": "Ps20"
+   },
+   "2026-07-18": {
+    "day": "Sat",
+    "ot": "Ezra4/5",
+    "nt": "Matt19",
+    "ps": "Ps21"
+   },
+   "2026-07-19": {
+    "day": "Sun",
+    "ot": "Ezra6/7",
+    "nt": "Matt20",
+    "ps": "Ps22"
+   },
+   "2026-07-20": {
+    "day": "Mon",
+    "ot": "Ezra8/9",
+    "nt": "Matt21",
+    "ps": "Ps23"
+   },
+   "2026-07-21": {
+    "day": "Tue",
+    "ot": "Ezra10/Neh1",
+    "nt": "Matt22",
+    "ps": "Ps24"
+   },
+   "2026-07-22": {
+    "day": "Wed",
+    "ot": "Neh2/3",
+    "nt": "Matt23",
+    "ps": "Ps25"
+   },
+   "2026-07-23": {
+    "day": "Thu",
+    "ot": "Neh4/5",
+    "nt": "Matt24",
+    "ps": "Ps26"
+   },
+   "2026-07-24": {
+    "day": "Fri",
+    "ot": "Neh6/7",
+    "nt": "Matt25",
+    "ps": "Ps27"
+   },
+   "2026-07-25": {
+    "day": "Sat",
+    "ot": "Neh8/9",
+    "nt": "Matt26",
+    "ps": "Ps28"
+   },
+   "2026-07-26": {
+    "day": "Sun",
+    "ot": "Neh10/11",
+    "nt": "Matt27",
+    "ps": "Ps29"
+   },
+   "2026-07-27": {
+    "day": "Mon",
+    "ot": "Neh12/13",
+    "nt": "Matt28",
+    "ps": "Ps30"
+   },
+   "2026-07-28": {
+    "day": "Tue",
+    "ot": "Esth1/2",
+    "nt": "Mark1",
+    "ps": "Ps31"
+   },
+   "2026-07-29": {
+    "day": "Wed",
+    "ot": "Esth3~5",
+    "nt": "Mark2",
+    "ps": "Ps32"
+   },
+   "2026-07-30": {
+    "day": "Thu",
+    "ot": "Esth6~8",
+    "nt": "Mark3",
+    "ps": "Ps33"
+   },
+   "2026-07-31": {
+    "day": "Fri",
+    "ot": "Esth9/10",
+    "nt": "Mark4",
+    "ps": "Ps34"
+   }
+  },
+  "2026-08": {
+   "2026-08-01": {
+    "day": "Sat",
+    "ot": "Job1/2",
+    "nt": "Mark5",
+    "ps": "Ps35"
+   },
+   "2026-08-02": {
+    "day": "Sun",
+    "ot": "Job3/4",
+    "nt": "Mark6",
+    "ps": "Ps36"
+   },
+   "2026-08-03": {
+    "day": "Mon",
+    "ot": "Job5/6",
+    "nt": "Mark7",
+    "ps": "Ps37"
+   },
+   "2026-08-04": {
+    "day": "Tue",
+    "ot": "Job7/8",
+    "nt": "Mark8",
+    "ps": "Ps38"
+   },
+   "2026-08-05": {
+    "day": "Wed",
+    "ot": "Job9/10",
+    "nt": "Mark9",
+    "ps": "Ps39"
+   },
+   "2026-08-06": {
+    "day": "Thu",
+    "ot": "Job11/12",
+    "nt": "Mark10",
+    "ps": "Ps40"
+   },
+   "2026-08-07": {
+    "day": "Fri",
+    "ot": "Job13/14",
+    "nt": "Mark11",
+    "ps": "Ps41"
+   },
+   "2026-08-08": {
+    "day": "Sat",
+    "ot": "Job15/16",
+    "nt": "Mark12",
+    "ps": "Ps42"
+   },
+   "2026-08-09": {
+    "day": "Sun",
+    "ot": "Job17/18",
+    "nt": "Mark13",
+    "ps": "Ps43"
+   },
+   "2026-08-10": {
+    "day": "Mon",
+    "ot": "Job19/20",
+    "nt": "Mark14",
+    "ps": "Ps44"
+   },
+   "2026-08-11": {
+    "day": "Tue",
+    "ot": "Job21/22",
+    "nt": "Mark15",
+    "ps": "Ps45"
+   },
+   "2026-08-12": {
+    "day": "Wed",
+    "ot": "Job23~25",
+    "nt": "Mark16",
+    "ps": "Ps46"
+   },
+   "2026-08-13": {
+    "day": "Thu",
+    "ot": "Job26~28",
+    "nt": "Luke1",
+    "ps": "Ps47"
+   },
+   "2026-08-14": {
+    "day": "Fri",
+    "ot": "Job29/30",
+    "nt": "Luke2",
+    "ps": "Ps48"
+   },
+   "2026-08-15": {
+    "day": "Sat",
+    "ot": "Job31/32",
+    "nt": "Luke3",
+    "ps": "Ps49"
+   },
+   "2026-08-16": {
+    "day": "Sun",
+    "ot": "Job33/34",
+    "nt": "Luke4",
+    "ps": "Ps50"
+   },
+   "2026-08-17": {
+    "day": "Mon",
+    "ot": "Job35/36",
+    "nt": "Luke5",
+    "ps": "Ps51"
+   },
+   "2026-08-18": {
+    "day": "Tue",
+    "ot": "Job37/38",
+    "nt": "Luke6",
+    "ps": "Ps52"
+   },
+   "2026-08-19": {
+    "day": "Wed",
+    "ot": "Job39/40",
+    "nt": "Luke7",
+    "ps": "Ps53"
+   },
+   "2026-08-20": {
+    "day": "Thu",
+    "ot": "Job41/42",
+    "nt": "Luke8",
+    "ps": "Ps54"
+   },
+   "2026-08-21": {
+    "day": "Fri",
+    "ot": "Eccl1/2",
+    "nt": "Luke9",
+    "ps": "Ps55"
+   },
+   "2026-08-22": {
+    "day": "Sat",
+    "ot": "Eccl3/4",
+    "nt": "Luke10",
+    "ps": "Ps56"
+   },
+   "2026-08-23": {
+    "day": "Sun",
+    "ot": "Eccl5/6",
+    "nt": "Luke11",
+    "ps": "Ps57"
+   },
+   "2026-08-24": {
+    "day": "Mon",
+    "ot": "Eccl7/8",
+    "nt": "Luke12",
+    "ps": "Ps58"
+   },
+   "2026-08-25": {
+    "day": "Tue",
+    "ot": "Eccl9/10",
+    "nt": "Luke13",
+    "ps": "Ps59"
+   },
+   "2026-08-26": {
+    "day": "Wed",
+    "ot": "Eccl11/12",
+    "nt": "Luke14",
+    "ps": "Ps60"
+   },
+   "2026-08-27": {
+    "day": "Thu",
+    "ot": "Song1/2",
+    "nt": "Luke15",
+    "ps": "Ps61"
+   },
+   "2026-08-28": {
+    "day": "Fri",
+    "ot": "Song3/4",
+    "nt": "Luke16",
+    "ps": "Ps62"
+   },
+   "2026-08-29": {
+    "day": "Sat",
+    "ot": "Song5/6",
+    "nt": "Luke17",
+    "ps": "Ps63"
+   },
+   "2026-08-30": {
+    "day": "Sun",
+    "ot": "Song7/8",
+    "nt": "Luke18",
+    "ps": "Ps64"
+   },
+   "2026-08-31": {
+    "day": "Mon",
+    "ot": "Is1/2",
+    "nt": "Luke19",
+    "ps": "Ps65"
+   }
+  },
+  "2026-09": {
+   "2026-09-01": {
+    "day": "Tue",
+    "ot": "Is3/4",
+    "nt": "Luke20",
+    "ps": "Ps66"
+   },
+   "2026-09-02": {
+    "day": "Wed",
+    "ot": "Is5/6",
+    "nt": "Luke21",
+    "ps": "Ps67"
+   },
+   "2026-09-03": {
+    "day": "Thu",
+    "ot": "Is7/8",
+    "nt": "Luke22",
+    "ps": "Ps68"
+   },
+   "2026-09-04": {
+    "day": "Fri",
+    "ot": "Is9/10",
+    "nt": "Luke23",
+    "ps": "Ps69"
+   },
+   "2026-09-05": {
+    "day": "Sat",
+    "ot": "Is11~13",
+    "nt": "Luke24",
+    "ps": "Ps70"
+   },
+   "2026-09-06": {
+    "day": "Sun",
+    "ot": "Is14~16",
+    "nt": "John1",
+    "ps": "Ps71"
+   },
+   "2026-09-07": {
+    "day": "Mon",
+    "ot": "Is17~19",
+    "nt": "John2",
+    "ps": "Ps72"
+   },
+   "2026-09-08": {
+    "day": "Tue",
+    "ot": "Is20~22",
+    "nt": "John3",
+    "ps": "Ps73"
+   },
+   "2026-09-09": {
+    "day": "Wed",
+    "ot": "Is23~25",
+    "nt": "John4",
+    "ps": "Ps74"
+   },
+   "2026-09-10": {
+    "day": "Thu",
+    "ot": "Is26/27",
+    "nt": "John5",
+    "ps": "Ps75"
+   },
+   "2026-09-11": {
+    "day": "Fri",
+    "ot": "Is28/29",
+    "nt": "John6",
+    "ps": "Ps76"
+   },
+   "2026-09-12": {
+    "day": "Sat",
+    "ot": "Is30~32",
+    "nt": "John7",
+    "ps": "Ps77"
+   },
+   "2026-09-13": {
+    "day": "Sun",
+    "ot": "Is33~35",
+    "nt": "John8",
+    "ps": "Ps78:1~37"
+   },
+   "2026-09-14": {
+    "day": "Mon",
+    "ot": "Is36/37",
+    "nt": "John9",
+    "ps": "Ps78:38~72"
+   },
+   "2026-09-15": {
+    "day": "Tue",
+    "ot": "Is38/39",
+    "nt": "John10",
+    "ps": "Ps79"
+   },
+   "2026-09-16": {
+    "day": "Wed",
+    "ot": "Is40/41",
+    "nt": "John11",
+    "ps": "Ps80"
+   },
+   "2026-09-17": {
+    "day": "Thu",
+    "ot": "Is42/43",
+    "nt": "John12",
+    "ps": "Ps81"
+   },
+   "2026-09-18": {
+    "day": "Fri",
+    "ot": "Is44/45",
+    "nt": "John13",
+    "ps": "Ps82"
+   },
+   "2026-09-19": {
+    "day": "Sat",
+    "ot": "Is46/47",
+    "nt": "John14",
+    "ps": "Ps83"
+   },
+   "2026-09-20": {
+    "day": "Sun",
+    "ot": "Is48/49",
+    "nt": "John15",
+    "ps": "Ps84"
+   },
+   "2026-09-21": {
+    "day": "Mon",
+    "ot": "Is50~52",
+    "nt": "John16",
+    "ps": "Ps85"
+   },
+   "2026-09-22": {
+    "day": "Tue",
+    "ot": "Is53~55",
+    "nt": "John17",
+    "ps": "Ps86"
+   },
+   "2026-09-23": {
+    "day": "Wed",
+    "ot": "Is56~58",
+    "nt": "John18",
+    "ps": "Ps87"
+   },
+   "2026-09-24": {
+    "day": "Thu",
+    "ot": "Is59/60",
+    "nt": "John19",
+    "ps": "Ps88"
+   },
+   "2026-09-25": {
+    "day": "Fri",
+    "ot": "Is61/62",
+    "nt": "John20",
+    "ps": "Ps89:1~18"
+   },
+   "2026-09-26": {
+    "day": "Sat",
+    "ot": "Is63/64",
+    "nt": "John21",
+    "ps": "Ps89:19~52"
+   },
+   "2026-09-27": {
+    "day": "Sun",
+    "ot": "Is65/66",
+    "nt": "Acts1/2",
+    "ps": "Ps90"
+   },
+   "2026-09-28": {
+    "day": "Mon",
+    "ot": "Jer1/2",
+    "nt": "Acts3/4",
+    "ps": "Ps91"
+   },
+   "2026-09-29": {
+    "day": "Tue",
+    "ot": "Jer3/4",
+    "nt": "Acts5/6",
+    "ps": "Ps92"
+   },
+   "2026-09-30": {
+    "day": "Wed",
+    "ot": "Jer5/6",
+    "nt": "Acts7/8",
+    "ps": "Ps93"
+   }
+  },
+  "2026-10": {
+   "2026-10-01": {
+    "day": "Thu",
+    "ot": "Jer7/8",
+    "nt": "Acts9/10",
+    "ps": "Ps94"
+   },
+   "2026-10-02": {
+    "day": "Fri",
+    "ot": "Jer9/10",
+    "nt": "Acts11/12",
+    "ps": "Ps95"
+   },
+   "2026-10-03": {
+    "day": "Sat",
+    "ot": "Jer11/12",
+    "nt": "Acts13/14",
+    "ps": "Ps96"
+   },
+   "2026-10-04": {
+    "day": "Sun",
+    "ot": "Jer13/14",
+    "nt": "Acts15/16",
+    "ps": "Ps97"
+   },
+   "2026-10-05": {
+    "day": "Mon",
+    "ot": "Jer15/16",
+    "nt": "Acts17/18",
+    "ps": "Ps98"
+   },
+   "2026-10-06": {
+    "day": "Tue",
+    "ot": "Jer17/18",
+    "nt": "Acts19/20",
+    "ps": "Ps99"
+   },
+   "2026-10-07": {
+    "day": "Wed",
+    "ot": "Jer19/20",
+    "nt": "Acts21/22",
+    "ps": "Ps100"
+   },
+   "2026-10-08": {
+    "day": "Thu",
+    "ot": "Jer21/22",
+    "nt": "Acts23/24",
+    "ps": "Ps101"
+   },
+   "2026-10-09": {
+    "day": "Fri",
+    "ot": "Jer23/24",
+    "nt": "Acts25/26",
+    "ps": "Ps102"
+   },
+   "2026-10-10": {
+    "day": "Sat",
+    "ot": "Jer25/26",
+    "nt": "Acts27/28",
+    "ps": "Ps103"
+   },
+   "2026-10-11": {
+    "day": "Sun",
+    "ot": "Jer27/28",
+    "nt": "Rom1/2",
+    "ps": "Ps104"
+   },
+   "2026-10-12": {
+    "day": "Mon",
+    "ot": "Jer29/30",
+    "nt": "Rom3~5",
+    "ps": "Ps105"
+   },
+   "2026-10-13": {
+    "day": "Tue",
+    "ot": "Jer31",
+    "nt": "Rom6/7",
+    "ps": "Ps106"
+   },
+   "2026-10-14": {
+    "day": "Wed",
+    "ot": "Jer32",
+    "nt": "Rom8/9",
+    "ps": "Ps107"
+   },
+   "2026-10-15": {
+    "day": "Thu",
+    "ot": "Jer33",
+    "nt": "Rom10/11",
+    "ps": "Ps108"
+   },
+   "2026-10-16": {
+    "day": "Fri",
+    "ot": "Jer34/35",
+    "nt": "Rom12~14",
+    "ps": "Ps109"
+   },
+   "2026-10-17": {
+    "day": "Sat",
+    "ot": "Jer36/37",
+    "nt": "Rom15/16",
+    "ps": "Ps110"
+   },
+   "2026-10-18": {
+    "day": "Sun",
+    "ot": "Jer38/39",
+    "nt": "1Cor1/2",
+    "ps": "Ps111"
+   },
+   "2026-10-19": {
+    "day": "Mon",
+    "ot": "Jer40/41",
+    "nt": "1Cor3/4",
+    "ps": "Ps112"
+   },
+   "2026-10-20": {
+    "day": "Tue",
+    "ot": "Jer42/43",
+    "nt": "1Cor5/6",
+    "ps": "Ps113"
+   },
+   "2026-10-21": {
+    "day": "Wed",
+    "ot": "Jer44/45",
+    "nt": "1Cor7/8",
+    "ps": "Ps114"
+   },
+   "2026-10-22": {
+    "day": "Thu",
+    "ot": "Jer46/47",
+    "nt": "1Cor9/10",
+    "ps": "Ps115"
+   },
+   "2026-10-23": {
+    "day": "Fri",
+    "ot": "Jer48",
+    "nt": "1Cor11/12",
+    "ps": "Ps116/117"
+   },
+   "2026-10-24": {
+    "day": "Sat",
+    "ot": "Jer49",
+    "nt": "1Cor13/14",
+    "ps": "Ps118"
+   },
+   "2026-10-25": {
+    "day": "Sun",
+    "ot": "Jer50",
+    "nt": "1Cor15/16",
+    "ps": "Ps119:1~24"
+   },
+   "2026-10-26": {
+    "day": "Mon",
+    "ot": "Jer51",
+    "nt": "2Cor1/2",
+    "ps": "Ps119:25~48"
+   },
+   "2026-10-27": {
+    "day": "Tue",
+    "ot": "Jer52",
+    "nt": "2Cor3/4",
+    "ps": "Ps119:49~72"
+   },
+   "2026-10-28": {
+    "day": "Wed",
+    "ot": "Lam1/2",
+    "nt": "2Cor5/6",
+    "ps": "Ps119:73~96"
+   },
+   "2026-10-29": {
+    "day": "Thu",
+    "ot": "Lam3",
+    "nt": "2Cor7/8",
+    "ps": "Ps119:97~120"
+   },
+   "2026-10-30": {
+    "day": "Fri",
+    "ot": "Lam4/5",
+    "nt": "2Cor9/10",
+    "ps": "Ps119:121~144"
+   },
+   "2026-10-31": {
+    "day": "Sat",
+    "ot": "Ezek1/2",
+    "nt": "2Cor11",
+    "ps": "Ps119:145~176"
+   }
+  },
+  "2026-11": {
+   "2026-11-01": {
+    "day": "Sun",
+    "ot": "Ezek3/4",
+    "nt": "2Cor12/13",
+    "ps": "Ps120"
+   },
+   "2026-11-02": {
+    "day": "Mon",
+    "ot": "Ezek5/6",
+    "nt": "Gal1/2",
+    "ps": "Ps121"
+   },
+   "2026-11-03": {
+    "day": "Tue",
+    "ot": "Ezek7/8",
+    "nt": "Gal3/4",
+    "ps": "Ps122"
+   },
+   "2026-11-04": {
+    "day": "Wed",
+    "ot": "Ezek9/10",
+    "nt": "Gal5/6",
+    "ps": "Ps123"
+   },
+   "2026-11-05": {
+    "day": "Thu",
+    "ot": "Ezek11/12",
+    "nt": "Eph1/2",
+    "ps": "Ps124"
+   },
+   "2026-11-06": {
+    "day": "Fri",
+    "ot": "Ezek13/14",
+    "nt": "Eph3/4",
+    "ps": "Ps125"
+   },
+   "2026-11-07": {
+    "day": "Sat",
+    "ot": "Ezek15/16",
+    "nt": "Eph5/6",
+    "ps": "Ps126"
+   },
+   "2026-11-08": {
+    "day": "Sun",
+    "ot": "Ezek17/18",
+    "nt": "Phil1/2",
+    "ps": "Ps127"
+   },
+   "2026-11-09": {
+    "day": "Mon",
+    "ot": "Ezek19/20",
+    "nt": "Phil3/4",
+    "ps": "Ps128"
+   },
+   "2026-11-10": {
+    "day": "Tue",
+    "ot": "Ezek21/22",
+    "nt": "Col1/2",
+    "ps": "Ps129"
+   },
+   "2026-11-11": {
+    "day": "Wed",
+    "ot": "Ezek23/24",
+    "nt": "Col3/4",
+    "ps": "Ps130"
+   },
+   "2026-11-12": {
+    "day": "Thu",
+    "ot": "Ezek25/26",
+    "nt": "1Thess1/2",
+    "ps": "Ps131"
+   },
+   "2026-11-13": {
+    "day": "Fri",
+    "ot": "Ezek27/28",
+    "nt": "1Thess3/4",
+    "ps": "Ps132"
+   },
+   "2026-11-14": {
+    "day": "Sat",
+    "ot": "Ezek29/30",
+    "nt": "1Thess5",
+    "ps": "Ps133/134"
+   },
+   "2026-11-15": {
+    "day": "Sun",
+    "ot": "Ezek31/32",
+    "nt": "2Thess1/2",
+    "ps": "Ps135"
+   },
+   "2026-11-16": {
+    "day": "Mon",
+    "ot": "Ezek33/34",
+    "nt": "2Thess3",
+    "ps": "Ps136"
+   },
+   "2026-11-17": {
+    "day": "Tue",
+    "ot": "Ezek35/36",
+    "nt": "1Tim1",
+    "ps": "Ps137"
+   },
+   "2026-11-18": {
+    "day": "Wed",
+    "ot": "Ezek37/38",
+    "nt": "1Tim2/3",
+    "ps": "Ps138"
+   },
+   "2026-11-19": {
+    "day": "Thu",
+    "ot": "Ezek39/40",
+    "nt": "1Tim4",
+    "ps": "Ps139"
+   },
+   "2026-11-20": {
+    "day": "Fri",
+    "ot": "Ezek41/42",
+    "nt": "1Tim5",
+    "ps": "Ps140"
+   },
+   "2026-11-21": {
+    "day": "Sat",
+    "ot": "Ezek43/44",
+    "nt": "1Tim6",
+    "ps": "Ps141"
+   },
+   "2026-11-22": {
+    "day": "Sun",
+    "ot": "Ezek45/46",
+    "nt": "2Tim1/2",
+    "ps": "Ps142"
+   },
+   "2026-11-23": {
+    "day": "Mon",
+    "ot": "Ezek47/48",
+    "nt": "2Tim3/4",
+    "ps": "Ps143"
+   },
+   "2026-11-24": {
+    "day": "Tue",
+    "ot": "Dan1/2",
+    "nt": "Titus1/2",
+    "ps": "Ps144"
+   },
+   "2026-11-25": {
+    "day": "Wed",
+    "ot": "Dan3/4",
+    "nt": "Titus3/Philem1",
+    "ps": "Ps145"
+   },
+   "2026-11-26": {
+    "day": "Thu",
+    "ot": "Dan5/6",
+    "nt": "Heb1/2",
+    "ps": "Ps146"
+   },
+   "2026-11-27": {
+    "day": "Fri",
+    "ot": "Dan7/8",
+    "nt": "Heb3/4",
+    "ps": "Ps147"
+   },
+   "2026-11-28": {
+    "day": "Sat",
+    "ot": "Dan9/10",
+    "nt": "Heb5/6",
+    "ps": "Ps148"
+   },
+   "2026-11-29": {
+    "day": "Sun",
+    "ot": "Dan11",
+    "nt": "Heb7/8",
+    "ps": "Ps149"
+   },
+   "2026-11-30": {
+    "day": "Mon",
+    "ot": "Dan12",
+    "nt": "Heb9/10",
+    "ps": "Ps150"
+   }
+  },
+  "2026-12": {
+   "2026-12-01": {
+    "day": "Tue",
+    "ot": "Hos1~3",
+    "nt": "Heb11/12",
+    "ps": "Prov1"
+   },
+   "2026-12-02": {
+    "day": "Wed",
+    "ot": "Hos4~6",
+    "nt": "Heb13/James1",
+    "ps": "Prov2"
+   },
+   "2026-12-03": {
+    "day": "Thu",
+    "ot": "Hos7/8",
+    "nt": "James2/3",
+    "ps": "Prov3"
+   },
+   "2026-12-04": {
+    "day": "Fri",
+    "ot": "Hos9/10",
+    "nt": "James4/5",
+    "ps": "Prov4"
+   },
+   "2026-12-05": {
+    "day": "Sat",
+    "ot": "Hos11~13",
+    "nt": "1Pet1",
+    "ps": "Prov5"
+   },
+   "2026-12-06": {
+    "day": "Sun",
+    "ot": "Hos14/Joel1",
+    "nt": "1Pet2",
+    "ps": "Prov6"
+   },
+   "2026-12-07": {
+    "day": "Mon",
+    "ot": "Joel2/3",
+    "nt": "1Pet3",
+    "ps": "Prov7"
+   },
+   "2026-12-08": {
+    "day": "Tue",
+    "ot": "Amos1/2",
+    "nt": "1Pet4/5",
+    "ps": "Prov8"
+   },
+   "2026-12-09": {
+    "day": "Wed",
+    "ot": "Amos3/4",
+    "nt": "2Pet1",
+    "ps": "Prov9"
+   },
+   "2026-12-10": {
+    "day": "Thu",
+    "ot": "Amos5/6",
+    "nt": "2Pet2",
+    "ps": "Prov10"
+   },
+   "2026-12-11": {
+    "day": "Fri",
+    "ot": "Amos7/8",
+    "nt": "2Pet3",
+    "ps": "Prov11"
+   },
+   "2026-12-12": {
+    "day": "Sat",
+    "ot": "Amos9/Obad1",
+    "nt": "1John1",
+    "ps": "Prov12"
+   },
+   "2026-12-13": {
+    "day": "Sun",
+    "ot": "Jon1/2",
+    "nt": "1John2",
+    "ps": "Prov13"
+   },
+   "2026-12-14": {
+    "day": "Mon",
+    "ot": "Jon3/4",
+    "nt": "1John3",
+    "ps": "Prov14"
+   },
+   "2026-12-15": {
+    "day": "Tue",
+    "ot": "Mic1/2",
+    "nt": "1John4",
+    "ps": "Prov15"
+   },
+   "2026-12-16": {
+    "day": "Wed",
+    "ot": "Mic3/4",
+    "nt": "1John5",
+    "ps": "Prov16"
+   },
+   "2026-12-17": {
+    "day": "Thu",
+    "ot": "Mic5/6",
+    "nt": "2John1/3John1",
+    "ps": "Prov17"
+   },
+   "2026-12-18": {
+    "day": "Fri",
+    "ot": "Mic7/Nah1",
+    "nt": "Jude1",
+    "ps": "Prov18"
+   },
+   "2026-12-19": {
+    "day": "Sat",
+    "ot": "Nah2/3",
+    "nt": "Rev1/2",
+    "ps": "Prov19"
+   },
+   "2026-12-20": {
+    "day": "Sun",
+    "ot": "Hab1~3",
+    "nt": "Rev3/4",
+    "ps": "Prov20"
+   },
+   "2026-12-21": {
+    "day": "Mon",
+    "ot": "Zeph1~3",
+    "nt": "Rev5/6",
+    "ps": "Prov21"
+   },
+   "2026-12-22": {
+    "day": "Tue",
+    "ot": "Hag1/2",
+    "nt": "Rev7/8",
+    "ps": "Prov22"
+   },
+   "2026-12-23": {
+    "day": "Wed",
+    "ot": "Zech1/2",
+    "nt": "Rev9/10",
+    "ps": "Prov23"
+   },
+   "2026-12-24": {
+    "day": "Thu",
+    "ot": "Zech3/4",
+    "nt": "Rev11/12",
+    "ps": "Prov24"
+   },
+   "2026-12-25": {
+    "day": "Fri",
+    "ot": "Zech5/6",
+    "nt": "Rev13/14",
+    "ps": "Prov25"
+   },
+   "2026-12-26": {
+    "day": "Sat",
+    "ot": "Zech7/8",
+    "nt": "Rev15/16",
+    "ps": "Prov26"
+   },
+   "2026-12-27": {
+    "day": "Sun",
+    "ot": "Zech9/10",
+    "nt": "Rev17/18",
+    "ps": "Prov27"
+   },
+   "2026-12-28": {
+    "day": "Mon",
+    "ot": "Zech11/12",
+    "nt": "Rev19",
+    "ps": "Prov28"
+   },
+   "2026-12-29": {
+    "day": "Tue",
+    "ot": "Zech13/14",
+    "nt": "Rev20",
+    "ps": "Prov29"
+   },
+   "2026-12-30": {
+    "day": "Wed",
+    "ot": "Mal1/2",
+    "nt": "Rev21",
+    "ps": "Prov30"
+   },
+   "2026-12-31": {
+    "day": "Thu",
+    "ot": "Mal3/4",
+    "nt": "Rev22",
+    "ps": "Prov31"
    }
   }
  }

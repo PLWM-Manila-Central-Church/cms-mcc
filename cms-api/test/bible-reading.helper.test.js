@@ -13,16 +13,23 @@ describe("bible reading plan", () => {
     const days = getMonthDays("2026-02");
     expect(days).toHaveLength(28);
     expect(days.every((day) => day.placeholder === false)).toBe(true);
-    expect(days[0]).toMatchObject({ date: "2026-02-01", ot: "Ex 13/14", nt: "Mark 4", ps: "Ps 37" });
+    expect(days[0]).toMatchObject({ date: "2026-02-01", ot: "Ex13/14", nt: "Mark4", ps: "Ps37" });
     expect(getMonthTarget("2026-02")).toBe(28);
   });
 
-  test("marks the unpublished second half as a placeholder instead of inventing readings", () => {
-    const days = getMonthDays("2026-08");
+  test("publishes every day in 2026 with the source year-end reading", () => {
+    const year = Array.from({ length: 12 }, (_, i) => getMonthDays(`2026-${String(i + 1).padStart(2, "0")}`)).flat();
+    expect(year).toHaveLength(365);
+    expect(year.every(({ ot, nt, ps, placeholder }) => !placeholder && ot && nt && ps)).toBe(true);
+    expect(year.at(-1)).toMatchObject({ date: "2026-12-31", ot: "Mal3/4", nt: "Rev22", ps: "Prov31" });
+  });
+
+  test("leaves months outside the published plan as placeholders", () => {
+    const days = getMonthDays("2027-08");
     expect(days).toHaveLength(31);
     expect(days.every((day) => day.placeholder === true)).toBe(true);
     expect(days[0].ot).toBeNull();
-    expect(getMonthTarget("2026-08")).toBe(0);
+    expect(getMonthTarget("2027-08")).toBe(0);
   });
 
   test("rejects a malformed month", () => {
