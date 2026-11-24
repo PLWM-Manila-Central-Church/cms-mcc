@@ -129,7 +129,7 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
   const openDayEvents = cells.days.find((day) => day.date === openDay)?.events || [];
 
   const button = {
-    width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 8,
+    width: 36, height: 36, flexShrink: 0, display: 'grid', placeItems: 'center', borderRadius: 8,
     border: `1px solid ${c.border}`, background: c.surface, color: c.t2, cursor: 'pointer',
   };
 
@@ -143,10 +143,10 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
               {monthEvents} {monthEvents === 1 ? (t.event || 'event') : (t.events || 'events')} · {t.tapHint || 'Tap a day to see details'}
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
             <button type="button" style={button} aria-label={t.previousMonth || 'Previous month'} onClick={() => setMonth((value) => shiftMonth(value, -1))}>‹</button>
             <button type="button" onClick={() => setMonth(manilaMonth())} style={{ ...button, width: 'auto', padding: '0 10px', fontSize: f.xs, fontWeight: 650 }}>{t.today || 'Today'}</button>
-            <span style={{ minWidth: 118, textAlign: 'center', fontSize: f.sm, fontWeight: 700, color: c.t1 }}>{monthLabel(month)}</span>
+            <span style={{ minWidth: 0, flex: isMobile ? 1 : '0 1 auto', textAlign: 'center', fontSize: f.sm, fontWeight: 700, color: c.t1, overflowWrap: 'anywhere' }}>{monthLabel(month)}</span>
             <button type="button" style={button} aria-label={t.nextMonth || 'Next month'} onClick={() => setMonth((value) => shiftMonth(value, 1))}>›</button>
           </div>
         </div>
@@ -171,7 +171,7 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
                   aria-label={`${dayLabel(day.date)}, ${day.events.length} ${day.events.length === 1 ? 'event' : 'events'}`}
                   onClick={() => setOpenDay(day.date)}
                   style={{
-                    height: isMobile ? 46 : 82, minWidth: 0, padding: isMobile ? '4px 3px' : '5px 6px',
+                    minHeight: isMobile ? 44 : 82, minWidth: 0, padding: isMobile ? '4px 3px' : '5px 6px',
                     display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'center' : 'stretch', gap: 3,
                     borderRadius: 7, textAlign: 'left', cursor: 'pointer', overflow: 'hidden',
                     border: isOpen ? `1.5px solid ${c.accent}` : `1px solid ${isToday ? c.accent : c.borderL}`,

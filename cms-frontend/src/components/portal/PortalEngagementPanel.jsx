@@ -117,7 +117,7 @@ export default function PortalEngagementPanel({ colors }) {
       </section>
 
       {/* Announcements & Messages */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 12, alignItems: 'start' }}>
         <section style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
           <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 700, color: C.t1 }}>Ministry Announcements</h3>
           {(data.announcements || []).length === 0 ? (

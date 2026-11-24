@@ -325,8 +325,8 @@ function OverviewTab({profile,attendance,finance,memoryVerse,hideMoney,onToggleM
   return (
     <div>
       {/* ── Stat Cards ── */}
-      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:isMobile?10:14,marginBottom:isMobile?12:20}}>
-        <div style={{...card,padding:isMobile?'14px 16px':'20px 22px',display:'flex',alignItems:'center',gap:14}}>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'repeat(2,minmax(0,1fr))':'repeat(3,minmax(0,1fr))',gap:isMobile?8:14,marginBottom:isMobile?10:20}}>
+        <div style={{...card,gridColumn:isMobile?'1 / -1':undefined,padding:isMobile?'10px 12px':'20px 22px',display:'flex',alignItems:'center',gap:12}}>
           <div style={{position:'relative',flexShrink:0}}>
             <Ring value={attendance?.attendanceRate||0} size={isMobile?60:78} stroke={isMobile?6:7} color={c.tabActive} bg={c.border}/>
             <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',textAlign:'center'}}>
@@ -340,23 +340,25 @@ function OverviewTab({profile,attendance,finance,memoryVerse,hideMoney,onToggleM
           </div>
         </div>
 
-        <div style={{...card,position:'relative',padding:isMobile?'14px 16px':'20px 22px'}}>
+        <div style={{...card,minWidth:0,padding:isMobile?'10px 12px':'20px 22px'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:4,marginBottom:4}}>
+            <div style={{fontSize:f.xs,color:c.t3,fontWeight:600}}>{t.totalOfferings}</div>
           <button
             type="button"
             onClick={onToggleMoney}
             aria-pressed={hideMoney}
             aria-label={hideMoney ? t.showAmounts : t.hideAmounts}
             title={hideMoney ? t.showAmounts : t.hideAmounts}
-            style={{position:'absolute',top:10,right:10,zIndex:2,width:30,height:30,display:'grid',placeItems:'center',borderRadius:8,border:`1px solid ${c.border}`,background:c.surfaceAlt,color:c.t2,cursor:'pointer'}}
+            style={{flexShrink:0,width:30,height:30,display:'grid',placeItems:'center',borderRadius:8,border:`1px solid ${c.border}`,background:c.surfaceAlt,color:c.t2,cursor:'pointer'}}
           >
             <MonoIcon name={hideMoney ? 'eyeOff' : 'eye'} size={15} />
           </button>
-          <div style={{fontSize:f.xs,color:c.t3,fontWeight:600,marginBottom:4}}>{t.totalOfferings}</div>
+          </div>
           <div style={{fontSize:isMobile?f.lg:f.stat,fontWeight:900,color:c.t1,letterSpacing:'-0.5px',lineHeight:1.1}}>{finance?PHP(finance.ytdTotal):'—'}</div>
           <div style={{fontSize:f.xs,color:c.t3,marginTop:4}}>{t.thisYear}</div>
         </div>
 
-        <div style={{...card,padding:isMobile?'14px 16px':'20px 22px'}}>
+        <div style={{...card,minWidth:0,padding:isMobile?'10px 12px':'20px 22px'}}>
           <div style={{fontSize:f.xs,color:c.t3,fontWeight:600,marginBottom:4}}>{t.memberSince}</div>
           <div style={{fontSize:isMobile?f.base:f.md,fontWeight:800,color:c.t1,lineHeight:1.3}}>{profile?fmtDate(profile.join_date):'—'}</div>
           <div style={{display:'flex',alignItems:'center',gap:8,marginTop:8,flexWrap:'wrap'}}>
@@ -519,7 +521,7 @@ function AttendanceTab({attendance,c,f,t,fmtDate,fmtTime,isMobile,language}) {
             // Card list on mobile
             <div style={{padding:'8px 0'}}>
               {historyRecords.length===0
-                ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{t.noAttendance}</div>
+                ? <div style={{padding:'16px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{t.noAttendance}</div>
                 : historyRecords.map(r=>(
                   <div key={recordKey(r)} style={{padding:'12px 16px',borderBottom:`1px solid ${c.borderL}`,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
                     <div style={{flex:1,minWidth:0}}>
@@ -699,9 +701,9 @@ function FinanceTab({finance,initialError,c,f,t,fmtDate,PHP,isMobile,language,hi
         // Card list on mobile
         <div style={{padding:'8px 0'}} aria-live="polite">
           {requestLoading
-            ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{copy.loading}</div>
+            ? <div style={{padding:'16px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{copy.loading}</div>
             : (!financeView?.records||financeView.records.length===0)
-            ? <div style={{padding:'32px 20px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{t.noOfferings}</div>
+            ? <div style={{padding:'16px',textAlign:'center',color:c.t3,fontSize:f.sm}}>{t.noOfferings}</div>
             : financeView.records.map(r=>{
               const cs=catStyle(r.category?.name,c.dk);
               return (
@@ -778,13 +780,13 @@ export default function MemberPortal() {
   const navigate = useNavigate();
   const location = useLocation();
   const width    = useWindowWidth();
-  const isMobile = width <= 768;
 
   const prefs = getPrefs();
   const c = makeC(prefs);
   const fontFamily = prefs.fontFamily || 'DM Sans';
   const fontSize   = prefs.fontSize   || 16;
   const zoom       = prefs.resolution || 1;
+  const isMobile   = width / zoom <= 768;
 
   const [lang, setLang] = useState(() => getLangCode());
   const t = LBL[lang] || LBL.en;
@@ -1124,22 +1126,22 @@ export default function MemberPortal() {
   );
 
   const MobileBottomTabBar = () => (
-    <nav aria-label="Member navigation" style={{
+    <nav className="member-bottom-nav" aria-label="Member navigation" style={{
       position:'fixed',bottom:0,left:0,right:0,
-      height:`calc(60px + env(safe-area-inset-bottom,0px))`,
+      minHeight:`calc(60px + env(safe-area-inset-bottom,0px))`,
       background:c.surface,borderTop:`1px solid ${c.border}`,
       display:'flex',zIndex:200,boxShadow:'0 -2px 12px rgba(0,0,0,0.08)',
       paddingBottom:'env(safe-area-inset-bottom,0px)',
     }}>
       {t.tabs.map((tb,i)=>(
-        <button key={i} aria-pressed={tab===i} onClick={()=>setTab(i)} style={{
-          flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-          gap:3,border:'none',background:'none',cursor:'pointer',padding:'6px 4px',
+        <button key={i} aria-pressed={tab===i} onClick={()=>{if(tab!==i){setTab(i);window.scrollTo(0,0);}}} style={{
+          flex:'1 1 0',minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+          gap:3,border:'none',background:'none',cursor:'pointer',padding:'6px 2px',
           color:tab===i?c.tabActive:c.t3,fontFamily:'inherit',position:'relative',
         }}>
           {tab===i&&<span style={{position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',width:32,height:3,background:c.tabActive,borderRadius:'0 0 3px 3px'}}/>}
           <MonoIcon name={TAB_ICON_NAMES[i]} size={19} />
-          <span style={{fontSize:10,fontWeight:tab===i?700:600,letterSpacing:'0.2px'}}>{tb}</span>
+          <span style={{fontSize:10,lineHeight:1.15,overflowWrap:'anywhere',fontWeight:tab===i?700:600}}>{tb}</span>
         </button>
       ))}
     </nav>
@@ -1164,7 +1166,7 @@ export default function MemberPortal() {
         @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideInRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
         @keyframes slideUpSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
-        *{box-sizing:border-box}
+        .mcc-portal *{box-sizing:border-box}
         ::-webkit-scrollbar{width:5px;height:5px}
         ::-webkit-scrollbar-track{background:transparent}
         ::-webkit-scrollbar-thumb{background:${c.border};border-radius:10px}
@@ -1180,25 +1182,22 @@ export default function MemberPortal() {
       <main id="member-main" tabIndex={-1} style={{
         maxWidth:isMobile?'100%':1200,
         margin:'0 auto',
-        padding:isMobile?'14px 12px':'18px 20px',
-        paddingBottom:isMobile?`calc(80px + env(safe-area-inset-bottom,0px))`:'24px',
+        padding:isMobile?'10px 10px':'18px 20px',
+        paddingBottom:isMobile?`calc(70px + env(safe-area-inset-bottom,0px))`:'24px',
       }}>
         {tab===0 ? <section className="member-welcome" style={{background:c.surface,color:c.t1}} aria-label="Personal church workspace">
           <div>
             <h2>{t.welcome}, {profile?.first_name||user?.email?.split('@')[0]||'Friend'}</h2>
             {nextGathering && <p style={{color:c.t2}}>{nextGathering.title} · {fmtDate(String(nextGathering.start_date || nextGathering.event_date).slice(0, 10))}</p>}
           </div>
-          <div className="member-welcome-actions"><button type="button" onClick={()=>setTab(1)}>{t.tabs[1]}</button><button type="button" onClick={()=>setTab(2)}>{t.tabs[2]}</button></div>
-        </section> : <section className="member-tab-intro" style={{color:c.t1}} aria-label={`${t.tabs[tab]} overview`}>
-          <span style={{display:'grid',placeItems:'center',width:44,height:44,borderRadius:12,background:c.accentL,color:c.accentT,flexShrink:0}}><MonoIcon name={TAB_ICON_NAMES[tab]} size={20}/></span>
-          <div><h2>{t.tabs[tab]}</h2><p style={{color:c.t2}}>{['','Every upcoming gathering and church event in one calendar.','Show your QR and review your personal check-in history.','Your recorded giving, dates and supporting receipts.','Follow your ministry schedule, practices and cleaning duty.','Follow the reading plan and your group memory verse.'][tab]}</p></div>
-        </section>}
-
-        {(tab === 1 || tab === 5) && <div className="member-calendar-controls">
-          <label>Text size <select value={calendarSize} onChange={changeCalendarSize}>
+          {!isMobile && <div className="member-welcome-actions"><button type="button" onClick={()=>setTab(1)}>{t.tabs[1]}</button><button type="button" onClick={()=>setTab(2)}>{t.tabs[2]}</button></div>}
+        </section> : <section className="member-tab-intro" style={{color:c.t1}}>
+          {!isMobile && <span style={{display:'grid',placeItems:'center',width:44,height:44,borderRadius:12,background:c.accentL,color:c.accentT,flexShrink:0}}><MonoIcon name={TAB_ICON_NAMES[tab]} size={20}/></span>}
+          <h2>{t.tabs[tab]}</h2>
+          {(tab === 1 || tab === 5) && <label className="member-calendar-controls">Text size <select value={calendarSize} onChange={changeCalendarSize}>
             <option value="standard">Standard</option><option value="large">Large</option>
-          </select></label>
-        </div>}
+          </select></label>}
+        </section>}
         {loading ? <LoadSkeleton/> : (
           <>
             {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} memoryVerse={memoryVerse} hideMoney={hideMoney} onToggleMoney={toggleMoney} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} setEditError={setEE} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={money} fmtDate={fmtDate} isMobile={isMobile}/>}
@@ -1208,7 +1207,7 @@ export default function MemberPortal() {
             {tab===4&&<>
               <MinistrySchedulePanel c={c} f={f} data={schedule} labels={MINISTRY_LBL[lang] || MINISTRY_LBL.en}/>
               <PortalEngagementPanel colors={c}/>
-              <div style={{marginTop:24}}><MemberSubstituteRequests c={c} isMobile={isMobile}/></div>
+              <div style={{marginTop:12}}><MemberSubstituteRequests c={c} isMobile={isMobile}/></div>
             </>}
             {tab===5&&<BibleReadingPanel c={c} f={calendarFont} labels={BIBLE_LBL[lang] || BIBLE_LBL.en} showToast={showToast}/>}
           </>

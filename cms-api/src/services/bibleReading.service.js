@@ -6,6 +6,7 @@ const {
   GroupMemoryVerse,
   Member,
   MinistryGroup,
+  CellGroup,
 } = require("../models");
 const AppError = require("../helpers/AppError");
 const {
@@ -99,8 +100,16 @@ exports.getSummary = async (month, options = {}) => {
   }
   const memberWhere = { is_deleted: 0 };
   if (options.group_id) memberWhere.group_id = Number(options.group_id);
+  if (options.cell_group_id) memberWhere.cell_group_id = Number(options.cell_group_id);
   const members = (
-    await Member.findAll({ where: memberWhere, attributes: ["id", "first_name", "last_name", "group_id"] })
+    await Member.findAll({
+      where: memberWhere,
+      attributes: ["id", "first_name", "last_name", "group_id", "cell_group_id"],
+      include: [
+        { model: MinistryGroup, as: "group", attributes: ["id", "name"], required: false },
+        { model: CellGroup, as: "cellGroup", attributes: ["id", "name"], required: false },
+      ],
+    })
   ).map(plain);
   const progress = (
     await BibleReadingProgress.findAll({
@@ -109,7 +118,15 @@ exports.getSummary = async (month, options = {}) => {
     })
   ).map(plain);
 
-  let rows = summarizeMonth({ members, progress, month });
+  let rows = summarizeMonth({
+    members: members.map((member) => ({
+      ...member,
+      group_name: member.group?.name || null,
+      cell_group_name: member.cellGroup?.name || null,
+    })),
+    progress,
+    month,
+  });
   const totalMembers = rows.length;
   const finished = rows.filter((row) => row.finished).length;
 

@@ -86,6 +86,12 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
     width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 8,
     border: `1px solid ${c.border}`, background: c.surface, color: c.t2, cursor: 'pointer',
   };
+  const dayFontSize = f.xs || 12;
+  const readingFontSize = Math.max(10, dayFontSize - 2);
+  const readingStyle = {
+    fontSize: readingFontSize, lineHeight: 1.2, width: '100%',
+    overflowWrap: 'anywhere', opacity: 0.85,
+  };
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
@@ -139,11 +145,11 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
                 </p>
               ) : (
                 <>
-                  <div role="grid" aria-label={monthLabel(month)} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 4 }}>
+              <div className="portal-bible-calendar" role="grid" aria-label={monthLabel(month)}>
                     {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-                      <span key={`head-${index}`} style={{ textAlign: 'center', fontSize: f.xs || 12, fontWeight: 700, color: c.t3, padding: '2px 0' }} aria-hidden="true">{day}</span>
+                      <span className="portal-bible-calendar-heading" key={`head-${index}`} style={{ fontSize: f.xs || 12, color: c.t3 }} aria-hidden="true">{day}</span>
                     ))}
-                    {Array.from({ length: firstWeekday }, (_, index) => <span key={`pad-${index}`} />)}
+                    {Array.from({ length: firstWeekday }, (_, index) => <span className="portal-bible-calendar-pad" key={`pad-${index}`} />)}
                     {data.days.map((day) => {
                       const dayRead = completed.has(day.date);
                       const isToday = day.date === today;
@@ -156,21 +162,24 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
                           aria-pressed={isActive}
                           aria-label={`${day.date}${dayRead ? ', completed' : ''}`}
                           onClick={() => setSelected(day.date)}
+                          className="portal-bible-calendar-day"
                           style={{
-                            height: 54, minWidth: 0, padding: '3px 4px', borderRadius: 8,
-                            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1,
-                            cursor: 'pointer', font: 'inherit', textAlign: 'left',
+                            minWidth: 0, padding: '7px 8px', borderRadius: 8,
+                            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.12em',
+                            cursor: 'pointer', fontFamily: 'inherit', fontSize: dayFontSize, lineHeight: 1.25, textAlign: 'left',
                             border: isActive ? `1.5px solid ${c.accent}` : `1px solid ${isToday ? c.accent : c.borderL}`,
                             background: dayRead ? c.accentL : 'transparent',
                             color: dayRead ? c.accentT : day.placeholder ? c.t3 : c.t1,
                           }}
                         >
-                          <span style={{ fontSize: f.xs, fontWeight: dayRead || isToday || isActive ? 800 : 500 }}>{Number(day.date.slice(8, 10))}</span>
+                          <span style={{ display: 'flex', alignItems: 'baseline', gap: 5, fontWeight: dayRead || isToday || isActive ? 800 : 500 }}>
+                            {Number(day.date.slice(8, 10))}<span className="portal-bible-weekday">{day.day}</span>
+                          </span>
                           {!day.placeholder && (
                             <>
-                              <span style={{ fontSize: Math.max(10, (f.xs || 12) - 2), lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.ot}</span>
-                              <span style={{ fontSize: Math.max(10, (f.xs || 12) - 2), lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.nt}</span>
-                              <span style={{ fontSize: Math.max(10, (f.xs || 12) - 2), lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.ps}</span>
+                              <span className="portal-bible-reference" style={readingStyle}>{day.ot}</span>
+                              <span className="portal-bible-reference" style={readingStyle}>{day.nt}</span>
+                              <span className="portal-bible-reference" style={readingStyle}>{day.ps}</span>
                             </>
                           )}
                         </button>
@@ -212,7 +221,7 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
                 ))}
               </dl>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTop: `1px solid ${c.borderL}`, paddingTop: 14 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTop: `1px solid ${c.borderL}`, paddingTop: 14 }}>
               <span style={{ fontSize: f.xs, color: c.t3 }}>
                 {t.referencesNote || 'References from the 2026 reading plan. Chapter text is not stored here.'}
               </span>

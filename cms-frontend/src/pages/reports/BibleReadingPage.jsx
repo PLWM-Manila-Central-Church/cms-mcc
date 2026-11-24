@@ -1,5 +1,5 @@
 import { downloadReportCsv } from '../../utils/reportCsv';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import IconActionButton from '../../components/common/IconActionButton';
 import { sanitizeScriptureRef } from '../../utils/inputConstraints';
@@ -38,27 +38,67 @@ export default function BibleReadingPage() {
   const [summary, setSummary] = useState(null);
   const [verses, setVerses] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [cellGroups, setCellGroups] = useState([]);
+  const [search, setSearch] = useState('');
+  const [groupId, setGroupId] = useState('');
+  const [cellGroupId, setCellGroupId] = useState('');
+  const [sortBy, setSortBy] = useState('active');
+  const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState('');
+  const summaryRequest = useRef(0);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ group_id: '', sunday_date: '', reference: '', verse_text: '' });
 
   const load = useCallback(async () => {
+    const requestId = ++summaryRequest.current;
     setError('');
     try {
-      const [summaryResponse, versesResponse, groupsResponse] = await Promise.all([
-        axiosInstance.get('/bible-reading/summary', { params: { month } }),
+      const summaryResponse = await axiosInstance.get('/bible-reading/summary', { params: {
+        month,
+        ...(search.trim() ? { search: search.trim() } : {}),
+        ...(groupId ? { group_id: groupId } : {}),
+        ...(cellGroupId ? { cell_group_id: cellGroupId } : {}),
+      } });
+      if (requestId === summaryRequest.current) setSummary(summaryResponse.data.data);
+    } catch (requestError) {
+      if (requestId === summaryRequest.current) {
+        setError(requestError.response?.data?.message || 'The reading monitor could not be loaded.');
+      }
+    }
+  }, [month, search, groupId, cellGroupId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const loadSupporting = useCallback(async () => {
+    try {
+      const [versesResponse, groupsResponse, cellGroupsResponse] = await Promise.all([
         axiosInstance.get('/bible-reading/verses', { params: { month } }),
         axiosInstance.get('/members/dropdowns/groups'),
+        axiosInstance.get('/members/dropdowns/cell-groups'),
       ]);
-      setSummary(summaryResponse.data.data);
       setVerses(versesResponse.data.data);
       setGroups(groupsResponse.data.data || []);
+      setCellGroups(cellGroupsResponse.data.data || []);
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'The reading monitor could not be loaded.');
+      setError(requestError.response?.data?.message || 'The reading monitor filters could not be loaded.');
     }
   }, [month]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadSupporting(); }, [loadSupporting]);
+
+  const progressRows = useMemo(() => {
+    const rows = [...(summary?.members || [])];
+    if (sortBy === 'name') rows.sort((a, b) => a.name.localeCompare(b.name));
+    else rows.sort((a, b) => b.completed - a.completed || a.name.localeCompare(b.name));
+    return rows;
+  }, [summary, sortBy]);
+  const visibleProgressRows = showAll ? progressRows : progressRows.slice(0, 10);
+  const filteredFinished = progressRows.filter((member) => member.finished).length;
+
+  const updateFilter = (setter) => (event) => {
+    setter(event.target.value);
+    setShowAll(false);
+  };
 
   const exportCsv = async (format = "csv") => {
     setError('');
@@ -89,7 +129,7 @@ export default function BibleReadingPage() {
     try {
       await axiosInstance.post('/bible-reading/verses', form);
       setForm({ group_id: '', sunday_date: '', reference: '', verse_text: '' });
-      await load();
+      await Promise.all([load(), loadSupporting()]);
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'The memory verse could not be saved.');
     } finally { setSaving(false); }
@@ -99,7 +139,7 @@ export default function BibleReadingPage() {
     setError('');
     try {
       await axiosInstance.delete(`/bible-reading/verses/${id}`);
-      await load();
+      await Promise.all([load(), loadSupporting()]);
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'The memory verse could not be removed.');
     }
@@ -135,13 +175,38 @@ export default function BibleReadingPage() {
         <h2 style={S.panelTitle}>Member progress</h2>
         {summary && (
           <p style={{ ...S.sub, marginBottom: 10 }}>
-            {summary.finished} of {summary.total} members finished · target {summary.target} days
+            {filteredFinished} of {progressRows.length} members finished in this view · target {summary.target} days
           </p>
         )}
         {!summary ? <p style={S.empty}>Loading…</p> : summary.target === 0 ? (
           <p style={S.empty}>The reading plan for this month has not been published yet.</p>
         ) : (
-          <table style={S.table}>
+          <>
+          <div className="bible-monitor-filters" style={{ marginBottom: 12 }}>
+            <label style={S.field}>Search name
+              <input aria-label="Search name" type="search" placeholder="First or last name" style={S.input} value={search} onChange={updateFilter(setSearch)} />
+            </label>
+            <label style={S.field}>Group
+              <select aria-label="Filter by group" style={S.input} value={groupId} onChange={updateFilter(setGroupId)}>
+                <option value="">All groups</option>
+                {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+              </select>
+            </label>
+            <label style={S.field}>Cell group
+              <select aria-label="Filter by cell group" style={S.input} value={cellGroupId} onChange={updateFilter(setCellGroupId)}>
+                <option value="">All cell groups</option>
+                {cellGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+              </select>
+            </label>
+            <label style={S.field}>Order
+              <select aria-label="Order members" style={S.input} value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                <option value="active">Most active</option>
+                <option value="name">Name A–Z</option>
+              </select>
+            </label>
+          </div>
+          {progressRows.length === 0 ? <p style={S.empty}>No members match these filters.</p> : (
+          <div style={{ overflowX: 'auto' }}><table style={S.table}>
             <thead>
               <tr>
                 <th style={S.th}>Member</th>
@@ -151,7 +216,7 @@ export default function BibleReadingPage() {
               </tr>
             </thead>
             <tbody>
-              {summary.members.map((member) => (
+              {visibleProgressRows.map((member) => (
                 <tr key={member.member_id}>
                   <td style={S.td}>{member.name}</td>
                   <td style={S.td}>{member.completed} / {member.target}</td>
@@ -169,7 +234,17 @@ export default function BibleReadingPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
+          )}
+          {progressRows.length > 10 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', paddingTop: 12 }}>
+              <span style={S.sub}>Showing {visibleProgressRows.length} of {summary.filtered_total ?? progressRows.length}</span>
+              <button type="button" style={S.button} onClick={() => setShowAll((value) => !value)}>
+                {showAll ? 'Show top 10' : 'Show all'}
+              </button>
+            </div>
+          )}
+          </>
         )}
       </section>
 
