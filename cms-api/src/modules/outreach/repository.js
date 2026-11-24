@@ -7,7 +7,7 @@ const { QrAttendanceSession, AttendanceExpectedMember, QrServiceAttendance, Even
 const { getSessionWithParent } = require("../qr-attendance/sessions.service");
 const { getMemberScopeWhere, ensureMemberInScope, isScopedLeader, requireLeaderScope } = require("../../helpers/scopedLeader.helper");
 const AppError = require("../../helpers/AppError");
-const { normalizePhone, maskedPhone, hasSmsConsent, getOutcome, isFinalized } = require("./policy");
+const { normalizePhone, maskedPhone, hasSmsConsent, getOutcome, isFinalized, ageOn } = require("./policy");
 const { STAFF_ROLES, GLOBAL_ROLES } = require("./permissions");
 const { OutreachPreference, OutreachSessionPolicy, AttendanceException, AttendanceFollowUp, OutreachDelivery, OutreachDeliveryAttempt } = require("./models");
 
