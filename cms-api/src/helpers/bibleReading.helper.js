@@ -2,7 +2,7 @@
 
 const PLAN = require("../data/bible-reading-2026.json");
 
-const MONTH_PATTERN = /^\d{4}-\d{2}$/;
+const MONTH_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])$/;
 
 const iso = (year, month, day) => (
   `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
@@ -19,6 +19,8 @@ const latestSunday = (today) => {
   value.setUTCDate(value.getUTCDate() - value.getUTCDay());
   return value.toISOString().slice(0, 10);
 };
+
+const readingDateOnly = (value) => (value instanceof Date ? value.toISOString().slice(0, 10) : String(value || "").slice(0, 10));
 
 const getMonthDays = (month) => {
   if (!MONTH_PATTERN.test(String(month || ""))) {
@@ -53,7 +55,7 @@ const resolveMemoryVerse = ({ today, groupId, verses = [] }) => {
   const currentSunday = latestSunday(today);
   const upcomingSunday = addDays(currentSunday, 7);
   const belongs = (verse, sunday) => (
-    Number(verse.group_id) === Number(groupId) && String(verse.sunday_date).slice(0, 10) === sunday
+    Number(verse.group_id) === Number(groupId) && readingDateOnly(verse.sunday_date) === sunday
   );
 
   return {
@@ -69,7 +71,7 @@ const summarizeMonth = ({ members = [], progress = [], month }) => {
   const completedByMember = new Map();
 
   for (const row of progress) {
-    if (String(row.reading_date).slice(0, 7) !== month) continue;
+    if (readingDateOnly(row.reading_date).slice(0, 7) !== month) continue;
     const memberId = Number(row.member_id);
     completedByMember.set(memberId, (completedByMember.get(memberId) || 0) + 1);
   }
@@ -93,6 +95,8 @@ const summarizeMonth = ({ members = [], progress = [], month }) => {
 };
 
 module.exports = {
+  MONTH_PATTERN,
+  readingDateOnly,
   getMonthDays,
   getMonthTarget,
   getTodayReading,

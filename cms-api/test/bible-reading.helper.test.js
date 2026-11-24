@@ -72,8 +72,8 @@ describe("monthly summary", () => {
       ],
       progress: [
         ...Array.from({ length: 28 }, (_, i) => ({ member_id: 1, reading_date: `2026-02-${String(i + 1).padStart(2, "0")}` })),
-        { member_id: 2, reading_date: "2026-02-01" },
-        { member_id: 2, reading_date: "2026-03-01" },
+        { member_id: 2, reading_date: new Date("2026-02-01T00:00:00Z") },
+        { member_id: 2, reading_date: new Date("2026-03-01T00:00:00Z") },
       ],
     });
 

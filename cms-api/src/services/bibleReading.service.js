@@ -2,6 +2,8 @@
 
 const { Op } = require("sequelize");
 const {
+  MONTH_PATTERN,
+  readingDateOnly,
   BibleReadingProgress,
   GroupMemoryVerse,
   Member,
@@ -17,14 +19,19 @@ const {
   summarizeMonth,
 } = require("../helpers/bibleReading.helper");
 
-const MONTH = /^\d{4}-\d{2}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const plain = (row) => (row && typeof row.get === "function" ? row.get({ plain: true }) : row);
 
 const manilaToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
 
-const monthRange = (month) => [`${month}-01`, `${month}-31`];
+// Keep the query bounds valid for TiDB/MySQL DATE columns. An upper bound like
+// YYYY-MM-31 is invalid for most months and can silently omit saved readings.
+const monthRange = (month) => {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+  return [`${month}-01`, `${month}-${String(lastDay).padStart(2, "0")}`];
+};
 
 const groupNameFor = async (groupId) => {
   if (!groupId) return null;
@@ -33,7 +40,7 @@ const groupNameFor = async (groupId) => {
 };
 
 exports.getMyMonth = async (memberId, month) => {
-  if (!MONTH.test(String(month || ""))) {
+  if (!MONTH_PATTERN.test(String(month || ""))) {
     throw AppError.badRequest("VALIDATION_ERROR", "month must be formatted YYYY-MM");
   }
 
@@ -42,7 +49,7 @@ exports.getMyMonth = async (memberId, month) => {
     where: { member_id: memberId, reading_date: { [Op.between]: monthRange(month) } },
     attributes: ["reading_date"],
   });
-  const completed = progress.map((row) => String(plain(row).reading_date).slice(0, 10));
+  const completed = progress.map((row) => readingDateOnly(plain(row).reading_date));
   const target = getMonthTarget(month);
   const verses = (await GroupMemoryVerse.findAll()).map(plain);
   const memory = resolveMemoryVerse({ today: manilaToday(), groupId: member?.group_id, verses });
@@ -95,7 +102,7 @@ exports.getMemoryVerse = async (memberId) => {
 };
 
 exports.getSummary = async (month, options = {}) => {
-  if (!MONTH.test(String(month || ""))) {
+  if (!MONTH_PATTERN.test(String(month || ""))) {
     throw AppError.badRequest("VALIDATION_ERROR", "month must be formatted YYYY-MM");
   }
   const memberWhere = { is_deleted: 0, status: "Active" };
@@ -167,7 +174,7 @@ exports.getSummary = async (month, options = {}) => {
 };
 
 exports.listVerses = async (month) => {
-  if (!MONTH.test(String(month || ""))) {
+  if (!MONTH_PATTERN.test(String(month || ""))) {
     throw AppError.badRequest("VALIDATION_ERROR", "month must be formatted YYYY-MM");
   }
   const rows = await GroupMemoryVerse.findAll({
@@ -181,7 +188,7 @@ exports.listVerses = async (month) => {
       id: value.id,
       group_id: value.group_id,
       group: value.group?.name || null,
-      sunday_date: String(value.sunday_date).slice(0, 10),
+      sunday_date: readingDateOnly(value.sunday_date),
       reference: value.reference,
       verse_text: value.verse_text,
     };
