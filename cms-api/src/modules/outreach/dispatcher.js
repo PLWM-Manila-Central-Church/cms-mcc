@@ -13,9 +13,16 @@ const { OutreachPreference, OutreachSessionPolicy, AttendanceFollowUp, OutreachD
 
 const allowedRecipient = (phone) => process.env.SMS_ALLOW_ALL_OPTED_IN === "true"
   || (process.env.SMS_ALLOWED_RECIPIENTS || "").split(",").map(normalizePhone).filter(Boolean).includes(phone);
+const automaticSmsMode = (config) => config.mode === "live" && process.env.SMS_AUTOMATIC_DELIVERY_ENABLED !== "true"
+  ? "simulation" : config.mode;
+const deliveryMode = (job, config) => {
+  if (job.channel === "in_app") return "in_app";
+  return job.kind === "campaign" ? config.mode : automaticSmsMode(config);
+};
 const preflight = async (job, config, now = new Date(), transaction, retry = false) => {
   if (job.kind !== "campaign" && !config.enabled) return { hold: true, reason: "WORKFLOW_DISABLED" };
   if (now >= new Date(job.expires_at)) return { reason: "MESSAGE_EXPIRED" };
+  const mode = deliveryMode(job, config);
   const member = await Member.findByPk(job.member_id, { transaction, ...(transaction && { lock: transaction.LOCK.UPDATE }) });
   if (!member || member.status !== "Active") return { reason: "MEMBER_INACTIVE" };
   const preference = await OutreachPreference.findOne({ where: { member_id: member.id }, transaction });
@@ -33,14 +40,14 @@ const preflight = async (job, config, now = new Date(), transaction, retry = fal
     }
     if (job.channel !== "sms") return { reason: "CAMPAIGN_SMS_ONLY" };
     if (!hasCampaignConsent(member, preference) || campaignRecipientPhone(member, preference) !== job.recipient_phone) return { reason: "SMS_CONSENT_MISSING_OR_CHANGED" };
-    if (config.mode === "disabled") return { hold: true, reason: "SMS_DISABLED" };
-    if (config.mode === "live") {
+    if (mode === "disabled") return { hold: true, reason: "SMS_DISABLED" };
+    if (mode === "live") {
       const state = transportState();
       if (!state.sms_delivery_enabled || !state.provider_configured || !state.recipient_restriction_configured) return { hold: true, reason: "LIVE_SMS_DISABLED" };
       if (!allowedRecipient(job.recipient_phone)) return { reason: "RECIPIENT_NOT_ALLOWED" };
     }
     const message = String(job.message || "");
-    if (config.mode === "live" && estimateSegments(message) > Math.max(1, Math.min(5, Number(process.env.SMS_MAX_SEGMENTS) || 1))) return { failed: true, reason: "SMS_SEGMENT_LIMIT" };
+    if (mode === "live" && estimateSegments(message) > Math.max(1, Math.min(5, Number(process.env.SMS_MAX_SEGMENTS) || 1))) return { failed: true, reason: "SMS_SEGMENT_LIMIT" };
     return { eligible: true, member, message, campaign };
   }
   if (preference && !(job.kind === "activity_reminder" ? preference.activity_reminders : preference.attendance_followups)) return { reason: "PREFERENCE_DISABLED" };
@@ -67,27 +74,35 @@ const preflight = async (job, config, now = new Date(), transaction, retry = fal
     if (!user) return { reason: "RECIPIENT_ACCOUNT_INACTIVE" };
   } else {
     if (!hasSmsConsent(member, preference) || normalizePhone(member.phone) !== job.recipient_phone) return { reason: "SMS_CONSENT_MISSING_OR_CHANGED" };
-    if (config.mode === "disabled") return { hold: true, reason: "SMS_DISABLED" };
-    if (config.mode === "live") {
+    if (mode === "disabled") return { hold: true, reason: "SMS_DISABLED" };
+    if (mode === "live") {
       const state = transportState();
       if (!state.sms_delivery_enabled || !state.provider_configured || !state.recipient_restriction_configured) return { hold: true, reason: "LIVE_SMS_DISABLED" };
       if (!allowedRecipient(job.recipient_phone)) return { reason: "RECIPIENT_NOT_ALLOWED" };
     }
   }
   const message = renderMessage(job.kind === "activity_reminder" ? config.reminder_template : config.followup_template, member, session);
-  if (job.channel === "sms" && config.mode === "live" && estimateSegments(message) > Math.max(1, Math.min(5, Number(process.env.SMS_MAX_SEGMENTS) || 1))) return { failed: true, reason: "SMS_SEGMENT_LIMIT" };
+  if (mode === "live" && estimateSegments(message) > Math.max(1, Math.min(5, Number(process.env.SMS_MAX_SEGMENTS) || 1))) return { failed: true, reason: "SMS_SEGMENT_LIMIT" };
   return { eligible: true, member, session, message };
 };
 const claimNext = async (config, now, campaignId, inAppOnly, campaignOnly = false) => sequelize.transaction(async (transaction) => {
   const state = transportState();
   const smsProcessable = config.mode === "simulation" || config.mode === "live" && state.sms_delivery_enabled && state.provider_configured && state.recipient_restriction_configured;
+  let channelFilter = {};
+  const canSimulateAutomaticSms = config.enabled && !campaignOnly && !campaignId && automaticSmsMode(config) === "simulation";
+  if (inAppOnly) channelFilter = { channel: "in_app" };
+  else if (!smsProcessable) {
+    channelFilter = canSimulateAutomaticSms
+      ? { [Op.or]: [{ channel: "in_app" }, { channel: "sms", kind: { [Op.ne]: "campaign" } }] }
+      : { channel: "in_app" };
+  }
   const row = await OutreachDelivery.findOne({
-    where: { status: "queued", scheduled_at: { [Op.lte]: now }, next_attempt_at: { [Op.lte]: now }, ...(campaignId ? { campaign_id: campaignId } : {}), ...(campaignOnly ? { kind: "campaign" } : {}), ...(!smsProcessable || inAppOnly ? { channel: "in_app" } : {}) },
+    where: { status: "queued", scheduled_at: { [Op.lte]: now }, next_attempt_at: { [Op.lte]: now }, ...(campaignId ? { campaign_id: campaignId } : {}), ...(campaignOnly ? { kind: "campaign" } : {}), ...channelFilter },
     order: [["next_attempt_at", "ASC"], ["id", "ASC"]], transaction, lock: transaction.LOCK.UPDATE,
   });
   if (!row) return null;
   return row.update({ status: "processing", claim_token: randomUUID(), lease_until: new Date(now.getTime() + 600000),
-    delivery_mode: row.channel === "in_app" ? "in_app" : config.mode }, { transaction });
+    delivery_mode: deliveryMode(row, config) }, { transaction });
 });
 const recoverExpiredClaims = async (now) => {
   const rows = await OutreachDelivery.findAll({ where: { status: "processing", lease_until: { [Op.lt]: now } }, limit: 100 });
@@ -121,7 +136,7 @@ const processClaim = async (claim, config, now) => {
         next_attempt_at: new Date(now.getTime() + 60000), lease_until: null, claim_token: null, last_error_code: check.reason }, { transaction });
       return;
     }
-    const mode = job.channel === "in_app" ? "in_app" : config.mode;
+    const mode = deliveryMode(job, config);
     if (mode === "live" && !await reserveBudget(config, now, transaction)) {
       await job.update({ status: "queued", next_attempt_at: new Date(new Date(new Date(now.getTime() + 8 * 3600000).toISOString().slice(0, 10) + "T00:00:00+08:00").getTime() + 86400000),
         lease_until: null, claim_token: null, last_error_code: "DAILY_SMS_CAP" }, { transaction });
@@ -149,7 +164,7 @@ const processClaim = async (claim, config, now) => {
     const latestConfig = await getConfiguration();
     const current = await OutreachDelivery.findByPk(prepared.id);
     const currentCheck = await preflight(current, latestConfig, new Date());
-    if (!currentCheck.eligible || latestConfig.mode !== "live") failure = { code: "ELIGIBILITY_CHANGED_BEFORE_SEND", ambiguous: false };
+    if (!currentCheck.eligible || deliveryMode(current, latestConfig) !== "live") failure = { code: "ELIGIBILITY_CHANGED_BEFORE_SEND", ambiguous: false };
     else result = await require("./mocean.transport").send(prepared);
   } catch (error) {
     failure = { code: /^([A-Z0-9_]){1,80}$/.test(error.code || "") ? error.code : "PROVIDER_RESULT_UNKNOWN",
