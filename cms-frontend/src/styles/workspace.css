@@ -344,6 +344,37 @@
   white-space: nowrap;
 }
 .mcc-btn-secondary:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+.mcc-header-actions,
+.mcc-tablist { display: flex; flex-wrap: wrap; gap: 8px; }
+.mcc-btn-secondary:disabled { opacity: .6; cursor: not-allowed; }
+.mcc-tablist {
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--mcc-border, #e2e8f0);
+}
+.mcc-tab {
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--mcc-ink, #0f172a);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mcc-tab:hover,
+.mcc-tab[aria-selected="true"] {
+  background: var(--mcc-brand-soft, #e4f2fc);
+  color: var(--mcc-brand, #005599);
+}
+.mcc-tab[aria-selected="true"] { border-color: var(--mcc-border, #cbe2f4); }
+.mcc-tab:focus-visible,
+.mcc-header-actions button:focus-visible {
+  outline: 2px solid var(--mcc-brand, #005599);
+  outline-offset: 2px;
+}
 .mcc-table-scroll {
   width: 100%;
   overflow-x: auto;

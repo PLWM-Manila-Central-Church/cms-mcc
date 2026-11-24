@@ -327,23 +327,26 @@ export default function ServicesPage() {
           <p style={styles.subtitle}>
             {total} {total === 1 ? 'service' : 'services'} scheduled
           </p>
-          {!isMember && activeTab === 'schedule' && <><button type="button" disabled={exporting} onClick={() => exportSchedule('xlsx')}>
-            {exporting ? 'Preparing report...' : 'Download Excel'}
-          </button>
-          <button type="button" disabled={exporting} onClick={() => exportSchedule('csv')}>
-            {exporting ? 'Preparing CSV...' : 'Download CSV'}
-          </button></>}
         </div>
-        {canCreate && !isMember && (
-          <button type="button" onClick={openCreateForm} className="mcc-btn-primary">
-            + New Service
-          </button>
+        {!isMember && (activeTab === 'schedule' || canCreate) && (
+          <div className="mcc-header-actions">
+            {activeTab === 'schedule' && (
+              <>
+                <button type="button" className="mcc-btn-secondary" disabled={exporting} onClick={() => exportSchedule('xlsx')}>Download Excel</button>
+                <button type="button" className="mcc-btn-secondary" disabled={exporting} onClick={() => exportSchedule('csv')}>Download CSV</button>
+              </>
+            )}
+            {canCreate && (
+              <button type="button" onClick={openCreateForm} className="mcc-btn-primary">+ New Service</button>
+            )}
+          </div>
         )}
       </div>
+      {exporting && <p role="status" style={styles.subtitle}>Preparing service schedule…</p>}
 
       {/* Unified single-level top tab bar for staff */}
       {!isMember && (
-        <div className="mcc-tablist" role="tablist" aria-label="Services views" style={{ marginBottom: 14 }}>
+        <div className="mcc-tablist" role="tablist" aria-label="Services views">
           {[
             { id: 'schedule', label: 'Schedule' },
             { id: 'program', label: 'Program & Servants' },
@@ -354,7 +357,7 @@ export default function ServicesPage() {
               type="button"
               role="tab"
               aria-selected={activeTab === t.id}
-              className={`mcc-tab${activeTab === t.id ? ' mcc-tab--active' : ''}`}
+              className="mcc-tab"
               onClick={() => setActiveTab(t.id)}
             >
               {t.label}

@@ -108,9 +108,9 @@ describe("consolidated analytics access and range checks", () => {
       if (sql.includes("NULLIF(gender")) return [{ label: "Unspecified", total: 2 }];
       if (sql.includes("SELECT cg.id") || sql.includes("SELECT g.id")) return [];
       if (sql.includes("AS cell_group_categories") || sql.includes("AS member_group_categories")) return [{ category_count: 0 }];
-      if (sql.includes("DATE_FORMAT(COALESCE(join_date") || sql.includes("DATE_FORMAT(created_at")) return [
-        { period: "2026-10-04", total: 1 },
-        { period: "2026-10-11", total: 1 },
+      if (sql.includes("DATE_FORMAT(COALESCE(join_date")) return [
+        { period: "2026-10-04", total: 1, estimated: 0 },
+        { period: "2026-10-11", total: 1, estimated: 2 },
       ];
       return [];
     });
@@ -129,8 +129,8 @@ describe("consolidated analytics access and range checks", () => {
       { period: "2026-10-11", service: 4, events: 0 },
     ]);
     expect(result.member_growth).toEqual([
-      { period: "2026-10-04", total: 1 },
-      { period: "2026-10-11", total: 1 },
+      { period: "2026-10-04", total: 1, estimated: 0 },
+      { period: "2026-10-11", total: 1, estimated: 2 },
     ]);
   });
 
