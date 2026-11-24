@@ -40,7 +40,7 @@ test('assigns a verse and removes one', async () => {
   render(<BibleReadingPage />);
   await screen.findByText('Ana Cruz');
 
-  fireEvent.change(screen.getByLabelText('Group'), { target: { value: '2' } });
+  fireEvent.change(screen.getByRole('combobox', { name: 'Group', exact: true }), { target: { value: '2' } });
   fireEvent.change(screen.getByLabelText('Sunday'), { target: { value: '2026-03-15' } });
   fireEvent.change(screen.getByLabelText('Reference'), { target: { value: 'Psalm 23' } });
   fireEvent.change(screen.getByLabelText('Verse text'), { target: { value: 'The LORD is my shepherd.' } });

@@ -53,8 +53,8 @@ describe("absence follow-up policy", () => {
   });
 });
 describe("contact consent and reminder evaluation (no provider calls)", () => {
-  test.each(["09123456789", "+639123456789", "639123456789", "0912 345 6789"])("normalizes %s", (value) => expect(normalizePhone(value)).toBe("+639123456789"));
-  test.each(["", "9123456789", "+1234567890", "091234567890", "not a number"])("rejects invalid mobile %s", (value) => expect(normalizePhone(value)).toBeNull());
+  test.each(["09123456789", "9123456789", "+639123456789", "639123456789", "0912 345 6789"])("normalizes %s", (value) => expect(normalizePhone(value)).toBe("+639123456789"));
+  test.each(["", "+1234567890", "091234567890", "not a number"])("rejects invalid mobile %s", (value) => expect(normalizePhone(value)).toBeNull());
   test("consent is false by default and tied to the current phone", () => {
     const member = { status: "Active", phone: "09123456789" };
     const consent = { sms_enabled: true, consent_at: new Date(), consent_phone: "+639123456789" };
