@@ -92,31 +92,42 @@ const resolveAudience = async (input, config, now = new Date()) => {
     : [];
   const preferenceByMember = new Map(preferences.map((preference) => [Number(preference.member_id), preference]));
   const excluded = emptyExcluded();
-  if (input.audience_type === "selected_members") excluded.not_found = new Set(input.member_ids || []).size - members.length;
+  const selected = input.audience_type === "selected_members";
+  const recipientStatus = new Map();
+  const exclude = (id, reason) => {
+    excluded[reason]++;
+    if (selected) recipientStatus.set(Number(id), { member_id: Number(id), reason });
+  };
+  if (selected) {
+    const found = new Set(members.map((member) => Number(member.id)));
+    for (const id of new Set(input.member_ids || [])) {
+      if (!found.has(Number(id))) exclude(id, "not_found");
+    }
+  }
   const allowedPhones = new Set((process.env.SMS_ALLOWED_RECIPIENTS || "").split(",").map(normalizePhone).filter(Boolean));
   const candidates = [];
   for (const member of members) {
-    if (member.status !== "Active" || Number(member.is_deleted)) { excluded.inactive++; continue; }
+    if (member.status !== "Active" || Number(member.is_deleted)) { exclude(member.id, "inactive"); continue; }
     const preference = preferenceByMember.get(Number(member.id));
-    if (!preference || preference.campaign_notifications === false) { excluded.preference_disabled++; continue; }
-    if (preference.opted_out_at) { excluded.opted_out++; continue; }
+    if (!preference || preference.campaign_notifications === false) { exclude(member.id, "preference_disabled"); continue; }
+    if (preference.opted_out_at) { exclude(member.id, "opted_out"); continue; }
     const age = ageAt(member.birthdate, now);
     const minor = age !== null && age < 18;
     let phone = normalizePhone(member.phone);
     let recipientName = member.first_name;
     if (minor) {
-      if (!preference.guardian_phone || !preference.guardian_consent_at) { excluded.minor_without_guardian++; continue; }
+      if (!preference.guardian_phone || !preference.guardian_consent_at) { exclude(member.id, "minor_without_guardian"); continue; }
       phone = normalizePhone(preference.guardian_phone);
       recipientName = preference.guardian_name || member.first_name;
-      if (!phone) { excluded.minor_without_guardian++; continue; }
+      if (!phone) { exclude(member.id, "minor_without_guardian"); continue; }
     }
-    if (!phone) { excluded.no_phone++; continue; }
+    if (!phone) { exclude(member.id, "no_phone"); continue; }
     const consentMissing = minor
       ? (!preference.sms_enabled || !preference.consent_at || !preference.guardian_consent_at)
       : (!preference.sms_enabled || !preference.consent_at || normalizePhone(preference.consent_phone) !== normalizePhone(member.phone));
-    if (consentMissing) { excluded.no_consent++; continue; }
+    if (consentMissing) { exclude(member.id, "no_consent"); continue; }
     if (config.mode === "live" && process.env.SMS_ALLOW_ALL_OPTED_IN !== "true" && !allowedPhones.has(phone)) {
-      excluded.recipient_restricted++; continue;
+      exclude(member.id, "recipient_restricted"); continue;
     }
     candidates.push({
       member_id: Number(member.id), first_name: member.first_name, last_name: member.last_name,
@@ -131,13 +142,14 @@ const resolveAudience = async (input, config, now = new Date()) => {
     const weekly = counts.weekly.get(candidate.member_id) || 0;
     const monthly = counts.monthly.get(candidate.member_id) || 0;
     if (weekly >= config.campaign_weekly_member_cap || monthly >= config.campaign_monthly_member_cap) {
-      excluded.frequency_cap++; continue;
+      exclude(candidate.member_id, "frequency_cap"); continue;
     }
-    if (seenPhones.has(candidate.phone)) { excluded.duplicate++; continue; }
+    if (seenPhones.has(candidate.phone)) { exclude(candidate.member_id, "duplicate"); continue; }
     seenPhones.add(candidate.phone);
     recipients.push(candidate);
+    if (selected) recipientStatus.set(candidate.member_id, { member_id: candidate.member_id, reason: null });
   }
-  return { recipients, excluded, warning, total_candidates: members.length };
+  return { recipients, excluded, warning, total_candidates: members.length, ...(selected ? { recipient_status: [...recipientStatus.values()] } : {}) };
 };
 
 const previewCampaign = async (input, config, now = new Date()) => {

@@ -7,7 +7,7 @@ const errorText = (error) => apiErrorMessage(error, 'The notification could not 
 const money = (value) => `₱${Number(value || 0).toFixed(2)}`;
 const label = (value) => value === 'sent' ? 'Accepted by Mocean' : String(value || '').replaceAll('_', ' ');
 const when = (value) => value ? new Date(value).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled';
-const audienceLabel = (type) => type === 'all_members' ? 'All members' : type === 'event' ? 'Event attendees' : type === 'ministry' ? 'Ministry members' : campaign.audience_type === 'selected_members' ? 'Selected members' : 'Cell group';
+const audienceLabel = (type) => type === 'all_members' ? 'All members' : type === 'event' ? 'Event attendees' : type === 'ministry' ? 'Ministry members' : type === 'selected_members' ? 'Selected members' : 'Cell group';
 
 export default function CampaignDetail({ campaignId, user, caps, onClose, onUpdated }) {
   const { dialogRef, closeButtonRef } = useDialogFocus(true, onClose);
@@ -69,10 +69,15 @@ export default function CampaignDetail({ campaignId, user, caps, onClose, onUpda
             <button type="button" disabled={busy || reason.trim().length < 5} onClick={() => act('reject')}>Reject</button></>}
           {canCancel && <button type="button" disabled={busy} onClick={() => act('cancel')}>Cancel notification</button>}
         </div>
-        <section><h3>Recipients</h3>
+        <section><h3>Delivery status</h3>
+          <button type="button" onClick={load}>Refresh delivery status</button>
           {!deliveries.length ? <p className="outreach-muted">Deliveries appear here after the notification is queued.</p> :
             <div className="outreach-table-wrap"><table className="outreach-table"><thead><tr><th>Member</th><th>Phone</th><th>Status</th></tr></thead>
-              <tbody>{deliveries.map((row) => <tr key={row.id}><td>{row.member_name || 'Member #' + row.member_id}</td><td>{row.recipient_phone || '—'}</td><td>{label(row.status)}</td></tr>)}</tbody>
+              <tbody>{deliveries.map((row) => <tr key={row.id}>
+                <td>{row.member_name || 'Member #' + row.member_id}</td>
+                <td>{row.recipient_phone || '—'}</td>
+                <td>{label(row.status)}{row.last_error_code && <small className="outreach-muted"> · {label(row.last_error_code)}</small>}</td>
+              </tr>)}</tbody>
             </table></div>}
         </section>
       </>}

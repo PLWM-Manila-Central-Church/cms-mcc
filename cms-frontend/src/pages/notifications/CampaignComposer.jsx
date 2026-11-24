@@ -6,10 +6,18 @@ import useDialogFocus from '../../components/attendance/useQrDialogFocus';
 
 const errorText = (error) => apiErrorMessage(error, 'The notification could not be saved.');
 const money = (value) => `₱${Number(value || 0).toFixed(2)}`;
-const statusLabel = (value) => String(value || '').replaceAll('_', ' ');
-const audienceLabel = (campaign) => campaign.audience_type === 'all_members' ? 'All members'
-  : campaign.audience_type === 'event' ? 'Event attendees'
-    : campaign.audience_type === 'ministry' ? 'Ministry members' : 'Cell group';
+const reasons = {
+  inactive: 'Member is inactive',
+  no_phone: 'No valid mobile number',
+  no_consent: 'SMS consent is missing or does not match the current number',
+  opted_out: 'Opted out of SMS',
+  preference_disabled: 'Campaign notifications are off or unset',
+  minor_without_guardian: 'Valid guardian number and consent required',
+  duplicate: 'Shares a number with another eligible recipient',
+  frequency_cap: 'SMS frequency limit reached',
+  recipient_restricted: 'Number is outside the live SMS allowlist',
+  not_found: 'Member record is unavailable',
+};
 
 const localInput = (date) => {
   const pad = (value) => String(value).padStart(2, '0');
@@ -57,7 +65,6 @@ export default function CampaignComposer({ user, caps, onClose, onCreated }) {
   useEffect(() => { if (preview) reviewHeading.current?.focus(); }, [preview]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
   const [options, setOptions] = useState({ events: [], ministries: [], cellGroups: [] });
 
   useEffect(() => {
@@ -106,7 +113,7 @@ export default function CampaignComposer({ user, caps, onClose, onCreated }) {
       setError('Choose at least one member.');
       return;
     }
-    setError(''); setNotice(''); setBusy(true);
+    setError(''); setBusy(true);
     try {
       const response = await api.post('/outreach/campaigns/preview', previewPayload());
       submissionKey.current = crypto.randomUUID();
@@ -117,30 +124,30 @@ export default function CampaignComposer({ user, caps, onClose, onCreated }) {
 
   const submit = async (event) => {
     event.preventDefault();
-    if (busy || submitting.current) return;
-    if (!preview?.recipient_count || preview?.sending_available === false) { setError('Preview the audience and cost before continuing.'); return; }
+    if (busy || submitting.current || !canConfirm) return;
     submitting.current = true;
-    setBusy(true); setError(''); setNotice('');
+    setBusy(true); setError('');
     try {
       const created = await api.post('/outreach/campaigns', { ...payload(), submission_key: submissionKey.current });
       const campaign = created.data.data;
       const submitted = await api.post(`/outreach/campaigns/${campaign.id}/submit`);
       onCreated?.(submitted.data.data);
-      setNotice(submitted.data.data.status === 'pending_approval'
-        ? 'Submitted for approval by another Registration Team user.'
-        : timingMode === 'send_now' ? 'Submitted for immediate processing.' : 'Notification approved and scheduled.');
-      setTimeout(onClose, 900);
     } catch (requestError) { submitting.current = false; setError(errorText(requestError)); }
     finally { setBusy(false); }
   };
 
   const charCount = message.length;
+  const recipientStatus = new Map((preview?.recipient_status || []).map((entry) => [Number(entry.member_id), entry]));
+  const budgetIssue = preview && (preview.estimated_cost_php > preview.monthly_remaining_php
+    ? 'Estimated cost exceeds the remaining monthly SMS budget.'
+    : budgetCap !== '' && preview.estimated_cost_php > Number(budgetCap)
+      ? 'Estimated cost exceeds this notification’s budget cap.' : '');
+  const canConfirm = Boolean(preview?.recipient_count) && preview.sending_available !== false && !budgetIssue;
   return <div className="outreach-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
     <section ref={dialogRef} role="dialog" aria-modal="true" aria-label="New notification" className="outreach-dialog campaign-composer">
       <header><h2 ref={reviewHeading} tabIndex={-1}>{preview ? 'Review SMS' : 'New notification'}</h2><button type="button" ref={closeButtonRef} onClick={onClose} disabled={busy} aria-label="Close dialog">Close</button></header>
       <form onSubmit={preview ? submit : runPreview}>
         {error && <div className="outreach-error" role="alert">{error}</div>}
-        {notice && <div className="outreach-success" role="status">{notice}</div>}
         {!preview && <>
         <label>Audience<select value={audienceType} onChange={(event) => { setAudienceType(event.target.value); setPreview(null); }}>
           {audienceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -197,21 +204,32 @@ export default function CampaignComposer({ user, caps, onClose, onCreated }) {
         {preview && <section className="campaign-preview" aria-label="Audience preview">
           <p className="sms-review-message">{message}</p>
           <p>{audienceOptions.find((option) => option.value === audienceType)?.label} · {timingMode === 'send_now' ? 'Send now' : scheduledAt.replace('T', ' ') + ' Manila time'}</p>
-          {audienceType === 'selected_members' && <p>{members.map((member) => member.label).join(', ')}</p>}
           <h3>{preview.recipient_count} eligible recipient{preview.recipient_count === 1 ? '' : 's'}</h3>
+          {audienceType === 'selected_members' && <ul aria-label="Selected recipient eligibility">
+            {members.map((member) => {
+              const status = recipientStatus.get(Number(member.id));
+              const eligible = status ? status.reason === null
+                : (preview.recipients || []).some((row) => Number(row.member_id) === Number(member.id));
+              return <li key={member.id}><strong>{member.label}</strong> — {eligible
+                ? 'Eligible at review'
+                : 'Will be skipped: ' + (reasons[status?.reason] || 'Does not meet SMS eligibility requirements')}</li>;
+            })}
+          </ul>}
+          {!preview.recipient_count && <p role="alert">No eligible recipients. Go back to change the audience.</p>}
+          {budgetIssue && <p role="alert">{budgetIssue}</p>}
           <p>{preview.total_segments} SMS segment{preview.total_segments === 1 ? '' : 's'} · estimated <strong>{money(preview.estimated_cost_php)}</strong> · monthly remaining {money(preview.monthly_remaining_php)}</p>
           {preview.warning && <p className="outreach-warning">{preview.warning}</p>}
           {preview.mode === 'simulation' && <p>Simulation mode. No SMS will be sent.</p>}
           {preview.sending_available === false && <p role="alert">SMS processing is disabled or the provider is unavailable.</p>}
           <details><summary>Who is excluded</summary><ul>
-            {Object.entries(preview.excluded || {}).filter(([, count]) => count > 0).map(([reason, count]) => <li key={reason}>{statusLabel(reason)}: {count}</li>)}
+            {Object.entries(preview.excluded || {}).filter(([, count]) => count > 0).map(([reason, count]) => <li key={reason}>{reasons[reason] || reason}: {count}</li>)}
           </ul></details>
           {preview.approval_required && <p className="outreach-warning">This notification needs approval before it can send.</p>}
         </section>}
         <div className="outreach-actions sms-footer">
           {preview ? <>
             <button type="button" disabled={busy} onClick={() => { setPreview(null); setError(''); }}>Back to edit</button>
-            <button type="submit" className="outreach-primary" disabled={busy || Boolean(notice) || !preview.recipient_count || preview.sending_available === false}>{busy ? 'Saving…' : preview.approval_required ? 'Submit for approval' : timingMode === 'send_now' ? 'Send SMS' : 'Schedule SMS'}</button>
+            <button type="submit" className="outreach-primary" disabled={busy || !canConfirm}>{busy ? 'Saving…' : preview.approval_required ? 'Submit for approval' : preview.mode === 'simulation' ? 'Simulate SMS' : timingMode === 'send_now' ? 'Send SMS' : 'Schedule SMS'}</button>
           </> : <button type="submit" className="outreach-primary" disabled={busy}>{busy ? 'Checking…' : 'Review SMS'}</button>}
         </div>
       </form>

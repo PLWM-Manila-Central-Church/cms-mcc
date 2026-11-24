@@ -62,6 +62,20 @@ describe('CampaignsPanel', () => {
     expect(screen.queryByRole('button', { name: 'New notification' })).not.toBeInTheDocument();
   });
 
+  test('shows the reason a selected recipient cannot receive the message', async () => {
+    api.post.mockResolvedValueOnce({ data: { data: {
+      recipient_count: 0, total_segments: 0, excluded: { no_consent: 1 },
+      recipient_status: [{ member_id: 12, reason: 'no_consent' }],
+    } } });
+    renderPanel({ user: { userId: 1, roleName: 'Registration Team' }, caps });
+    fireEvent.click(screen.getByRole('button', { name: 'New notification' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Alex Sample' }));
+    fireEvent.change(screen.getByLabelText(/Message/), { target: { value: 'Church reminder' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Review SMS' }).closest('form'));
+    expect(await screen.findByText(/Will be skipped: SMS consent/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send SMS' })).toBeDisabled();
+  });
+
   test('approval-only view filters to pending approval', async () => {
     renderPanel({ user: { userId: 1, roleName: 'Registration Team' }, caps, approvalsOnly: true });
     await screen.findByText('Christmas Eve reminder');

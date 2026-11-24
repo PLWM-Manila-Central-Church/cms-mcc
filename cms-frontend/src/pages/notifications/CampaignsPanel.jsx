@@ -10,7 +10,7 @@ const errorText = (error) => apiErrorMessage(error, 'Notifications could not be 
 const money = (value) => `₱${Number(value || 0).toFixed(2)}`;
 const label = (value) => String(value || '').replaceAll('_', ' ');
 const when = (value) => value ? new Date(value).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled';
-const audienceLabel = (type) => type === 'all_members' ? 'All members' : type === 'event' ? 'Event attendees' : type === 'ministry' ? 'Ministry members' : campaign.audience_type === 'selected_members' ? 'Selected members' : 'Cell group';
+const audienceLabel = (type) => type === 'all_members' ? 'All members' : type === 'event' ? 'Event attendees' : type === 'ministry' ? 'Ministry members' : type === 'selected_members' ? 'Selected members' : 'Cell group';
 
 export default function CampaignsPanel({ user, caps, refreshKey = 0, onUpdated, approvalsOnly = false }) {
   const [items, setItems] = useState(null);
@@ -63,7 +63,7 @@ export default function CampaignsPanel({ user, caps, refreshKey = 0, onUpdated, 
     </table></div>}
     {items && total > 0 && <CompactPagination page={page} totalPages={totalPages} total={total} limit={limit} pageSizes={[15, 25, 50]} onPageChange={setPage} onLimitChange={(n) => { setLimit(n); setPage(1); }} itemLabel="notifications" />}
     {composerOpen && <CampaignComposer user={user} caps={caps} onClose={() => setComposerOpen(false)}
-      onCreated={() => { setComposerOpen(false); reload(); }} />}
+      onCreated={(campaign) => { setComposerOpen(false); setSelected(campaign.id); reload(); }} />}
     {selected && <CampaignDetail campaignId={selected} user={user} caps={caps} onClose={() => setSelected(null)} onUpdated={reload} />}
   </section>;
 }

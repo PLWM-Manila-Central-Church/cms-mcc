@@ -47,6 +47,18 @@ test("excludes a member without consent", async () => {
   expect(result.excluded.no_consent).toBe(1);
 });
 
+test("explains selected recipient results without returning contact data in the status rows", async () => {
+  Member.findAll.mockResolvedValue([member({}), member({ id: 2 })]);
+  OutreachPreference.findAll.mockResolvedValue([preference({}), preference({ member_id: 2, sms_enabled: false })]);
+  const result = await resolveAudience({ audience_type: "selected_members", member_ids: [1, 2, 3] }, config);
+  expect(result.recipient_status).toEqual(expect.arrayContaining([
+    { member_id: 1, reason: null },
+    { member_id: 2, reason: "no_consent" },
+    { member_id: 3, reason: "not_found" },
+  ]));
+  expect(result.recipients.map(({ member_id }) => member_id)).toEqual([1]);
+});
+
 test("routes a minor to a consented guardian number", async () => {
   Member.findAll.mockResolvedValue([member({ birthdate: "2012-01-01" })]);
   OutreachPreference.findAll.mockResolvedValue([preference({
