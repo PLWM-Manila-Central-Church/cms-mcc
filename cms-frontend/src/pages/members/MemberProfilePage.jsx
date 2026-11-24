@@ -1,3 +1,4 @@
+import MemberAvatar from '../../components/common/MemberAvatar';
 import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
@@ -169,7 +170,7 @@ export default function MemberProfilePage() {
       {/* Profile Header Card */}
       <div style={styles.profileCard}>
         <div style={{ ...styles.avatarLg, overflow: 'hidden' }}>
-          {member.profile_photo_url ? <img src={uploadUrl(member.profile_photo_url)} alt={`${fullName} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : initials}
+          <MemberAvatar src={uploadUrl(member.profile_photo_url)} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} fallback={initials} />
         </div>
         <div style={styles.profileInfo}>
           <h1 className="workspace-page-title" style={styles.profileName}>{fullName}</h1>

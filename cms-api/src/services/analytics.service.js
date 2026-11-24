@@ -204,12 +204,13 @@ exports.getAnalytics = async ({ user, date_from, date_to, period = "year" } = {}
         { type: QueryTypes.SELECT },
       ),
       sequelize.query(`
-        SELECT DATE_FORMAT(COALESCE(join_date, DATE(created_at)), '%Y-%m-%d') AS period, COUNT(*) AS total
+        SELECT DATE_FORMAT(COALESCE(join_date, CASE WHEN import_batch IS NULL THEN DATE(created_at) END, estimated_join_date), '%Y-%m-%d') AS period,
+               SUM(CASE WHEN join_date IS NOT NULL OR import_batch IS NULL THEN 1 ELSE 0 END) AS total,
+               SUM(CASE WHEN join_date IS NULL AND import_batch IS NOT NULL THEN 1 ELSE 0 END) AS estimated
         FROM members
         WHERE is_deleted = 0
-          AND (import_batch IS NULL OR join_date IS NOT NULL)
-          AND COALESCE(join_date, DATE(created_at)) >= :fromDate
-          AND COALESCE(join_date, DATE(created_at)) <= :toDate
+          AND COALESCE(join_date, CASE WHEN import_batch IS NULL THEN DATE(created_at) END, estimated_join_date) >= :fromDate
+          AND COALESCE(join_date, CASE WHEN import_batch IS NULL THEN DATE(created_at) END, estimated_join_date) <= :toDate
         GROUP BY period ORDER BY period`,
         { type: QueryTypes.SELECT, replacements: { fromDate: range.from, toDate: range.to } },
       ),
@@ -276,7 +277,7 @@ exports.getAnalytics = async ({ user, date_from, date_to, period = "year" } = {}
           categoryLabel: "groups",
         }),
       },
-      growth: fillBuckets(range.from, range.to, growthRows, bucket),
+      growth: fillBuckets(range.from, range.to, growthRows, bucket, ["total", "estimated"]),
       group_insights: {
         ministry_participation: ministryParticipationRows.map((r) => {
           const tot = asNumber(r.total);

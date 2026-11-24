@@ -12,6 +12,7 @@ const Event = sequelize.define(
       primaryKey: true,
     },
     category_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    calendar_source_key: { type: DataTypes.STRING(90), allowNull: true },
     title: { type: DataTypes.STRING(150), allowNull: false },
     description: { type: DataTypes.TEXT, allowNull: true },
     image_url: { type: DataTypes.STRING(1000), allowNull: true },

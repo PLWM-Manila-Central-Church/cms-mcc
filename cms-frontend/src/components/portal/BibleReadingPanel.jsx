@@ -141,7 +141,7 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
                 <>
                   <div role="grid" aria-label={monthLabel(month)} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 4 }}>
                     {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-                      <span key={`head-${index}`} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: c.t3, padding: '2px 0' }} aria-hidden="true">{day}</span>
+                      <span key={`head-${index}`} style={{ textAlign: 'center', fontSize: f.xs || 12, fontWeight: 700, color: c.t3, padding: '2px 0' }} aria-hidden="true">{day}</span>
                     ))}
                     {Array.from({ length: firstWeekday }, (_, index) => <span key={`pad-${index}`} />)}
                     {data.days.map((day) => {
@@ -168,9 +168,9 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
                           <span style={{ fontSize: f.xs, fontWeight: dayRead || isToday || isActive ? 800 : 500 }}>{Number(day.date.slice(8, 10))}</span>
                           {!day.placeholder && (
                             <>
-                              <span style={{ fontSize: 8, lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.ot}</span>
-                              <span style={{ fontSize: 8, lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.nt}</span>
-                              <span style={{ fontSize: 8, lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.ps}</span>
+                              <span style={{ fontSize: Math.max(10, (f.xs || 12) - 2), lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.ot}</span>
+                              <span style={{ fontSize: Math.max(10, (f.xs || 12) - 2), lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.nt}</span>
+                              <span style={{ fontSize: Math.max(10, (f.xs || 12) - 2), lineHeight: 1.15, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>{day.ps}</span>
                             </>
                           )}
                         </button>
@@ -188,7 +188,7 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
         <PortalDialog onClose={() => selected === activeDay.date && setSelected('')} label={fullDate(activeDay.date)} width={520}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '20px 22px 14px', borderBottom: `1px solid ${c.borderL}` }}>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: c.t3 }}>{t.selectedDay || 'Selected day'}</div>
+              <div style={{ fontSize: f.xs || 12, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: c.t3 }}>{t.selectedDay || 'Selected day'}</div>
               <div style={{ fontSize: f.lg || 17, fontWeight: 700, color: c.t1, marginTop: 2 }}>{fullDate(activeDay.date)}</div>
             </div>
             <button type="button" onClick={() => setSelected('')} aria-label={t.closeDay || 'Close day readings'} style={{ width: 36, height: 36, borderRadius: '50%', border: 0, background: c.surfaceAlt, color: c.t2, cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
@@ -206,7 +206,7 @@ export default function BibleReadingPanel({ c, f, labels = {}, showToast }) {
                   [t.psalmsProverbs || 'Psalms / Proverbs', activeDay.ps],
                 ].map(([label, value]) => (
                   <div key={label} style={{ background: c.surfaceAlt, border: `1px solid ${c.borderL}`, borderRadius: 10, padding: '10px 12px' }}>
-                    <dt style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: c.t3 }}>{label}</dt>
+                    <dt style={{ fontSize: f.xs || 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: c.t3 }}>{label}</dt>
                     <dd style={{ margin: '3px 0 0', fontSize: f.md || 14, fontWeight: 650, color: c.t1 }}>{value}</dd>
                   </div>
                 ))}

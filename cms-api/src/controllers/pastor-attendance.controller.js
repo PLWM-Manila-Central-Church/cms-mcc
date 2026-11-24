@@ -128,7 +128,18 @@ exports.exportReport = async (req, res, next) => {
       }, report.filters)),
       ...report.sessions.map((session) => withFilters({ row_type: "session", ...session }, report.filters)),
     ];
+    const metadata = [
+      ["PLWM - MANILA CENTRAL CHURCH"], ["Pastor Attendance Report"],
+      ["Report period", report.filters.from, report.filters.to],
+      ["Generated (Asia/Manila)", new Intl.DateTimeFormat("en-PH", {
+        dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila",
+      }).format(new Date())],
+      ["Confirmed visits", report.summary.confirmed_visits],
+      ["Unique attendees", report.summary.unique_attendees],
+      [], ["Attendance details"],
+    ];
     const lines = [
+      ...metadata.map((row) => COLUMNS.map((_, index) => csvCell(row[index])).join(",")),
       COLUMNS.map(([, heading]) => csvCell(heading)).join(","),
       ...rows.map((row) => COLUMNS.map(([key]) => csvCell(row[key])).join(",")),
     ];

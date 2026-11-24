@@ -395,13 +395,13 @@ exports.exportSessionCsv = async (req, res, next) => {
     };
     const records = session.service_id
       ? await QrServiceAttendance.findAll({
-        where: { service_id: session.service_id, check_in_method: { [Op.ne]: "pre-reg" }, ...(scope && { voided_at: null }) },
+        where: { service_id: session.service_id, check_in_method: { [Op.ne]: "pre-reg" }, voided_at: null },
         include: [memberInclude],
         order: [["checked_in_at", "ASC"], ["id", "ASC"]],
         limit: 20001,
       })
       : await EventAttendance.findAll({
-        where: { session_id: session.id, ...(scope && { voided_at: null }) },
+        where: { session_id: session.id, voided_at: null },
         include: [{ ...memberInclude, as: "member" }],
         order: [["checked_in_at", "ASC"], ["id", "ASC"]],
         limit: 20001,
@@ -409,7 +409,17 @@ exports.exportSessionCsv = async (req, res, next) => {
     if (records.length > 20000) {
       throw AppError.conflict("EXPORT_LIMIT_REACHED", "This session has more than 20,000 rows. Use a paged export workflow or narrow the session before exporting.");
     }
-    const rows = [["member_id", "first_name", "last_name", "checked_in_at", "entry_source", "capture_method"]];
+    const rows = [
+      ["PLWM - MANILA CENTRAL CHURCH"], ["Confirmed QR Attendance"],
+      ["Session ID", Number(session.id)],
+      ["Session start (UTC)", session.starts_at?.toISOString?.() || session.starts_at],
+      ["Generated (Asia/Manila)", new Intl.DateTimeFormat("en-PH", {
+        dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila",
+      }).format(new Date())],
+      [], ["Summary"], ["Confirmed check-ins", records.length], [],
+      ["Confirmed attendance"],
+      ["Member ID", "First name", "Last name", "Check-in (UTC)", "Entry source", "Capture method"],
+    ];
     for (const record of records) {
       const member = record.Member || record.member;
       rows.push([
@@ -421,7 +431,7 @@ exports.exportSessionCsv = async (req, res, next) => {
         record.check_in_method,
       ]);
     }
-    const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+    const csv = rows.map((row) => Array.from({ length: 6 }, (_, index) => csvCell(row[index])).join(",")).join("\r\n");
     res.set({
       "Content-Type": "text/csv; charset=utf-8",
       "Cache-Control": "private, no-store, max-age=0",

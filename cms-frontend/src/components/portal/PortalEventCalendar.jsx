@@ -34,7 +34,7 @@ function DayDialog({ date, events, onClose, onEventClick, c, f, labels }) {
     <PortalDialog onClose={onClose} label={dayLabel(date)} width={560}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '20px 22px 14px', borderBottom: `1px solid ${c.borderL}` }}>
         <div>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: c.t3 }}>
+          <div style={{ fontSize: f.xs || 12, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: c.t3 }}>
             {t.selectedDay || 'Selected day'}
           </div>
           <div style={{ fontSize: f.lg || 17, fontWeight: 700, color: c.t1, marginTop: 2 }}>{dayLabel(date)}</div>
@@ -61,7 +61,7 @@ function DayDialog({ date, events, onClose, onEventClick, c, f, labels }) {
           return (
             <article key={event.id} style={{ border: `1px solid ${c.border}`, borderRadius: 12, padding: '13px 15px', display: 'grid', gap: 5 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: c.t2, minWidth: 62 }}>
+                <span style={{ fontSize: f.sm || 13, fontWeight: 700, color: c.t2, minWidth: 62 }}>
                   {event.start_time ? timeLabel(event.start_time) : (t.allDay || 'All day')}
                 </span>
                 <span style={{ fontSize: f.sm, fontWeight: 650, color: c.t1, flex: 1, minWidth: 0 }}>{event.title}</span>
@@ -71,7 +71,7 @@ function DayDialog({ date, events, onClose, onEventClick, c, f, labels }) {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingLeft: 74, marginTop: 2 }}>
                 <span>
                   {event.is_registered && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: c.success, background: c.successL, borderRadius: 99, padding: '2px 8px' }}>
+                    <span style={{ fontSize: f.xs || 12, fontWeight: 700, color: c.success, background: c.successL, borderRadius: 99, padding: '2px 8px' }}>
                       {t.registered || 'Registered'}
                     </span>
                   )}
@@ -154,7 +154,7 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
         <div style={{ padding: '10px 12px 14px' }}>
           <div role="row" aria-hidden="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 3, marginBottom: 3 }}>
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-              <span key={`head-${index}`} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: c.t3, padding: '2px 0' }}>{day}</span>
+              <span key={`head-${index}`} style={{ textAlign: 'center', fontSize: f.xs || 12, fontWeight: 700, color: c.t3, padding: '2px 0' }}>{day}</span>
             ))}
           </div>
           <div role="grid" aria-label={monthLabel(month)} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 3 }}>
@@ -201,7 +201,7 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
                       style={{
                         border: 0, padding: '1px 4px', margin: 0, background: 'rgba(0,85,153,0.08)', borderRadius: 4,
                         cursor: 'pointer', textAlign: 'left', minHeight: 0, flexShrink: 0,
-                        font: 'inherit', fontSize: 10, lineHeight: 1.3, color: c.accentT,
+                        font: 'inherit', fontSize: f.xs || 12, lineHeight: 1.3, color: c.accentT,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%',
                       }}
                     >
@@ -209,7 +209,7 @@ export default function PortalEventCalendar({ events = [], onEventClick, c, f, i
                     </button>
                   ))}
                   {hasEvents && !isMobile && day.events.length > 2 && (
-                    <span style={{ fontSize: 10, color: c.t3 }}>+{day.events.length - 2}</span>
+                    <span style={{ fontSize: f.xs || 12, color: c.t3 }}>+{day.events.length - 2}</span>
                   )}
                   {hasEvents && isMobile && (
                     <span style={{ width: 5, height: 5, borderRadius: 99, background: c.accent, marginTop: 1 }} aria-hidden="true" />

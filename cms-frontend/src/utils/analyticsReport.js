@@ -189,7 +189,8 @@ export const buildAnalyticsCsvRows = (data, {
     }
     rows.push(analyticsCsvBlankRow(), analyticsCsvRow('MEMBER GROWTH'), ANALYTICS_CSV_HEADER);
     for (const item of data.member_growth || []) {
-      rows.push(analyticsCsvRow('Member growth', item.period, item.total, 'members', 'New members per report interval'));
+      rows.push(analyticsCsvRow('Member growth (recorded)', item.period, item.total, 'members', 'Recorded date'));
+      if (item.estimated) rows.push(analyticsCsvRow('Member growth (estimated)', item.period, item.estimated, 'members', 'Assigned reporting date for an import without a recorded join date'));
     }
     if (data.member_insights) {
       rows.push(

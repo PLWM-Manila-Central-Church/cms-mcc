@@ -1,3 +1,5 @@
+import { downloadReportCsv } from '../../utils/reportCsv';
+import { fetchAllPages } from '../../api/fetchAllPages';
 import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import useIsMobile from '../../hooks/useIsMobile';
@@ -26,6 +28,7 @@ export default function FinanceReportsLedgerPage() {
   const [expReport, setExpReport] = useState(null);
   const [ledger, setLedger] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
 
   const loadReports = useCallback(async () => {
@@ -49,6 +52,39 @@ export default function FinanceReportsLedgerPage() {
 
   useEffect(() => { loadReports(); }, [loadReports]);
 
+  const exportCsv = async (format = "csv") => {
+    if (!statement || !expReport || loading || error || exporting) return;
+    setExporting(true);
+    try {
+      const range = { date_from: dateFrom, date_to: dateTo };
+      const expenseParams = { ...range, report_type: reportType, year: dateTo.slice(0, 4) };
+      const [entries, expenses] = await Promise.all([
+        fetchAllPages('/finance/ledger', 'items', { ...range, type: ledgerType }),
+        reportType === 'detail' ? fetchAllPages('/finance/reports/expenses', 'rows', expenseParams) : expReport.rows,
+      ]);
+      const detail = reportType === 'detail';
+      await downloadReportCsv(`plwm-mcc-finance-${dateFrom}-to-${dateTo}.csv`, 'Financial Statements, Expense Reports & Ledger',
+        [['Report period', `${statement.from || dateFrom} to ${statement.to || dateTo}`], ['Currency', 'PHP'],
+          ['Ledger type', ledgerType], ['Expense report period', expReport.year || `${expReport.from || dateFrom} to ${expReport.to || dateTo}`]], [
+          { title: 'Consolidated financial statement', columns: ['Metric', 'Amount (PHP)'], records: [
+            ['Beginning balance', statement.beginning_balance], ['Income', statement.total_income],
+            ['Paid expenses', statement.total_expenses], ['Ending balance', statement.ending_balance],
+            ['Internal transfers excluded', statement.internal_transfers_excluded],
+          ].map(([metric, value]) => [metric, Number(value ?? 0)]) },
+          { title: REPORT_TYPES.find((item) => item.id === reportType).label,
+            columns: detail ? ['Date', 'Reference', 'Payee', 'Description', 'Category', 'Amount (PHP)'] : ['Group', 'Transactions', 'Amount (PHP)'],
+            records: [...expenses.map((row) => detail
+              ? [row.date, row.transaction_number || `EXP-${row.id}`, row.payee, row.description, row.category?.category_name, Number(row.amount)]
+              : [row.category || row.month || row.ministry || row.event, row.count, Number(row.total)]),
+            detail ? ['', '', '', '', 'Total', Number(expReport.grand_total)] : ['Total', '', Number(expReport.grand_total)]] },
+          { title: 'Ledger', columns: ['Date', 'Type', 'Reference', 'Category', 'Description', 'Status', 'Amount (PHP)'],
+            records: entries.map((row) => [row.date, row.entry_type, row.transaction_number, row.category, row.description, row.status, Number(row.amount)]) },
+        ], format);
+    } catch (failure) {
+      setError(failure.response?.data?.message || failure.message || 'The financial reports could not be exported.');
+    } finally { setExporting(false); }
+  };
+
   return (
     <div className="mcc-module mcc-module-finance-reports" style={S.page}>
       <div style={S.header}>
@@ -58,9 +94,17 @@ export default function FinanceReportsLedgerPage() {
             Consolidated monthly balance reconciliation, 5 structured expense report views, and chronological audit ledger.
           </p>
         </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" onClick={() => exportCsv('xlsx')} disabled={!statement || !expReport || loading || !!error || exporting} style={S.ghostBtn}>
+          {exporting ? 'Preparing report...' : 'Download Excel'}
+        </button>
+          <button type="button" onClick={() => exportCsv('csv')} disabled={!statement || !expReport || loading || !!error || exporting} style={S.ghostBtn}>
+          {exporting ? 'Preparing CSV...' : 'Download CSV'}
+        </button>
         <button type="button" onClick={() => window.print()} style={S.primaryBtn}>
           <MonoIcon name="printer" size={15} /> Print / PDF
         </button>
+        </div>
       </div>
 
       <FinanceNavigation />

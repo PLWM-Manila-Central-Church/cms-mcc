@@ -652,7 +652,7 @@ exports.getConsolidatedStatement = async ({ date_from, date_to } = {}) => {
 exports.getLedger = async ({ date_from, date_to, type = "all", search = "", page, limit = 25 } = {}) => {
   const capped = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
   const currentPage = page !== undefined ? Math.max(1, parseInt(page, 10) || 1) : 1;
-  const fetchLimit = Math.min(2000, currentPage * capped + 200);
+  const fetchLimit = page !== undefined ? 10001 : capped;
   const dateWhere = (field) => (date_from || date_to ? {
     [field]: {
       ...(date_from ? { [Op.gte]: date_from } : {}),
@@ -662,7 +662,7 @@ exports.getLedger = async ({ date_from, date_to, type = "all", search = "", page
 
   const [incomes, expenses, transfers] = await Promise.all([
     type === "all" || type === "income"
-      ? safeFindAll(FinancialRecord, {
+      ? FinancialRecord.findAll({
           where: { is_deleted: 0, ...dateWhere("transaction_date") },
           include: [{ model: FinancialCategory, as: "category", attributes: ["name"], required: false }],
           order: [["transaction_date", "DESC"], ["id", "DESC"]],
@@ -670,7 +670,7 @@ exports.getLedger = async ({ date_from, date_to, type = "all", search = "", page
         })
       : Promise.resolve([]),
     type === "all" || type === "expense"
-      ? safeFindAll(Expense, {
+      ? Expense.findAll({
           where: { is_deleted: 0, status: "paid", ...dateWhere("date") },
           include: [{ model: ExpenseCategory, as: "category", attributes: ["category_name"], required: false }],
           order: [["date", "DESC"], ["id", "DESC"]],
@@ -678,13 +678,17 @@ exports.getLedger = async ({ date_from, date_to, type = "all", search = "", page
         })
       : Promise.resolve([]),
     type === "all" || type === "transfer"
-      ? safeFindAll(FinanceTransfer, {
+      ? FinanceTransfer.findAll({
           where: { is_deleted: 0, ...dateWhere("transfer_date") },
           order: [["transfer_date", "DESC"], ["id", "DESC"]],
           limit: fetchLimit,
         })
       : Promise.resolve([]),
   ]);
+
+  if (page !== undefined && [incomes, expenses, transfers].some((records) => records.length >= fetchLimit)) {
+    throw AppError.conflict("LEDGER_RANGE_TOO_LARGE", "Narrow the date range before exporting the ledger.");
+  }
 
   let entries = [
     ...incomes.map((r) => ({

@@ -1,3 +1,5 @@
+import { downloadReportCsv } from '../../utils/reportCsv';
+import { fetchAllPages } from '../../api/fetchAllPages';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
@@ -71,6 +73,7 @@ export default function ServicesPage() {
 
   const [activeTab, setActiveTab]       = useState('schedule'); // 'schedule' | 'program' | 'recurring'
   const [plannerServiceId, setPlannerServiceId] = useState('');
+  const [exporting, setExporting] = useState(false);
   const [services, setServices]         = useState([]);
   const [eventOptions, setEventOptions] = useState([]);
   const [total, setTotal]               = useState(0);
@@ -298,6 +301,24 @@ export default function ServicesPage() {
     ? [{ value: '', label: 'All' }, { value: 'published', label: 'Published' }, { value: 'completed', label: 'Completed' }]
     : [{ value: '', label: 'All' }, { value: 'draft', label: 'Draft' }, { value: 'published', label: 'Published' }, { value: 'completed', label: 'Completed' }, { value: 'cancelled', label: 'Cancelled' }];
 
+  const exportSchedule = async (format = "csv") => {
+    setExporting(true);
+    try {
+      const params = { sort: sortOrder, ...(debouncedSearch.trim() && { search: debouncedSearch.trim() }),
+        ...(statusFilter && { status: statusFilter }), ...(typeFilter && { gathering_type: typeFilter }) };
+      const rows = await fetchAllPages('/services', 'services', params);
+      await downloadReportCsv('plwm-mcc-service-schedule.csv', 'Service Schedule',
+        [['Search', params.search || 'All'], ['Status', statusFilter || 'All'], ['Gathering type', typeFilter || 'All']], [
+          { title: 'Summary', columns: ['Metric', 'Count'], records: [['Matching services', rows.length]] },
+          { title: 'Services', columns: ['Service', 'Date', 'Time (Manila)', 'Gathering type', 'Status', 'Capacity', 'Parking slots'],
+            records: rows.map((row) => [row.title, row.service_date, row.service_time, row.gathering_type,
+              row.status, row.capacity, row.total_parking_slots]) },
+        ], format);
+    } catch (failure) {
+      setError(failure.response?.data?.message || failure.message || 'The service schedule could not be exported.');
+    } finally { setExporting(false); }
+  };
+
   return (
     <div className="mcc-module mcc-module-services-page">
       <div style={styles.pageHeader}>
@@ -306,6 +327,12 @@ export default function ServicesPage() {
           <p style={styles.subtitle}>
             {total} {total === 1 ? 'service' : 'services'} scheduled
           </p>
+          {!isMember && activeTab === 'schedule' && <><button type="button" disabled={exporting} onClick={() => exportSchedule('xlsx')}>
+            {exporting ? 'Preparing report...' : 'Download Excel'}
+          </button>
+          <button type="button" disabled={exporting} onClick={() => exportSchedule('csv')}>
+            {exporting ? 'Preparing CSV...' : 'Download CSV'}
+          </button></>}
         </div>
         {canCreate && !isMember && (
           <button type="button" onClick={openCreateForm} className="mcc-btn-primary">

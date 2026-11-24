@@ -443,20 +443,20 @@ exports.updateMember = async (id, data, updatedBy, user = {}) => {
 };
 
 // ── Archive Member ───────────────────────────────────────────
-exports.archiveMember = async (id, deletedBy, reason, user = {}) => {
+exports.archiveMember = async (id, deletedBy, reason, user = {}, { inactiveOnly = false } = {}) => {
   if (isScopedLeader(user)) {
     throw AppError.forbidden("Leaders can only remove members from their assigned scope");
   }
 
-  const member = await Member.findOne({ where: { id } });
-  if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
-
-  // Keep the account link so restoring this profile can restore its prior state.
-  const linkedUser = await User.findOne({ where: { member_id: id, is_deleted: 0 } });
-
   const sequelize = require("../config/db");
 
-  await sequelize.transaction(async (t) => {
+  const archived = await sequelize.transaction(async (t) => {
+    const member = await Member.findOne({ where: { id, is_deleted: 0 }, transaction: t, lock: t.LOCK.UPDATE });
+    if (inactiveOnly && (!member || member.status !== "Inactive")) return false;
+    if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
+    // Keep the account link so restoring the profile restores its prior state.
+    const linkedUser = await User.findOne({ where: { member_id: id, is_deleted: 0 }, transaction: t, lock: t.LOCK.UPDATE });
+
     // Soft-delete the member
     await member.update(
       {
@@ -482,7 +482,9 @@ exports.archiveMember = async (id, deletedBy, reason, user = {}) => {
         where: { user_id: linkedUser.id, logout_at: null }, transaction: t,
       });
     }
+    return true;
   });
+  if (!archived) return { skipped: true };
 
   auditLog.log({ userId: deletedBy, action: "ARCHIVE_MEMBER", targetTable: "members", targetId: id, details: reason ? { reason } : undefined });
   cache.keys("dashboard:*").forEach((key) => cache.del(key));

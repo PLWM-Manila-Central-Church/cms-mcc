@@ -1,3 +1,4 @@
+import { downloadReportCsv } from '../../utils/reportCsv';
 import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
@@ -93,6 +94,31 @@ export default function AnalyticsReportPage() {
     window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
   };
 
+  const downloadExcel = async () => {
+    if (!data || loading) return;
+    try {
+      const from = data.range?.from || dateFrom;
+      const to = data.range?.to || dateTo;
+      const rows = buildAnalyticsCsvRows(data, { ...reportScope, dateFrom: from, dateTo: to,
+        reportPeriod: data.period?.preset || reportPeriod, generatedAt: new Date() });
+      const blocks = [];
+      let block = [];
+      for (const row of rows) {
+        if (row.every((cell) => cell === '' || cell == null)) {
+          if (block.length) blocks.push(block);
+          block = [];
+        } else block.push(row);
+      }
+      if (block.length) blocks.push(block);
+      const sections = blocks.slice(1).filter((part) => part.length > 1).map(([heading, columns, ...records]) => ({
+        title: heading[0], columns, records,
+      }));
+      await downloadReportCsv(`plwm-mcc-analytics-${from}-to-${to}.csv`, 'Consolidated Analytics',
+        [['Report period', `${from} to ${to}`]], sections, 'xlsx');
+      setDownloadNotice('Analytics Excel download requested.');
+    } catch { setDownloadNotice('The Excel report could not be downloaded.'); }
+  };
+
   const selectPeriod = (period) => {
     setReportPeriod(period);
     const nextRange = getReportPeriodRange(period);
@@ -106,7 +132,7 @@ export default function AnalyticsReportPage() {
   const growthRows = data?.member_growth || [];
   const growthPoints = growthRows.map((row) => ({
     label: bucketLabel(row.period, bucket),
-    values: { total: Number(row.total) || 0 },
+    values: { total: Number(row.total) || 0, estimated: Number(row.estimated) || 0 },
   }));
   const peakGrowth = growthRows.reduce(
     (best, row) => (Number(row.total) > Number(best?.total || -1) ? row : best),
@@ -152,6 +178,7 @@ export default function AnalyticsReportPage() {
           </div>
         </div>
         <div className="ar-actions">
+          <button type="button" className="ar-button ar-button--ghost" onClick={downloadExcel} disabled={!data || loading}>Download Excel</button>
           <button type="button" className="ar-button ar-button--ghost" onClick={downloadCsv} disabled={!data || loading}>Download CSV</button>
           <button type="button" className="ar-button" onClick={() => window.print()} disabled={!data || loading}>Print / Save PDF</button>
           {downloadNotice && <span className="ar-notice" role="status" aria-live="polite">{downloadNotice}</span>}
@@ -211,7 +238,7 @@ export default function AnalyticsReportPage() {
             {canSeeMembersAndAttendance && data.members && (
               <ReportSection
                 title="Member growth"
-                hint="New members per report interval"
+                hint="Recorded dates and separately estimated dates for imported members"
                 className="ar-span-8 ar-chart-section"
                 data-empty={growthPoints.length === 0}
               >
@@ -226,7 +253,7 @@ export default function AnalyticsReportPage() {
                   <LineTrend
                     ariaLabel="Member growth by interval"
                     points={growthPoints}
-                    series={[{ key: 'total', label: 'New members', color: '#005599' }]}
+                    series={[{ key: 'total', label: 'Recorded', color: '#005599' }, { key: 'estimated', label: 'Estimated', color: '#9a7426' }]}
                   />
                 </div>
               </ReportSection>

@@ -369,9 +369,9 @@ export default function PublicLayout({ children }) {
       <main className="public-main" style={{ flex:1 }}>{children}</main>
 
       {/* ── Footer ── */}
-      <footer style={{ background:C.off, borderTop:`1px solid ${C.border}`, padding:'36px 24px 24px' }}>
+      <footer style={{ background:C.off, borderTop:`1px solid ${C.border}`, padding:'var(--public-footer-padding)' }}>
         <div style={{ maxWidth:MAX_W, margin:'0 auto' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:24, marginBottom:24 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:'var(--public-footer-gap)', marginBottom:'var(--public-footer-gap)' }}>
             <div>
               <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:'1.25rem', fontWeight:700, color:C.text, marginBottom:8 }}>Manila Central Church</div>
               <div style={{ fontSize:14, color:C.muted, lineHeight:1.75, marginBottom:20, maxWidth:280 }}>Mother Church of Philippine Life Word Mission (PLWM). Serving Manila and the Philippines through the Word of God.</div>

@@ -11,6 +11,7 @@ const Service = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
+    calendar_source_key: { type: DataTypes.STRING(90), allowNull: true },
     title: { type: DataTypes.STRING(150), allowNull: false },
     service_date: { type: DataTypes.DATEONLY, allowNull: false },
     service_time: { type: DataTypes.TIME, allowNull: true },

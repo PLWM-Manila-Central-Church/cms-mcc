@@ -1,3 +1,4 @@
+import { downloadReportCsv } from '../../utils/reportCsv';
 import { useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { fetchAllPages } from '../../api/fetchAllPages';
@@ -56,6 +57,19 @@ export default function FinanceStatementDialog({ dateFrom = '', dateTo = '', onC
     return () => { active = false; };
   }, [dateFrom, dateTo, reloadVersion]);
 
+  const downloadExcel = async () => {
+    const rows = buildFinanceStatementCsvRows(statement);
+    const detail = rows.findIndex(([label]) => label === 'TRANSACTIONS');
+    const summary = rows.findIndex(([label]) => label === 'ACCOUNT SUMMARY');
+    try {
+      await downloadReportCsv(`plwm-mcc-finance-statement-${dateFrom || 'all'}-to-${dateTo || 'all'}.csv`, 'Finance Statement of Account',
+        [['Report period', periodLabel(dateFrom, dateTo)], ['Currency', 'PHP']], [
+          { title: 'Account summary', columns: ['Metric', 'Value'], records: rows.slice(summary + 1, detail).filter((row) => row.length) },
+          { title: 'Transactions', columns: rows[detail + 1], records: rows.slice(detail + 2).filter((row) => row.length > 2) },
+        ], 'xlsx');
+    } catch { setError('The Excel report could not be downloaded.'); }
+  };
+
   const downloadCsv = () => {
     if (!statement) return;
     const rows = buildFinanceStatementCsvRows(statement);
@@ -86,6 +100,7 @@ export default function FinanceStatementDialog({ dateFrom = '', dateTo = '', onC
             <small>CSV includes church and report labels. Print / Save PDF preserves the logo and color theme.</small>
           </div>
           <div>
+            <button type="button" onClick={downloadExcel} disabled={!statement || loading}>Download Excel</button>
             <button type="button" onClick={downloadCsv} disabled={!statement || loading}>Download CSV</button>
             <button type="button" onClick={() => window.print()} disabled={!statement || loading}>Print / Save PDF</button>
             <button type="button" className="finance-statement-close" onClick={onClose} aria-label="Close finance statement">Close</button>

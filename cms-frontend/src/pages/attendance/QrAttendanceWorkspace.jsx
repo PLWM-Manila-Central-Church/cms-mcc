@@ -1,3 +1,4 @@
+import { downloadServerReportExcel } from '../../utils/reportCsv';
 import { displayMemberName } from '../../utils/displayIdentity';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -563,11 +564,15 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
     finally { setBusy(false); }
   };
 
-  const downloadCsv = async () => {
+  const downloadCsv = async (format = "csv") => {
     if (!session) return;
     setBusy(true); setError('');
     try {
       const response = await axiosInstance.get(`/qr-attendance/sessions/${session.id}/export.csv`, { responseType: 'blob' });
+      if (format === 'xlsx') {
+        await downloadServerReportExcel(`attendance-session-${session.id}.csv`, 'Confirmed QR Attendance', response.data);
+        return;
+      }
       const url = URL.createObjectURL(response.data);
       const link = document.createElement('a');
       link.href = url;
@@ -759,7 +764,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
             {session.status === 'draft' && <button type="button" className="qr-primary-button" disabled={busy} onClick={() => updateSession('open')}>Open Check-in</button>}
             {session.status === 'open' && <button type="button" className="qr-secondary-button" disabled={busy} onClick={() => updateSession('close')}>Close Check-in</button>}
             {['draft', 'open'].includes(session.status) && <button type="button" className="qr-danger-button" disabled={busy} onClick={cancelSession}>Cancel Session</button>}
-            <button type="button" className="qr-secondary-button" disabled={busy} onClick={downloadCsv}>Export CSV</button>
+            <button type="button" className="qr-secondary-button" disabled={busy} onClick={() => downloadCsv('xlsx')}>Download Excel</button> <button type="button" className="qr-secondary-button" disabled={busy} onClick={() => downloadCsv('csv')}>Export CSV</button>
           </div>}
 
           {canConfigure && session.status === 'draft' && session.expected_basis === 'explicit_roster' && (
@@ -882,7 +887,7 @@ export default function QrAttendanceWorkspace({ targetType: targetTypeProp, targ
           </section>}
 
           <section className="qr-section qr-workspace-card">
-            <div className="qr-section-heading"><div><h3>Confirmed attendance</h3><small>{attendanceCount.toLocaleString()} total records</small></div><button type="button" className="qr-secondary-button" disabled={busy} onClick={downloadCsv}>Export CSV</button></div>
+            <div className="qr-section-heading"><div><h3>Confirmed attendance</h3><small>{attendanceCount.toLocaleString()} total records</small></div><button type="button" className="qr-secondary-button" disabled={busy} onClick={() => downloadCsv('xlsx')}>Download Excel</button> <button type="button" className="qr-secondary-button" disabled={busy} onClick={() => downloadCsv('csv')}>Export CSV</button></div>
             {attendance.length === 0 ? <div className="qr-muted-box">No confirmed attendance has been recorded for this session.</div> : (
               <div className="qr-table-wrap"><table className="qr-table"><thead><tr><th>Member</th><th>Check-in</th><th>Method</th><th>Source</th><th>Status</th>{canCorrect && <th>Correction</th>}</tr></thead><tbody>
                 {attendance.map((record) => {

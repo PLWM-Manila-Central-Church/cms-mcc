@@ -1,3 +1,4 @@
+import { downloadReportCsv } from '../../utils/reportCsv';
 import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import IconActionButton from '../../components/common/IconActionButton';
@@ -59,6 +60,29 @@ export default function BibleReadingPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const exportCsv = async (format = "csv") => {
+    setError('');
+    try {
+      const [progress, memory] = await Promise.all([
+        axiosInstance.get('/bible-reading/summary', { params: { month } }),
+        axiosInstance.get('/bible-reading/verses', { params: { month } }),
+      ]);
+      const report = progress.data.data;
+      if (report.members.length !== report.total) throw new Error('The report did not return all member progress records.');
+      await downloadReportCsv(`plwm-mcc-bible-reading-${month}.csv`, 'Bible Reading', [['Report period', monthLabel(month)]], [
+        { title: 'Summary', columns: ['Metric', 'Count'], records: [
+          ['Members', report.total], ['Finished', report.finished], ['Target days', report.target],
+        ] },
+        { title: 'Member progress', columns: ['Member', 'Days completed', 'Status'],
+          records: report.members.map((member) => [member.name, member.completed, member.finished ? 'Finished' : 'In progress']) },
+        { title: 'Sunday memory verses', columns: ['Sunday', 'Group', 'Reference', 'Verse'],
+          records: memory.data.data.map((verse) => [verse.sunday_date, verse.group, verse.reference, verse.verse_text]) },
+      ], format);
+    } catch (failure) {
+      setError(failure.response?.data?.message || failure.message || 'The report could not be exported.');
+    }
+  };
+
   const saveVerse = async (event) => {
     event.preventDefault();
     setSaving(true); setError('');
@@ -88,7 +112,9 @@ export default function BibleReadingPage() {
           <h1 style={S.title}>Bible Reading</h1>
           <p style={S.sub}>Monthly reading progress and the memory verse each group carries on Sunday.</p>
         </div>
-        <div style={S.controls}>
+        <div style={{ ...S.controls, flexWrap: 'wrap' }}>
+          <button type="button" style={S.button} onClick={() => exportCsv('xlsx')}>Download Excel</button>
+          <button type="button" style={S.button} onClick={() => exportCsv('csv')}>Download CSV</button>
           <button type="button" style={S.button} onClick={() => setMonth((value) => {
             const [year, monthNumber] = value.split('-').map(Number);
             const date = new Date(Date.UTC(year, monthNumber - 2, 1));

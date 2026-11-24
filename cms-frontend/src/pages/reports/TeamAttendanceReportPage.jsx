@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
 import { formatReportBucket, getReportPeriodRange } from '../../utils/analyticsReport';
-import { toCsv } from '../../utils/csv';
+import { downloadReportCsv } from '../../utils/reportCsv';
 
 const number = (value) => Number(value || 0).toLocaleString('en-PH');
 const buttonStyle = { border: 0, borderRadius: 8, background: '#0f6aa3', color: '#fff', padding: '10px 14px', fontWeight: 700, cursor: 'pointer', minHeight: 40 };
@@ -47,20 +47,22 @@ export default function TeamAttendanceReportPage() {
     }
   };
 
-  const downloadCsv = () => {
-    if (!data) return;
-    const rows = [
-      ['Section', 'Period', 'Service check-ins', 'Event check-ins'],
-      ...data.attendance.buckets.map((row) => ['Attendance', row.period, row.service, row.events]),
-    ];
-    const blobUrl = URL.createObjectURL(new Blob([`\uFEFF${toCsv(rows)}`], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = `plwm-mcc-team-attendance-${dateFrom}-to-${dateTo}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  const downloadCsv = async (format = "csv") => {
+    if (!data || loading || error) return;
+    try {
+      const buckets = data.attendance.buckets;
+      await downloadReportCsv(`plwm-mcc-team-attendance-${dateFrom}-to-${dateTo}.csv`, 'Team Attendance',
+        [['Report period', `${dateFrom} to ${dateTo}`], ['Scope', data.scope || 'Active team']], [
+          { title: 'Summary', columns: ['Metric', 'Count'], records: [
+            ['Service check-ins', data.attendance.service_checkins],
+            ['Event check-ins', data.attendance.event_checkins],
+          ] },
+          { title: 'Attendance by period', columns: ['Period', 'Service check-ins', 'Event check-ins'],
+            records: buckets.map((row) => [row.period, row.service, row.events]) },
+        ], format);
+    } catch {
+      setError('The report could not be downloaded.');
+    }
   };
 
   const buckets = data?.attendance?.buckets || [];
@@ -74,7 +76,8 @@ export default function TeamAttendanceReportPage() {
           <h1 className="workspace-page-title" style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>Team attendance report</h1>
           <p style={{ margin: '6px 0 0', color: 'var(--mcc-secondary, #52647a)', fontSize: 14 }}>Service and Event attendance for your active assigned team. Weeks start Sunday; dates use Asia/Manila.</p>
         </div>
-        <button type="button" onClick={downloadCsv} disabled={!data || loading} style={{ ...buttonStyle, opacity: !data || loading ? 0.6 : 1 }}>Download CSV</button>
+        <button type="button" onClick={() => downloadCsv('xlsx')} disabled={!data || loading || !!error} style={{ ...buttonStyle, opacity: !data || loading ? 0.6 : 1 }}>Download Excel</button>
+          <button type="button" onClick={() => downloadCsv('csv')} disabled={!data || loading || !!error} style={{ ...buttonStyle, opacity: !data || loading ? 0.6 : 1 }}>Download CSV</button>
       </header>
 
       <section aria-label="Report filters" style={{ display: 'flex', alignItems: 'end', gap: 12, flexWrap: 'wrap', padding: 14, marginBottom: 16, background: 'var(--mcc-surface, #fff)', border: '1px solid var(--mcc-border, #e2e8f0)', borderRadius: 12 }}>

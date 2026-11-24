@@ -1,3 +1,4 @@
+import MemberAvatar from '../../components/common/MemberAvatar';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
@@ -60,9 +61,7 @@ function MemberCard({ m, onView, onEdit, onUnassign, canEdit, canUnassign, isMem
         fontSize: 16, fontWeight: 800, letterSpacing: '-0.5px',
         boxShadow: '0 2px 8px rgba(0,85,153,0.18)',
       }}>
-        {m.profile_photo_url
-          ? <img src={uploadUrl(m.profile_photo_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-          : initials}
+        <MemberAvatar src={uploadUrl(m.profile_photo_url)} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} fallback={initials} />
       </div>
 
       {/* Info */}

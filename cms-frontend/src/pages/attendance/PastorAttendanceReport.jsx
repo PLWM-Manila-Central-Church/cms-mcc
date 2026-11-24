@@ -1,3 +1,4 @@
+import { downloadServerReportExcel } from '../../utils/reportCsv';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
@@ -268,7 +269,7 @@ export default function PastorAttendanceReport() {
     setSearchParams(params);
   };
 
-  const exportCsv = async () => {
+  const exportCsv = async (format = "csv") => {
     setExporting(true);
     setError('');
     try {
@@ -276,6 +277,10 @@ export default function PastorAttendanceReport() {
         params: makeReportQuery(activeFilters, false),
         responseType: 'blob',
       });
+      if (format === 'xlsx') {
+        await downloadServerReportExcel(`pastor-attendance-${activeFilters.from}-to-${activeFilters.to}.csv`, 'Pastor Attendance Report', response.data);
+        return;
+      }
       const url = URL.createObjectURL(response.data);
       const anchor = document.createElement('a');
       anchor.href = url;
@@ -311,7 +316,7 @@ export default function PastorAttendanceReport() {
           <h1 className="workspace-page-title" style={styles.title}>Pastor Attendance Report</h1>
           <p style={styles.subtitle}>Church-wide Service and Event attendance. Use the activity and session filters to drill into the records; this view is read-only.</p>
         </div>
-        <button type="button" style={styles.secondaryButton} disabled={exporting || !report?.sessions?.length} onClick={exportCsv}>
+        <button type="button" style={styles.secondaryButton} disabled={exporting || !report?.sessions?.length} onClick={() => exportCsv('xlsx')}>Download Excel</button> <button type="button" style={styles.secondaryButton} disabled={exporting || !report?.sessions?.length} onClick={() => exportCsv('csv')}>
           {exporting ? 'Preparing CSV…' : 'Export filtered report'}
         </button>
       </header>

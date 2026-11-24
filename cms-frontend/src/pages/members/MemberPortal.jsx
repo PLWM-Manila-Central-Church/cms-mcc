@@ -1,3 +1,4 @@
+import MemberAvatar from '../../components/common/MemberAvatar';
 import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
@@ -383,9 +384,7 @@ function OverviewTab({profile,attendance,finance,memoryVerse,hideMoney,onToggleM
         {/* Header row */}
         <div style={{display:'flex',flexDirection:isMobile?'column':'row',justifyContent:'space-between',alignItems:isMobile?'flex-start':'center',marginBottom:16,paddingBottom:14,borderBottom:`1px solid ${c.borderL}`,gap:isMobile?12:0}}>
           <div style={{display:'flex',alignItems:'center',gap:14}}>
-            {avatarUrl
-              ? <img src={avatarUrl} alt="profile" style={{width:isMobile?48:52,height:isMobile?48:52,borderRadius:'50%',objectFit:'cover',border:`2px solid ${c.border}`}}/>
-              : <div style={{width:isMobile?48:52,height:isMobile?48:52,borderRadius:'50%',background:BRAND,display:'flex',alignItems:'center',justifyContent:'center',fontSize:isMobile?15:17,fontWeight:800,color:'#fff'}}>{initials}</div>}
+            <MemberAvatar src={avatarUrl} style={{width:isMobile?48:52,height:isMobile?48:52,borderRadius:'50%',objectFit:'cover',border:`2px solid ${c.border}`}} fallback={<div style={{width:isMobile?48:52,height:isMobile?48:52,borderRadius:'50%',background:BRAND,display:'flex',alignItems:'center',justifyContent:'center',fontSize:isMobile?15:17,fontWeight:800,color:'#fff'}}>{initials}</div>} />
             <div>
               <div style={{fontSize:isMobile?f.md:f.lg,fontWeight:800,color:c.t1}}>{profile?`${profile.first_name} ${profile.last_name}`:'—'}</div>
               <div style={{fontSize:f.sm,color:c.t3,marginTop:2}}>{profile?.cellGroup?.name||'—'} · {profile?.group?.name||'—'}</div>
@@ -843,6 +842,15 @@ export default function MemberPortal() {
     stat: Math.round(fontSize * 1.9),
   };
 
+  const [calendarSize, setCalendarSize] = useState(() => getPrefs().calendarTextSize === 'large' ? 'large' : 'standard');
+  const calendarFont = Object.fromEntries(Object.entries(f).map(([key, value]) => [
+    key, typeof value === 'number' ? value + (calendarSize === 'large' ? 4 : 2) : value,
+  ]));
+  const changeCalendarSize = (event) => {
+    const value = event.target.value;
+    setCalendarSize(value);
+    try { localStorage.setItem('plwm_prefs', JSON.stringify({ ...getPrefs(), calendarTextSize: value })); } catch { /* Preferences are optional. */ }
+  };
   const [tab, setTab]           = useState(() => { const p = new URLSearchParams(location.search); if (p.get('tab') === 'overview') return 0; if (p.get('tab') === 'events' || p.get('tab') === 'services' || p.get('tab') === 'calendar') return 1; if (p.get('tab') === 'attendance') return 2; if (p.get('tab') === 'tithes' || p.get('tab') === 'giving') return 3; if (p.get('tab') === 'ministries') return 4; if (p.get('tab') === 'bible' || p.get('tab') === 'reading') return 5; return 1; });
   const [profile, setProfile]   = useState(null);
   const [attendance, setAtt]    = useState(null);
@@ -1088,9 +1096,7 @@ export default function MemberPortal() {
       <div style={{display:'flex',alignItems:'center',gap:isMobile?8:10}}>
         {/* Avatar + name */}
         <button type="button" aria-label={t.editProfile} style={{display:'flex',alignItems:'center',gap:isMobile?6:9,background:'rgba(255,255,255,0.12)',borderRadius:24,padding:isMobile?'3px 10px 3px 3px':'4px 14px 4px 4px',border:'1px solid rgba(255,255,255,0.2)',cursor:'pointer',fontFamily:'inherit'}} onClick={()=>{setTab(0);startEdit();}}>
-          {avatarUrl
-            ? <img src={avatarUrl} alt="avatar" style={{width:isMobile?26:28,height:isMobile?26:28,borderRadius:'50%',objectFit:'cover'}}/>
-            : <div style={{width:isMobile?26:28,height:isMobile?26:28,borderRadius:'50%',background:'rgba(255,255,255,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:isMobile?9:10,fontWeight:800,color:'#fff'}}>{initials}</div>}
+          <MemberAvatar src={avatarUrl} style={{width:isMobile?26:28,height:isMobile?26:28,borderRadius:'50%',objectFit:'cover'}} fallback={<div style={{width:isMobile?26:28,height:isMobile?26:28,borderRadius:'50%',background:'rgba(255,255,255,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:isMobile?9:10,fontWeight:800,color:'#fff'}}>{initials}</div>} />
           <span style={{color:'rgba(255,255,255,0.9)',fontSize:f.sm,fontWeight:600}}>{profile?.first_name||'—'}</span>
         </button>
         <MemberNotificationCenter colors={c} isMobile={isMobile} language={getLangCode()} />
@@ -1188,10 +1194,15 @@ export default function MemberPortal() {
           <div><h2>{t.tabs[tab]}</h2><p style={{color:c.t2}}>{['','Every upcoming gathering and church event in one calendar.','Show your QR and review your personal check-in history.','Your recorded giving, dates and supporting receipts.','Follow your ministry schedule, practices and cleaning duty.','Follow the reading plan and your group memory verse.'][tab]}</p></div>
         </section>}
 
+        {(tab === 1 || tab === 5) && <div className="member-calendar-controls">
+          <label>Text size <select value={calendarSize} onChange={changeCalendarSize}>
+            <option value="standard">Standard</option><option value="large">Large</option>
+          </select></label>
+        </div>}
         {loading ? <LoadSkeleton/> : (
           <>
             {tab===0&&<OverviewTab profile={profile} attendance={attendance} finance={finance} memoryVerse={memoryVerse} hideMoney={hideMoney} onToggleMoney={toggleMoney} editing={editing} editForm={editForm} setEditForm={setEditForm} editSaving={editSaving} editError={editError} setEditError={setEE} startEdit={startEdit} saveEdit={saveEdit} setEditing={setEditing} c={c} f={f} t={t} avatarUrl={avatarUrl} initials={initials} BRAND={BRAND} PHP={money} fmtDate={fmtDate} isMobile={isMobile}/>}
-            {tab===1&&<EventsTab events={events} onEventDetailsClick={onEventDetailsClick} c={c} f={f} isMobile={isMobile} labels={CAL_LBL[lang] || CAL_LBL.en}/>}
+            {tab===1&&<EventsTab events={events} onEventDetailsClick={onEventDetailsClick} c={c} f={calendarFont} isMobile={isMobile} labels={CAL_LBL[lang] || CAL_LBL.en}/>}
             {tab===2&&<AttendanceTab attendance={attendance} c={c} f={f} t={t} fmtDate={fmtDate} fmtTime={fmtTime} isMobile={isMobile} language={lang}/>}
             {tab===3&&<FinanceTab finance={finance} initialError={financeError} c={c} f={f} t={t} fmtDate={fmtDate} PHP={money} hideMoney={hideMoney} onToggleMoney={toggleMoney} isMobile={isMobile} language={lang}/>}
             {tab===4&&<>
@@ -1199,7 +1210,7 @@ export default function MemberPortal() {
               <PortalEngagementPanel colors={c}/>
               <div style={{marginTop:24}}><MemberSubstituteRequests c={c} isMobile={isMobile}/></div>
             </>}
-            {tab===5&&<BibleReadingPanel c={c} f={f} labels={BIBLE_LBL[lang] || BIBLE_LBL.en} showToast={showToast}/>}
+            {tab===5&&<BibleReadingPanel c={c} f={calendarFont} labels={BIBLE_LBL[lang] || BIBLE_LBL.en} showToast={showToast}/>}
           </>
         )}
       </main>
