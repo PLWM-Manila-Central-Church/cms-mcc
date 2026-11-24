@@ -27,13 +27,13 @@ const preflight = async (job, config, now = new Date(), transaction, retry = fal
   if (!member || member.status !== "Active") return { reason: "MEMBER_INACTIVE" };
   const preference = await OutreachPreference.findOne({ where: { member_id: member.id }, transaction });
   if (job.kind === "campaign") {
-    if (!require("./campaigns.service").withinSendWindow(now, config)) return { hold: true, reason: "OUTSIDE_SEND_WINDOW" };
     if (!config.campaigns_enabled) return { hold: true, reason: "CAMPAIGNS_DISABLED" };
     if (!preference || preference.campaign_notifications === false) return { reason: "CAMPAIGN_PREFERENCE_DISABLED" };
     const { NotificationCampaign } = require("./models");
     const campaign = await NotificationCampaign.findByPk(job.campaign_id, { transaction });
     if (!campaign || !["approved", "scheduled", "sending", ...(retry ? ["failed"] : [])].includes(String(campaign.status))) return { reason: "CAMPAIGN_NOT_ACTIVE" };
     if (campaign.window_end && now > new Date(campaign.window_end)) return { reason: "CAMPAIGN_EXPIRED" };
+    if (!require("./campaigns.service").canSendCampaignAt(campaign, now, config)) return { hold: true, reason: "OUTSIDE_SEND_WINDOW" };
     if (campaign.event_id) {
       const event = await Event.findByPk(campaign.event_id, { attributes: ["id", "status"], transaction });
       if (!event || event.status === "Cancelled") return { reason: "EVENT_CANCELLED" };

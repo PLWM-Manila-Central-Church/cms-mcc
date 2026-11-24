@@ -63,8 +63,13 @@ const quietHour = (scheduledAt) => Number(new Intl.DateTimeFormat("en-GB", {
 
 const withinSendWindow = (date, config) => quietHour(date) >= Number(config.campaign_quiet_start) && quietHour(date) < Number(config.campaign_quiet_end);
 
-const assertSendWindow = (scheduledAt, config) => {
-  if (!withinSendWindow(scheduledAt, config)) {
+// A deliberate Send now to one selected member can go out at any hour.
+const canSendCampaignAt = (campaign, date, config) => withinSendWindow(date, config)
+  || (campaign.timing_mode === "send_now" && campaign.audience_type === "selected_members"
+    && Array.isArray(campaign.member_ids) && campaign.member_ids.length === 1);
+
+const assertSendWindow = (campaign, scheduledAt, config) => {
+  if (!canSendCampaignAt(campaign, scheduledAt, config)) {
     throw AppError.badRequest("OUTSIDE_SEND_WINDOW",
       `Schedule between ${config.campaign_quiet_start}:00 and ${config.campaign_quiet_end}:00 Asia/Manila`);
   }
@@ -87,7 +92,7 @@ const preview = async (input, user, now = new Date()) => {
   assertAudiencePermission(user, input);
   const config = await getConfiguration();
   if (!config.campaigns_enabled) throw AppError.conflict("CAMPAIGNS_DISABLED", "Notification campaigns are turned off");
-  if (input.timing_mode === "send_now" && !input.scheduled_at) assertSendWindow(now, config);
+  if (input.timing_mode === "send_now" && !input.scheduled_at) assertSendWindow(input, now, config);
   const activity = await activityFor(input, input.scheduled_at || now);
   const mode = config.mode || "simulation";
   const transport = transportState();
@@ -122,7 +127,7 @@ const create = async (input, user) => {
   if (Number.isNaN(scheduledAt.getTime()) || (!immediate && scheduledAt <= new Date())) {
     throw AppError.badRequest("INVALID_SCHEDULE", "Choose a future send time");
   }
-  assertSendWindow(scheduledAt, config);
+  assertSendWindow(input, scheduledAt, config);
   const prepared = await preview({ ...input, scheduled_at: scheduledAt.toISOString() }, user);
   if (!prepared.sending_available) throw AppError.conflict("SMS_DISABLED", "SMS processing is disabled or the provider is unavailable");
   if (!prepared.recipient_count) throw AppError.conflict("NO_RECIPIENTS", prepared.warning || "No eligible recipients for this audience");
@@ -327,6 +332,7 @@ const deliveries = async (id, { page = 1, limit = 25, search = "" } = {}) => {
 const queueCampaign = async (candidate, config, now) => sequelize.transaction(async (transaction) => {
   const campaign = await NotificationCampaign.findByPk(candidate.id, { transaction, lock: transaction.LOCK.UPDATE });
   if (!campaign || !["approved", "scheduled"].includes(campaign.status)) return { campaign_id: candidate.id, queued: 0 };
+  if (!canSendCampaignAt(campaign, now, config)) return { campaign_id: campaign.id, queued: 0 };
   const prepared = await previewCampaign({
     audience_type: campaign.audience_type, event_id: campaign.event_id, ministry_id: campaign.ministry_id,
     cell_group_id: campaign.cell_group_id, message: campaign.message, title: campaign.title,
@@ -374,7 +380,7 @@ const queueDueCampaigns = async (now = new Date(), campaignId) => {
   });
   let queued = 0;
   for (const campaign of campaigns) {
-    if (!withinSendWindow(now, config)) continue;
+    if (!canSendCampaignAt(campaign, now, config)) continue;
     const result = await queueCampaign(campaign, config, now);
     queued += result.queued;
   }
@@ -396,5 +402,5 @@ const refreshCampaignStatus = async (id) => {
   }
 };
 
-module.exports = { memberOptions, withinSendWindow, preview, create, submit, approve, reject, cancel, list, get, deliveries,
+module.exports = { memberOptions, withinSendWindow, canSendCampaignAt, preview, create, submit, approve, reject, cancel, list, get, deliveries,
   queueDueCampaigns, queueCampaign, refreshCampaignStatus, approvalRequired, monthlyCommitment, activityFor };
