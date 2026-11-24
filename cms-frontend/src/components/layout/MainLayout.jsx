@@ -308,7 +308,7 @@ export default function MainLayout({ children }) {
       {/* Desktop/tablet sidebar inside dedicated CSS Grid column — never overlapped by wide content */}
       {!isMobile && (
         <div className="mcc-sidebar-rail" style={{
-          ...S.sidebarWrapper,
+          ...S.sidebarRail,
           width: sidebarWidth,
           zIndex: 110,
         }}>
@@ -321,7 +321,7 @@ export default function MainLayout({ children }) {
       )}
 
       {/* Right column: Header + Main content */}
-      <div style={S.contentColumn}>
+      <div style={{ ...S.contentColumn, gridColumn: isMobile ? 1 : 2 }}>
         <Header
           sidebarWidth={mainPadLeft}
           isMobile={isMobile}
@@ -361,12 +361,12 @@ const S = {
     background: 'var(--mcc-canvas)',
     fontFamily: "'Inter', 'Segoe UI', -apple-system, sans-serif",
     position: 'relative',
-    transition: 'grid-template-columns 0.2s ease',
+    transition: 'grid-template-columns 0.25s ease',
   },
-  sidebarWrapper: {
-    minHeight: '100vh',
-    position: 'relative',
-    flexShrink: 0,
+  sidebarRail: {
+    position: 'fixed',
+    inset: '0 auto 0 0',
+    transition: 'width 0.25s ease',
   },
   contentColumn: {
     minWidth: 0,

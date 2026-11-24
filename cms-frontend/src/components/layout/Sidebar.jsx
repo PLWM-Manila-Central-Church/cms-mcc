@@ -80,12 +80,10 @@ export default function Sidebar({ collapsed, onToggle, isMobile = false }) {
 
 const S = {
   sidebar: {
-    height: '100vh',
-    position: 'sticky',
-    top: 0,
+    height: '100%',
     background: '#00284a',
     display: 'flex', flexDirection: 'column',
-    overflowX: 'hidden', overflowY: 'auto',
+    overflow: 'hidden',
     borderRight: '1px solid rgba(255,255,255,0.08)',
   },
   logoWrap: {
@@ -97,7 +95,7 @@ const S = {
   logoTextWrap: { display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   logoText:     { color: '#fff', fontWeight: '800', fontSize: '15px', letterSpacing: '1.2px', whiteSpace: 'nowrap' },
   logoSub:      { color: 'rgba(255,255,255,0.62)', fontSize: '11px', fontWeight: '500', whiteSpace: 'nowrap', marginTop: '1px' },
-  nav:          { flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 8px', overflowY: 'auto', overflowX: 'hidden' },
+  nav:          { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 8px', overflowY: 'auto', overflowX: 'hidden', overscrollBehaviorY: 'contain' },
   navItem: {
     display: 'flex', alignItems: 'center', gap: '11px',
     padding: '9px 14px', textDecoration: 'none',
