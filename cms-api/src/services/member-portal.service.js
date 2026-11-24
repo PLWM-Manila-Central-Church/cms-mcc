@@ -309,6 +309,7 @@ exports.getMyEvents = async (memberId) => {
       description:           e.description,
       start_date:            e.start_date,
       end_date:              e.end_date,
+      start_time:            e.start_time,
       location:              e.location,
       image_url:             e.image_url || null,
       capacity:              e.capacity,
