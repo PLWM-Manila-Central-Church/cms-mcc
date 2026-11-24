@@ -18,9 +18,10 @@ router.put("/roles/:id",    auth, authorize("ministry", "update"), validate(upda
 router.patch("/roles/:id/archive", auth, authorize("ministry", "delete"), ctrl.archiveRole);
 
 // ── Ministry Schedules ─────────────────────────────────────
-router.get("/schedules",        auth, authorize("ministry", "read"),   ctrl.listSchedules);
-router.post("/schedules",       auth, authorize("ministry", "update"), ctrl.createSchedule);
-router.delete("/schedules/:id", auth, authorize("ministry", "update"), ctrl.deleteSchedule);
+router.get("/schedules",              auth, authorize("ministry", "read"),   ctrl.listSchedules);
+router.post("/schedules",             auth, authorize("ministry", "update"), ctrl.createSchedule);
+router.post("/schedules/:id/archive", auth, authorize("ministry", "update"), ctrl.deleteSchedule);
+router.patch("/schedules/:id/archive", auth, authorize("ministry", "update"), ctrl.deleteSchedule);
 
 // ── Ministry Assignments ─────────────────────────────────────
 router.get("/assignments",                     auth, authorize("ministry", "read"),   ctrl.getAllAssignments);

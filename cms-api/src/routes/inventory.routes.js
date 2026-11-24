@@ -2,6 +2,7 @@
 
 const router    = require("express").Router();
 const ctrl      = require("../controllers/inventory.controller");
+const invUpgrade = require("../services/inventoryUpgrade.service");
 const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
@@ -38,6 +39,62 @@ router.get("/requests/:id",  auth, authorize("inventory", "read"), ctrl.getReque
 router.post("/requests",                   auth, authorize("inventory", "read"),   validate(createRequestSchema), ctrl.createRequest);
 router.put("/requests/:id/review",         auth, authorize("inventory", "update"), validate(reviewRequestSchema), ctrl.reviewRequest);
 router.patch("/requests/:id/review",       auth, authorize("inventory", "update"), validate(reviewRequestSchema), ctrl.reviewRequest);
+
+// ── Phase 7: Authoritative Stock Ledger, Borrowing, Maintenance & Extended Reports ──
+router.get("/transactions", auth, authorize("inventory", "read"), async (req, res, next) => {
+  try {
+    const data = await invUpgrade.listTransactions(req.query);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.post("/transactions", auth, authorize("inventory", "update"), async (req, res, next) => {
+  try {
+    const data = await invUpgrade.recordStockMovement(req.body, req.user);
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.get("/borrowings", auth, authorize("inventory", "read"), async (req, res, next) => {
+  try {
+    const data = await invUpgrade.listBorrowings();
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.post("/borrowings", auth, authorize("inventory", "update"), async (req, res, next) => {
+  try {
+    const data = await invUpgrade.createBorrowing(req.body, req.user);
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.post("/borrowings/:id/return", auth, authorize("inventory", "update"), async (req, res, next) => {
+  try {
+    const data = await invUpgrade.returnBorrowing(req.params.id, req.body, req.user);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.get("/maintenance", auth, authorize("inventory", "read"), async (req, res, next) => {
+  try {
+    const data = await invUpgrade.listMaintenance();
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.post("/maintenance", auth, authorize("inventory", "update"), async (req, res, next) => {
+  try {
+    const data = await invUpgrade.createMaintenance(req.body, req.user);
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.post("/maintenance/:id/complete", auth, authorize("inventory", "update"), async (req, res, next) => {
+  try {
+    const data = await invUpgrade.completeMaintenance(req.params.id);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.get("/reports/extended", auth, authorize("inventory", "read"), async (req, res, next) => {
+  try {
+    const data = await invUpgrade.getExtendedReports();
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
 
 // ── Usage ────────────────────────────────────────────────────
 router.get("/usage",        auth, authorize("inventory", "read"), validateQuery(getUsageQuerySchema), ctrl.getAllUsage);

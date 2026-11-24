@@ -18,7 +18,26 @@ const Account = sequelize.define(
     },
     fund_id: {
       type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
+    },
+    account_type: {
+      type: DataTypes.ENUM("cash", "petty_cash", "bank", "gcash", "other"),
       allowNull: false,
+      defaultValue: "cash",
+    },
+    account_number_masked: {
+      type: DataTypes.STRING(60),
+      allowNull: true,
+    },
+    opening_balance: {
+      type: DataTypes.DECIMAL(14, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    is_active: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: 1,
     },
     description: {
       type: DataTypes.TEXT,

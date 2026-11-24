@@ -15,6 +15,15 @@ const MinistryAssignment = sequelize.define(
     member_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
     ministry_role_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
     confirmed: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
+    confirmation_status: {
+      type: DataTypes.ENUM("pending", "confirmed", "declined", "substituted"),
+      allowNull: false,
+      defaultValue: "pending",
+    },
+    confirmed_at: { type: DataTypes.DATE, allowNull: true },
+    decline_reason: { type: DataTypes.STRING(255), allowNull: true },
+    substitute_member_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    notified_at: { type: DataTypes.DATE, allowNull: true },
     substitute_requested: {
       type: DataTypes.TINYINT,
       allowNull: false,

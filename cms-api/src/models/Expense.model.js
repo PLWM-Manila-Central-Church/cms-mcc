@@ -15,6 +15,14 @@ const Expense = sequelize.define(
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
+    fund_id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
+    },
+    transaction_number: {
+      type: DataTypes.STRING(40),
+      allowNull: true,
+    },
     category_id: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
@@ -27,6 +35,10 @@ const Expense = sequelize.define(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
+    payee: {
+      type: DataTypes.STRING(160),
+      allowNull: true,
+    },
     description: {
       type: DataTypes.TEXT,
       allowNull: true,
@@ -35,6 +47,22 @@ const Expense = sequelize.define(
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
     },
+    requested_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    approved_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    approved_at: { type: DataTypes.DATE, allowNull: true },
+    paid_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    paid_at: { type: DataTypes.DATE, allowNull: true },
+    payment_reference: { type: DataTypes.STRING(120), allowNull: true },
+    event_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    ministry_group_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    liquidation_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    status: {
+      type: DataTypes.ENUM("draft", "pending_approval", "approved", "rejected", "paid", "cancelled"),
+      allowNull: false,
+      defaultValue: "paid",
+    },
+    rejection_reason: { type: DataTypes.TEXT, allowNull: true },
+    remarks: { type: DataTypes.TEXT, allowNull: true },
     created_by: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,

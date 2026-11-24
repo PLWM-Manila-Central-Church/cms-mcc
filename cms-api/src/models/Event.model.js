@@ -19,8 +19,18 @@ const Event = sequelize.define(
     start_date: { type: DataTypes.DATEONLY, allowNull: false },
     end_date: { type: DataTypes.DATEONLY, allowNull: true },
     start_time: { type: DataTypes.TIME, allowNull: true },
+    end_time: { type: DataTypes.TIME, allowNull: true },
     location: { type: DataTypes.STRING(255), allowNull: true },
     capacity: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    expected_participants: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    organizer_ministry_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    coordinator_user_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    program_notes: { type: DataTypes.TEXT, allowNull: true },
+    lifecycle_status: {
+      type: DataTypes.ENUM("draft", "pending_approval", "approved", "published", "ongoing", "completed", "liquidated", "closed", "cancelled"),
+      allowNull: false,
+      defaultValue: "published",
+    },
     total_parking_slots: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: null },
     registration_deadline: { type: DataTypes.DATE, allowNull: true },
     status: {

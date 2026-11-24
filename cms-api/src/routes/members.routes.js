@@ -23,6 +23,14 @@ router.get("/",    auth, authorize("members", "read"), validateQuery(getMembersQ
 router.get("/dropdowns/cell-groups", auth, authorize("members", "read"), ctrl.getCellGroupDropdowns);
 router.get("/dropdowns/groups",      auth, authorize("members", "read"), ctrl.getGroupDropdowns);
 
+const engSvc = require("../services/ministryEngagement.service");
+
+router.get("/:id/engagement", auth, authorize("members", "read"), async (req, res, next) => {
+  try {
+    const data = await engSvc.getMemberEngagementProfile(req.params.id);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
 router.get("/:id/status-history", auth, authorize("members", "read"), ctrl.getMemberStatusHistory);
 router.get("/:id", auth, authorize("members", "read"),   ctrl.getMemberById);
 router.post("/",   auth, authorize("members", "create"), validate(createMemberSchema), ctrl.createMember);  // Fix #1

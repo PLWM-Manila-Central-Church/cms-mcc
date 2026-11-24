@@ -19,6 +19,8 @@ const Member = sequelize.define(
     phone: { type: DataTypes.STRING(30), allowNull: true },
     birthdate: { type: DataTypes.DATEONLY, allowNull: true },
     spiritual_birthday: { type: DataTypes.DATEONLY, allowNull: true },
+    join_date: { type: DataTypes.DATEONLY, allowNull: true },
+    import_batch: { type: DataTypes.STRING(64), allowNull: true },
     address: { type: DataTypes.TEXT, allowNull: true },
     gender: {
       type: DataTypes.ENUM(...MEMBER_GENDERS),

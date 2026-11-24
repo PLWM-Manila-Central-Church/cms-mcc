@@ -63,7 +63,7 @@ describe("consolidated analytics access and range checks", () => {
       if (sql.includes("AS member_group_categories")) return [{ category_count: 22 }];
       if (sql.includes("SELECT cg.id")) return topCellGroups;
       if (sql.includes("SELECT g.id")) return topGroups;
-      if (sql.includes("DATE_FORMAT(created_at")) return [];
+      if (sql.includes("DATE_FORMAT(COALESCE(join_date") || sql.includes("DATE_FORMAT(created_at")) return [];
       return [];
     });
 
@@ -108,7 +108,7 @@ describe("consolidated analytics access and range checks", () => {
       if (sql.includes("NULLIF(gender")) return [{ label: "Unspecified", total: 2 }];
       if (sql.includes("SELECT cg.id") || sql.includes("SELECT g.id")) return [];
       if (sql.includes("AS cell_group_categories") || sql.includes("AS member_group_categories")) return [{ category_count: 0 }];
-      if (sql.includes("DATE_FORMAT(created_at")) return [
+      if (sql.includes("DATE_FORMAT(COALESCE(join_date") || sql.includes("DATE_FORMAT(created_at")) return [
         { period: "2026-10-04", total: 1 },
         { period: "2026-10-11", total: 1 },
       ];
@@ -190,5 +190,45 @@ describe("consolidated analytics access and range checks", () => {
       { period: "2026-10-04", service: 2, events: 0 },
       { period: "2026-10-11", service: 3, events: 0 },
     ]);
+  });
+
+  test("computes member, attendance, finance, group, and ops insights for System Admin", async () => {
+    Member.count.mockResolvedValueOnce(80).mockResolvedValueOnce(20).mockResolvedValueOnce(100);
+    Attendance.findAll.mockResolvedValue([{ period: "2026-10-11", total: 40 }]);
+    FinancialRecord.findAll.mockResolvedValue([{ period: "2026-10-11", total: "10000.00" }]);
+    Expense.findAll.mockResolvedValue([{ period: "2026-10-11", total: "4000.00" }]);
+    getAttendanceModel.mockResolvedValue(Attendance);
+    sequelize.query.mockImplementation(async (sql) => {
+      if (sql.includes("TIMESTAMPDIFF(YEAR")) return [{ label: "18-29", total: 100 }];
+      if (sql.includes("NULLIF(gender")) return [{ label: "Female", total: 100 }];
+      if (sql.includes("AS cell_group_categories") || sql.includes("AS member_group_categories")) return [{ category_count: 1 }];
+      if (sql.includes("SELECT cg.id, COALESCE")) return [{ id: 1, label: "Lakefront A", total: 100 }];
+      if (sql.includes("SELECT g.id, COALESCE")) return [{ id: 1, label: "Young Adults", total: 100 }];
+      if (sql.includes("DATE_FORMAT(COALESCE(join_date")) return [{ period: "2026-10-05", total: 10 }];
+      if (sql.includes("is_deleted = 1 AND deleted_at")) return [{ total: 2 }];
+      if (sql.includes("priorFrom")) return [{ total: 5 }];
+      if (sql.includes("FROM visitor_records")) return [{ visit_type: "first_time", total: 4 }, { visit_type: "returning", total: 2 }];
+      if (sql.includes("COALESCE(s.gathering_type")) return [{ gathering_type: "lords_day", services_count: 2, checkins: 40 }];
+      if (sql.includes("FROM financial_records fr")) return [{ label: "Tithes", total: 10000 }];
+      if (sql.includes("FROM expenses e")) return [{ label: "Utilities", total: 4000 }];
+      if (sql.includes("FROM inventory_items")) return [{ total_items: 50, low_stock: 3 }];
+      if (sql.includes("last_verified_backup_at")) return [{ setting_value: "2026-10-12 02:00" }];
+      return [];
+    });
+
+    const result = await analyticsService.getAnalytics({
+      user: { roleName: "System Admin" },
+      date_from: "2026-10-01",
+      date_to: "2026-10-12",
+      period: "custom",
+    });
+
+    expect(result.member_insights).toMatchObject({ archived_in_range: 2, net_growth: 8, retention_rate_pct: 80, yoy_delta_pct: 100 });
+    expect(result.attendance_insights).toMatchObject({
+      gatherings_count: 2, average_per_gathering: 20, attendance_rate_pct: 25,
+      first_time_visitors: 4, returning_visitors: 2, total_visitors: 6,
+    });
+    expect(result.finance_insights).toMatchObject({ expense_ratio_pct: 40, net_margin_pct: 60 });
+    expect(result.operations_snapshot).toEqual({ inventory_total_items: 50, inventory_low_stock: 3, last_verified_backup_at: "2026-10-12 02:00" });
   });
 });

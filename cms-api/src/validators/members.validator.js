@@ -12,6 +12,7 @@ const memberBody = {
   gender:             Joi.string().valid(...MEMBER_GENDERS).allow(null, "").optional(),
   birthdate:          Joi.date().iso().allow(null, "").optional(),
   spiritual_birthday: Joi.date().iso().allow(null, "").optional(),
+  join_date:          Joi.date().iso().allow(null, "").optional(),
   address:            Joi.string().max(500).allow(null, "").optional(),
   cell_group_id:      Joi.number().integer().positive().allow(null).optional(),
   group_id:           Joi.number().integer().positive().allow(null).optional(),

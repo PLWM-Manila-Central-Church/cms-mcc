@@ -43,24 +43,38 @@ exports.updateCategorySchema = Joi.object({
 // ── Fund schemas ─────────────────────────────────────────────
 exports.createFundSchema = Joi.object({
   name: Joi.string().max(100).required(),
+  fund_code: Joi.string().max(32).allow(null, "").optional(),
+  is_restricted: Joi.boolean().optional(),
+  opening_balance: Joi.number().min(0).optional(),
   description: Joi.string().max(500).allow(null, "").optional(),
 });
 
 exports.updateFundSchema = Joi.object({
   name: Joi.string().max(100).optional(),
+  fund_code: Joi.string().max(32).allow(null, "").optional(),
+  is_restricted: Joi.boolean().optional(),
+  opening_balance: Joi.number().min(0).optional(),
+  is_active: Joi.boolean().optional(),
   description: Joi.string().max(500).allow(null, "").optional(),
 }).min(1);
 
 // ── Account schemas ──────────────────────────────────────────
 exports.createAccountSchema = Joi.object({
   name: Joi.string().max(100).required(),
-  fund_id: Joi.number().integer().positive().required(),
+  fund_id: Joi.number().integer().positive().allow(null).optional(),
+  account_type: Joi.string().valid("cash", "petty_cash", "bank", "gcash", "other").optional(),
+  account_number_masked: Joi.string().max(60).allow(null, "").optional(),
+  opening_balance: Joi.number().min(0).optional(),
   description: Joi.string().max(500).allow(null, "").optional(),
 });
 
 exports.updateAccountSchema = Joi.object({
   name: Joi.string().max(100).optional(),
-  fund_id: Joi.number().integer().positive().optional(),
+  fund_id: Joi.number().integer().positive().allow(null).optional(),
+  account_type: Joi.string().valid("cash", "petty_cash", "bank", "gcash", "other").optional(),
+  account_number_masked: Joi.string().max(60).allow(null, "").optional(),
+  opening_balance: Joi.number().min(0).optional(),
+  is_active: Joi.boolean().optional(),
   description: Joi.string().max(500).allow(null, "").optional(),
 }).min(1);
 

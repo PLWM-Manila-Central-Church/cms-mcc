@@ -2,6 +2,7 @@
 
 const router = require("express").Router();
 const ctrl   = require("../controllers/member-portal.controller");
+const engSvc = require("../services/ministryEngagement.service");
 const auth   = require("../middlewares/verifyToken");
 const { profileUpload, requireDurableUploadStorage } = require("../middlewares/upload-s3");
 const validate = require("../middlewares/validate");
@@ -35,5 +36,31 @@ router.get   ("/schedule",                                   auth, ctrl.getMySch
 router.get   ("/bible-reading",                              auth, ctrl.getMyBibleReading);
 router.post  ("/bible-reading/:date",                         auth, ctrl.toggleMyBibleReading);
 router.get   ("/memory-verse",                               auth, ctrl.getMyMemoryVerse);
+
+// ── Phase 5: Calm Member Engagement (RSVP, Announcements, Leader Messages, Prayer Requests)
+router.get   ("/engagement",                                 auth, async (req, res, next) => {
+  try {
+    const data = await engSvc.getPortalEngagement(req.user);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.post  ("/activities/:activityId/rsvp",                auth, async (req, res, next) => {
+  try {
+    const data = await engSvc.submitPortalRsvp(req.params.activityId, req.body, req.user);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.post  ("/messages",                                   auth, async (req, res, next) => {
+  try {
+    const data = await engSvc.sendMessage({ ...req.body, member_id: req.user.memberId, direction: "member_to_leader" }, req.user);
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.post  ("/feedback",                                   auth, async (req, res, next) => {
+  try {
+    const data = await engSvc.submitPortalFeedback(req.body, req.user);
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+});
 
 module.exports = router;

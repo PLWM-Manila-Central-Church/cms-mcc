@@ -2,7 +2,7 @@
 
 > Generated from the runtime Sequelize models, including the separate QR attendance model module. This describes the application contract, not verified live TiDB DDL. Migrations define the database schema; compare this catalog with the isolated live schema before relying on constraints, indexes, or columns.
 
-Models: 58
+Models: 91
 
 ## `accounts`
 
@@ -12,7 +12,11 @@ Model: `Account`
 | --- | --- | --- | --- | --- |
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `name` | STRING(100) | No | No | — |
-| `fund_id` | INTEGER UNSIGNED | No | No | — |
+| `fund_id` | INTEGER UNSIGNED | Yes | No | — |
+| `account_type` | ENUM("cash", "petty_cash", "bank", "gcash", "other") | No | No | "cash" |
+| `account_number_masked` | STRING(60) | Yes | No | — |
+| `opening_balance` | DECIMAL(14, 2) | No | No | 0 |
+| `is_active` | TINYINT | No | No | 1 |
 | `description` | TEXT | Yes | No | — |
 | `is_deleted` | TINYINT | No | No | 0 |
 | `deleted_at` | DATE | Yes | No | — |
@@ -65,6 +69,24 @@ Indexes
 
 Associations
 - HasMany `ArchiveRecords` → `archive_records` via `category_id`
+## `archive_holds`
+
+Model: `ArchiveHold`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `entity_type` | STRING(64) | No | No | — |
+| `entity_id` | INTEGER UNSIGNED | No | No | — |
+| `reason` | STRING(255) | Yes | No | — |
+| `created_by` | INTEGER UNSIGNED | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+
+Indexes
+- Unique `uq_archive_hold`: entity_type, entity_id
+
+Associations
+- None declared in the model
 ## `archive_records`
 
 Model: `ArchiveRecord`
@@ -87,11 +109,15 @@ Model: `ArchiveRecord`
 | `is_deleted` | TINYINT | No | No | 0 |
 | `deleted_at` | DATE | Yes | No | — |
 | `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `purge_after` | DATE | Yes | No | — |
+| `retention_hold` | TINYINT | No | No | 0 |
+| `hold_reason` | STRING(255) | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
 Indexes
 - Index `idx_archive_status`: status
+- Index `idx_archive_purge_after`: purge_after
 
 Associations
 - BelongsTo `approvedByUser` → `users` via `approved_by`
@@ -338,6 +364,23 @@ Indexes
 
 Associations
 - BelongsTo `User` → `users` via `user_id`
+## `bible_reading_progress`
+
+Model: `BibleReadingProgress`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `member_id` | INTEGER UNSIGNED | No | No | — |
+| `reading_date` | DATEONLY | No | No | — |
+| `completed_at` | DATE | No | No | NOW |
+
+Indexes
+- Unique `uq_brp_member_date`: member_id, reading_date
+- Index `idx_brp_date`: reading_date
+
+Associations
+- BelongsTo `member` → `members` via `member_id`
 ## `cell_group_history`
 
 Model: `CellGroupHistory`
@@ -360,6 +403,50 @@ Associations
 - BelongsTo `changedByUser` → `users` via `changed_by`
 - BelongsTo `newCellGroup` → `cell_groups` via `new_cell_group_id`
 - BelongsTo `oldCellGroup` → `cell_groups` via `old_cell_group_id`
+## `cell_group_meeting_attendance`
+
+Model: `CellGroupMeetingAttendance`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `meeting_id` | INTEGER UNSIGNED | No | No | — |
+| `member_id` | INTEGER UNSIGNED | No | No | — |
+| `status` | ENUM("present", "absent", "excused") | No | No | "present" |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- None declared in the model
+## `cell_group_meetings`
+
+Model: `CellGroupMeeting`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `cell_group_id` | INTEGER UNSIGNED | No | No | — |
+| `meeting_date` | DATEONLY | No | No | — |
+| `meeting_time` | TIME | Yes | No | — |
+| `location` | STRING(200) | Yes | No | — |
+| `lesson_topic` | STRING(200) | Yes | No | — |
+| `scripture_reference` | STRING(150) | Yes | No | — |
+| `prayer_notes` | TEXT | Yes | No | — |
+| `attendees_count` | INTEGER UNSIGNED | No | No | 0 |
+| `visitors_count` | INTEGER UNSIGNED | No | No | 0 |
+| `recorded_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- None declared in the model
 ## `cell_groups`
 
 Model: `CellGroup`
@@ -368,7 +455,15 @@ Model: `CellGroup`
 | --- | --- | --- | --- | --- |
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `name` | STRING(100) | No | No | — |
+| `code` | STRING(32) | Yes | No | — |
 | `area` | STRING(100) | Yes | No | — |
+| `leader_user_id` | INTEGER UNSIGNED | Yes | No | — |
+| `assistant_leader_user_id` | INTEGER UNSIGNED | Yes | No | — |
+| `ministry_group_id` | INTEGER UNSIGNED | Yes | No | — |
+| `meeting_day` | STRING(32) | Yes | No | — |
+| `meeting_time` | TIME | Yes | No | — |
+| `meeting_location` | STRING(200) | Yes | No | — |
+| `status` | ENUM("active", "inactive", "archived") | No | No | "active" |
 | `is_deleted` | TINYINT | No | No | 0 |
 | `deleted_at` | DATE | Yes | No | — |
 | `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
@@ -401,6 +496,50 @@ Indexes
 - None declared in the model
 
 Associations
+- BelongsTo `member` → `members` via `member_id`
+## `event_approvals`
+
+Model: `EventApproval`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `event_id` | INTEGER UNSIGNED | No | No | — |
+| `entity_type` | ENUM("event", "budget", "cash_advance", "liquidation") | No | No | — |
+| `entity_id` | INTEGER UNSIGNED | No | No | — |
+| `action` | STRING(40) | No | No | — |
+| `actor_user_id` | INTEGER UNSIGNED | Yes | No | — |
+| `remarks` | TEXT | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- None declared in the model
+## `event_assignments`
+
+Model: `EventAssignment`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `event_id` | INTEGER UNSIGNED | No | No | — |
+| `committee_id` | INTEGER UNSIGNED | Yes | No | — |
+| `member_id` | INTEGER UNSIGNED | No | No | — |
+| `role_title` | STRING(120) | No | No | — |
+| `task_notes` | TEXT | Yes | No | — |
+| `status` | ENUM("assigned", "confirmed", "completed", "cancelled") | No | No | "assigned" |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `committee` → `event_committees` via `committee_id`
+- BelongsTo `event` → `events` via `event_id`
 - BelongsTo `member` → `members` via `member_id`
 ## `event_attendances`
 
@@ -440,6 +579,88 @@ Associations
 - BelongsTo `sourceBatch` → `attendance_batches` via `source_batch_id`
 - BelongsTo `voidedBy` → `users` via `voided_by`
 - HasMany `qrBatchItems` → `attendance_batch_items` via `event_attendance_id`
+## `event_budget_items`
+
+Model: `EventBudgetItem`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `budget_id` | INTEGER UNSIGNED | No | No | — |
+| `category_name` | STRING(100) | No | No | — |
+| `description` | STRING(255) | Yes | No | — |
+| `quantity` | DECIMAL(10, 2) | No | No | 1 |
+| `unit_cost` | DECIMAL(12, 2) | No | No | 0 |
+| `estimated_amount` | DECIMAL(14, 2) | No | No | 0 |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `budget` → `event_budgets` via `budget_id`
+## `event_budgets`
+
+Model: `EventBudget`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `event_id` | INTEGER UNSIGNED | No | No | — |
+| `title` | STRING(160) | No | No | — |
+| `total_requested` | DECIMAL(14, 2) | No | No | 0 |
+| `total_approved` | DECIMAL(14, 2) | Yes | No | — |
+| `fund_id` | INTEGER UNSIGNED | Yes | No | — |
+| `status` | ENUM("draft", "submitted", "approved", "rejected", "revised") | No | No | "draft" |
+| `submitted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `approved_by` | INTEGER UNSIGNED | Yes | No | — |
+| `approved_at` | DATE | Yes | No | — |
+| `rejection_reason` | TEXT | Yes | No | — |
+| `notes` | TEXT | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `event` → `events` via `event_id`
+- BelongsTo `fund` → `funds` via `fund_id`
+- HasMany `items` → `event_budget_items` via `budget_id`
+## `event_cash_advances`
+
+Model: `EventCashAdvance`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `event_id` | INTEGER UNSIGNED | No | No | — |
+| `budget_id` | INTEGER UNSIGNED | Yes | No | — |
+| `recipient_member_id` | INTEGER UNSIGNED | Yes | No | — |
+| `recipient_name` | STRING(150) | No | No | — |
+| `amount_released` | DECIMAL(14, 2) | No | No | — |
+| `release_date` | DATEONLY | Yes | No | — |
+| `account_id` | INTEGER UNSIGNED | Yes | No | — |
+| `fund_id` | INTEGER UNSIGNED | Yes | No | — |
+| `reference_number` | STRING(100) | Yes | No | — |
+| `status` | ENUM("requested", "approved", "released", "liquidated", "cancelled") | No | No | "requested" |
+| `released_by` | INTEGER UNSIGNED | Yes | No | — |
+| `released_at` | DATE | Yes | No | — |
+| `notes` | TEXT | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `account` → `accounts` via `account_id`
+- BelongsTo `event` → `events` via `event_id`
+- BelongsTo `fund` → `funds` via `fund_id`
 ## `event_categories`
 
 Model: `EventCategory`
@@ -457,6 +678,27 @@ Indexes
 
 Associations
 - HasMany `Events` → `events` via `category_id`
+## `event_committees`
+
+Model: `EventCommittee`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `event_id` | INTEGER UNSIGNED | No | No | — |
+| `name` | STRING(120) | No | No | — |
+| `chair_member_id` | INTEGER UNSIGNED | Yes | No | — |
+| `responsibilities` | TEXT | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `chair` → `members` via `chair_member_id`
+- BelongsTo `event` → `events` via `event_id`
 ## `event_image_archives`
 
 Model: `EventImageArchive`
@@ -471,6 +713,84 @@ Model: `EventImageArchive`
 | `is_deleted` | TINYINT | No | No | 1 |
 | `deleted_at` | DATE | Yes | No | — |
 | `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `event` → `events` via `event_id`
+## `event_liquidation_items`
+
+Model: `EventLiquidationItem`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `liquidation_id` | INTEGER UNSIGNED | No | No | — |
+| `expense_category_id` | INTEGER UNSIGNED | Yes | No | — |
+| `expense_date` | DATEONLY | No | No | — |
+| `vendor` | STRING(150) | Yes | No | — |
+| `description` | STRING(255) | No | No | — |
+| `receipt_number` | STRING(100) | Yes | No | — |
+| `amount` | DECIMAL(14, 2) | No | No | — |
+| `posted_expense_id` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `liquidation` → `event_liquidations` via `liquidation_id`
+## `event_liquidations`
+
+Model: `EventLiquidation`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `event_id` | INTEGER UNSIGNED | No | No | — |
+| `cash_advance_id` | INTEGER UNSIGNED | Yes | No | — |
+| `total_advanced` | DECIMAL(14, 2) | No | No | 0 |
+| `total_spent` | DECIMAL(14, 2) | No | No | 0 |
+| `amount_returned` | DECIMAL(14, 2) | No | No | 0 |
+| `amount_reimbursed` | DECIMAL(14, 2) | No | No | 0 |
+| `status` | ENUM("draft", "submitted", "verified", "posted", "rejected") | No | No | "draft" |
+| `submitted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `verified_by` | INTEGER UNSIGNED | Yes | No | — |
+| `verified_at` | DATE | Yes | No | — |
+| `posted_at` | DATE | Yes | No | — |
+| `rejection_reason` | TEXT | Yes | No | — |
+| `notes` | TEXT | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `cashAdvance` → `event_cash_advances` via `cash_advance_id`
+- BelongsTo `event` → `events` via `event_id`
+- HasMany `items` → `event_liquidation_items` via `liquidation_id`
+## `event_program_items`
+
+Model: `EventProgramItem`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `event_id` | INTEGER UNSIGNED | No | No | — |
+| `sort_order` | INTEGER UNSIGNED | No | No | 0 |
+| `start_time` | TIME | Yes | No | — |
+| `end_time` | TIME | Yes | No | — |
+| `title` | STRING(180) | No | No | — |
+| `lead_person` | STRING(120) | Yes | No | — |
+| `notes` | TEXT | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -519,8 +839,14 @@ Model: `Event`
 | `start_date` | DATEONLY | No | No | — |
 | `end_date` | DATEONLY | Yes | No | — |
 | `start_time` | TIME | Yes | No | — |
+| `end_time` | TIME | Yes | No | — |
 | `location` | STRING(255) | Yes | No | — |
 | `capacity` | INTEGER UNSIGNED | Yes | No | — |
+| `expected_participants` | INTEGER UNSIGNED | Yes | No | — |
+| `organizer_ministry_id` | INTEGER UNSIGNED | Yes | No | — |
+| `coordinator_user_id` | INTEGER UNSIGNED | Yes | No | — |
+| `program_notes` | TEXT | Yes | No | — |
+| `lifecycle_status` | ENUM("draft", "pending_approval", "approved", "published", "ongoing", "completed", "liquidated", "closed", "cancelled") | No | No | "published" |
 | `total_parking_slots` | INTEGER UNSIGNED | Yes | No | null |
 | `registration_deadline` | DATE | Yes | No | — |
 | `status` | ENUM("Upcoming", "Ongoing", "Completed", "Cancelled") | No | No | "Upcoming" |
@@ -541,7 +867,15 @@ Associations
 - BelongsTo `deletedByUser` → `users` via `deleted_by`
 - HasMany `EventRegistrations` → `event_registrations` via `event_id`
 - HasMany `MinistryEventInvites` → `ministry_event_invites` via `event_id`
+- HasMany `approvals` → `event_approvals` via `event_id`
 - HasMany `archivedImages` → `event_image_archives` via `event_id`
+- HasMany `assignments` → `event_assignments` via `event_id`
+- HasMany `budgets` → `event_budgets` via `event_id`
+- HasMany `cashAdvances` → `event_cash_advances` via `event_id`
+- HasMany `committees` → `event_committees` via `event_id`
+- HasMany `liquidations` → `event_liquidations` via `event_id`
+- HasMany `programItems` → `event_program_items` via `event_id`
+- HasMany `visitors` → `visitor_records` via `event_id`
 - HasOne `attendanceService` → `services` via `event_id`
 ## `expense_categories`
 
@@ -573,11 +907,26 @@ Model: `Expense`
 | --- | --- | --- | --- | --- |
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `account_id` | INTEGER UNSIGNED | Yes | No | — |
+| `fund_id` | INTEGER UNSIGNED | Yes | No | — |
+| `transaction_number` | STRING(40) | Yes | No | — |
 | `category_id` | INTEGER UNSIGNED | No | No | — |
 | `date` | DATEONLY | No | No | — |
 | `amount` | DECIMAL(10, 2) | No | No | — |
+| `payee` | STRING(160) | Yes | No | — |
 | `description` | TEXT | Yes | No | — |
 | `payment_method_id` | INTEGER UNSIGNED | No | No | — |
+| `requested_by` | INTEGER UNSIGNED | Yes | No | — |
+| `approved_by` | INTEGER UNSIGNED | Yes | No | — |
+| `approved_at` | DATE | Yes | No | — |
+| `paid_by` | INTEGER UNSIGNED | Yes | No | — |
+| `paid_at` | DATE | Yes | No | — |
+| `payment_reference` | STRING(120) | Yes | No | — |
+| `event_id` | INTEGER UNSIGNED | Yes | No | — |
+| `ministry_group_id` | INTEGER UNSIGNED | Yes | No | — |
+| `liquidation_id` | INTEGER UNSIGNED | Yes | No | — |
+| `status` | ENUM("draft", "pending_approval", "approved", "rejected", "paid", "cancelled") | No | No | "paid" |
+| `rejection_reason` | TEXT | Yes | No | — |
+| `remarks` | TEXT | Yes | No | — |
 | `created_by` | INTEGER UNSIGNED | No | No | — |
 | `is_deleted` | TINYINT | No | No | 0 |
 | `deleted_at` | DATE | Yes | No | — |
@@ -590,10 +939,67 @@ Indexes
 
 Associations
 - BelongsTo `account` → `accounts` via `account_id`
+- BelongsTo `approver` → `users` via `approved_by`
 - BelongsTo `category` → `expense_categories` via `category_id`
 - BelongsTo `creator` → `users` via `created_by`
+- BelongsTo `event` → `events` via `event_id`
+- BelongsTo `fund` → `funds` via `fund_id`
+- BelongsTo `ministryGroup` → `ministry_groups` via `ministry_group_id`
+- BelongsTo `payer` → `users` via `paid_by`
 - BelongsTo `paymentMethod` → `payment_methods` via `payment_method_id`
+- BelongsTo `requester` → `users` via `requested_by`
 - HasMany `attachments` → `attachments` via `expense_id`
+## `finance_approvals`
+
+Model: `FinanceApproval`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `entity_type` | ENUM("expense", "budget", "liquidation", "transfer") | No | No | — |
+| `entity_id` | INTEGER UNSIGNED | No | No | — |
+| `action` | ENUM("submitted", "approved", "rejected", "paid", "cancelled") | No | No | — |
+| `actor_user_id` | INTEGER UNSIGNED | Yes | No | — |
+| `remarks` | TEXT | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `actor` → `users` via `actor_user_id`
+## `finance_transfers`
+
+Model: `FinanceTransfer`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `transaction_number` | STRING(40) | Yes | No | — |
+| `transfer_date` | DATEONLY | No | No | — |
+| `amount` | DECIMAL(14, 2) | No | No | — |
+| `from_account_id` | INTEGER UNSIGNED | Yes | No | — |
+| `to_account_id` | INTEGER UNSIGNED | Yes | No | — |
+| `from_fund_id` | INTEGER UNSIGNED | Yes | No | — |
+| `to_fund_id` | INTEGER UNSIGNED | Yes | No | — |
+| `reference_number` | STRING(100) | Yes | No | — |
+| `remarks` | TEXT | Yes | No | — |
+| `created_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `creator` → `users` via `created_by`
+- BelongsTo `fromAccount` → `accounts` via `from_account_id`
+- BelongsTo `fromFund` → `funds` via `from_fund_id`
+- BelongsTo `toAccount` → `accounts` via `to_account_id`
+- BelongsTo `toFund` → `funds` via `to_fund_id`
 ## `financial_categories`
 
 Model: `FinancialCategory`
@@ -622,6 +1028,13 @@ Model: `FinancialRecord`
 | `member_id` | INTEGER UNSIGNED | Yes | No | — |
 | `is_anonymous` | TINYINT | No | No | 0 |
 | `category_id` | INTEGER UNSIGNED | No | No | — |
+| `transaction_number` | STRING(40) | Yes | No | — |
+| `fund_id` | INTEGER UNSIGNED | Yes | No | — |
+| `account_id` | INTEGER UNSIGNED | Yes | No | — |
+| `event_id` | INTEGER UNSIGNED | Yes | No | — |
+| `ministry_group_id` | INTEGER UNSIGNED | Yes | No | — |
+| `received_by_name` | STRING(120) | Yes | No | — |
+| `approval_status` | ENUM("posted", "pending", "voided") | No | No | "posted" |
 | `receipt_number` | STRING(100) | Yes | No | — |
 | `amount` | DECIMAL(10, 2) | No | No | — |
 | `payment_method` | ENUM("cash", "gcash", "bank_transfer") | Yes | No | — |
@@ -642,8 +1055,12 @@ Indexes
 
 Associations
 - BelongsTo `Member` → `members` via `member_id`
+- BelongsTo `account` → `accounts` via `account_id`
 - BelongsTo `category` → `financial_categories` via `category_id`
 - BelongsTo `deletedByUser` → `users` via `deleted_by`
+- BelongsTo `event` → `events` via `event_id`
+- BelongsTo `fund` → `funds` via `fund_id`
+- BelongsTo `ministryGroup` → `ministry_groups` via `ministry_group_id`
 - BelongsTo `recorder` → `users` via `recorded_by`
 - HasMany `attachments` → `attachments` via `income_id`
 ## `funds`
@@ -654,6 +1071,10 @@ Model: `Fund`
 | --- | --- | --- | --- | --- |
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `name` | STRING(100) | No | No | — |
+| `fund_code` | STRING(32) | Yes | No | — |
+| `is_restricted` | TINYINT | No | No | 0 |
+| `opening_balance` | DECIMAL(14, 2) | No | No | 0 |
+| `is_active` | TINYINT | No | No | 1 |
 | `description` | TEXT | Yes | No | — |
 | `is_deleted` | TINYINT | No | No | 0 |
 | `deleted_at` | DATE | Yes | No | — |
@@ -666,6 +1087,161 @@ Indexes
 
 Associations
 - HasMany `Accounts` → `accounts` via `fund_id`
+## `group_activities`
+
+Model: `GroupActivity`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `group_id` | INTEGER UNSIGNED | No | No | — |
+| `title` | STRING(180) | No | No | — |
+| `description` | TEXT | Yes | No | — |
+| `activity_date` | DATEONLY | Yes | No | — |
+| `start_time` | TIME | Yes | No | — |
+| `location` | STRING(200) | Yes | No | — |
+| `status` | ENUM("planned", "ongoing", "completed", "cancelled") | No | No | "planned" |
+| `created_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `group` → `ministry_roles` via `group_id`
+- HasMany `tasks` → `group_tasks` via `activity_id`
+## `group_member_positions`
+
+Model: `GroupMemberPosition`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `group_id` | INTEGER UNSIGNED | No | No | — |
+| `position_id` | INTEGER UNSIGNED | Yes | No | — |
+| `member_id` | INTEGER UNSIGNED | No | No | — |
+| `assigned_by` | INTEGER UNSIGNED | Yes | No | — |
+| `assigned_at` | DATE | No | No | NOW |
+| `is_active` | TINYINT | No | No | 1 |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `group` → `ministry_roles` via `group_id`
+- BelongsTo `member` → `members` via `member_id`
+- BelongsTo `position` → `group_positions` via `position_id`
+## `group_memory_verses`
+
+Model: `GroupMemoryVerse`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `group_id` | INTEGER UNSIGNED | No | No | — |
+| `sunday_date` | DATEONLY | No | No | — |
+| `reference` | STRING(120) | No | No | — |
+| `verse_text` | TEXT | No | No | — |
+| `created_by` | INTEGER UNSIGNED | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- Unique `uq_gmv_group_sunday`: group_id, sunday_date
+
+Associations
+- BelongsTo `group` → `ministry_groups` via `group_id`
+## `group_positions`
+
+Model: `GroupPosition`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `group_id` | INTEGER UNSIGNED | No | No | — |
+| `name` | STRING(120) | No | No | — |
+| `responsibilities` | TEXT | Yes | No | — |
+| `sort_order` | INTEGER UNSIGNED | No | No | 0 |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `group` → `ministry_roles` via `group_id`
+- HasMany `assignments` → `group_member_positions` via `position_id`
+## `group_tasks`
+
+Model: `GroupTask`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `group_id` | INTEGER UNSIGNED | No | No | — |
+| `activity_id` | INTEGER UNSIGNED | Yes | No | — |
+| `title` | STRING(200) | No | No | — |
+| `description` | TEXT | Yes | No | — |
+| `assigned_member_id` | INTEGER UNSIGNED | Yes | No | — |
+| `due_date` | DATEONLY | Yes | No | — |
+| `status` | ENUM("pending", "in_progress", "completed", "cancelled") | No | No | "pending" |
+| `completed_at` | DATE | Yes | No | — |
+| `created_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `activity` → `group_activities` via `activity_id`
+- BelongsTo `assignedMember` → `members` via `assigned_member_id`
+- BelongsTo `group` → `ministry_roles` via `group_id`
+## `inventory_borrowings`
+
+Model: `InventoryBorrowing`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `item_id` | INTEGER UNSIGNED | No | No | — |
+| `borrower_member_id` | INTEGER UNSIGNED | Yes | No | — |
+| `borrower_name` | STRING(150) | No | No | — |
+| `event_id` | INTEGER UNSIGNED | Yes | No | — |
+| `ministry_group_id` | INTEGER UNSIGNED | Yes | No | — |
+| `quantity` | INTEGER UNSIGNED | No | No | 1 |
+| `quantity_returned` | INTEGER UNSIGNED | No | No | 0 |
+| `borrowed_at` | DATE | No | No | NOW |
+| `due_return_date` | DATEONLY | Yes | No | — |
+| `returned_at` | DATE | Yes | No | — |
+| `return_condition` | ENUM("Good", "Fair", "Poor", "Damaged", "Lost") | Yes | No | — |
+| `status` | ENUM("requested", "approved", "borrowed", "partially_returned", "returned", "overdue", "damaged", "lost") | No | No | "borrowed" |
+| `notes` | TEXT | Yes | No | — |
+| `recorded_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `item` → `inventory_items` via `item_id`
 ## `inventory_categories`
 
 Model: `InventoryCategory`
@@ -690,7 +1266,16 @@ Model: `InventoryItem`
 | --- | --- | --- | --- | --- |
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `name` | STRING(150) | No | No | — |
+| `item_code` | STRING(40) | Yes | No | — |
+| `item_type` | ENUM("reusable_asset", "consumable") | No | No | "reusable_asset" |
 | `category_id` | INTEGER UNSIGNED | Yes | No | — |
+| `location` | STRING(160) | Yes | No | — |
+| `acquisition_date` | DATEONLY | Yes | No | — |
+| `unit_cost` | DECIMAL(12, 2) | No | No | 0 |
+| `supplier` | STRING(150) | Yes | No | — |
+| `custodian_user_id` | INTEGER UNSIGNED | Yes | No | — |
+| `asset_qr_code` | STRING(100) | Yes | No | — |
+| `reserved_quantity` | INTEGER UNSIGNED | No | No | 0 |
 | `quantity` | INTEGER UNSIGNED | No | No | 0 |
 | `unit` | STRING(50) | Yes | No | — |
 | `condition` | ENUM("Good", "Fair", "Poor", "For Disposal") | Yes | No | — |
@@ -710,7 +1295,35 @@ Associations
 - BelongsTo `category` → `inventory_categories` via `category_id`
 - HasMany `InventoryRequests` → `inventory_requests` via `item_id`
 - HasMany `InventoryUsages` → `inventory_usage` via `item_id`
+- HasMany `borrowings` → `inventory_borrowings` via `item_id`
+- HasMany `maintenanceLogs` → `inventory_maintenance` via `item_id`
 - HasMany `transactions` → `inventory_transactions` via `item_id`
+## `inventory_maintenance`
+
+Model: `InventoryMaintenance`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `item_id` | INTEGER UNSIGNED | No | No | — |
+| `maintenance_date` | DATEONLY | No | No | — |
+| `maintenance_type` | ENUM("inspection", "repair", "servicing", "calibration", "disposal") | No | No | "repair" |
+| `vendor` | STRING(150) | Yes | No | — |
+| `cost` | DECIMAL(12, 2) | No | No | 0 |
+| `finance_expense_id` | INTEGER UNSIGNED | Yes | No | — |
+| `status` | ENUM("scheduled", "in_progress", "completed", "cancelled") | No | No | "scheduled" |
+| `notes` | TEXT | Yes | No | — |
+| `next_due_date` | DATEONLY | Yes | No | — |
+| `recorded_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `item` → `inventory_items` via `item_id`
 ## `inventory_requests`
 
 Model: `InventoryRequest`
@@ -753,6 +1366,11 @@ Model: `InventoryTransaction`
 | `item_id` | INTEGER UNSIGNED | No | No | — |
 | `transaction_type` | ENUM("initial", "adjustment", "usage", "request_fulfillment", "return") | No | No | — |
 | `quantity_delta` | INTEGER | No | No | — |
+| `unit_cost` | DECIMAL(12, 2) | Yes | No | — |
+| `supplier` | STRING(150) | Yes | No | — |
+| `reference_doc_key` | STRING(120) | Yes | No | — |
+| `finance_expense_id` | INTEGER UNSIGNED | Yes | No | — |
+| `balance_after` | INTEGER UNSIGNED | Yes | No | — |
 | `source_type` | STRING(80) | Yes | No | — |
 | `source_id` | INTEGER UNSIGNED | Yes | No | — |
 | `notes` | TEXT | Yes | No | — |
@@ -812,6 +1430,57 @@ Indexes
 Associations
 - BelongsTo `invitedByUser` → `users` via `invited_by`
 - HasOne `User` → `users` via `invited_member_id`
+## `member_feedback`
+
+Model: `MemberFeedback`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `member_id` | INTEGER UNSIGNED | No | No | — |
+| `ministry_group_id` | INTEGER UNSIGNED | Yes | No | — |
+| `category` | ENUM("prayer_request", "question", "suggestion", "care_needed") | No | No | "prayer_request" |
+| `subject` | STRING(180) | Yes | No | — |
+| `message` | TEXT | No | No | — |
+| `is_confidential` | TINYINT | No | No | 1 |
+| `status` | ENUM("open", "acknowledged", "prayed_for", "resolved") | No | No | "open" |
+| `leader_response` | TEXT | Yes | No | — |
+| `responded_by` | INTEGER UNSIGNED | Yes | No | — |
+| `responded_at` | DATE | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `member` → `members` via `member_id`
+## `member_messages`
+
+Model: `MemberMessage`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `ministry_group_id` | INTEGER UNSIGNED | Yes | No | — |
+| `member_id` | INTEGER UNSIGNED | No | No | — |
+| `sender_user_id` | INTEGER UNSIGNED | No | No | — |
+| `direction` | ENUM("leader_to_member", "member_to_leader") | No | No | "leader_to_member" |
+| `subject` | STRING(180) | Yes | No | — |
+| `body` | TEXT | No | No | — |
+| `is_read` | TINYINT | No | No | 0 |
+| `read_at` | DATE | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `member` → `members` via `member_id`
+- BelongsTo `sender` → `users` via `sender_user_id`
 ## `member_notes`
 
 Model: `MemberNote`
@@ -891,6 +1560,8 @@ Model: `Member`
 | `phone` | STRING(30) | Yes | No | — |
 | `birthdate` | DATEONLY | Yes | No | — |
 | `spiritual_birthday` | DATEONLY | Yes | No | — |
+| `join_date` | DATEONLY | Yes | No | — |
+| `import_batch` | STRING(64) | Yes | No | — |
 | `address` | TEXT | Yes | No | — |
 | `gender` | ENUM("Male", "Female") | Yes | No | — |
 | `status` | ENUM("Active", "Inactive") | No | No | "Active" |
@@ -927,7 +1598,9 @@ Associations
 - HasMany `MinistryEventInvites` → `ministry_event_invites` via `member_id`
 - HasMany `MinistryMemberships` → `ministry_memberships` via `member_id`
 - HasMany `ServiceResponses` → `service_responses` via `member_id`
+- HasMany `assignedGroupTasks` → `group_tasks` via `assigned_member_id`
 - HasMany `emergencyContacts` → `emergency_contacts` via `member_id`
+- HasMany `groupPositions` → `group_member_positions` via `member_id`
 - HasMany `ministryApplications` → `ministry_applications` via `member_id`
 - HasMany `referrals` → `members` via `referred_by`
 - HasOne `User` → `users` via `member_id`
@@ -951,6 +1624,79 @@ Indexes
 Associations
 - BelongsTo `legacyMinistryRole` → `ministry_roles` via `legacy_ministry_role_id`
 - HasMany `positions` → `ministry_positions` via `ministry_id`
+## `ministry_activities`
+
+Model: `MinistryActivity`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `ministry_group_id` | INTEGER UNSIGNED | No | No | — |
+| `title` | STRING(180) | No | No | — |
+| `activity_type` | ENUM("fellowship", "bible_study", "outreach", "service", "camp", "meeting", "other") | No | No | "fellowship" |
+| `activity_date` | DATEONLY | No | No | — |
+| `start_time` | TIME | Yes | No | — |
+| `end_time` | TIME | Yes | No | — |
+| `location` | STRING(200) | Yes | No | — |
+| `description` | TEXT | Yes | No | — |
+| `linked_service_id` | INTEGER UNSIGNED | Yes | No | — |
+| `linked_event_id` | INTEGER UNSIGNED | Yes | No | — |
+| `rsvp_deadline` | DATE | Yes | No | — |
+| `status` | ENUM("planned", "completed", "cancelled") | No | No | "planned" |
+| `created_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `ministry` → `ministry_groups` via `ministry_group_id`
+- HasMany `attendances` → `ministry_activity_attendance` via `activity_id`
+- HasMany `responses` → `ministry_attendance_responses` via `activity_id`
+## `ministry_activity_attendance`
+
+Model: `MinistryActivityAttendance`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `activity_id` | INTEGER UNSIGNED | No | No | — |
+| `member_id` | INTEGER UNSIGNED | No | No | — |
+| `source` | ENUM("qr", "manual", "imported_service", "imported_event") | No | No | "manual" |
+| `checked_in_at` | DATE | No | No | NOW |
+| `recorded_by` | INTEGER UNSIGNED | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `activity` → `ministry_activities` via `activity_id`
+- BelongsTo `member` → `members` via `member_id`
+## `ministry_announcements`
+
+Model: `MinistryAnnouncement`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `ministry_group_id` | INTEGER UNSIGNED | No | No | — |
+| `title` | STRING(180) | No | No | — |
+| `body` | TEXT | No | No | — |
+| `is_pinned` | TINYINT | No | No | 0 |
+| `published_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `ministry` → `ministry_groups` via `ministry_group_id`
 ## `ministry_applications`
 
 Model: `MinistryApplication`
@@ -988,6 +1734,11 @@ Model: `MinistryAssignment`
 | `member_id` | INTEGER UNSIGNED | No | No | — |
 | `ministry_role_id` | INTEGER UNSIGNED | No | No | — |
 | `confirmed` | TINYINT | No | No | 0 |
+| `confirmation_status` | ENUM("pending", "confirmed", "declined", "substituted") | No | No | "pending" |
+| `confirmed_at` | DATE | Yes | No | — |
+| `decline_reason` | STRING(255) | Yes | No | — |
+| `substitute_member_id` | INTEGER UNSIGNED | Yes | No | — |
+| `notified_at` | DATE | Yes | No | — |
 | `substitute_requested` | TINYINT | No | No | 0 |
 | `is_deleted` | TINYINT | No | No | 0 |
 | `deleted_at` | DATE | Yes | No | — |
@@ -1003,6 +1754,27 @@ Associations
 - BelongsTo `Service` → `services` via `service_id`
 - BelongsTo `ministryRole` → `ministry_roles` via `ministry_role_id`
 - HasMany `SubstituteRequests` → `substitute_requests` via `assignment_id`
+## `ministry_attendance_responses`
+
+Model: `MinistryAttendanceResponse`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `activity_id` | INTEGER UNSIGNED | No | No | — |
+| `member_id` | INTEGER UNSIGNED | No | No | — |
+| `response` | ENUM("yes", "no", "maybe", "no_response") | No | No | "no_response" |
+| `decline_reason` | STRING(255) | Yes | No | — |
+| `responded_at` | DATE | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `activity` → `ministry_activities` via `activity_id`
+- BelongsTo `member` → `members` via `member_id`
 ## `ministry_event_invites`
 
 Model: `MinistryEventInvite`
@@ -1035,6 +1807,16 @@ Model: `MinistryGroup`
 | --- | --- | --- | --- | --- |
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `name` | STRING(100) | No | No | — |
+| `code` | STRING(32) | Yes | No | — |
+| `description` | TEXT | Yes | No | — |
+| `leader_user_id` | INTEGER UNSIGNED | Yes | No | — |
+| `assistant_leader_user_id` | INTEGER UNSIGNED | Yes | No | — |
+| `age_min` | TINYINT UNSIGNED | Yes | No | — |
+| `age_max` | TINYINT UNSIGNED | Yes | No | — |
+| `status` | ENUM("Active", "Inactive", "Archived") | No | No | "Active" |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
 | `created_at` | DATE | No | No | — |
 | `updated_at` | DATE | No | No | — |
 
@@ -1042,7 +1824,11 @@ Indexes
 - None declared in the model
 
 Associations
+- BelongsTo `assistantLeader` → `users` via `assistant_leader_user_id`
+- BelongsTo `leader` → `users` via `leader_user_id`
 - HasMany `Members` → `members` via `group_id`
+- HasMany `activities` → `ministry_activities` via `ministry_group_id`
+- HasMany `announcements` → `ministry_announcements` via `ministry_group_id`
 ## `ministry_memberships`
 
 Model: `MinistryMembership`
@@ -1092,6 +1878,13 @@ Model: `MinistryRole`
 | --- | --- | --- | --- | --- |
 | `id` | INTEGER UNSIGNED | No | Yes | — |
 | `name` | STRING(100) | No | No | — |
+| `code` | STRING(32) | Yes | No | — |
+| `category` | ENUM("Department", "Service Team", "Committee", "Worship", "Operations", "Teaching", "Other") | No | No | "Service Team" |
+| `description` | TEXT | Yes | No | — |
+| `leader_user_id` | INTEGER UNSIGNED | Yes | No | — |
+| `assistant_leader_user_id` | INTEGER UNSIGNED | Yes | No | — |
+| `established_date` | DATEONLY | Yes | No | — |
+| `status` | ENUM("Active", "Inactive", "Archived") | No | No | "Active" |
 | `is_deleted` | TINYINT | No | No | 0 |
 | `deleted_at` | DATE | Yes | No | — |
 | `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
@@ -1102,10 +1895,43 @@ Indexes
 - None declared in the model
 
 Associations
+- BelongsTo `assistantLeader` → `users` via `assistant_leader_user_id`
+- BelongsTo `leader` → `users` via `leader_user_id`
 - HasMany `MinistryAssignments` → `ministry_assignments` via `ministry_role_id`
 - HasMany `MinistryMemberships` → `ministry_memberships` via `ministry_role_id`
+- HasMany `activities` → `group_activities` via `group_id`
 - HasMany `applications` → `ministry_applications` via `ministry_role_id`
+- HasMany `memberPositions` → `group_member_positions` via `group_id`
+- HasMany `positions` → `group_positions` via `group_id`
+- HasMany `tasks` → `group_tasks` via `group_id`
 - HasOne `normalizedMinistry` → `ministries` via `legacy_ministry_role_id`
+## `ministry_schedules`
+
+Model: `MinistrySchedule`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `ministry_role_id` | INTEGER UNSIGNED | No | No | — |
+| `kind` | ENUM("practice", "cleaning", "service") | No | No | "practice" |
+| `title` | STRING(150) | No | No | — |
+| `schedule_date` | DATEONLY | No | No | — |
+| `start_time` | TIME | Yes | No | — |
+| `end_time` | TIME | Yes | No | — |
+| `location` | STRING(255) | Yes | No | — |
+| `notes` | TEXT | Yes | No | — |
+| `created_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `deleted_at` | DATE | Yes | No | — |
+| `deleted_by` | INTEGER UNSIGNED | Yes | No | — |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- Index `idx_ms_role_date`: ministry_role_id, schedule_date
+
+Associations
+- BelongsTo `ministryRole` → `ministry_roles` via `ministry_role_id`
 ## `notifications`
 
 Model: `Notification`
@@ -1149,6 +1975,32 @@ Indexes
 
 Associations
 - BelongsTo `User` → `users` via `user_id`
+## `pastoral_visitations`
+
+Model: `PastoralVisitation`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `member_id` | INTEGER UNSIGNED | No | No | — |
+| `ministry_group_id` | INTEGER UNSIGNED | Yes | No | — |
+| `cell_group_id` | INTEGER UNSIGNED | Yes | No | — |
+| `visit_date` | DATEONLY | No | No | — |
+| `visit_type` | ENUM("home_visit", "phone_call", "hospital_visit", "counseling", "follow_up") | No | No | "follow_up" |
+| `care_stage` | ENUM("needs_followup", "contacted", "in_progress", "visitation_scheduled", "completed") | No | No | "contacted" |
+| `notes` | TEXT | Yes | No | — |
+| `next_action_date` | DATEONLY | Yes | No | — |
+| `visited_by_user_id` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `member` → `members` via `member_id`
+- BelongsTo `visitor` → `users` via `visited_by_user_id`
 ## `payment_methods`
 
 Model: `PaymentMethod`
@@ -1260,6 +2112,55 @@ Indexes
 
 Associations
 - BelongsTo `Service` → `services` via `service_id`
+## `service_program_items`
+
+Model: `ServiceProgramItem`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `service_id` | INTEGER UNSIGNED | No | No | — |
+| `sort_order` | INTEGER UNSIGNED | No | No | 0 |
+| `segment_type` | ENUM("worship", "prayer", "scripture", "sermon", "offering", "announcement", "benediction", "other") | No | No | "other" |
+| `title` | STRING(180) | No | No | — |
+| `start_time` | TIME | Yes | No | — |
+| `duration_minutes` | INTEGER UNSIGNED | Yes | No | — |
+| `assigned_person` | STRING(120) | Yes | No | — |
+| `notes` | TEXT | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- None declared in the model
+## `service_recurrence_rules`
+
+Model: `ServiceRecurrenceRule`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `title` | STRING(150) | No | No | — |
+| `gathering_type` | STRING(40) | No | No | "lords_day" |
+| `day_of_week` | TINYINT | No | No | 0 |
+| `start_time` | TIME | Yes | No | — |
+| `end_time` | TIME | Yes | No | — |
+| `venue` | STRING(200) | Yes | No | — |
+| `capacity` | INTEGER UNSIGNED | Yes | No | — |
+| `is_active` | TINYINT | No | No | 1 |
+| `created_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- None declared in the model
 ## `service_responses`
 
 Model: `ServiceResponse`
@@ -1294,9 +2195,14 @@ Model: `Service`
 | `title` | STRING(150) | No | No | — |
 | `service_date` | DATEONLY | No | No | — |
 | `service_time` | TIME | Yes | No | — |
+| `end_time` | TIME | Yes | No | — |
+| `venue` | STRING(200) | Yes | No | — |
+| `presiding_minister` | STRING(150) | Yes | No | — |
+| `recurrence_rule_id` | INTEGER UNSIGNED | Yes | No | — |
 | `capacity` | INTEGER UNSIGNED | Yes | No | — |
 | `total_parking_slots` | INTEGER UNSIGNED | Yes | No | — |
 | `event_id` | INTEGER UNSIGNED | Yes | No | — |
+| `gathering_type` | ENUM("lords_day", "wednesday_service", "hs_ya_service", "bible_seminar", "prayer_meeting", "other") | No | No | "lords_day" |
 | `response_deadline` | DATE | Yes | No | — |
 | `status` | ENUM("draft", "published", "cancelled", "completed") | No | No | "draft" |
 | `is_deleted` | TINYINT | No | No | 0 |
@@ -1313,6 +2219,7 @@ Associations
 - HasMany `Attendances` → `attendances` via `service_id`
 - HasMany `MinistryAssignments` → `ministry_assignments` via `service_id`
 - HasMany `ServiceResponses` → `service_responses` via `service_id`
+- HasMany `visitors` → `visitor_records` via `service_id`
 - HasOne `summary` → `service_attendance_summary` via `service_id`
 ## `substitute_requests`
 
@@ -1450,3 +2357,32 @@ Associations
 - HasMany `leaderAssignments` → `user_leader_assignments` via `user_id`
 - HasMany `reviewedMinistryApplications` → `ministry_applications` via `reviewed_by`
 - HasMany `uploadedAttachments` → `attachments` via `uploaded_by`
+## `visitor_records`
+
+Model: `VisitorRecord`
+
+| Column | Application type | Nullable | Primary key | Default |
+| --- | --- | --- | --- | --- |
+| `id` | INTEGER UNSIGNED | No | Yes | — |
+| `service_id` | INTEGER UNSIGNED | Yes | No | — |
+| `event_id` | INTEGER UNSIGNED | Yes | No | — |
+| `full_name` | STRING(150) | No | No | — |
+| `phone` | STRING(40) | Yes | No | — |
+| `email` | STRING(150) | Yes | No | — |
+| `visit_type` | ENUM("first_time", "returning") | No | No | "first_time" |
+| `visit_date` | DATEONLY | No | No | — |
+| `invited_by_member_id` | INTEGER UNSIGNED | Yes | No | — |
+| `follow_up_status` | ENUM("pending", "contacted", "integrated") | No | No | "pending" |
+| `notes` | TEXT | Yes | No | — |
+| `recorded_by` | INTEGER UNSIGNED | Yes | No | — |
+| `is_deleted` | TINYINT | No | No | 0 |
+| `created_at` | DATE | No | No | — |
+| `updated_at` | DATE | No | No | — |
+
+Indexes
+- None declared in the model
+
+Associations
+- BelongsTo `event` → `events` via `event_id`
+- BelongsTo `invitedBy` → `members` via `invited_by_member_id`
+- BelongsTo `service` → `services` via `service_id`

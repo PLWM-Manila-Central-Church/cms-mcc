@@ -136,6 +136,8 @@ app.use("/api/events",        require("./routes/ministry-invites.routes"));
 app.use("/api/inventory",     require("./routes/inventory.routes"));
 app.use("/api/archives",      require("./routes/archives.routes"));
 app.use("/api/ministry",      require("./routes/ministry.routes"));
+app.use("/api/ministries",    require("./routes/life-ministries.routes"));
+app.use("/api/groups",        require("./routes/org-groups.routes"));
 app.use("/api/ministry-applications", require("./routes/ministry-applications.routes"));
 app.use("/api/notifications", require("./routes/notifications.routes"));
 app.use("/api/outreach",      require("./modules/outreach/routes"));

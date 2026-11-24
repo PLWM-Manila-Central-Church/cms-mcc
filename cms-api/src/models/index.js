@@ -58,6 +58,36 @@ const ExpenseCategory = require("./ExpenseCategory.model");
 const PaymentMethod = require("./PaymentMethod.model");
 const Expense = require("./Expense.model");
 const Attachment = require("./Attachment.model");
+const { GroupPosition, GroupMemberPosition, GroupActivity, GroupTask } = require("./OrgGroupExtras.model");
+const VisitorRecord = require("./VisitorRecord.model");
+const { FinanceTransfer, FinanceApproval } = require("./FinanceExtras.model");
+const {
+  EventCommittee,
+  EventAssignment,
+  EventProgramItem,
+  EventBudget,
+  EventBudgetItem,
+  EventCashAdvance,
+  EventLiquidation,
+  EventLiquidationItem,
+  EventApproval,
+} = require("./EventWorkspace.model");
+const {
+  MinistryActivity,
+  MinistryAttendanceResponse,
+  MinistryActivityAttendance,
+  MinistryAnnouncement,
+  MemberMessage,
+  MemberFeedback,
+  PastoralVisitation,
+} = require("./MinistryEngagement.model");
+const {
+  CellGroupMeeting,
+  CellGroupMeetingAttendance,
+  ServiceRecurrenceRule,
+  ServiceProgramItem,
+} = require("./CellAndServiceExtras.model");
+const { InventoryBorrowing, InventoryMaintenance } = require("./InventoryExtras.model");
 
 // ── Roles & Permissions ──────────────────────────────────────
 Role.belongsToMany(Permission, {
@@ -402,6 +432,115 @@ Attachment.belongsTo(Expense, { foreignKey: "expense_id", as: "expenseRecord" })
 User.hasMany(Attachment, { foreignKey: "uploaded_by", as: "uploadedAttachments" });
 Attachment.belongsTo(User, { foreignKey: "uploaded_by", as: "uploader" });
 
+// ── Organizational Group Positions, Activities & Tasks ───────
+MinistryRole.hasMany(GroupPosition, { foreignKey: "group_id", as: "positions" });
+GroupPosition.belongsTo(MinistryRole, { foreignKey: "group_id", as: "group" });
+
+MinistryRole.hasMany(GroupMemberPosition, { foreignKey: "group_id", as: "memberPositions" });
+GroupMemberPosition.belongsTo(MinistryRole, { foreignKey: "group_id", as: "group" });
+GroupPosition.hasMany(GroupMemberPosition, { foreignKey: "position_id", as: "assignments" });
+GroupMemberPosition.belongsTo(GroupPosition, { foreignKey: "position_id", as: "position" });
+Member.hasMany(GroupMemberPosition, { foreignKey: "member_id", as: "groupPositions" });
+GroupMemberPosition.belongsTo(Member, { foreignKey: "member_id", as: "member" });
+
+MinistryRole.hasMany(GroupActivity, { foreignKey: "group_id", as: "activities" });
+GroupActivity.belongsTo(MinistryRole, { foreignKey: "group_id", as: "group" });
+
+MinistryRole.hasMany(GroupTask, { foreignKey: "group_id", as: "tasks" });
+GroupTask.belongsTo(MinistryRole, { foreignKey: "group_id", as: "group" });
+GroupActivity.hasMany(GroupTask, { foreignKey: "activity_id", as: "tasks" });
+GroupTask.belongsTo(GroupActivity, { foreignKey: "activity_id", as: "activity" });
+Member.hasMany(GroupTask, { foreignKey: "assigned_member_id", as: "assignedGroupTasks" });
+GroupTask.belongsTo(Member, { foreignKey: "assigned_member_id", as: "assignedMember" });
+
+MinistryGroup.belongsTo(User, { foreignKey: "leader_user_id", as: "leader" });
+MinistryGroup.belongsTo(User, { foreignKey: "assistant_leader_user_id", as: "assistantLeader" });
+MinistryRole.belongsTo(User, { foreignKey: "leader_user_id", as: "leader" });
+MinistryRole.belongsTo(User, { foreignKey: "assistant_leader_user_id", as: "assistantLeader" });
+
+Service.hasMany(VisitorRecord, { foreignKey: "service_id", as: "visitors" });
+VisitorRecord.belongsTo(Service, { foreignKey: "service_id", as: "service" });
+Event.hasMany(VisitorRecord, { foreignKey: "event_id", as: "visitors" });
+VisitorRecord.belongsTo(Event, { foreignKey: "event_id", as: "event" });
+VisitorRecord.belongsTo(Member, { foreignKey: "invited_by_member_id", as: "invitedBy" });
+
+// ── Phase 3 Finance Upgrade Associations ──────────────────────
+FinancialRecord.belongsTo(Fund, { foreignKey: "fund_id", as: "fund" });
+FinancialRecord.belongsTo(Account, { foreignKey: "account_id", as: "account" });
+FinancialRecord.belongsTo(Event, { foreignKey: "event_id", as: "event" });
+FinancialRecord.belongsTo(MinistryGroup, { foreignKey: "ministry_group_id", as: "ministryGroup" });
+
+Expense.belongsTo(Fund, { foreignKey: "fund_id", as: "fund" });
+Expense.belongsTo(Event, { foreignKey: "event_id", as: "event" });
+Expense.belongsTo(MinistryGroup, { foreignKey: "ministry_group_id", as: "ministryGroup" });
+Expense.belongsTo(User, { foreignKey: "requested_by", as: "requester" });
+Expense.belongsTo(User, { foreignKey: "approved_by", as: "approver" });
+Expense.belongsTo(User, { foreignKey: "paid_by", as: "payer" });
+
+FinanceTransfer.belongsTo(Account, { foreignKey: "from_account_id", as: "fromAccount" });
+FinanceTransfer.belongsTo(Account, { foreignKey: "to_account_id", as: "toAccount" });
+FinanceTransfer.belongsTo(Fund, { foreignKey: "from_fund_id", as: "fromFund" });
+FinanceTransfer.belongsTo(Fund, { foreignKey: "to_fund_id", as: "toFund" });
+FinanceTransfer.belongsTo(User, { foreignKey: "created_by", as: "creator" });
+FinanceApproval.belongsTo(User, { foreignKey: "actor_user_id", as: "actor" });
+
+// ── Phase 4 Event Workspace Associations ──────────────────────
+Event.hasMany(EventCommittee, { foreignKey: "event_id", as: "committees" });
+EventCommittee.belongsTo(Event, { foreignKey: "event_id", as: "event" });
+EventCommittee.belongsTo(Member, { foreignKey: "chair_member_id", as: "chair" });
+
+Event.hasMany(EventAssignment, { foreignKey: "event_id", as: "assignments" });
+EventAssignment.belongsTo(Event, { foreignKey: "event_id", as: "event" });
+EventAssignment.belongsTo(EventCommittee, { foreignKey: "committee_id", as: "committee" });
+EventAssignment.belongsTo(Member, { foreignKey: "member_id", as: "member" });
+
+Event.hasMany(EventProgramItem, { foreignKey: "event_id", as: "programItems" });
+EventProgramItem.belongsTo(Event, { foreignKey: "event_id", as: "event" });
+
+Event.hasMany(EventBudget, { foreignKey: "event_id", as: "budgets" });
+EventBudget.belongsTo(Event, { foreignKey: "event_id", as: "event" });
+EventBudget.belongsTo(Fund, { foreignKey: "fund_id", as: "fund" });
+EventBudget.hasMany(EventBudgetItem, { foreignKey: "budget_id", as: "items" });
+EventBudgetItem.belongsTo(EventBudget, { foreignKey: "budget_id", as: "budget" });
+
+Event.hasMany(EventCashAdvance, { foreignKey: "event_id", as: "cashAdvances" });
+EventCashAdvance.belongsTo(Event, { foreignKey: "event_id", as: "event" });
+EventCashAdvance.belongsTo(Account, { foreignKey: "account_id", as: "account" });
+EventCashAdvance.belongsTo(Fund, { foreignKey: "fund_id", as: "fund" });
+
+Event.hasMany(EventLiquidation, { foreignKey: "event_id", as: "liquidations" });
+EventLiquidation.belongsTo(Event, { foreignKey: "event_id", as: "event" });
+EventLiquidation.belongsTo(EventCashAdvance, { foreignKey: "cash_advance_id", as: "cashAdvance" });
+EventLiquidation.hasMany(EventLiquidationItem, { foreignKey: "liquidation_id", as: "items" });
+EventLiquidationItem.belongsTo(EventLiquidation, { foreignKey: "liquidation_id", as: "liquidation" });
+
+Event.hasMany(EventApproval, { foreignKey: "event_id", as: "approvals" });
+
+// ── Phase 5 Ministry Engagement & Pastoral Care Associations ──
+MinistryGroup.hasMany(MinistryActivity, { foreignKey: "ministry_group_id", as: "activities" });
+MinistryActivity.belongsTo(MinistryGroup, { foreignKey: "ministry_group_id", as: "ministry" });
+MinistryActivity.hasMany(MinistryAttendanceResponse, { foreignKey: "activity_id", as: "responses" });
+MinistryAttendanceResponse.belongsTo(MinistryActivity, { foreignKey: "activity_id", as: "activity" });
+MinistryAttendanceResponse.belongsTo(Member, { foreignKey: "member_id", as: "member" });
+MinistryActivity.hasMany(MinistryActivityAttendance, { foreignKey: "activity_id", as: "attendances" });
+MinistryActivityAttendance.belongsTo(MinistryActivity, { foreignKey: "activity_id", as: "activity" });
+MinistryActivityAttendance.belongsTo(Member, { foreignKey: "member_id", as: "member" });
+
+MinistryGroup.hasMany(MinistryAnnouncement, { foreignKey: "ministry_group_id", as: "announcements" });
+MinistryAnnouncement.belongsTo(MinistryGroup, { foreignKey: "ministry_group_id", as: "ministry" });
+
+MemberMessage.belongsTo(Member, { foreignKey: "member_id", as: "member" });
+MemberMessage.belongsTo(User, { foreignKey: "sender_user_id", as: "sender" });
+MemberFeedback.belongsTo(Member, { foreignKey: "member_id", as: "member" });
+PastoralVisitation.belongsTo(Member, { foreignKey: "member_id", as: "member" });
+PastoralVisitation.belongsTo(User, { foreignKey: "visited_by_user_id", as: "visitor" });
+
+// ── Phase 7 Inventory Borrowing & Maintenance Associations ────
+InventoryItem.hasMany(InventoryBorrowing, { foreignKey: "item_id", as: "borrowings" });
+InventoryBorrowing.belongsTo(InventoryItem, { foreignKey: "item_id", as: "item" });
+InventoryItem.hasMany(InventoryMaintenance, { foreignKey: "item_id", as: "maintenanceLogs" });
+InventoryMaintenance.belongsTo(InventoryItem, { foreignKey: "item_id", as: "item" });
+
 module.exports = {
   User,
   Role,
@@ -460,4 +599,33 @@ module.exports = {
   MinistrySchedule,
   BibleReadingProgress,
   GroupMemoryVerse,
+  GroupPosition,
+  GroupMemberPosition,
+  GroupActivity,
+  GroupTask,
+  VisitorRecord,
+  FinanceTransfer,
+  FinanceApproval,
+  EventCommittee,
+  EventAssignment,
+  EventProgramItem,
+  EventBudget,
+  EventBudgetItem,
+  EventCashAdvance,
+  EventLiquidation,
+  EventLiquidationItem,
+  EventApproval,
+  MinistryActivity,
+  MinistryAttendanceResponse,
+  MinistryActivityAttendance,
+  MinistryAnnouncement,
+  MemberMessage,
+  MemberFeedback,
+  PastoralVisitation,
+  CellGroupMeeting,
+  CellGroupMeetingAttendance,
+  ServiceRecurrenceRule,
+  ServiceProgramItem,
+  InventoryBorrowing,
+  InventoryMaintenance,
 };

@@ -243,7 +243,7 @@ const rollbackNewMember = async (memberId) => {
 exports.createMember = async (data, createdBy, user = {}, importedStatus = null) => {
   data = constrainMemberCreateToScope(data, user);
   const {
-    first_name, last_name, email, phone, birthdate, spiritual_birthday,
+    first_name, last_name, email, phone, birthdate, spiritual_birthday, join_date,
     address, gender, status, cell_group_id, group_id, referred_by,
     profile_photo_url, barcode, ministry_role_id,
   } = data;
@@ -275,6 +275,7 @@ exports.createMember = async (data, createdBy, user = {}, importedStatus = null)
     phone:              phone              || null,
     birthdate:          birthdate          || null,
     spiritual_birthday: spiritual_birthday || null,
+    join_date:          join_date          || null,
     address:            address            || null,
     gender:             gender             || null,
     status:             status             || "Active",
@@ -345,7 +346,7 @@ exports.updateMember = async (id, data, updatedBy, user = {}) => {
   if (!member) throw AppError.notFound("RECORD_NOT_FOUND", "Member not found");
 
   const {
-    first_name, last_name, email, phone, birthdate, spiritual_birthday,
+    first_name, last_name, email, phone, birthdate, spiritual_birthday, join_date,
     address, gender, status, cell_group_id, group_id, referred_by,
     profile_photo_url, barcode,
   } = data;
@@ -380,6 +381,7 @@ exports.updateMember = async (id, data, updatedBy, user = {}) => {
     ...(phone               !== undefined && { phone }),
     ...(birthdate           !== undefined && { birthdate }),
     ...(spiritual_birthday  !== undefined && { spiritual_birthday }),
+    ...(join_date           !== undefined && { join_date }),
     ...(address             !== undefined && { address }),
     ...(gender              !== undefined && { gender }),
     ...(status              !== undefined && { status }),

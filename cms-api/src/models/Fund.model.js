@@ -16,6 +16,25 @@ const Fund = sequelize.define(
       allowNull: false,
       unique: true,
     },
+    fund_code: {
+      type: DataTypes.STRING(32),
+      allowNull: true,
+    },
+    is_restricted: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    opening_balance: {
+      type: DataTypes.DECIMAL(14, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    is_active: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: 1,
+    },
     description: {
       type: DataTypes.TEXT,
       allowNull: true,

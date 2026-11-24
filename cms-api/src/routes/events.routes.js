@@ -18,6 +18,11 @@ const allowVisibleMemberEventImage = (req, res, next) => {
   return authorizeEventImageRead(req, res, next);
 };
 
+const workspaceRoutes = require("./event-workspace.routes");
+
+// ── Event Workspace & Financial Integration (must be before /:id catch-all) ──
+router.use("/", workspaceRoutes);
+
 // ── Event Categories (MUST be before /:id) ───────────────────
 router.get("/categories",        auth, authorize("events", "read"),   ctrl.getAllCategories);
 router.get("/categories/:id",    auth, authorize("events", "read"),   ctrl.getCategoryById);

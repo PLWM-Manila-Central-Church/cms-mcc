@@ -14,9 +14,25 @@ const Service = sequelize.define(
     title: { type: DataTypes.STRING(150), allowNull: false },
     service_date: { type: DataTypes.DATEONLY, allowNull: false },
     service_time: { type: DataTypes.TIME, allowNull: true },
+    end_time: { type: DataTypes.TIME, allowNull: true },
+    venue: { type: DataTypes.STRING(200), allowNull: true },
+    presiding_minister: { type: DataTypes.STRING(150), allowNull: true },
+    recurrence_rule_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     capacity: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     total_parking_slots: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     event_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, unique: true },
+    gathering_type: {
+      type: DataTypes.ENUM(
+        "lords_day",
+        "wednesday_service",
+        "hs_ya_service",
+        "bible_seminar",
+        "prayer_meeting",
+        "other"
+      ),
+      allowNull: false,
+      defaultValue: "lords_day",
+    },
     response_deadline: { type: DataTypes.DATE, allowNull: true },
     status: {
       type: DataTypes.ENUM("draft", "published", "cancelled", "completed"),

@@ -50,18 +50,20 @@ const notificationScope = (userId, roleName) => ({
 });
 
 // ── Get All Notifications for User ──────────────────────────
-exports.getUserNotifications = async (userId, roleName) => {
+exports.getUserNotifications = async (userId, roleName, limit = 100) => {
   return await Notification.findAll({
     where: notificationScope(userId, roleName),
     order: [["created_at", "DESC"]],
+    limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 100)),
   });
 };
 
 // ── Get Unread Notifications for User ───────────────────────
-exports.getUnreadNotifications = async (userId, roleName) => {
+exports.getUnreadNotifications = async (userId, roleName, limit = 100) => {
   return await Notification.findAll({
     where: { ...notificationScope(userId, roleName), is_read: 0 },
     order: [["created_at", "DESC"]],
+    limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 100)),
   });
 };
 

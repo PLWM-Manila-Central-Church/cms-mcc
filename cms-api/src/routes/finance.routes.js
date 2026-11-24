@@ -2,6 +2,7 @@
 
 const router    = require("express").Router();
 const ctrl      = require("../controllers/finance.controller");
+const upgradeSvc = require("../services/financeUpgrade.service");
 const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
@@ -74,6 +75,94 @@ const authorizeAttachmentDownload = (req, res, next) => {
 router.post("/attachments/upload", auth, authorize("finance", "create"), requireDurableUploadStorage, receiptUpload.single("file"), ctrl.uploadAttachment);
 router.get("/attachments/:id/download", auth, authorizeAttachmentDownload, ctrl.downloadAttachment);
 router.patch("/attachments/:id/archive", auth, authorize("finance", "archive"), ctrl.archiveAttachment);
+
+// ── Phase 3 Finance Upgrade (Overview, Balances, Transfers, Approvals, Reports, Ledger) ──
+router.get("/overview", auth, authorize("finance", "read"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.getFinanceOverview(req.query);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+router.get("/funds/balances", auth, authorize("finance", "read"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.listFundsWithBalances();
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+router.get("/accounts/balances", auth, authorize("finance", "read"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.listAccountsWithBalances();
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+router.get("/transfers", auth, authorize("finance", "read"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.listTransfers(req.query);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+router.post("/transfers", auth, authorize("finance", "create"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.createTransfer(req.body, req.user);
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+router.post("/transfers/:id/archive", auth, authorize("finance", "archive"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.archiveTransfer(req.params.id, req.user);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+router.get("/expenses/workflow", auth, authorize("finance", "read"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.listWorkflowExpenses(req.query);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+router.post("/expenses/workflow", auth, authorize("finance", "create"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.createExpenseRequest(req.body, req.user);
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+for (const action of ["submit", "approve", "reject", "mark-paid", "cancel"]) {
+  const permAction = action === "submit" ? "create" : "update";
+  router.post(`/expenses/:id/${action}`, auth, authorize("finance", permAction), async (req, res, next) => {
+    try {
+      const data = await upgradeSvc.transitionExpenseStatus(req.params.id, action, req.body, req.user);
+      res.json({ success: true, data });
+    } catch (err) { next(err); }
+  });
+}
+
+router.get("/reports/expenses", auth, authorize("finance", "read"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.getExpenseReport(req.query);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+router.get("/reports/statement", auth, authorize("finance", "read"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.getConsolidatedStatement(req.query);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+router.get("/ledger", auth, authorize("finance", "read"), async (req, res, next) => {
+  try {
+    const data = await upgradeSvc.getLedger(req.query);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
 
 // ── Root aliases (frontend compatibility) ────────────────────
 router.get("/",    auth, authorize("finance", "read"),   ctrl.getAllRecords);

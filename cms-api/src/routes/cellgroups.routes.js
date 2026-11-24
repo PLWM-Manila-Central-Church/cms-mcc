@@ -2,12 +2,39 @@
 
 const router    = require("express").Router();
 const ctrl      = require("../controllers/cellgroups.controller");
+const meetingsSvc = require("../services/cellMeetings.service");
 const auth      = require("../middlewares/verifyToken");
 const authorize = require("../middlewares/authorize");
 const validate  = require("../middlewares/validate");
 const {
   createCellGroupSchema, updateCellGroupSchema, createCellGroupHistorySchema,
 } = require("../validators/cellgroups.validator");
+
+// Health alerts & meetings routes (before /:id catch-all)
+router.get("/health-alerts", auth, authorize("cell_groups", "read"), async (req, res, next) => {
+  try {
+    const data = await meetingsSvc.getCellGroupHealthAlerts();
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.get("/:id/meetings", auth, authorize("cell_groups", "read"), async (req, res, next) => {
+  try {
+    const data = await meetingsSvc.listMeetings(req.params.id);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.post("/:id/meetings", auth, authorize("cell_groups", "update"), async (req, res, next) => {
+  try {
+    const data = await meetingsSvc.createMeeting(req.params.id, req.body, req.user);
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+});
+router.post("/:id/meetings/:meetingId/attendance", auth, authorize("cell_groups", "update"), async (req, res, next) => {
+  try {
+    const data = await meetingsSvc.recordMeetingAttendance(req.params.meetingId, req.body.entries || []);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
 
 // History routes MUST come before /:id to avoid being shadowed
 router.get("/history/:memberId", auth, authorize("cell_groups", "read"),   ctrl.getCellGroupHistory);

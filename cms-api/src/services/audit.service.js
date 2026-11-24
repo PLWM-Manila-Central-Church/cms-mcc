@@ -7,7 +7,7 @@ const { Op } = require("sequelize");
 
 exports.getAllLogs = async (query = {}) => {
   const page   = Math.max(1, parseInt(query.page)  || 1);
-  const limit  = Math.max(1, parseInt(query.limit) || 30);
+  const limit  = Math.min(100, Math.max(1, parseInt(query.limit) || 30));
   const offset = (page - 1) * limit;
 
   const where = {};
@@ -48,6 +48,7 @@ exports.getLogsByUser = async (userId) => {
   return await AuditLog.findAll({
     where: { user_id: userId },
     order: [["created_at", "DESC"]],
+    limit: 100,
   });
 };
 
@@ -55,5 +56,6 @@ exports.getLogsByTable = async (targetTable) => {
   return await AuditLog.findAll({
     where: { target_table: targetTable },
     order: [["created_at", "DESC"]],
+    limit: 100,
   });
 };

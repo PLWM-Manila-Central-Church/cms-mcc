@@ -122,13 +122,13 @@ describe("historic inventory notification visibility", () => {
     await notifications.getUserNotifications(27, "Member");
     await notifications.getUnreadNotifications(27, "Member");
     const scope = { user_id: 27, type: { [Op.notIn]: ["inventory_item_low_stock", "inventory_item_out_of_stock", "inventory_item_under_repair", "inventory_item_available"] } };
-    expect(Notification.findAll).toHaveBeenNthCalledWith(1, { where: scope, order: [["created_at", "DESC"]] });
-    expect(Notification.findAll).toHaveBeenNthCalledWith(2, { where: { ...scope, is_read: 0 }, order: [["created_at", "DESC"]] });
+    expect(Notification.findAll).toHaveBeenNthCalledWith(1, { where: scope, order: [["created_at", "DESC"]], limit: 100 });
+    expect(Notification.findAll).toHaveBeenNthCalledWith(2, { where: { ...scope, is_read: 0 }, order: [["created_at", "DESC"]], limit: 100 });
   });
   test("Admin retains operational notices within its account", async () => {
     Notification.findAll.mockClear();
     await notifications.getUserNotifications(1, "System Admin");
-    expect(Notification.findAll).toHaveBeenCalledWith({ where: { user_id: 1 }, order: [["created_at", "DESC"]] });
+    expect(Notification.findAll).toHaveBeenCalledWith({ where: { user_id: 1 }, order: [["created_at", "DESC"]], limit: 100 });
   });
 
   test("archives one notification with actor metadata instead of deleting it", async () => {
